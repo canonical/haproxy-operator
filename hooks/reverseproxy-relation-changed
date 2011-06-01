@@ -86,7 +86,7 @@ for unit in units:
     p.wait()
     # Add all configured units:
     if 'hostname' in settings and 'ip' in settings and 'port' in settings:
-        servers += ("    server %(hostname)s %(ip)s:%(port)s\n" % settings)
+        servers += ("    server %(hostname)s %(ip)s:%(port)s check\n" % settings)
 
 print servers
 
