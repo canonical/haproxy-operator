@@ -26,6 +26,8 @@ import json
 import tempfile
 import glob
 
+from socket import getaddrinfo
+
 remote_unit = os.environ.get("ENSEMBLE_REMOTE_UNIT")
 
 service_name, _ = remote_unit.split("/")
@@ -85,8 +87,8 @@ for unit in units:
     settings = json.loads(p.stdout.read().strip())
     p.wait()
     # Add all configured units:
-    if 'hostname' in settings and 'ip' in settings and 'port' in settings:
-        servers += ("    server %(hostname)s %(ip)s:%(port)s check\n" % settings)
+    if 'hostname' in settings and 'port' in settings:
+        servers += ("    server %(hostname)s %(hostname)s:%(port)s check\n" % settings)
 
 print servers
 
