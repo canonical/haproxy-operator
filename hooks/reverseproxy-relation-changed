@@ -110,3 +110,5 @@ with tempfile.NamedTemporaryFile(dir="/etc/haproxy",prefix="haproxy.cfg", delete
 # Just in case haproxy wouldn't start because of empty/bad configs before, start it now
 subprocess.call(["service", "haproxy", "start"])
 subprocess.call(["service", "haproxy", "reload"])
+
+subprocess.call(["open-port", "80"])
