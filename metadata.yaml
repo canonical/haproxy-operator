@@ -1,4 +1,3 @@
-ensemble: formula
 name: haproxy
 revision: 15
 summary: "fast and reliable load balancing reverse proxy"
