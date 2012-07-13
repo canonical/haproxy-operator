@@ -1,0 +1,82 @@
+options:
+  global_log:
+    default: "127.0.0.1 local0, 127.0.0.1 local1 notice"
+    type: string
+    description: Global log line ( multiples ... comma separated list )
+  global_maxconn:
+    default: 4096
+    type: int
+    description: Max conn
+  global_user:
+    default: "haproxy"
+    type: string
+    description: User
+  global_group:
+    default: "haproxy"
+    type: string
+    description: Group
+  global_debug:
+    default: False
+    type: boolean
+    description: Debug or not
+  global_quiet:
+    default: False
+    type: boolean
+    description: Quiet
+  global_spread_checks:
+    default: 0
+    type: int
+    descriptions: Spread checks ( 0 .. 50 )
+  default_log:
+    default: "global"
+    type: string
+    description: Default log
+  default_mode:
+    default: "http"
+    type: string
+    description: Default mode
+  default_options:
+    default: "httplog, dontlognull"
+    type: string
+    description: Default options
+  default_retries:
+    default: 3
+    type: int
+    description: Retries
+  default_timeouts:
+    default: "queue 1000, connect 1000, client 1000, server 1000"
+    type: string
+    description: Default timeouts 
+  enable_monitoring:
+    default: False
+    type: boolean
+    description: Enable monitoring
+  monitoring_port:
+    default: 10000
+    type: int
+    description: Default monitoring port
+  monitoring_allowed_cidr:
+    default: "127.0.0.1/32"
+    type: string
+    description: CIDR allowed ( multiple CIDRs separated by space )
+  monitoring_username:
+    default: "haproxy"
+    type: string
+    description: Monitoring username
+  monitoring_password:
+    default: "changeme"
+    type: string
+    description: Default password ( if changeme, a new password will be generated and displayed in juju-log )
+  monitoring_stats_refresh:
+    default: 3
+    type: int
+    description: Status refresh
+  services:
+    default: |
+              - service_name: haproxy_service
+                service_host: "0.0.0.0"
+                service_port: 80
+                service_options: [balance leastconn]
+                server_options: maxconn 100
+    type: string
+    description: services definition
