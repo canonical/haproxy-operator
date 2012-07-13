@@ -6,7 +6,9 @@ options:
   global_maxconn:
     default: 4096
     type: int
-    description: Max conn
+    description: |
+        Sets the maximum per-process number of concurrent connections to
+        <number>.
   global_user:
     default: "haproxy"
     type: string
@@ -26,7 +28,12 @@ options:
   global_spread_checks:
     default: 0
     type: int
-    descriptions: Spread checks ( 0 .. 50 )
+    descriptions: |
+        Sometimes it is desirable to avoid sending health checks to servers at
+        exact intervals, for instance when many logical servers are located on
+        the same physical server. With the help of this parameter, it becomes 
+        possible to add some randomness in the check interval between 0 and 
+        +/- 50%. A value between 2 and 5 seems to show good results.
   default_log:
     default: "global"
     type: string
@@ -42,7 +49,15 @@ options:
   default_retries:
     default: 3
     type: int
-    description: Retries
+    description: |
+        Set the number of retries to perform on a server after a connection
+        failure. It is important to understand that this value applies to the
+        number of connection attempts, not full requests. When a connection 
+        has effectively been established to a server, there will be no more 
+        retry.
+        In order to avoid immediate reconnections to a server which is 
+        restarting, a turn-around timer of 1 second is applied before a retry
+        occurs.
   default_timeouts:
     default: "queue 1000, connect 1000, client 1000, server 1000"
     type: string
@@ -58,7 +73,9 @@ options:
   monitoring_allowed_cidr:
     default: "127.0.0.1/32"
     type: string
-    description: CIDR allowed ( multiple CIDRs separated by space )
+    description: |
+        CIDR allowed ( multiple CIDRs separated by space ) access to the
+        monitoring interface.
   monitoring_username:
     default: "haproxy"
     type: string
@@ -66,11 +83,13 @@ options:
   monitoring_password:
     default: "changeme"
     type: string
-    description: Default password ( if changeme, a new password will be generated and displayed in juju-log )
+    description: |
+        Password to the monitoring interface ( if "changeme", a new password
+        will be generated and displayed in juju-log )
   monitoring_stats_refresh:
     default: 3
     type: int
-    description: Status refresh
+    description: Monitoring interface refresh interval (in seconds)
   services:
     default: |
               - service_name: haproxy_service
@@ -79,4 +98,11 @@ options:
                 service_options: [balance leastconn]
                 server_options: maxconn 100
     type: string
-    description: services definition
+    description: |
+        Services definition(s). Although the variable type is a string, this is
+        interpreted in the charm as yaml. To use multiple services within the
+        same haproxy instance, specify all of the variables (service_name,
+        service_host, service_port, service_options, server_options) with a "-"
+        before the first variable, service_name, as above. Service options is a
+        comma separated list, server options will be appended as a string to
+        the individual server lines for a given listen stanza.
