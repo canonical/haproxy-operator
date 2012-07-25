@@ -51,10 +51,13 @@ def config_get(scope=None):
 #                              desired item.
 #                unit_name:    limits the data ( and optionally the scope )
 #                              to the specified unit
+#                relation_id:  specify relation id for out of context usage.
 #------------------------------------------------------------------------------
-def relation_get(scope=None, unit_name=None):
+def relation_get(scope=None, unit_name=None, relation_id=None):
     try:
         relation_cmd_line = ['relation-get', '--format=json']
+        if relation_id is not None:
+            relation_cmd_line.extend(('-r', relation_id))
         if scope is not None:
             relation_cmd_line.append(scope)
         else:
@@ -323,43 +326,46 @@ def create_services():
                                          'server_options': server_options}
 
     try:
-        for unit in json.loads(\
-        subprocess.check_output(['relation-list', '--format=json'])):
-            relation_info = relation_get(None, unit)
-            if type(relation_info) != type({}):
-                sys.exit(0)
-            # Mandatory switches ( hostname, port )
-            server_name = "%s__%s" % \
-            (relation_info['hostname'].replace('.', '_'), \
-            relation_info['port'])
-            server_ip = relation_info['hostname']
-            server_port = relation_info['port']
-            # Optional switches ( service_name )
-            if 'service_name' in relation_info:
-                if relation_info['service_name'] in services_dict:
-                    service_name = relation_info['service_name']
+        relids = subprocess.Popen(['relation-ids','reverseproxy'], stdout=subprocess.PIPE)
+        for relid in [ x.strip() for x in relids.stdout]:
+            for unit in json.loads(\
+            subprocess.check_output(['relation-list', '--format=json',
+                                     '-r', relid])):
+                relation_info = relation_get(None, unit, relid)
+                if type(relation_info) != type({}):
+                    sys.exit(0)
+                # Mandatory switches ( hostname, port )
+                server_name = "%s__%s" % \
+                (relation_info['hostname'].replace('.', '_'), \
+                relation_info['port'])
+                server_ip = relation_info['hostname']
+                server_port = relation_info['port']
+                # Optional switches ( service_name )
+                if 'service_name' in relation_info:
+                    if relation_info['service_name'] in services_dict:
+                        service_name = relation_info['service_name']
+                    else:
+                        subprocess.call([\
+                        'juju-log', 'service %s does not exists. ' % \
+                        relation_info['service_name']])
+                        sys.exit(1)
                 else:
-                    subprocess.call([\
-                    'juju-log', 'service %s does not exists. ' % \
-                    relation_info['service_name']])
-                    sys.exit(1)
-            else:
-                service_name = services_list[0]['service_name']
-            if os.path.exists("%s/%s.is.proxy" % \
-            (default_haproxy_service_config_dir, service_name)):
-                if 'option forwardfor' not in service_options:
-                    service_options.append("option forwardfor")
-            # Add the server entries
-            if not 'servers' in services_dict[service_name]:
-                services_dict[service_name]['servers'] = \
-                [(server_name, server_ip, server_port, \
-                services_dict[service_name]['server_options'])]
-            else:
-                services_dict[service_name]['servers'].append((\
-                server_name, server_ip, server_port, \
-                services_dict[service_name]['server_options']))
-    except:
-        pass
+                    service_name = services_list[0]['service_name']
+                if os.path.exists("%s/%s.is.proxy" % \
+                (default_haproxy_service_config_dir, service_name)):
+                    if 'option forwardfor' not in service_options:
+                        service_options.append("option forwardfor")
+                # Add the server entries
+                if not 'servers' in services_dict[service_name]:
+                    services_dict[service_name]['servers'] = \
+                    [(server_name, server_ip, server_port, \
+                    services_dict[service_name]['server_options'])]
+                else:
+                    services_dict[service_name]['servers'].append((\
+                    server_name, server_ip, server_port, \
+                    services_dict[service_name]['server_options']))
+    except Exception, e:
+        subprocess.call(['juju-log', str(e)])
     # Construct the new haproxy.cfg file
     for service in services_dict:
         print "Service: ", service
