@@ -38,7 +38,8 @@ def config_get(scope=None):
             config_cmd_line.append(scope)
         config_cmd_line.append('--format=json')
         config_data = json.loads(subprocess.check_output(config_cmd_line))
-    except:
+    except Exception, e:
+        subprocess.call(['juju-log', str(e)])
         config_data = None
     finally:
         return(config_data)
@@ -65,7 +66,8 @@ def relation_get(scope=None, unit_name=None, relation_id=None):
         if unit_name is not None:
             relation_cmd_line.append(unit_name)
         relation_data = json.loads(subprocess.check_output(relation_cmd_line))
-    except:
+    except Exception, e:
+        subprocess.call(['juju-log', str(e)])
         relation_data = None
     finally:
         return(relation_data)
@@ -418,14 +420,16 @@ def remove_services(service_name=None):
                 os.remove("%s/%s.service" % \
                 (default_haproxy_service_config_dir, service_name))
                 return(True)
-            except:
+            except Exception, e:
+                subprocess.call(['juju-log', str(e)])
                 return(False)
     else:
         for service in glob.glob("%s/*.service" % \
         default_haproxy_service_config_dir):
             try:
                 os.remove(service)
-            except:
+            except Exception, e:
+                subprocess.call(['juju-log', str(e)])
                 pass
         return(True)
 
