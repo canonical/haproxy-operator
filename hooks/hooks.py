@@ -545,12 +545,14 @@ def reverseproxy_interface(hook_name=None):
 def website_interface(hook_name=None):
     if hook_name is None:
         return(None)
-    my_fqdn = socket.getfqdn(socket.gethostname())
+    my_host = socket.getfqdn(socket.gethostname())
+    if my_host == "localhost":
+        my_host = socket.gethostname()
     default_port = 80
     relation_data = relation_get()
     if hook_name == "joined":
         subprocess.call(['relation-set', 'port=%d' % \
-        default_port, 'hostname=%s' % my_fqdn])
+        default_port, 'hostname=%s' % my_host])
     elif hook_name == "changed":
         if 'is-proxy' in relation_data:
             service_name = "%s__%d" % \
