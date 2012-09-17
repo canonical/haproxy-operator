@@ -307,6 +307,16 @@ def get_config_services():
     services_list = yaml.load(config_data['services'])
     return(services_list)
 
+#------------------------------------------------------------------------------
+# get_config_service:   Convenience function that returns a dictionary
+#                       of the configuration of a given services configuration
+#------------------------------------------------------------------------------
+def get_config_service(service_name=None):
+    services_list = get_config_services()
+    for service_item in services_list:
+        if service_item['service_name'] == service_name:
+            return(service_item)
+    return(None)
 
 #------------------------------------------------------------------------------
 # create_services:  Function that will create the services configuration
@@ -545,21 +555,35 @@ def reverseproxy_interface(hook_name=None):
 def website_interface(hook_name=None):
     if hook_name is None:
         return(None)
-    my_host = socket.getfqdn(socket.gethostname())
-    if my_host == "localhost":
-        my_host = socket.gethostname()
     default_port = 80
     relation_data = relation_get()
-    if hook_name == "joined":
-        subprocess.call(['relation-set', 'port=%d' % \
-        default_port, 'hostname=%s' % my_host])
-    elif hook_name == "changed":
+    # If a specfic service has been asked for then return the ip:port for
+    # that service, else pass back the default
+    if 'service_name' in relation_data:
+        service_name = relation_data['service_name']
+        requestedservice = get_config_service(service_name)
+        my_host = requestedservice['service_host']
+        my_port = requestedservice['service_port']
+    else:
+        my_host = socket.getfqdn(socket.gethostname())
+        my_port = default_port
+
+    # If the listen ip has been set to 0.0.0.0 then pass back the hostname
+    if my_host == "0.0.0.0":
+        my_host = socket.getfqdn(socket.gethostname())
+
+    # If the fqdn lookup has returned localhost (lxc setups) then return
+    # hostname
+    if my_host == "localhost":
+        my_host = socket.gethostname()
+    subprocess.call(['relation-set', 'port=%d' % \
+    my_port, 'hostname=%s' % my_host])
+    if hook_name == "changed":
         if 'is-proxy' in relation_data:
             service_name = "%s__%d" % \
             (relation_data['hostname'], relation_data['port'])
             open("%s/%s.is.proxy" % \
             (default_haproxy_service_config_dir, service_name), 'a').close()
-
 
 ###############################################################################
 # Main section
