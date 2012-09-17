@@ -557,6 +557,8 @@ def website_interface(hook_name=None):
         return(None)
     default_port = 80
     relation_data = relation_get()
+    config_data = config_get()
+
     # If a specfic service has been asked for then return the ip:port for
     # that service, else pass back the default
     if 'service_name' in relation_data:
@@ -577,7 +579,7 @@ def website_interface(hook_name=None):
     if my_host == "localhost":
         my_host = socket.gethostname()
     subprocess.call(['relation-set', 'port=%d' % \
-    my_port, 'hostname=%s' % my_host])
+    my_port, 'hostname=%s' % my_host, 'all_services=%s' % config_data['services']])
     if hook_name == "changed":
         if 'is-proxy' in relation_data:
             service_name = "%s__%d" % \
