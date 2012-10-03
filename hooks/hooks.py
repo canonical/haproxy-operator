@@ -112,7 +112,7 @@ def create_haproxy_globals():
         haproxy_globals.append("    debug")
     if config_data['global_quiet'] is True:
         haproxy_globals.append("    quiet")
-    haproxy_globals.append("    spread-checks %d" % \
+    haproxy_globals.append("    spread-checks %d" %
     config_data['global_spread_checks'])
     return('\n'.join(haproxy_globals))
 
@@ -186,7 +186,7 @@ def get_service_ports(haproxy_config_file="/etc/haproxy/haproxy.cfg"):
 def open_port(port=None, protocol="TCP"):
     if port is None:
         return(None)
-    return(subprocess.call(['/usr/bin/open-port', "%d/%s" % \
+    return(subprocess.call(['/usr/bin/open-port', "%d/%s" %
     (int(port), protocol)]))
 
 
@@ -197,7 +197,7 @@ def open_port(port=None, protocol="TCP"):
 def close_port(port=None, protocol="TCP"):
     if port is None:
         return(None)
-    return(subprocess.call(['/usr/bin/close-port', "%d/%s" % \
+    return(subprocess.call(['/usr/bin/close-port', "%d/%s" %
     (int(port), protocol)]))
 
 
@@ -223,9 +223,9 @@ def update_service_ports(old_service_ports=None, new_service_ports=None):
 #                      default: 20
 #------------------------------------------------------------------------------
 def pwgen(pwd_length=20):
-    alphanumeric_chars = [l for l in (string.letters + string.digits) \
+    alphanumeric_chars = [l for l in (string.letters + string.digits)
     if l not in 'Iil0oO1']
-    random_chars = [random.choice(alphanumeric_chars) \
+    random_chars = [random.choice(alphanumeric_chars)
     for i in range(pwd_length)]
     return(''.join(random_chars))
 
@@ -249,12 +249,12 @@ def create_listen_stanza(service_name=None, service_ip=None,
     if service_name is None or service_ip is None or service_port is None:
         return(None)
     service_config = []
-    service_config.append("listen %s %s:%s" % \
+    service_config.append("listen %s %s:%s" %
     (service_name, service_ip, service_port))
     if service_options is not None:
         for service_option in service_options:
             service_config.append("    %s" % service_option.strip())
-    if server_entries is not None and type(server_entries) == type([]):
+    if server_entries is not None and isinstance(server_entries, list):
         for (server_name, server_ip, server_port, server_options) \
         in server_entries:
             server_line = "    server %s %s:%s" % \
@@ -281,19 +281,19 @@ def create_monitoring_stanza(service_name="haproxy_monitoring"):
         monitoring_password = pwgen()
     monitoring_config = []
     monitoring_config.append("mode http")
-    monitoring_config.append("acl allowed_cidr src %s" % \
+    monitoring_config.append("acl allowed_cidr src %s" %
     config_data['monitoring_allowed_cidr'])
     monitoring_config.append("block unless allowed_cidr")
     monitoring_config.append("stats enable")
     monitoring_config.append("stats uri /")
     monitoring_config.append("stats realm Haproxy\ Statistics")
-    monitoring_config.append("stats auth %s:%s" % \
+    monitoring_config.append("stats auth %s:%s" %
     (config_data['monitoring_username'], monitoring_password))
-    monitoring_config.append("stats refresh %d" % \
+    monitoring_config.append("stats refresh %d" %
     config_data['monitoring_stats_refresh'])
-    return(create_listen_stanza(service_name, \
-                                "0.0.0.0", \
-                                config_data['monitoring_port'], \
+    return(create_listen_stanza(service_name,
+                                "0.0.0.0",
+                                config_data['monitoring_port'],
                                 monitoring_config))
 
 
@@ -307,6 +307,7 @@ def get_config_services():
     services_list = yaml.load(config_data['services'])
     return(services_list)
 
+
 #------------------------------------------------------------------------------
 # get_config_service:   Convenience function that returns a dictionary
 #                       of the configuration of a given services configuration
@@ -317,6 +318,7 @@ def get_config_service(service_name=None):
         if service_item['service_name'] == service_name:
             return(service_item)
     return(None)
+
 
 #------------------------------------------------------------------------------
 # create_services:  Function that will create the services configuration
@@ -338,17 +340,18 @@ def create_services():
                                          'server_options': server_options}
 
     try:
-        relids = subprocess.Popen(['relation-ids','reverseproxy'], stdout=subprocess.PIPE)
-        for relid in [ x.strip() for x in relids.stdout]:
-            for unit in json.loads(\
+        relids = subprocess.Popen(['relation-ids', 'reverseproxy'],
+            stdout=subprocess.PIPE)
+        for relid in [x.strip() for x in relids.stdout]:
+            for unit in json.loads(
             subprocess.check_output(['relation-list', '--format=json',
                                      '-r', relid])):
                 relation_info = relation_get(None, unit, relid)
-                if type(relation_info) != type({}):
+                if not isinstance(relation_info, dict):
                     sys.exit(0)
                 # Mandatory switches ( hostname, port )
                 server_name = "%s__%s" % \
-                (relation_info['hostname'].replace('.', '_'), \
+                (relation_info['hostname'].replace('.', '_'),
                 relation_info['port'])
                 server_ip = relation_info['hostname']
                 server_port = relation_info['port']
@@ -357,24 +360,24 @@ def create_services():
                     if relation_info['service_name'] in services_dict:
                         service_name = relation_info['service_name']
                     else:
-                        subprocess.call([\
-                        'juju-log', 'service %s does not exists. ' % \
+                        subprocess.call([
+                        'juju-log', 'service %s does not exists. ' %
                         relation_info['service_name']])
                         sys.exit(1)
                 else:
                     service_name = services_list[0]['service_name']
-                if os.path.exists("%s/%s.is.proxy" % \
+                if os.path.exists("%s/%s.is.proxy" %
                 (default_haproxy_service_config_dir, service_name)):
                     if 'option forwardfor' not in service_options:
                         service_options.append("option forwardfor")
                 # Add the server entries
                 if not 'servers' in services_dict[service_name]:
                     services_dict[service_name]['servers'] = \
-                    [(server_name, server_ip, server_port, \
+                    [(server_name, server_ip, server_port,
                     services_dict[service_name]['server_options'])]
                 else:
-                    services_dict[service_name]['servers'].append((\
-                    server_name, server_ip, server_port, \
+                    services_dict[service_name]['servers'].append((
+                    server_name, server_ip, server_port,
                     services_dict[service_name]['server_options']))
     except Exception, e:
         subprocess.call(['juju-log', str(e)])
@@ -384,11 +387,11 @@ def create_services():
         server_entries = None
         if 'servers' in services_dict[service]:
             server_entries = services_dict[service]['servers']
-        with open("%s/%s.service" % (\
-        default_haproxy_service_config_dir, \
+        with open("%s/%s.service" % (
+        default_haproxy_service_config_dir,
         services_dict[service]['service_name']), 'w') as service_config:
-                service_config.write(\
-                create_listen_stanza(services_dict[service]['service_name'],\
+                service_config.write(
+                create_listen_stanza(services_dict[service]['service_name'],
                                      services_dict[service]['service_host'],
                                      services_dict[service]['service_port'],
                                      services_dict[service]['service_options'],
@@ -402,14 +405,14 @@ def create_services():
 def load_services(service_name=None):
     services = ''
     if service_name is not None:
-        if os.path.exists("%s/%s.service" % \
+        if os.path.exists("%s/%s.service" %
         (default_haproxy_service_config_dir, service_name)):
-            services = open("%s/%s.service" % \
+            services = open("%s/%s.service" %
             (default_haproxy_service_config_dir, service_name)).read()
         else:
             services = None
     else:
-        for service in glob.glob("%s/*.service" % \
+        for service in glob.glob("%s/*.service" %
             default_haproxy_service_config_dir):
             services += open(service).read()
             services += "\n\n"
@@ -424,17 +427,17 @@ def load_services(service_name=None):
 #------------------------------------------------------------------------------
 def remove_services(service_name=None):
     if service_name is not None:
-        if os.path.exists("%s/%s.service" % \
+        if os.path.exists("%s/%s.service" %
         (default_haproxy_service_config_dir, service_name)):
             try:
-                os.remove("%s/%s.service" % \
+                os.remove("%s/%s.service" %
                 (default_haproxy_service_config_dir, service_name))
                 return(True)
             except Exception, e:
                 subprocess.call(['juju-log', str(e)])
                 return(False)
     else:
-        for service in glob.glob("%s/*.service" % \
+        for service in glob.glob("%s/*.service" %
         default_haproxy_service_config_dir):
             try:
                 os.remove(service)
@@ -485,7 +488,7 @@ def service_haproxy(action=None, haproxy_config=default_haproxy_config):
     if action is None or haproxy_config is None:
         return(None)
     elif action == "check":
-        retVal = subprocess.call(\
+        retVal = subprocess.call(
         ['/usr/sbin/haproxy', '-f', haproxy_config, '-c'])
         if retVal == 1:
             return(False)
@@ -507,7 +510,7 @@ def service_haproxy(action=None, haproxy_config=default_haproxy_config):
 def install_hook():
     if not os.path.exists(default_haproxy_service_config_dir):
         os.mkdir(default_haproxy_service_config_dir, 0600)
-    return (apt_get_install("haproxy") == enable_haproxy() == True)
+    return ((apt_get_install("haproxy") == enable_haproxy()) is True)
 
 
 def config_changed():
@@ -522,9 +525,9 @@ def config_changed():
     remove_services()
     create_services()
     haproxy_services = load_services()
-    construct_haproxy_config(haproxy_globals, \
-                             haproxy_defaults, \
-                             haproxy_monitoring, \
+    construct_haproxy_config(haproxy_globals,
+                             haproxy_defaults,
+                             haproxy_monitoring,
                              haproxy_services)
 
     if service_haproxy("check"):
@@ -578,13 +581,14 @@ def website_interface(hook_name=None):
     # hostname
     if my_host == "localhost":
         my_host = socket.gethostname()
-    subprocess.call(['relation-set', 'port=%d' % \
-    my_port, 'hostname=%s' % my_host, 'all_services=%s' % config_data['services']])
+    subprocess.call(['relation-set', 'port=%d' %
+    my_port, 'hostname=%s' % my_host, 'all_services=%s' %
+    config_data['services']])
     if hook_name == "changed":
         if 'is-proxy' in relation_data:
             service_name = "%s__%d" % \
             (relation_data['hostname'], relation_data['port'])
-            open("%s/%s.is.proxy" % \
+            open("%s/%s.is.proxy" %
             (default_haproxy_service_config_dir, service_name), 'a').close()
 
 ###############################################################################
