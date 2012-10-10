@@ -506,11 +506,21 @@ def service_haproxy(action=None, haproxy_config=default_haproxy_config):
         else:
             return(False)
 
+### BASENODE BEGIN ####
+def basenode_init():
+    ## TODO(jjo): do normal/proper import, once basenode if pkg-friendly (negronjl)
+    sys.path.insert(0, 'basenode')
+    import basenode
+    subprocess.call(['juju-log', 'basenode_init: begin'])
+    basenode.basenode_init()
+    subprocess.call(['juju-log', 'basenode_init: end'])
+### BASENODE END   ####
 
 ###############################################################################
 # Hook functions
 ###############################################################################
 def install_hook():
+    basenode_init()
     if not os.path.exists(default_haproxy_service_config_dir):
         os.mkdir(default_haproxy_service_config_dir, 0600)
     return ((apt_get_install("haproxy") == enable_haproxy()) is True)
