@@ -8,15 +8,22 @@ NAGIOS_SERVICEGROUP=$(config-get nagios_context)
 NAGIOS_HOSTNAME="${NAGIOS_SERVICEGROUP}-${JUJU_UNIT_NAME//\//-}"
 
 cp files/nrpe-external-master/check_haproxy.sh /usr/local/lib/nagios/plugins/check_haproxy.sh
+cp files/nrpe-external-master/check_haproxy_queue_depth.sh /usr/local/lib/nagios/plugins/check_haproxy_queue_depth.sh
 chmod 555 /usr/local/lib/nagios/plugins/check_haproxy.sh
+chmod 555 /usr/local/lib/nagios/plugins/check_haproxy_queue_depth.sh
 [ ! -d /var/log/nagios ] && mkdir /var/log/nagios && chown -R nagios:nagios /var/log/nagios
 
-NRPE_CHECK="# check haproxy backends
+NRPE_CHECK_HAPROXY="# check haproxy backends
 command[check_haproxy]=/usr/local/lib/nagios/plugins/check_haproxy.sh"
 
-echo "$NRPE_CHECK" > /etc/nagios/nrpe.d/check_haproxy.cfg
+echo "$NRPE_CHECK_HAPROXY" > /etc/nagios/nrpe.d/check_haproxy.cfg
 
-NRPE_EXPORT="
+NRPE_CHECK_HAPROXY_QUEUE_DEPTH="# check haproxy queue depth
+command[check_haproxy_queue_depth]=/usr/local/lib/nagios/plugins/check_haproxy_queue_depth.sh"
+
+echo "$NRPE_CHECK_HAPROXY_QUEUE_DEPTH" > /etc/nagios/nrpe.d/check_haproxy_queue_depth.cfg
+
+NRPE_EXPORT_HAPROXY="
 define service {
     use                             active-service
     host_name                       ${NAGIOS_HOSTNAME}
@@ -26,6 +33,18 @@ define service {
 
 }"
 
-echo "$NRPE_EXPORT" > /var/lib/nagios/export/service__${NAGIOS_HOSTNAME}_check_haproxy.cfg
+echo "$NRPE_EXPORT_HAPROXY" > /var/lib/nagios/export/service__${NAGIOS_HOSTNAME}_check_haproxy.cfg
+
+NRPE_EXPORT_HAPROXY_QUEUE_DEPTH="
+define service {
+    use                             active-service
+    host_name                       ${NAGIOS_HOSTNAME}
+    service_description             ${NAGIOS_HOSTNAME} Check HAProxy Queue Depth
+    check_command                   check_nrpe!check_haproxy_queue_depth
+    servicegroups                   ${NAGIOS_SERVICEGROUP}
+
+}"
+
+echo "$NRPE_EXPORT_HAPROXY_QUEUE_DEPTH" > /var/lib/nagios/export/service__${NAGIOS_HOSTNAME}_check_haproxy_queue_depth.cfg
 
 /etc/init.d/nagios-nrpe-server reload
