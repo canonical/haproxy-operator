@@ -1,0 +1,31 @@
+#!/bin/bash
+set -eux
+
+# XXX: We should also be listing the listen stanzas in the configs and then
+# doing a queue depth check on all of them
+
+NAGIOS_SERVICEGROUP=$(config-get nagios_context)
+NAGIOS_HOSTNAME="${NAGIOS_SERVICEGROUP}-${JUJU_UNIT_NAME//\//-}"
+
+cp files/nrpe-external-master/check_haproxy.sh /usr/local/lib/nagios/plugins/check_haproxy.sh
+chmod 555 /usr/local/lib/nagios/plugins/check_haproxy.sh
+[ ! -d /var/log/nagios ] && mkdir /var/log/nagios && chown -R nagios:nagios /var/log/nagios
+
+NRPE_CHECK="# check haproxy backends
+command[check_haproxy]=/usr/local/lib/nagios/plugins/check_haproxy.sh"
+
+echo "$NRPE_CHECK" > /etc/nagios/nrpe.d/check_haproxy.cfg
+
+NRPE_EXPORT="
+define service {
+    use                             active-service
+    host_name                       ${NAGIOS_HOSTNAME}
+    service_description             ${NAGIOS_HOSTNAME} Check HAProxy
+    check_command                   check_nrpe!check_haproxy
+    servicegroups                   ${NAGIOS_SERVICEGROUP}
+
+}"
+
+echo "$NRPE_EXPORT" > /var/lib/nagios/export/service__${NAGIOS_HOSTNAME}_check_haproxy.cfg
+
+/etc/init.d/nagios-nrpe-server reload
