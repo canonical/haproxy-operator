@@ -12,7 +12,7 @@ MAXQthrsh=100
 
 AUTH=$(grep -r "stats auth" /etc/haproxy | head -1 | awk '{print $4}')
 
-HAPROXYSTATS=$(wget -O- "http://${AUTH}@localhost:10000/;csv;norefresh" -q)
+HAPROXYSTATS=$(/usr/lib/nagios/plugins/check_http -a ${AUTH} -I 127.0.0.1 -p 10000 -v)
 
 for BACKEND in $(echo $HAPROXYSTATS| xargs -n1 | grep BACKEND | awk -F , '{print $1}')
 do
