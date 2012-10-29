@@ -186,7 +186,7 @@ def get_service_ports(haproxy_config_file="/etc/haproxy/haproxy.cfg"):
 def open_port(port=None, protocol="TCP"):
     if port is None:
         return(None)
-    return(subprocess.call(['/usr/bin/open-port', "%d/%s" %
+    return(subprocess.call(['open-port', "%d/%s" %
     (int(port), protocol)]))
 
 
@@ -197,7 +197,7 @@ def open_port(port=None, protocol="TCP"):
 def close_port(port=None, protocol="TCP"):
     if port is None:
         return(None)
-    return(subprocess.call(['/usr/bin/close-port', "%d/%s" %
+    return(subprocess.call(['close-port', "%d/%s" %
     (int(port), protocol)]))
 
 
