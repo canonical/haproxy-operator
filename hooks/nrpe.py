@@ -100,7 +100,7 @@ define service {{
         command = shlex.split(check_cmd)
         for path in search_path:
             if os.path.exists(os.path.join(path,command[0])):
-                return os.path.join(path, command[0]) + " ".join(command[1:])
+                return os.path.join(path, command[0]) + " " + " ".join(command[1:])
         subprocess.call(['juju-log', 'Check command not found: {}'.format(command[0])])
         return ''
 
