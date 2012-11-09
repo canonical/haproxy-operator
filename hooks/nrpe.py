@@ -54,18 +54,20 @@ import shlex
 #        (...)
 #        update_nrpe_config()
 
+class ConfigurationError(Exception):
+    '''An error interacting with the Juju config'''
+    pass
 def config_get(scope=None):
+    '''Return the Juju config as a dictionary'''
     try:
         config_cmd_line = ['config-get']
         if scope is not None:
             config_cmd_line.append(scope)
         config_cmd_line.append('--format=json')
-        config_data = json.loads(subprocess.check_output(config_cmd_line))
-    except Exception, e:
-        subprocess.call(['juju-log', str(e)])
-        config_data = None
-    finally:
-        return(config_data)
+        return json.loads(subprocess.check_output(config_cmd_line))
+    except (ValueError, OSError, subprocess.CalledProcessError) as error:
+        subprocess.call(['juju-log', str(error)])
+        raise ConfigurationError(str(error))
 
 class CheckException(Exception): pass
 class Check(object):
