@@ -556,7 +556,8 @@ def reverseproxy_interface(hook_name=None):
         return(None)
     if hook_name == "changed":
         config_changed()
-
+    if hook_name=="departed":
+        config_changed()
 
 def website_interface(hook_name=None):
     if hook_name is None:
@@ -609,6 +610,8 @@ elif hook_name == "reverseproxy-relation-broken":
     config_changed()
 elif hook_name == "reverseproxy-relation-changed":
     reverseproxy_interface("changed")
+elif hook_name == "reverseproxy-relation-departed":
+    reverseproxy_interface("departed")
 elif hook_name == "website-relation-joined":
     website_interface("joined")
 elif hook_name == "website-relation-changed":
