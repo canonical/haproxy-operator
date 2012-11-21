@@ -507,20 +507,14 @@ def service_haproxy(action=None, haproxy_config=default_haproxy_config):
         else:
             return(False)
 
-### BASENODE BEGIN ####
-def basenode_setup():
-    subprocess.call(['juju-log', 'basenode_setup: begin'])
-    subprocess.call(['sh', '-c', 'cd basenode && python setup.py install'])
-    import basenode
-    basenode.basenode_init()
-    subprocess.call(['juju-log', 'basenode_setup: end'])
-### BASENODE END   ####
 
 ###############################################################################
 # Hook functions
 ###############################################################################
 def install_hook():
-    basenode_setup()
+    for f in glob.glob('exec.d/*/charm-pre-install'):
+        if os.path.isfile(f) and os.access(f, os.X_OK):
+            subprocess.check_call(['sh', '-c', f])
     if not os.path.exists(default_haproxy_service_config_dir):
         os.mkdir(default_haproxy_service_config_dir, 0600)
     return ((apt_get_install("haproxy") == enable_haproxy()) is True)
