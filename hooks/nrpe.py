@@ -79,7 +79,7 @@ class Check(object):
 define service {{
     use                             active-service
     host_name                       {nagios_hostname}
-    service_description             {nagios_hostname}({shortname}) {description}
+    service_description             {nagios_hostname} {shortname} {description}
     check_command                   check_nrpe!check_{shortname}
     servicegroups                   {nagios_servicegroup}
 }}
