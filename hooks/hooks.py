@@ -10,6 +10,7 @@ import string
 import subprocess
 import sys
 import yaml
+import nrpe
 
 
 ###############################################################################
@@ -511,6 +512,9 @@ def service_haproxy(action=None, haproxy_config=default_haproxy_config):
 # Hook functions
 ###############################################################################
 def install_hook():
+    for f in glob.glob('exec.d/*/charm-pre-install'):
+        if os.path.isfile(f) and os.access(f, os.X_OK):
+            subprocess.check_call(['sh', '-c', f])
     if not os.path.exists(default_haproxy_service_config_dir):
         os.mkdir(default_haproxy_service_config_dir, 0600)
     return ((apt_get_install("haproxy") == enable_haproxy()) is True)
@@ -595,6 +599,12 @@ def website_interface(hook_name=None):
             open("%s/%s.is.proxy" %
             (default_haproxy_service_config_dir, service_name), 'a').close()
 
+def update_nrpe_config():
+    nrpe_compat = nrpe.NRPE()
+    nrpe_compat.add_check('haproxy','Check HAProxy', 'check_haproxy.sh')
+    nrpe_compat.add_check('haproxy_queue','Check HAProxy queue depth', 'check_haproxy_queue_depth.sh')
+    nrpe_compat.write()
+
 ###############################################################################
 # Main section
 ###############################################################################
@@ -602,6 +612,7 @@ if hook_name == "install":
     install_hook()
 elif hook_name == "config-changed":
     config_changed()
+    update_nrpe_config()
 elif hook_name == "start":
     start_hook()
 elif hook_name == "stop":
@@ -616,6 +627,8 @@ elif hook_name == "website-relation-joined":
     website_interface("joined")
 elif hook_name == "website-relation-changed":
     website_interface("changed")
+elif hook_name == "nrpe-external-master-relation-changed":
+    update_nrpe_config()
 else:
     print "Unknown hook"
     sys.exit(1)

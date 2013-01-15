@@ -106,3 +106,13 @@ options:
         before the first variable, service_name, as above. Service options is a
         comma separated list, server options will be appended as a string to
         the individual server lines for a given listen stanza.
+  nagios_context:
+    default: "juju"
+    type: string
+    description: |
+        Used by the nrpe-external-master subordinate charm.
+        A string that will be prepended to instance name to set the host name
+        in nagios. So for instance the hostname would be something like:
+            juju-postgresql-0
+        If you're running multiple environments with the same services in them
+        this allows you to differentiate between them.
