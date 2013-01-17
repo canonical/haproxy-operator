@@ -19,11 +19,16 @@ import nrpe
 default_haproxy_config_dir = "/etc/haproxy"
 default_haproxy_config = "%s/haproxy.cfg" % default_haproxy_config_dir
 default_haproxy_service_config_dir = "/var/run/haproxy"
-hook_name = os.path.basename(sys.argv[0])
 
 ###############################################################################
 # Supporting functions
 ###############################################################################
+
+#------------------------------------------------------------------------------
+# log:  Log a message via juju's logging mechanism.
+#------------------------------------------------------------------------------
+def log(msg):
+    subprocess.call(["juju-log", msg])
 
 
 #------------------------------------------------------------------------------
@@ -40,7 +45,7 @@ def config_get(scope=None):
         config_cmd_line.append('--format=json')
         config_data = json.loads(subprocess.check_output(config_cmd_line))
     except Exception, e:
-        subprocess.call(['juju-log', str(e)])
+        log(str(e))
         config_data = None
     finally:
         return(config_data)
@@ -68,10 +73,52 @@ def relation_get(scope=None, unit_name=None, relation_id=None):
             relation_cmd_line.append(unit_name)
         relation_data = json.loads(subprocess.check_output(relation_cmd_line))
     except Exception, e:
-        subprocess.call(['juju-log', str(e)])
+        log(str(e))
         relation_data = None
     finally:
         return(relation_data)
+
+
+def get_relation_ids(relation_name=None):
+    try:
+        relation_cmd_line = ['relation-ids', '--format=json']
+        if relation_name is not None:
+            relation_cmd_line.append(relation_name)
+        log('Calling: %s' % relation_cmd_line)
+        relation_ids = json.loads(subprocess.check_output(relation_cmd_line))
+    except Exception:
+        relation_ids = None
+    finally:
+        return(relation_ids)
+
+
+def get_relation_list(relation_id=None):
+    try:
+        relation_cmd_line = ['relation-list', '--format=json']
+        if relation_id is not None:
+            relation_cmd_line.extend(('-r', relation_id))
+        log('Calling: %s' % relation_cmd_line)
+        relations = json.loads(subprocess.check_output(relation_cmd_line))
+    except Exception:
+        relations = None
+    finally:
+        return(relations)
+
+
+def get_relation_data(relation_name=None):
+    relation_ids = get_relation_ids(relation_name)
+    if relation_ids is None:
+        return()
+    try:
+        all_relation_data = {}
+        for rid in relation_ids:
+            units = get_relation_list(relation_id=rid)
+            for unit in units:
+                all_relation_data[unit.replace('/', '-')] = relation_get(relation_id=rid, unit_name=unit)
+    except Exception:
+        all_relation_data = None
+    finally:
+        return(all_relation_data)
 
 
 #------------------------------------------------------------------------------
@@ -299,26 +346,36 @@ def create_monitoring_stanza(service_name="haproxy_monitoring"):
 
 
 #------------------------------------------------------------------------------
-# get_config_services:  Convenience function that returns a list
-#                       of dictionary entries containing all of the services
-#                       configuration
+# get_config_services:  Convenience function that returns a mapping containing
+#                       all of the services configuration
 #------------------------------------------------------------------------------
 def get_config_services():
     config_data = config_get()
-    services_list = yaml.load(config_data['services'])
-    return(services_list)
+    services = {}
+    for service_config in yaml.load(config_data['services']):
+        if not services:
+            # 'None' is used as a marker for the first service defined, which
+            # is used as the default service if a proxied server doesn't
+            # specify which service it is bound to.
+            services[None] = service_config
+        services[service_config["service_name"]] = service_config
+    return services
 
 
 #------------------------------------------------------------------------------
 # get_config_service:   Convenience function that returns a dictionary
-#                       of the configuration of a given services configuration
+#                       of the configuration of a given service's configuration
 #------------------------------------------------------------------------------
 def get_config_service(service_name=None):
-    services_list = get_config_services()
-    for service_item in services_list:
-        if service_item['service_name'] == service_name:
-            return(service_item)
-    return(None)
+    return get_config_services().get(service_name, None)
+
+
+def is_proxy(service_name):
+    if os.path.exists(
+        os.path.join((default_haproxy_service_config_dir,
+                      "%s.is.proxy" % service_name))):
+        return True
+    return False
 
 
 #------------------------------------------------------------------------------
@@ -326,81 +383,84 @@ def get_config_service(service_name=None):
 #                   from the config data and/or relation information
 #------------------------------------------------------------------------------
 def create_services():
-    services_list = get_config_services()
-    services_dict = {}
-    for service_item in services_list:
-        service_name = service_item['service_name']
-        service_host = service_item['service_host']
-        service_port = service_item['service_port']
-        service_options = service_item['service_options']
-        server_options = service_item['server_options']
-        services_dict[service_name] = {'service_name': service_name,
-                                         'service_host': service_host,
-                                         'service_port': service_port,
-                                         'service_options': service_options,
-                                         'server_options': server_options}
+    services_dict = get_config_services()
+    relation_data = get_relation_data(relation_name="reverseproxy")
 
-    try:
-        relids = subprocess.Popen(['relation-ids', 'reverseproxy'],
-            stdout=subprocess.PIPE)
-        for relid in [x.strip() for x in relids.stdout]:
-            for unit in json.loads(
-            subprocess.check_output(['relation-list', '--format=json',
-                                     '-r', relid])):
-                relation_info = relation_get(None, unit, relid)
-                unit_name = unit.rpartition('/')[0]
-                if not isinstance(relation_info, dict):
-                    sys.exit(0)
-                # Mandatory switches ( hostname, port )
-                server_name = "%s__%s" % \
-                (relation_info['hostname'].replace('.', '_'),
-                relation_info['port'])
-                server_ip = relation_info['hostname']
-                server_port = relation_info['port']
-                # Optional switches ( service_name )
-                if 'service_name' in relation_info:
-                    if relation_info['service_name'] in services_dict:
-                        service_name = relation_info['service_name']
-                    else:
-                        subprocess.call([
-                        'juju-log', 'service %s does not exists. ' %
-                        relation_info['service_name']])
-                        sys.exit(1)
-                elif unit_name in services_dict:
-                    service_name = unit_name
-                else:
-                    service_name = services_list[0]['service_name']
-                if os.path.exists("%s/%s.is.proxy" %
-                (default_haproxy_service_config_dir, service_name)):
-                    if 'option forwardfor' not in service_options:
-                        service_options.append("option forwardfor")
-                # Add the server entries
-                if not 'servers' in services_dict[service_name]:
-                    services_dict[service_name]['servers'] = \
-                    [(server_name, server_ip, server_port,
-                    services_dict[service_name]['server_options'])]
-                else:
-                    services_dict[service_name]['servers'].append((
-                    server_name, server_ip, server_port,
-                    services_dict[service_name]['server_options']))
-    except Exception, e:
-        subprocess.call(['juju-log', str(e)])
+    if relation_data is None or len(relation_data) == 0:
+        log("No relation data, exiting.")
+        return
+
+    servers_added = False
+    for unit in sorted(relation_data.keys()):
+        relation_info = relation_data[unit]
+        unit_name = unit.rpartition('-')[0]
+
+        relation_ok = True
+        for required in ("port", "private-address", "hostname"):
+            if not required in relation_info:
+                log("No %s in relation data for '%s', skipping." %
+                    (required, unit))
+                relation_ok = False
+                break
+
+        if not relation_ok:
+            continue
+
+        # Mandatory switches ( hostname, port )
+        hostname = relation_info['hostname']
+        host = relation_info['private-address']
+        port = relation_info['port']
+        server_name = ("%s__%s" % (hostname.replace('.', '_'), port))
+
+        # Optional switches ( service_name )
+        if 'service_name' in relation_info:
+            if relation_info['service_name'] in services_dict:
+                service_name = relation_info['service_name']
+            else:
+                log("Service '%s' does not exist." %
+                    relation_info['service_name'])
+                continue
+        elif unit_name in services_dict:
+            service_name = unit_name
+        else:
+            service_name = services_dict[None]["service_name"]
+
+        service = services_dict[service_name]
+        if (is_proxy(service_name) and
+            "option forwardfor" not in service["service_options"]):
+            service["service_options"].append("option forwardfor")
+
+        # Add the server entries
+        servers = service.setdefault("servers", [])
+        servers.append((server_name, host, port,
+                        services_dict[service_name]['server_options']))
+        servers_added = True
+
+    if not servers_added:
+        return
+
+    write_service_config(services_dict)
+    return services_dict
+
+
+def write_service_config(services_dict):
     # Construct the new haproxy.cfg file
     for service in services_dict:
         print "Service: ", service
         server_entries = None
         if 'servers' in services_dict[service]:
             server_entries = services_dict[service]['servers']
-        with open("%s/%s.service" % (
-        default_haproxy_service_config_dir,
-        services_dict[service]['service_name']), 'w') as service_config:
-                service_config.write(
-                create_listen_stanza(services_dict[service]['service_name'],
-                                     services_dict[service]['service_host'],
-                                     services_dict[service]['service_port'],
-                                     services_dict[service]['service_options'],
-                                     server_entries))
 
+        service_config = services_dict[service]
+        service_name = service_config["service_name"]
+        with open(os.path.join(default_haproxy_service_config_dir,
+                               "%s.service" % service_name), 'w') as config:
+            config.write(create_listen_stanza(
+                service_name,
+                service_config['service_host'],
+                service_config['service_port'],
+                service_config['service_options'],
+                server_entries))
 
 #------------------------------------------------------------------------------
 # load_services: Convenience function that load the service snippet
@@ -438,7 +498,7 @@ def remove_services(service_name=None):
                 (default_haproxy_service_config_dir, service_name))
                 return(True)
             except Exception, e:
-                subprocess.call(['juju-log', str(e)])
+                log(str(e))
                 return(False)
     else:
         for service in glob.glob("%s/*.service" %
@@ -446,7 +506,7 @@ def remove_services(service_name=None):
             try:
                 os.remove(service)
             except Exception, e:
-                subprocess.call(['juju-log', str(e)])
+                log(str(e))
                 pass
         return(True)
 
@@ -589,14 +649,14 @@ def website_interface(hook_name=None):
     if my_host == "localhost":
         my_host = socket.gethostname()
     subprocess.call(['relation-set', 'port=%d' %
-    my_port, 'hostname=%s' % my_host, 'all_services=%s' %
-    config_data['services']])
+                     my_port, 'hostname=%s' % my_host, 'all_services=%s' %
+                     config_data['services']])
     if hook_name == "changed":
         if 'is-proxy' in relation_data:
-            service_name = "%s__%d" % \
-            (relation_data['hostname'], relation_data['port'])
-            open("%s/%s.is.proxy" %
-            (default_haproxy_service_config_dir, service_name), 'a').close()
+            service_name = ("%s__%d" % (relation_data['hostname'],
+                                        relation_data['port']))
+            open("%s/%s.is.proxy" % (default_haproxy_service_config_dir,
+                                     service_name), 'a').close()
 
 def update_nrpe_config():
     nrpe_compat = nrpe.NRPE()
@@ -607,25 +667,31 @@ def update_nrpe_config():
 ###############################################################################
 # Main section
 ###############################################################################
-if hook_name == "install":
-    install_hook()
-elif hook_name == "config-changed":
-    config_changed()
-    update_nrpe_config()
-elif hook_name == "start":
-    start_hook()
-elif hook_name == "stop":
-    stop_hook()
-elif hook_name == "reverseproxy-relation-broken":
-    config_changed()
-elif hook_name == "reverseproxy-relation-changed":
-    reverseproxy_interface("changed")
-elif hook_name == "website-relation-joined":
-    website_interface("joined")
-elif hook_name == "website-relation-changed":
-    website_interface("changed")
-elif hook_name == "nrpe-external-master-relation-changed":
-    update_nrpe_config()
-else:
-    print "Unknown hook"
-    sys.exit(1)
+
+def main(hook_name):
+    if hook_name == "install":
+        install_hook()
+    elif hook_name == "config-changed":
+        config_changed()
+        update_nrpe_config()
+    elif hook_name == "start":
+        start_hook()
+    elif hook_name == "stop":
+        stop_hook()
+    elif hook_name == "reverseproxy-relation-broken":
+        config_changed()
+    elif hook_name == "reverseproxy-relation-changed":
+        reverseproxy_interface("changed")
+    elif hook_name == "website-relation-joined":
+        website_interface("joined")
+    elif hook_name == "website-relation-changed":
+        website_interface("changed")
+    elif hook_name == "nrpe-external-master-relation-changed":
+        update_nrpe_config()
+    else:
+        print "Unknown hook"
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main(os.path.basename(sys.argv[0]))
+    
