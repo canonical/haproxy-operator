@@ -64,3 +64,45 @@ class ReverseProxyRelationTest(TestCase):
         self.log.assert_called_once_with(
             "No hostname in relation data for 'foo', skipping.")
         self.write_service_config.assert_not_called()
+
+
+class HelpersTest(TestCase):
+    def test_log(self):
+        with patch('subprocess.call') as call:
+            msg = 'some message'
+
+            hooks.log(msg)
+
+            call.assert_called_with(["juju-log", msg])
+
+    def test_gets_config(self):
+        json_string = '{"foo": "BAR"}'
+        with patch('subprocess.check_output') as check_output:
+            check_output.return_value = json_string
+
+            result = hooks.config_get()
+
+            self.assertEqual(result['foo'], 'BAR')
+            check_output.assert_called_with(['config-get', '--format=json'])
+
+    def test_gets_config_with_scope(self):
+        json_string = '{"foo": "BAR"}'
+        with patch('subprocess.check_output') as check_output:
+            check_output.return_value = json_string
+
+            result = hooks.config_get(scope='baz')
+
+            self.assertEqual(result['foo'], 'BAR')
+            check_output.assert_called_with(['config-get', 'baz',
+                                             '--format=json'])
+
+    @patch('subprocess.check_output')
+    @patch('hooks.log')
+    def test_logs_and_returns_none_if_config_get_fails(self, log,
+                                                       check_output):
+        check_output.side_effect = RuntimeError()
+
+        result = hooks.config_get()
+
+        self.assertTrue(log.called)
+        self.assertIsNone(result)
