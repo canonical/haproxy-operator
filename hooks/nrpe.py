@@ -8,7 +8,7 @@ import shlex
 
 # This module adds compatibility with the nrpe_external_master
 # subordinate charm. To use it in your charm:
-# 
+#
 # 1. Update metadata.yaml
 #
 #   provides:
@@ -16,7 +16,7 @@ import shlex
 #     nrpe-external-master:
 #       interface: nrpe-external-master
 #           scope: container
-# 
+#
 # 2. Add the following to config.yaml
 #
 #    nagios_context:
@@ -54,9 +54,12 @@ import shlex
 #        (...)
 #        update_nrpe_config()
 
+
 class ConfigurationError(Exception):
     '''An error interacting with the Juju config'''
     pass
+
+
 def config_get(scope=None):
     '''Return the Juju config as a dictionary'''
     try:
@@ -69,7 +72,11 @@ def config_get(scope=None):
         subprocess.call(['juju-log', str(error)])
         raise ConfigurationError(str(error))
 
-class CheckException(Exception): pass
+
+class CheckException(Exception):
+    pass
+
+
 class Check(object):
     shortname_re = '[A-Za-z0-9-_]*'
     service_template = """
@@ -84,11 +91,13 @@ define service {{
     servicegroups                   {nagios_servicegroup}
 }}
 """
+
     def __init__(self, shortname, description, check_cmd):
         super(Check, self).__init__()
         # XXX: could be better to calculate this from the service name
         if not re.match(self.shortname_re, shortname):
-            raise CheckException("shortname must match {}".format(Check.shortname_re))
+            raise CheckException("shortname must match {}".format(
+                Check.shortname_re))
         self.shortname = shortname
         self.description = description
         self.check_cmd = self._locate_cmd(check_cmd)
@@ -96,14 +105,17 @@ define service {{
     def _locate_cmd(self, check_cmd):
         search_path = (
             '/',
-            os.path.join(os.environ['CHARM_DIR'], 'files/nrpe-external-master'),
+            os.path.join(os.environ['CHARM_DIR'],
+                         'files/nrpe-external-master'),
             '/usr/lib/nagios/plugins',
         )
         command = shlex.split(check_cmd)
         for path in search_path:
-            if os.path.exists(os.path.join(path,command[0])):
-                return os.path.join(path, command[0]) + " " + " ".join(command[1:])
-        subprocess.call(['juju-log', 'Check command not found: {}'.format(command[0])])
+            if os.path.exists(os.path.join(path, command[0])):
+                return os.path.join(path, command[0]) + " " + " ".join(
+                    command[1:])
+        subprocess.call(['juju-log', 'Check command not found: {}'.format(
+            command[0])])
         return ''
 
     def write(self, nagios_context, hostname):
@@ -123,7 +135,8 @@ define service {{
         with open(nrpe_service_file, 'w') as nrpe_service_config:
             nrpe_service_config.write(str(nrpe_service_text))
 
-        nrpe_check_file = '/etc/nagios/nrpe.d/check_{}.cfg'.format(self.shortname)
+        nrpe_check_file = '/etc/nagios/nrpe.d/check_{}.cfg'.format(
+            self.shortname)
         with open(nrpe_check_file, 'w') as nrpe_check_config:
             nrpe_check_config.write("# check {}\n".format(self.shortname))
             nrpe_check_config.write("command[check_{}]={}\n".format(
@@ -132,10 +145,12 @@ define service {{
     def run(self):
         subprocess.call(self.check_cmd)
 
+
 class NRPE(object):
     nagios_logdir = '/var/log/nagios'
     nagios_exportdir = '/var/lib/nagios/export'
     nrpe_confdir = '/etc/nagios/nrpe.d'
+
     def __init__(self):
         super(NRPE, self).__init__()
         self.config = config_get()
@@ -145,18 +160,22 @@ class NRPE(object):
         self.checks = []
 
     def add_check(self, *args, **kwargs):
-        self.checks.append( Check(*args, **kwargs) )
+        self.checks.append(Check(*args, **kwargs))
 
     def write(self):
         try:
             nagios_uid = pwd.getpwnam('nagios').pw_uid
             nagios_gid = grp.getgrnam('nagios').gr_gid
         except:
-            subprocess.call(['juju-log', "Nagios user not set up, nrpe checks not updated"])
+            subprocess.call(
+                ['juju-log',
+                 "Nagios user not set up, nrpe checks not updated"])
             return
 
         if not os.path.exists(NRPE.nagios_exportdir):
-            subprocess.call(['juju-log', 'Exiting as {} is not accessible'.format(NRPE.nagios_exportdir)])
+            subprocess.call(['juju-log',
+                             'Exiting as {} is not accessible'.format(
+                                 NRPE.nagios_exportdir)])
             return
 
         if not os.path.exists(NRPE.nagios_logdir):

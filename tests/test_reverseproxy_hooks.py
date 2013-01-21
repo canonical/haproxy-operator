@@ -1,5 +1,3 @@
-import yaml
-
 from testtools import TestCase
 from mock import patch
 
@@ -26,7 +24,6 @@ class ReverseProxyRelationTest(TestCase):
         write_service_config = patch.object(hooks, "write_service_config")
         self.write_service_config = write_service_config.start()
         self.addCleanup(write_service_config.stop)
-        
 
     def test_relation_data_returns_none(self):
         self.get_relation_data.return_value = None
@@ -39,11 +36,11 @@ class ReverseProxyRelationTest(TestCase):
         self.assertIs(None, hooks.create_services())
         self.log.assert_called_once_with("No relation data, exiting.")
         self.write_service_config.assert_not_called()
-        
+
     def test_no_port_in_relation_data(self):
         self.get_relation_data.return_value = {
             "foo": {"private-address": "1.2.3.4"},
-            }
+        }
         self.assertIs(None, hooks.create_services())
         self.log.assert_called_once_with(
             "No port in relation data for 'foo', skipping.")
@@ -52,7 +49,7 @@ class ReverseProxyRelationTest(TestCase):
     def test_no_private_address_in_relation_data(self):
         self.get_relation_data.return_value = {
             "foo": {"port": 4242},
-            }
+        }
         self.assertIs(None, hooks.create_services())
         self.log.assert_called_once_with(
             "No private-address in relation data for 'foo', skipping.")
@@ -62,7 +59,7 @@ class ReverseProxyRelationTest(TestCase):
         self.get_relation_data.return_value = {
             "foo": {"port": 4242,
                     "private-address": "1.2.3.4"},
-            }
+        }
         self.assertIs(None, hooks.create_services())
         self.log.assert_called_once_with(
             "No hostname in relation data for 'foo', skipping.")

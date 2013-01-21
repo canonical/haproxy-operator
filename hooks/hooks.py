@@ -24,6 +24,7 @@ default_haproxy_service_config_dir = "/var/run/haproxy"
 # Supporting functions
 ###############################################################################
 
+
 #------------------------------------------------------------------------------
 # log:  Log a message via juju's logging mechanism.
 #------------------------------------------------------------------------------
@@ -114,7 +115,8 @@ def get_relation_data(relation_name=None):
         for rid in relation_ids:
             units = get_relation_list(relation_id=rid)
             for unit in units:
-                all_relation_data[unit.replace('/', '-')] = relation_get(relation_id=rid, unit_name=unit)
+                all_relation_data[unit.replace('/', '-')] = relation_get(
+                    relation_id=rid, unit_name=unit)
     except Exception:
         all_relation_data = None
     finally:
@@ -137,8 +139,8 @@ def apt_get_install(packages=None):
 #------------------------------------------------------------------------------
 def enable_haproxy():
     default_haproxy = "/etc/default/haproxy"
-    enabled_haproxy = \
-    open(default_haproxy).read().replace('ENABLED=0', 'ENABLED=1')
+    enabled_haproxy = open(default_haproxy).read().replace('ENABLED=0',
+                                                           'ENABLED=1')
     with open(default_haproxy, 'w') as f:
         f.write(enabled_haproxy)
 
@@ -161,7 +163,7 @@ def create_haproxy_globals():
     if config_data['global_quiet'] is True:
         haproxy_globals.append("    quiet")
     haproxy_globals.append("    spread-checks %d" %
-    config_data['global_spread_checks'])
+                           config_data['global_spread_checks'])
     return('\n'.join(haproxy_globals))
 
 
@@ -235,7 +237,7 @@ def open_port(port=None, protocol="TCP"):
     if port is None:
         return(None)
     return(subprocess.call(['/usr/bin/open-port', "%d/%s" %
-    (int(port), protocol)]))
+                            (int(port), protocol)]))
 
 
 #------------------------------------------------------------------------------
@@ -246,7 +248,7 @@ def close_port(port=None, protocol="TCP"):
     if port is None:
         return(None)
     return(subprocess.call(['/usr/bin/close-port', "%d/%s" %
-    (int(port), protocol)]))
+                            (int(port), protocol)]))
 
 
 #------------------------------------------------------------------------------
@@ -272,9 +274,9 @@ def update_service_ports(old_service_ports=None, new_service_ports=None):
 #------------------------------------------------------------------------------
 def pwgen(pwd_length=20):
     alphanumeric_chars = [l for l in (string.letters + string.digits)
-    if l not in 'Iil0oO1']
+                          if l not in 'Iil0oO1']
     random_chars = [random.choice(alphanumeric_chars)
-    for i in range(pwd_length)]
+                    for i in range(pwd_length)]
     return(''.join(random_chars))
 
 
@@ -298,15 +300,15 @@ def create_listen_stanza(service_name=None, service_ip=None,
         return(None)
     service_config = []
     service_config.append("listen %s %s:%s" %
-    (service_name, service_ip, service_port))
+                          (service_name, service_ip, service_port))
     if service_options is not None:
         for service_option in service_options:
             service_config.append("    %s" % service_option.strip())
     if server_entries is not None and isinstance(server_entries, list):
-        for (server_name, server_ip, server_port, server_options) \
-        in server_entries:
+        for (server_name, server_ip, server_port,
+             server_options) in server_entries:
             server_line = "    server %s %s:%s" % \
-            (server_name, server_ip, server_port)
+                (server_name, server_ip, server_port)
             if server_options is not None:
                 server_line += " %s" % server_options
             service_config.append(server_line)
@@ -324,21 +326,22 @@ def create_monitoring_stanza(service_name="haproxy_monitoring"):
     monitoring_password = get_monitoring_password()
     if config_data['monitoring_password'] != "changeme":
         monitoring_password = config_data['monitoring_password']
-    elif monitoring_password is None and \
-    config_data['monitoring_password'] == "changeme":
+    elif (monitoring_password is None and
+          config_data['monitoring_password'] == "changeme"):
         monitoring_password = pwgen()
     monitoring_config = []
     monitoring_config.append("mode http")
     monitoring_config.append("acl allowed_cidr src %s" %
-    config_data['monitoring_allowed_cidr'])
+                             config_data['monitoring_allowed_cidr'])
     monitoring_config.append("block unless allowed_cidr")
     monitoring_config.append("stats enable")
     monitoring_config.append("stats uri /")
     monitoring_config.append("stats realm Haproxy\ Statistics")
     monitoring_config.append("stats auth %s:%s" %
-    (config_data['monitoring_username'], monitoring_password))
+                             (config_data['monitoring_username'],
+                              monitoring_password))
     monitoring_config.append("stats refresh %d" %
-    config_data['monitoring_stats_refresh'])
+                             config_data['monitoring_stats_refresh'])
     return(create_listen_stanza(service_name,
                                 "0.0.0.0",
                                 config_data['monitoring_port'],
@@ -426,8 +429,8 @@ def create_services():
             service_name = services_dict[None]["service_name"]
 
         service = services_dict[service_name]
-        if (is_proxy(service_name) and
-            "option forwardfor" not in service["service_options"]):
+        if is_proxy(service_name) and ("option forwardfor"
+                                       not in service["service_options"]):
             service["service_options"].append("option forwardfor")
 
         # Add the server entries
@@ -462,6 +465,7 @@ def write_service_config(services_dict):
                 service_config['service_options'],
                 server_entries))
 
+
 #------------------------------------------------------------------------------
 # load_services: Convenience function that load the service snippet
 #                configuration from the filesystem.
@@ -470,14 +474,15 @@ def load_services(service_name=None):
     services = ''
     if service_name is not None:
         if os.path.exists("%s/%s.service" %
-        (default_haproxy_service_config_dir, service_name)):
+                          (default_haproxy_service_config_dir, service_name)):
             services = open("%s/%s.service" %
-            (default_haproxy_service_config_dir, service_name)).read()
+                            (default_haproxy_service_config_dir,
+                             service_name)).read()
         else:
             services = None
     else:
         for service in glob.glob("%s/*.service" %
-            default_haproxy_service_config_dir):
+                                 default_haproxy_service_config_dir):
             services += open(service).read()
             services += "\n\n"
     return(services)
@@ -492,17 +497,17 @@ def load_services(service_name=None):
 def remove_services(service_name=None):
     if service_name is not None:
         if os.path.exists("%s/%s.service" %
-        (default_haproxy_service_config_dir, service_name)):
+                          (default_haproxy_service_config_dir, service_name)):
             try:
                 os.remove("%s/%s.service" %
-                (default_haproxy_service_config_dir, service_name))
+                          (default_haproxy_service_config_dir, service_name))
                 return(True)
             except Exception, e:
                 log(str(e))
                 return(False)
     else:
         for service in glob.glob("%s/*.service" %
-        default_haproxy_service_config_dir):
+                                 default_haproxy_service_config_dir):
             try:
                 os.remove(service)
             except Exception, e:
@@ -521,11 +526,10 @@ def remove_services(service_name=None):
 #                            optional arguments
 #------------------------------------------------------------------------------
 def construct_haproxy_config(haproxy_globals=None,
-                         haproxy_defaults=None,
-                         haproxy_monitoring=None,
-                         haproxy_services=None):
-    if haproxy_globals is None or \
-       haproxy_defaults is None:
+                             haproxy_defaults=None,
+                             haproxy_monitoring=None,
+                             haproxy_services=None):
+    if haproxy_globals is None or haproxy_defaults is None:
         return(None)
     with open(default_haproxy_config, 'w') as haproxy_config:
         haproxy_config.write(haproxy_globals)
@@ -553,7 +557,7 @@ def service_haproxy(action=None, haproxy_config=default_haproxy_config):
         return(None)
     elif action == "check":
         retVal = subprocess.call(
-        ['/usr/sbin/haproxy', '-f', haproxy_config, '-c'])
+            ['/usr/sbin/haproxy', '-f', haproxy_config, '-c'])
         if retVal == 1:
             return(False)
         elif retVal == 0:
@@ -658,15 +662,19 @@ def website_interface(hook_name=None):
             open("%s/%s.is.proxy" % (default_haproxy_service_config_dir,
                                      service_name), 'a').close()
 
+
 def update_nrpe_config():
     nrpe_compat = nrpe.NRPE()
-    nrpe_compat.add_check('haproxy','Check HAProxy', 'check_haproxy.sh')
-    nrpe_compat.add_check('haproxy_queue','Check HAProxy queue depth', 'check_haproxy_queue_depth.sh')
+    nrpe_compat.add_check('haproxy', 'Check HAProxy', 'check_haproxy.sh')
+    nrpe_compat.add_check('haproxy_queue', 'Check HAProxy queue depth',
+                          'check_haproxy_queue_depth.sh')
     nrpe_compat.write()
+
 
 ###############################################################################
 # Main section
 ###############################################################################
+
 
 def main(hook_name):
     if hook_name == "install":
@@ -694,4 +702,3 @@ def main(hook_name):
 
 if __name__ == "__main__":
     main(os.path.basename(sys.argv[0]))
-    
