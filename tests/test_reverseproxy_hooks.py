@@ -164,8 +164,10 @@ class HelpersTest(TestCase):
         mock_call.assert_called_with(['apt-get', '-y', 'install', '-qq',
                                       'foo bar'])
 
-    def test_installs_nothing_if_package_not_provided(self):
+    @patch('subprocess.call')
+    def test_installs_nothing_if_package_not_provided(self, mock_call):
         self.assertFalse(hooks.apt_get_install())
+        self.assertFalse(mock_call.called)
 
     def test_enables_haproxy(self):
         mock_file = MagicMock()
