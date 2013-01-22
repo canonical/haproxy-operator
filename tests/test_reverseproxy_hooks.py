@@ -197,3 +197,42 @@ class RelationsTest(TestCase):
         log.assert_called_with('Calling: %s' % ['relation-ids',
                                                 '--format=json'])
         self.assertIsNone(result)
+
+    @patch('subprocess.check_output')
+    @patch('hooks.log')
+    def test_gets_relation_list(self, log, check_output):
+        json_string = '{"foo": "BAR"}'
+        check_output.return_value = json_string
+
+        result = hooks.get_relation_list()
+
+        self.assertEqual(result['foo'], 'BAR')
+        check_output.assert_called_with(['relation-list', '--format=json'])
+        log.assert_called_with('Calling: %s' % ['relation-list',
+                                                '--format=json'])
+
+    @patch('subprocess.check_output')
+    @patch('hooks.log')
+    def test_gets_relation_list_by_id(self, log, check_output):
+        json_string = '{"foo": "BAR"}'
+        check_output.return_value = json_string
+
+        result = hooks.get_relation_list(relation_id=123)
+
+        self.assertEqual(result['foo'], 'BAR')
+        check_output.assert_called_with(['relation-list', '--format=json',
+                                         '-r', 123])
+        log.assert_called_with('Calling: %s' % ['relation-list',
+                                                '--format=json', '-r', 123])
+
+    @patch('subprocess.check_output')
+    @patch('hooks.log')
+    def test_returns_none_when_get_relation_list_fails(self, log,
+                                                       check_output):
+        check_output.side_effect = RuntimeError('some error')
+
+        result = hooks.get_relation_list()
+
+        log.assert_called_with('Calling: %s' % ['relation-list',
+                                                '--format=json'])
+        self.assertIsNone(result)
