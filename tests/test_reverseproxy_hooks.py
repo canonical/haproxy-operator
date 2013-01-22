@@ -9,21 +9,16 @@ class ReverseProxyRelationTest(TestCase):
     def setUp(self):
         super(ReverseProxyRelationTest, self).setUp()
 
-        get_relation_data = patch.object(hooks, "get_relation_data")
-        self.get_relation_data = get_relation_data.start()
-        self.addCleanup(get_relation_data.stop)
+        self.get_relation_data = self.patch_hook("get_relation_data")
+        self.get_config_services = self.patch_hook("get_config_services")
+        self.log = self.patch_hook("log")
+        self.write_service_config = self.patch_hook("write_service_config")
 
-        get_config_services = patch.object(hooks, "get_config_services")
-        self.get_config_services = get_config_services.start()
-        self.addCleanup(get_config_services.stop)
-
-        log = patch.object(hooks, "log")
-        self.log = log.start()
-        self.addCleanup(log.stop)
-
-        write_service_config = patch.object(hooks, "write_service_config")
-        self.write_service_config = write_service_config.start()
-        self.addCleanup(write_service_config.stop)
+    def patch_hook(self, hook_name):
+        mock_controller = patch.object(hooks, hook_name)
+        mock = mock_controller.start()
+        self.addCleanup(mock_controller.stop)
+        return mock
 
     def test_relation_data_returns_none(self):
         self.get_relation_data.return_value = None
