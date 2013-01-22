@@ -62,6 +62,56 @@ class ReverseProxyRelationTest(TestCase):
             "No hostname in relation data for 'foo', skipping.")
         self.write_service_config.assert_not_called()
 
+    @patch('hooks.config_get')
+    def test_creates_haproxy_globals(self, config_get):
+        config_get.return_value = {
+            'global_log': 'foo-log, bar-log',
+            'global_maxconn': 123,
+            'global_user': 'foo-user',
+            'global_group': 'foo-group',
+            'global_spread_checks': 234,
+            'global_debug': False,
+            'global_quiet': False,
+        }
+        result = hooks.create_haproxy_globals()
+
+        expected = '\n'.join([
+            'global',
+            '    log foo-log',
+            '    log bar-log',
+            '    maxconn 123',
+            '    user foo-user',
+            '    group foo-group',
+            '    spread-checks 234',
+        ])
+        self.assertEqual(result, expected)
+
+    @patch('hooks.config_get')
+    def test_creates_haproxy_globals_quietly_with_debug(self, config_get):
+        config_get.return_value = {
+            'global_log': 'foo-log, bar-log',
+            'global_maxconn': 123,
+            'global_user': 'foo-user',
+            'global_group': 'foo-group',
+            'global_spread_checks': 234,
+            'global_debug': True,
+            'global_quiet': True,
+        }
+        result = hooks.create_haproxy_globals()
+
+        expected = '\n'.join([
+            'global',
+            '    log foo-log',
+            '    log bar-log',
+            '    maxconn 123',
+            '    user foo-user',
+            '    group foo-group',
+            '    debug',
+            '    quiet',
+            '    spread-checks 234',
+        ])
+        self.assertEqual(result, expected)
+
 
 class HelpersTest(TestCase):
     def test_log(self):
