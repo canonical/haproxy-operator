@@ -95,9 +95,66 @@ class HelpersTest(TestCase):
     @patch('hooks.log')
     def test_logs_and_returns_none_if_config_get_fails(self, log,
                                                        check_output):
-        check_output.side_effect = RuntimeError()
+        check_output.side_effect = RuntimeError('some error')
 
         result = hooks.config_get()
 
-        self.assertTrue(log.called)
+        log.assert_called_with('some error')
+        self.assertIsNone(result)
+
+
+class RelationsTest(TestCase):
+    @patch('subprocess.check_output')
+    def test_gets_relation(self, check_output):
+        json_string = '{"foo": "BAR"}'
+        check_output.return_value = json_string
+
+        result = hooks.relation_get()
+
+        self.assertEqual(result['foo'], 'BAR')
+        check_output.assert_called_with(['relation-get', '--format=json', ''])
+
+    @patch('subprocess.check_output')
+    def test_gets_relation_with_scope(self, check_output):
+        json_string = '{"foo": "BAR"}'
+        check_output.return_value = json_string
+
+        result = hooks.relation_get(scope='baz-scope')
+
+        self.assertEqual(result['foo'], 'BAR')
+        check_output.assert_called_with(['relation-get', '--format=json',
+                                         'baz-scope'])
+
+    @patch('subprocess.check_output')
+    def test_gets_relation_with_unit_name(self, check_output):
+        json_string = '{"foo": "BAR"}'
+        check_output.return_value = json_string
+
+        result = hooks.relation_get(scope='baz-scope', unit_name='baz-unit')
+
+        self.assertEqual(result['foo'], 'BAR')
+        check_output.assert_called_with(['relation-get', '--format=json',
+                                         'baz-scope', 'baz-unit'])
+
+    @patch('subprocess.check_output')
+    def test_gets_relation_with_relation_id(self, check_output):
+        json_string = '{"foo": "BAR"}'
+        check_output.return_value = json_string
+
+        result = hooks.relation_get(scope='baz-scope', unit_name='baz-unit',
+                                    relation_id=123)
+
+        self.assertEqual(result['foo'], 'BAR')
+        check_output.assert_called_with(['relation-get', '--format=json', '-r',
+                                         123, 'baz-scope', 'baz-unit'])
+
+    @patch('subprocess.check_output')
+    @patch('hooks.log')
+    def test_logs_and_returns_none_relation_get_fails(self, log,
+                                                      check_output):
+        check_output.side_effect = RuntimeError('some error')
+
+        result = hooks.relation_get()
+
+        log.assert_called_with('some error')
         self.assertIsNone(result)
