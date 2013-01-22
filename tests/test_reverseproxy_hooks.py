@@ -1,5 +1,5 @@
 from testtools import TestCase
-from mock import patch
+from mock import patch, call
 
 import hooks
 
@@ -63,12 +63,12 @@ class ReverseProxyRelationTest(TestCase):
 
 class HelpersTest(TestCase):
     def test_log(self):
-        with patch('subprocess.call') as call:
+        with patch('subprocess.call') as mock_call:
             msg = 'some message'
 
             hooks.log(msg)
 
-            call.assert_called_with(["juju-log", msg])
+            mock_call.assert_called_with(["juju-log", msg])
 
     def test_gets_config(self):
         json_string = '{"foo": "BAR"}'
@@ -235,4 +235,63 @@ class RelationsTest(TestCase):
 
         log.assert_called_with('Calling: %s' % ['relation-list',
                                                 '--format=json'])
+        self.assertIsNone(result)
+
+    @patch('hooks.get_relation_ids')
+    @patch('hooks.get_relation_list')
+    @patch('hooks.relation_get')
+    def test_gets_relation_data_by_name(self, relation_get, get_relation_list,
+                                        get_relation_ids):
+        get_relation_ids.return_value = [1, 2]
+        get_relation_list.side_effect = [
+            ['foo/1', 'bar/1'],
+            ['foo/2', 'bar/2'],
+        ]
+        relation_get.side_effect = [
+            'FOO 1',
+            'BAR 1',
+            'FOO 2',
+            'BAR 2',
+        ]
+
+        result = hooks.get_relation_data(relation_name='baz')
+        expected_data = {
+            'foo-1': 'FOO 1',
+            'bar-1': 'BAR 1',
+            'foo-2': 'FOO 2',
+            'bar-2': 'BAR 2',
+        }
+
+        self.assertEqual(result, expected_data)
+        get_relation_ids.assert_called_with('baz')
+        self.assertEqual(get_relation_list.mock_calls, [
+            call(relation_id=1),
+            call(relation_id=2),
+        ])
+        self.assertEqual(relation_get.mock_calls, [
+            call(relation_id=1, unit_name='foo/1'),
+            call(relation_id=1, unit_name='bar/1'),
+            call(relation_id=2, unit_name='foo/2'),
+            call(relation_id=2, unit_name='bar/2'),
+        ])
+
+    @patch('hooks.get_relation_ids')
+    def test_gets_data_as_none_if_no_relation_ids_exist(self,
+                                                        get_relation_ids):
+        get_relation_ids.return_value = None
+
+        result = hooks.get_relation_data(relation_name='baz')
+
+        self.assertEqual(result, ())
+        get_relation_ids.assert_called_with('baz')
+
+    @patch('hooks.get_relation_ids')
+    @patch('hooks.get_relation_list')
+    def test_returns_none_if_get_data_fails(self, get_relation_list,
+                                            get_relation_ids):
+        get_relation_ids.return_value = [1, 2]
+        get_relation_list.side_effect = RuntimeError('some error')
+
+        result = hooks.get_relation_data(relation_name='baz')
+
         self.assertIsNone(result)
