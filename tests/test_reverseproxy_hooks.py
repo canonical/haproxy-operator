@@ -102,6 +102,19 @@ class HelpersTest(TestCase):
         log.assert_called_with('some error')
         self.assertIsNone(result)
 
+    @patch('subprocess.call')
+    def test_installs_packages(self, mock_call):
+        mock_call.return_value = 'some result'
+
+        result = hooks.apt_get_install('foo bar')
+
+        self.assertEqual(result, 'some result')
+        mock_call.assert_called_with(['apt-get', '-y', 'install', '-qq',
+                                      'foo bar'])
+
+    def test_installs_nothing_if_package_not_provided(self):
+        self.assertFalse(hooks.apt_get_install())
+
 
 class RelationsTest(TestCase):
     @patch('subprocess.check_output')
