@@ -139,8 +139,8 @@ def apt_get_install(packages=None):
 #------------------------------------------------------------------------------
 def enable_haproxy():
     default_haproxy = "/etc/default/haproxy"
-    enabled_haproxy = open(default_haproxy).read().replace('ENABLED=0',
-                                                           'ENABLED=1')
+    with open(default_haproxy) as f:
+        enabled_haproxy = f.read().replace('ENABLED=0', 'ENABLED=1')
     with open(default_haproxy, 'w') as f:
         f.write(enabled_haproxy)
 

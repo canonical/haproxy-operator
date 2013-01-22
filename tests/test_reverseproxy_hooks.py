@@ -1,5 +1,7 @@
+from contextlib import contextmanager
+
 from testtools import TestCase
-from mock import patch, call
+from mock import patch, call, MagicMock
 
 import hooks
 
@@ -114,6 +116,27 @@ class HelpersTest(TestCase):
 
     def test_installs_nothing_if_package_not_provided(self):
         self.assertFalse(hooks.apt_get_install())
+
+    def test_enables_haproxy(self):
+        mock_file = MagicMock()
+
+        @contextmanager
+        def mock_open(*args, **kwargs):
+            yield mock_file
+
+        initial_content = """
+        foo
+        ENABLED=0
+        bar
+        """
+        ending_content = initial_content.replace('ENABLED=0', 'ENABLED=1')
+
+        with patch('__builtin__.open', mock_open):
+            mock_file.read.return_value = initial_content
+
+            hooks.enable_haproxy()
+
+            mock_file.write.assert_called_with(ending_content)
 
 
 class RelationsTest(TestCase):
