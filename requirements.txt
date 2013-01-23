@@ -1,0 +1,13 @@
+PyYAML==3.10
+Pygments==1.6rc1
+argparse==1.2.1
+coverage==3.6
+extras==0.0.3
+flake8==1.7.0
+mock==1.0.1
+nose==1.2.1
+termcolor==1.0.1
+testtools==0.9.26
+wsgiref==0.1.2
+xtraceback==0.3.3
+yanc==0.2.3
