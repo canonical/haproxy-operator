@@ -163,21 +163,21 @@ class ReverseProxyRelationTest(TestCase):
             None: {
                 "service_name": "service",
                 },
-            "backend_service": {
-                "service_name": "backend_service",
+            "foo_service": {
+                "service_name": "foo_service",
                 "server_options": "maxconn 4",
                 },
             }
         self.get_relation_data.return_value = {
             "foo": {"port": 4242,
                     "hostname": "backend.1",
-                    "service_name": "backend_service",
+                    "service_name": "foo_service",
                     "private-address": "1.2.3.4"},
         }
 
         expected = {
-            'backend_service': {
-                'service_name': 'backend_service',
+            'foo_service': {
+                'service_name': 'foo_service',
                 'server_options': 'maxconn 4',
                 'servers': [('backend_1__4242', '1.2.3.4',
                              4242, 'maxconn 4')],
@@ -192,20 +192,20 @@ class ReverseProxyRelationTest(TestCase):
             None: {
                 "service_name": "service",
                 },
-            "backend": {
-                "service_name": "backend",
+            "foo": {
+                "service_name": "foo",
                 "server_options": "maxconn 4",
                 },
             }
         self.get_relation_data.return_value = {
-            "backend-1": {"port": 4242,
+            "foo-1": {"port": 4242,
                           "hostname": "backend.1",
                           "private-address": "1.2.3.4"},
         }
 
         expected = {
-            'backend': {
-                'service_name': 'backend',
+            'foo': {
+                'service_name': 'foo',
                 'server_options': 'maxconn 4',
                 'servers': [('backend_1__4242', '1.2.3.4',
                              4242, 'maxconn 4')],
