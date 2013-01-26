@@ -13,7 +13,7 @@ class ReverseProxyRelationTest(TestCase):
         self.get_config_services = self.patch_hook("get_config_services")
         self.log = self.patch_hook("log")
         self.write_service_config = self.patch_hook("write_service_config")
-        self.is_proxy = self.patch_hook("is_proxy")
+        self.apply_peer_config = self.patch_hook("apply_peer_config")
 
     def patch_hook(self, hook_name):
         mock_controller = patch.object(hooks, hook_name)
@@ -105,7 +105,6 @@ class ReverseProxyRelationTest(TestCase):
         self.write_service_config.assert_not_called()
 
     def test_relation_default_service(self):
-        self.is_proxy.return_value = False
         self.get_config_services.return_value = {
             None: {
                 "service_name": "service",
@@ -123,21 +122,20 @@ class ReverseProxyRelationTest(TestCase):
         expected = {
             'service': {
                 'service_name': 'service',
-                'servers': [('backend_1__4242', '1.2.3.4', 4242, '')],
+                'servers': [('backend_1__4242', '1.2.3.4', 4242, [])],
                 },
             }
         self.assertEqual(expected, hooks.create_services())
         self.write_service_config.assert_called_with(expected)
 
     def test_with_service_options(self):
-        self.is_proxy.return_value = False
         self.get_config_services.return_value = {
             None: {
                 "service_name": "service",
                 },
             "service": {
                 "service_name": "service",
-                "server_options": "maxconn 4",
+                "server_options": ["maxconn 4"],
                 },
             }
         self.get_relation_data.return_value = {
@@ -149,23 +147,22 @@ class ReverseProxyRelationTest(TestCase):
         expected = {
             'service': {
                 'service_name': 'service',
-                'server_options': 'maxconn 4',
+                'server_options': ["maxconn 4"],
                 'servers': [('backend_1__4242', '1.2.3.4',
-                             4242, 'maxconn 4')],
+                             4242, ["maxconn 4"])],
                 },
             }
         self.assertEqual(expected, hooks.create_services())
         self.write_service_config.assert_called_with(expected)
 
     def test_with_service_name(self):
-        self.is_proxy.return_value = False
         self.get_config_services.return_value = {
             None: {
                 "service_name": "service",
                 },
             "foo_service": {
                 "service_name": "foo_service",
-                "server_options": "maxconn 4",
+                "server_options": ["maxconn 4"],
                 },
             }
         self.get_relation_data.return_value = {
@@ -178,23 +175,22 @@ class ReverseProxyRelationTest(TestCase):
         expected = {
             'foo_service': {
                 'service_name': 'foo_service',
-                'server_options': 'maxconn 4',
+                'server_options': ["maxconn 4"],
                 'servers': [('backend_1__4242', '1.2.3.4',
-                             4242, 'maxconn 4')],
+                             4242, ["maxconn 4"])],
                 },
             }
         self.assertEqual(expected, hooks.create_services())
         self.write_service_config.assert_called_with(expected)
 
     def test_no_service_name_unit_name_match_service_name(self):
-        self.is_proxy.return_value = False
         self.get_config_services.return_value = {
             None: {
                 "service_name": "service",
                 },
             "foo": {
                 "service_name": "foo",
-                "server_options": "maxconn 4",
+                "server_options": ["maxconn 4"],
                 },
             }
         self.get_relation_data.return_value = {
@@ -206,9 +202,37 @@ class ReverseProxyRelationTest(TestCase):
         expected = {
             'foo': {
                 'service_name': 'foo',
-                'server_options': 'maxconn 4',
+                'server_options': ["maxconn 4"],
                 'servers': [('backend_1__4242', '1.2.3.4',
-                             4242, 'maxconn 4')],
+                             4242, ["maxconn 4"])],
+                },
+            }
+        self.assertEqual(expected, hooks.create_services())
+        self.write_service_config.assert_called_with(expected)
+
+    def test_with_sitenames_match_service_name(self):
+        self.get_config_services.return_value = {
+            None: {
+                "service_name": "service",
+                },
+            "foo_service": {
+                "service_name": "foo_service",
+                "server_options": ["maxconn 4"],
+                },
+            }
+        self.get_relation_data.return_value = {
+            "foo": {"port": 4242,
+                    "hostname": "backend.1",
+                    "sitenames": "foo_service bar_service",
+                    "private-address": "1.2.3.4"},
+        }
+
+        expected = {
+            'foo_service': {
+                'service_name': 'foo_service',
+                'server_options': ["maxconn 4"],
+                'servers': [('backend_1__4242', '1.2.3.4',
+                             4242, ["maxconn 4"])],
                 },
             }
         self.assertEqual(expected, hooks.create_services())

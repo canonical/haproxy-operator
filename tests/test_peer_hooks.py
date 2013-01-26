@@ -1,7 +1,8 @@
-from contextlib import contextmanager
+import os
+import yaml
 
 from testtools import TestCase
-from mock import patch, call, MagicMock
+from mock import patch
 
 import hooks
 
@@ -12,9 +13,8 @@ class PeerRelationTest(TestCase):
         super(PeerRelationTest, self).setUp()
 
         self.get_relation_data = self.patch_hook("get_relation_data")
-        self.get_config_services = self.patch_hook("get_config_services")
         self.log = self.patch_hook("log")
-        self.write_service_config = self.patch_hook("write_service_config")
+        self.unit_get = self.patch_hook("unit_get")
 
     def patch_hook(self, hook_name):
         mock_controller = patch.object(hooks, hook_name)
@@ -22,5 +22,47 @@ class PeerRelationTest(TestCase):
         self.addCleanup(mock_controller.stop)
         return mock
 
+    @patch.dict(os.environ, {"JUJU_UNIT_NAME": "haproxy-2"})
+    def test_with_peer_same_services(self):
+        self.unit_get.return_value = "1.2.4.5"
+        self.get_relation_data.return_value = {
+            "haproxy-1": {
+                "hostname": "haproxy-1",
+                "private-address": "1.2.4.4",
+                "all_services": yaml.dump([
+                    {"service_name": "foo_service",
+                     "service_port": 4242},
+                    ])
+                }
+            }
 
+        services_dict = {
+            'foo_service': {
+                'service_name': 'foo_service',
+                'service_port': 4242,
+                'server_options': ["maxconn 4"],
+                'servers': [('backend_1__4242', '1.2.3.4',
+                             4242, ["maxconn 4"])],
+                },
+            }
+
+        expected = {
+            'foo_service': {
+                'service_name': 'foo_service',
+                'servers': [
+                    ('haproxy-1', '1.2.4.4',
+                     4242, ["check"]),
+                    ('haproxy-2', '1.2.4.5',
+                     4242, ["check", "backup"])
+                    ],
+                },
+            'foo_service_be': {
+                'service_name': 'foo_service_be',
+                'service_port': 4243,
+                'server_options': ["maxconn 4"],
+                'servers': [('backend_1__4242', '1.2.3.4',
+                             4242, ["maxconn 4"])],
+                },
+            }
+        self.assertEqual(expected, hooks.apply_peer_config(services_dict))
     
