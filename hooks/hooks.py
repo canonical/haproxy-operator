@@ -382,6 +382,7 @@ def get_config_services():
 
         service["server_options"] = service["server_options"].split()
         services[service_name] = service
+
     return services
 
 
@@ -409,15 +410,13 @@ def create_services():
     services_dict = get_config_services()
     relation_data = get_relation_data(relation_name="reverseproxy")
 
-    if relation_data is None or len(relation_data) == 0:
-        log("No relation data, exiting.")
-        return
-
     if len(services_dict) == 0:
         log("No services configured, exiting.")
         return
 
-    servers_added = False
+    if relation_data is None:
+        relation_data = {}
+        
     for unit in sorted(relation_data.keys()):
         relation_info = relation_data[unit]
         unit_name = unit.rpartition('-')[0]
@@ -466,9 +465,14 @@ def create_services():
             servers.append((server_name, host, port,
                             services_dict[service_name].get(
                                 'server_options', [])))
-            servers_added = True
 
-    if not servers_added:
+    has_servers = False
+    for service_name, service in services_dict.iteritems():
+        if service.get("servers", []):
+            has_servers = True
+
+    if not has_servers:
+        log("No backend servers, exiting.")
         return
 
     del services_dict[None]

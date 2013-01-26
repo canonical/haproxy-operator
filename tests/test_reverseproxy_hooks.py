@@ -1,5 +1,5 @@
 from testtools import TestCase
-from mock import patch
+from mock import patch, call
 
 import hooks
 
@@ -22,15 +22,25 @@ class ReverseProxyRelationTest(TestCase):
         return mock
 
     def test_relation_data_returns_none(self):
+        self.get_config_services.return_value = {
+            "service": {
+                "service_name": "service",
+                },
+            }
         self.get_relation_data.return_value = None
         self.assertIs(None, hooks.create_services())
-        self.log.assert_called_once_with("No relation data, exiting.")
+        self.log.assert_called_once_with("No backend servers, exiting.")
         self.write_service_config.assert_not_called()
 
     def test_relation_data_returns_no_relations(self):
-        self.get_relation_data.return_value = ()
+        self.get_config_services.return_value = {
+            "service": {
+                "service_name": "service",
+                },
+            }
+        self.get_relation_data.return_value = {}
         self.assertIs(None, hooks.create_services())
-        self.log.assert_called_once_with("No relation data, exiting.")
+        self.log.assert_called_once_with("No backend servers, exiting.")
         self.write_service_config.assert_not_called()
 
     def test_relation_no_services(self):
@@ -54,8 +64,8 @@ class ReverseProxyRelationTest(TestCase):
             "foo": {"private-address": "1.2.3.4"},
         }
         self.assertIs(None, hooks.create_services())
-        self.log.assert_called_once_with(
-            "No port in relation data for 'foo', skipping.")
+        self.log.assert_has_calls([call.log(
+            "No port in relation data for 'foo', skipping.")])
         self.write_service_config.assert_not_called()
 
     def test_no_private_address_in_relation_data(self):
@@ -68,8 +78,8 @@ class ReverseProxyRelationTest(TestCase):
             "foo": {"port": 4242},
         }
         self.assertIs(None, hooks.create_services())
-        self.log.assert_called_once_with(
-            "No private-address in relation data for 'foo', skipping.")
+        self.log.assert_has_calls([call.log(
+            "No private-address in relation data for 'foo', skipping.")])
         self.write_service_config.assert_not_called()
 
     def test_no_hostname_in_relation_data(self):
@@ -83,8 +93,8 @@ class ReverseProxyRelationTest(TestCase):
                     "private-address": "1.2.3.4"},
         }
         self.assertIs(None, hooks.create_services())
-        self.log.assert_called_once_with(
-            "No hostname in relation data for 'foo', skipping.")
+        self.log.assert_has_calls([call.log(
+            "No hostname in relation data for 'foo', skipping.")])
         self.write_service_config.assert_not_called()
 
     def test_relation_unknown_service(self):
@@ -100,9 +110,34 @@ class ReverseProxyRelationTest(TestCase):
                     "private-address": "1.2.3.4"},
         }
         self.assertIs(None, hooks.create_services())
-        self.log.assert_called_once_with(
-            "Service 'invalid' does not exist.")
+        self.log.assert_has_calls([call.log(
+            "Service 'invalid' does not exist.")])
         self.write_service_config.assert_not_called()
+
+    def test_no_relation_but_has_servers_from_config(self):
+        self.get_config_services.return_value = {
+            None: {
+                "service_name": "service",
+                },
+            "service": {
+                "service_name": "service",
+                "servers": [
+                    ("legacy-backend", "1.2.3.1", 4242, ["maxconn 42"]),
+                    ]
+                },
+            }
+        self.get_relation_data.return_value = {}
+
+        expected = {
+            'service': {
+                'service_name': 'service',
+                'servers': [
+                    ("legacy-backend", "1.2.3.1", 4242, ["maxconn 42"]),
+                    ],
+                },
+            }
+        self.assertEqual(expected, hooks.create_services())
+        self.write_service_config.assert_called_with(expected)
 
     def test_relation_default_service(self):
         self.get_config_services.return_value = {
