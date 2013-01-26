@@ -1,15 +1,21 @@
-VIRTUAL_ENV = .env
-BIN = $(VIRTUAL_ENV)/bin
+PWD:=$(shell pwd)
+VIRTUAL_ENV=$(PWD)/.env
+BIN=$(VIRTUAL_ENV)/bin
+PATH:=$(BIN):$(PATH)
 
+export PATH
 
 setup:
 	@virtualenv $(VIRTUAL_ENV)
-	@$(BIN)/pip install -r requirements.txt
+	@pip install -r requirements.txt
 
 test:
-	@PYTHONPATH=hooks $(BIN)/nosetests --with-coverage --cover-package=hooks --cover-erase --with-yanc --with-xtraceback tests/
+	@PYTHONPATH=hooks nosetests -s --with-coverage --cover-package=hooks --cover-erase --with-yanc --with-xtraceback tests/
+
+auto-test:
+	@yes | PYTHONPATH=hooks tdaemon --custom-args="--with-notify --no-start-message --with-yanc --with-xtraceback" --ignore-dirs=.env,.bzr
 
 lint:
-	@$(BIN)/flake8 . --exclude=./$(VIRTUAL_ENV)/*
+	@flake8 . --exclude=$(VIRTUAL_ENV)/*
 
 build: setup test lint

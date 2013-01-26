@@ -375,8 +375,8 @@ def get_config_service(service_name=None):
 
 def is_proxy(service_name):
     if os.path.exists(
-        os.path.join((default_haproxy_service_config_dir,
-                      "%s.is.proxy" % service_name))):
+        os.path.join(default_haproxy_service_config_dir,
+                      "%s.is.proxy" % service_name)):
         return True
     return False
 
@@ -391,6 +391,10 @@ def create_services():
 
     if relation_data is None or len(relation_data) == 0:
         log("No relation data, exiting.")
+        return
+
+    if len(services_dict) == 0:
+        log("No services configured, exiting.")
         return
 
     servers_added = False
@@ -436,12 +440,14 @@ def create_services():
         # Add the server entries
         servers = service.setdefault("servers", [])
         servers.append((server_name, host, port,
-                        services_dict[service_name]['server_options']))
+                        services_dict[service_name].get(
+                            'server_options', '')))
         servers_added = True
 
     if not servers_added:
         return
 
+    del services_dict[None]
     write_service_config(services_dict)
     return services_dict
 
