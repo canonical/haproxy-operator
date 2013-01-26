@@ -777,9 +777,9 @@ def main(hook_name):
     elif hook_name == "website-relation-changed":
         website_interface("changed")
     elif hook_name == "peer-relation-joined":
-        website_interface("joined")
+        reverseproxy_interface("joined")
     elif hook_name == "peer-relation-changed":
-        website_interface("changed")
+        reverseproxy_interface("changed")
     elif hook_name == "nrpe-external-master-relation-changed":
         update_nrpe_config()
     else:
