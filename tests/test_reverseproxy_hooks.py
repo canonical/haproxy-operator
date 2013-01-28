@@ -170,13 +170,26 @@ class ReverseProxyRelationTest(TestCase):
 
         self.assertIsNone(password)
 
-    @patch('hooks.load_haproxy_config')
-    def test_gets_none_if_config_doesnt_exist(self, load_haproxy_config):
-        load_haproxy_config.return_value = None
-
-        password = hooks.get_monitoring_password()
+    def test_gets_none_pass_if_config_doesnt_exist(self):
+        password = hooks.get_monitoring_password('/some/foo/path')
 
         self.assertIsNone(password)
+
+    @patch('hooks.load_haproxy_config')
+    def test_gets_service_ports(self, load_haproxy_config):
+        load_haproxy_config.return_value = '''
+        listen foo port:123
+        listen port bar or whatever:234
+        '''
+
+        ports = hooks.get_service_ports()
+
+        self.assertEqual(ports, ['123', '234'])
+
+    def test_gets_none_port_if_config_doesnt_exist(self):
+        ports = hooks.get_service_ports('/some/foo/path')
+
+        self.assertIsNone(ports)
 
 
 class HelpersTest(TestCase):
