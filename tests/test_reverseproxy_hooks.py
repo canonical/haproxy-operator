@@ -154,6 +154,30 @@ class ReverseProxyRelationTest(TestCase):
         isfile.assert_called_with(config_file)
         mock_open.assert_called_with(config_file)
 
+    @patch('hooks.load_haproxy_config')
+    def test_gets_monitoring_password(self, load_haproxy_config):
+        load_haproxy_config.return_value = 'stats auth foo:bar'
+
+        password = hooks.get_monitoring_password()
+
+        self.assertEqual(password, 'bar')
+
+    @patch('hooks.load_haproxy_config')
+    def test_gets_none_if_different_pattern(self, load_haproxy_config):
+        load_haproxy_config.return_value = 'some other pattern'
+
+        password = hooks.get_monitoring_password()
+
+        self.assertIsNone(password)
+
+    @patch('hooks.load_haproxy_config')
+    def test_gets_none_if_config_doesnt_exist(self, load_haproxy_config):
+        load_haproxy_config.return_value = None
+
+        password = hooks.get_monitoring_password()
+
+        self.assertIsNone(password)
+
 
 class HelpersTest(TestCase):
     def test_log(self):
