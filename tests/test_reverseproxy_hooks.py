@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from StringIO import StringIO
 
 from testtools import TestCase
 from mock import patch, call, MagicMock
@@ -134,6 +135,24 @@ class ReverseProxyRelationTest(TestCase):
             '    timeout 456',
         ])
         self.assertEqual(result, expected)
+
+    def test_returns_none_when_haproxy_config_doesnt_exist(self):
+        self.assertIsNone(hooks.load_haproxy_config('/some/foo/file'))
+
+    @patch('__builtin__.open')
+    @patch('os.path.isfile')
+    def test_loads_haproxy_config_file(self, isfile, mock_open):
+        content = 'some content'
+        config_file = '/etc/haproxy/haproxy.cfg'
+        file_object = StringIO(content)
+        isfile.return_value = True
+        mock_open.return_value = file_object
+
+        result = hooks.load_haproxy_config()
+
+        self.assertEqual(result, content)
+        isfile.assert_called_with(config_file)
+        mock_open.assert_called_with(config_file)
 
 
 class HelpersTest(TestCase):
