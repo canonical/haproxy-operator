@@ -112,6 +112,29 @@ class ReverseProxyRelationTest(TestCase):
         ])
         self.assertEqual(result, expected)
 
+    @patch('hooks.config_get')
+    def test_creates_haproxy_defaults(self, config_get):
+        config_get.return_value = {
+            'default_options': 'foo-option, bar-option',
+            'default_timeouts': '234, 456',
+            'default_log': 'foo-log',
+            'default_mode': 'foo-mode',
+            'default_retries': 321,
+        }
+        result = hooks.create_haproxy_defaults()
+
+        expected = '\n'.join([
+            'defaults',
+            '    log foo-log',
+            '    mode foo-mode',
+            '    option foo-option',
+            '    option bar-option',
+            '    retries 321',
+            '    timeout 234',
+            '    timeout 456',
+        ])
+        self.assertEqual(result, expected)
+
 
 class HelpersTest(TestCase):
     def test_log(self):
