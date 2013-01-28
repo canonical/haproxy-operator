@@ -5,11 +5,13 @@ from .environment import virtualenv_local, clean
 
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+HOOKS_DIR = os.path.join(ROOT_DIR, 'hooks')
+TEST_PREFIX = 'PYTHONPATH=%s' % HOOKS_DIR
+TEST_DIR = os.path.join(ROOT_DIR, 'tests')
 
 
 def test():
     """Run unit tests."""
-    test_prefix = 'PYTHONPATH=hooks'
     test_arguments = [
         '--with-coverage',
         '--cover-package=hooks',
@@ -17,16 +19,15 @@ def test():
         '--with-yanc',
         '--with-xtraceback',
     ]
-    tests_dir = os.path.join(ROOT_DIR, 'tests')
     cmd = '%s nosetests %s %s' % (
-        test_prefix,
+        TEST_PREFIX,
         ' '.join(test_arguments),
-        tests_dir,
+        TEST_DIR,
     )
     virtualenv_local(cmd, capture=False)
 
 
-def check_style():
+def lint():
     """Check for code style and other visual organization issues."""
     venv_dir = os.path.join(ROOT_DIR, VIRTUALENV)
     cmd = 'flake8 %s --exclude=%s/*' % (ROOT_DIR, venv_dir)
@@ -36,5 +37,20 @@ def check_style():
 def build():
     """Run build."""
     test()
-    check_style()
+    lint()
     clean()
+
+
+def watch():
+    test_arguments = [
+        '--with-notify',
+        '--no-start-message',
+        '--with-yanc',
+        '--with-xtraceback',
+    ]
+    cmd = '%s tdaemon --custom-args="%s" %s' % (
+        TEST_PREFIX,
+        ' '.join(test_arguments),
+        TEST_DIR,
+    )
+    virtualenv_local(cmd, capture=False)
