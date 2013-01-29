@@ -4,7 +4,7 @@ from .constants import VIRTUALENV
 from .environment import virtualenv_local, clean
 
 
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
 HOOKS_DIR = os.path.join(ROOT_DIR, 'hooks')
 TEST_PREFIX = 'PYTHONPATH=%s' % HOOKS_DIR
 TEST_DIR = os.path.join(ROOT_DIR, 'tests')
