@@ -4,7 +4,7 @@
 set -e
 
 DOWNLOAD_CACHE=$(dirname `dirname $PWD`)/download-cache-packages
-DOWNLOAD_CACHE_BRANCH="lp:~diogobaeder/canonical-marshal/download-cache"
+DOWNLOAD_CACHE_BRANCH="lp:~ubuntuone-pqm-team/canonical-marshal/download-cache"
 
 if [ -d $DOWNLOAD_CACHE ]; then
     echo "Updating download cache at dir" $DOWNLOAD_CACHE
