@@ -3,7 +3,7 @@
 
 set -e
 
-DOWNLOAD_CACHE=$(dirname `dirname $PWD`)/download-cache-packages
+DOWNLOAD_CACHE=$(dirname $(dirname $PWD))/download-cache-packages
 DOWNLOAD_CACHE_BRANCH="lp:~ubuntuone-pqm-team/canonical-marshal/download-cache"
 
 if [ -d $DOWNLOAD_CACHE ]; then
