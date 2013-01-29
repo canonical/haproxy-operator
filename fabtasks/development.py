@@ -16,6 +16,7 @@ def test():
         '--with-coverage',
         '--cover-package=hooks',
         '--cover-erase',
+        '--cover-xml',
         '--with-yanc',
         '--with-xtraceback',
     ]

@@ -17,7 +17,6 @@ def bootstrap(download_cache_path=None):
 
 def clean():
     """Clean up compiled and backup files."""
-    local("rm -rf .coverage coverage.d coverage.xml")
     local("find . -name '*.~*' -delete")
     local("find . -name '*.pyc' -delete")
 
