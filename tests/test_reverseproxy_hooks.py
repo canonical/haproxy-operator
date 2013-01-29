@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from StringIO import StringIO
 
 from testtools import TestCase
 from mock import patch, call, MagicMock
@@ -111,6 +112,84 @@ class ReverseProxyRelationTest(TestCase):
             '    spread-checks 234',
         ])
         self.assertEqual(result, expected)
+
+    @patch('hooks.config_get')
+    def test_creates_haproxy_defaults(self, config_get):
+        config_get.return_value = {
+            'default_options': 'foo-option, bar-option',
+            'default_timeouts': '234, 456',
+            'default_log': 'foo-log',
+            'default_mode': 'foo-mode',
+            'default_retries': 321,
+        }
+        result = hooks.create_haproxy_defaults()
+
+        expected = '\n'.join([
+            'defaults',
+            '    log foo-log',
+            '    mode foo-mode',
+            '    option foo-option',
+            '    option bar-option',
+            '    retries 321',
+            '    timeout 234',
+            '    timeout 456',
+        ])
+        self.assertEqual(result, expected)
+
+    def test_returns_none_when_haproxy_config_doesnt_exist(self):
+        self.assertIsNone(hooks.load_haproxy_config('/some/foo/file'))
+
+    @patch('__builtin__.open')
+    @patch('os.path.isfile')
+    def test_loads_haproxy_config_file(self, isfile, mock_open):
+        content = 'some content'
+        config_file = '/etc/haproxy/haproxy.cfg'
+        file_object = StringIO(content)
+        isfile.return_value = True
+        mock_open.return_value = file_object
+
+        result = hooks.load_haproxy_config()
+
+        self.assertEqual(result, content)
+        isfile.assert_called_with(config_file)
+        mock_open.assert_called_with(config_file)
+
+    @patch('hooks.load_haproxy_config')
+    def test_gets_monitoring_password(self, load_haproxy_config):
+        load_haproxy_config.return_value = 'stats auth foo:bar'
+
+        password = hooks.get_monitoring_password()
+
+        self.assertEqual(password, 'bar')
+
+    @patch('hooks.load_haproxy_config')
+    def test_gets_none_if_different_pattern(self, load_haproxy_config):
+        load_haproxy_config.return_value = 'some other pattern'
+
+        password = hooks.get_monitoring_password()
+
+        self.assertIsNone(password)
+
+    def test_gets_none_pass_if_config_doesnt_exist(self):
+        password = hooks.get_monitoring_password('/some/foo/path')
+
+        self.assertIsNone(password)
+
+    @patch('hooks.load_haproxy_config')
+    def test_gets_service_ports(self, load_haproxy_config):
+        load_haproxy_config.return_value = '''
+        listen foo port:123
+        listen port bar or whatever:234
+        '''
+
+        ports = hooks.get_service_ports()
+
+        self.assertEqual(ports, ['123', '234'])
+
+    def test_gets_none_port_if_config_doesnt_exist(self):
+        ports = hooks.get_service_ports('/some/foo/path')
+
+        self.assertIsNone(ports)
 
 
 class HelpersTest(TestCase):
