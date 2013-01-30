@@ -348,7 +348,7 @@ def create_services():
             subprocess.check_output(['relation-list', '--format=json',
                                      '-r', relid])):
                 relation_info = relation_get(None, unit, relid)
-                unit_name = unit.rpartition('/')[0]
+                juju_service_name = unit.rpartition('/')[0]
                 if not isinstance(relation_info, dict):
                     sys.exit(0)
                 # Mandatory switches ( hostname, port )
@@ -366,8 +366,8 @@ def create_services():
                         'juju-log', 'service %s does not exists. ' %
                         relation_info['service_name']])
                         sys.exit(1)
-                elif unit_name in services_dict:
-                    service_name = unit_name
+                elif juju_service_name + '_service' in services_dict:
+                    service_name = juju_service_name + '_service'
                 else:
                     service_name = services_list[0]['service_name']
                 if os.path.exists("%s/%s.is.proxy" %
