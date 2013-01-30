@@ -366,8 +366,8 @@ def create_services():
                         'juju-log', 'service %s does not exists. ' %
                         relation_info['service_name']])
                         sys.exit(1)
-                elif unit_name in services_dict:
-                    service_name = unit_name
+                elif unit_name + '_service' in services_dict:
+                    service_name = unit_name + '_service'
                 else:
                     service_name = services_list[0]['service_name']
                 if os.path.exists("%s/%s.is.proxy" %
