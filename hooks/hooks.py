@@ -381,7 +381,9 @@ def get_config_services():
                                        service["service_options"]):
             service["service_options"].append("option forwardfor")
 
-        service["server_options"] = service["server_options"].split()
+        if isinstance(service["server_options"], basestring):
+            service["server_options"] = service["server_options"].split()
+            
         services[service_name] = service
 
     return services
