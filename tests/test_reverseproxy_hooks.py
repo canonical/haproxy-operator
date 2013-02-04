@@ -222,10 +222,10 @@ class ReverseProxyRelationTest(TestCase):
     def test_no_service_name_unit_name_match_service_name(self):
         self.get_config_services.return_value = {
             None: {
-                "service_name": "service",
+                "service_name": "foo_service",
                 },
-            "foo": {
-                "service_name": "foo",
+            "foo_service": {
+                "service_name": "foo_service",
                 "server_options": ["maxconn 4"],
                 },
             }
@@ -236,8 +236,8 @@ class ReverseProxyRelationTest(TestCase):
         }
 
         expected = {
-            'foo': {
-                'service_name': 'foo',
+            'foo_service': {
+                'service_name': 'foo_service',
                 'server_options': ["maxconn 4"],
                 'servers': [('backend_1__4242', '1.2.3.4',
                              4242, ["maxconn 4"])],

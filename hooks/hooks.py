@@ -422,7 +422,7 @@ def create_services():
 
     for unit in sorted(relation_data.keys()):
         relation_info = relation_data[unit]
-        unit_name = unit.rpartition('-')[0]
+        juju_service_name = unit.rpartition('-')[0]
 
         relation_ok = True
         for required in ("port", "private-address", "hostname"):
@@ -455,8 +455,8 @@ def create_services():
             for sitename in sitenames:
                 if sitename in services_dict:
                     service_names.append(sitename)
-        elif unit_name in services_dict:
-            service_names.append(unit_name)
+        elif juju_service_name + "_services" in services_dict:
+            service_names.append(juju_service_name + "_services")
         else:
             service_names.append(services_dict[None]["service_name"])
 
