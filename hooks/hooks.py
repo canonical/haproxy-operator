@@ -49,7 +49,7 @@ def config_get(scope=None):
         log(str(e))
         config_data = None
     finally:
-        return(config_data)
+        return config_data
 
 
 #------------------------------------------------------------------------------
@@ -58,12 +58,12 @@ def config_get(scope=None):
 def unit_get(item):
     try:
         cmd_line = ['unit-get', item]
-        data = subprocess.check_output(cmd_line)
+        data = subprocess.check_output(cmd_line).strip()
     except Exception, e:
         log(str(e))
         data = None
     finally:
-        return(data)
+        return data
 
 
 #------------------------------------------------------------------------------
