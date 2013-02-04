@@ -383,7 +383,7 @@ def get_config_services():
 
         if isinstance(service["server_options"], basestring):
             service["server_options"] = service["server_options"].split()
-            
+
         services[service_name] = service
 
     return services
@@ -479,6 +479,7 @@ def create_services():
         return
 
     del services_dict[None]
+    services_dict = apply_peer_config(services_dict)
     write_service_config(services_dict)
     return services_dict
 
@@ -780,7 +781,7 @@ def main(hook_name):
     elif hook_name == "website-relation-changed":
         website_interface("changed")
     elif hook_name == "peer-relation-joined":
-        reverseproxy_interface("joined")
+        website_interface("joined")
     elif hook_name == "peer-relation-changed":
         reverseproxy_interface("changed")
     elif hook_name == "nrpe-external-master-relation-changed":

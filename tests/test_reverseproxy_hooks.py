@@ -14,6 +14,7 @@ class ReverseProxyRelationTest(TestCase):
         self.log = self.patch_hook("log")
         self.write_service_config = self.patch_hook("write_service_config")
         self.apply_peer_config = self.patch_hook("apply_peer_config")
+        self.apply_peer_config.side_effect = lambda value: value
 
     def patch_hook(self, hook_name):
         mock_controller = patch.object(hooks, hook_name)
