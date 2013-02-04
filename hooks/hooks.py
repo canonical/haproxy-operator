@@ -497,6 +497,9 @@ def apply_peer_config(services_dict):
                 peer_service["service_name"] = service_name
                 peer_service["service_host"] = service["service_host"]
                 peer_service["service_port"] = service["service_port"]
+                peer_service["service_options"] = ["balance leastconn",
+                                                   "mode tcp",
+                                                   "option tcplog"]
                 servers = peer_service.setdefault("servers", [])
                 servers.append((unit_name,
                                 peer_data[unit_name]["private-address"],

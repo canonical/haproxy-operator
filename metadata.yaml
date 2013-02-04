@@ -21,4 +21,3 @@ provides:
 peers:
   peer:
     interface: haproxy-peer
-  

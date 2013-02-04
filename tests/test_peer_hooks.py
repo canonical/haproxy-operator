@@ -31,39 +31,45 @@ class PeerRelationTest(TestCase):
                 "private-address": "1.2.4.4",
                 "all_services": yaml.dump([
                     {"service_name": "foo_service",
-                     "service_host": '0.0.0.0',
+                     "service_host": "0.0.0.0",
+                     "service_options": ["balance leastconn"],
                      "service_port": 4242},
                     ])
                 }
             }
 
         services_dict = {
-            'foo_service': {
-                'service_name': 'foo_service',
-                'service_host': '0.0.0.0',
-                'service_port': 4242,
-                'server_options': ["maxconn 4"],
-                'servers': [('backend_1__8080', '1.2.3.4',
+            "foo_service": {
+                "service_name": "foo_service",
+                "service_host": "0.0.0.0",
+                "service_port": 4242,
+                "service_options": ["balance leastconn"],
+                "server_options": ["maxconn 4"],
+                "servers": [("backend_1__8080", "1.2.3.4",
                              8080, ["maxconn 4"])],
                 },
             }
 
         expected = {
-            'foo_service': {
-                'service_name': 'foo_service',
-                'service_host': '0.0.0.0',
-                'service_port': 4242,
-                'servers': [
-                    ('haproxy-1', '1.2.4.4', 4243, ["check"]),
-                    ('haproxy-2', '1.2.4.5', 4243, ["check", "backup"])
+            "foo_service": {
+                "service_name": "foo_service",
+                "service_host": "0.0.0.0",
+                "service_port": 4242,
+                "service_options": ["balance leastconn",
+                                    "mode tcp",
+                                    "option tcplog"],
+                "servers": [
+                    ("haproxy-1", "1.2.4.4", 4243, ["check"]),
+                    ("haproxy-2", "1.2.4.5", 4243, ["check", "backup"])
                     ],
                 },
-            'foo_service_be': {
-                'service_name': 'foo_service_be',
-                'service_host': '0.0.0.0',
-                'service_port': 4243,
-                'server_options': ["maxconn 4"],
-                'servers': [('backend_1__8080', '1.2.3.4',
+            "foo_service_be": {
+                "service_name": "foo_service_be",
+                "service_host": "0.0.0.0",
+                "service_port": 4243,
+                "service_options": ["balance leastconn"],
+                "server_options": ["maxconn 4"],
+                "servers": [("backend_1__8080", "1.2.3.4",
                              8080, ["maxconn 4"])],
                 },
             }
