@@ -355,7 +355,7 @@ def create_monitoring_stanza(service_name="haproxy_monitoring"):
 def get_config_services():
     config_data = config_get()
     services = {}
-    for service_config in yaml.load(config_data['services']):
+    for service_config in yaml.safe_load(config_data['services']):
         if not services:
             # 'None' is used as a marker for the first service defined, which
             # is used as the default service if a proxied server doesn't
