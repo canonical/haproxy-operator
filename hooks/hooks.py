@@ -508,7 +508,7 @@ def apply_peer_config(services_dict):
     if not peer_services:
         return services_dict
 
-    unit_name = os.environ["JUJU_UNIT_NAME"]
+    unit_name = os.environ["JUJU_UNIT_NAME"].replace("/", "-")
     private_address = unit_get("private-address")
     for service_name, peer_service in peer_services.iteritems():
         original_service = services_dict[service_name]

@@ -22,7 +22,7 @@ class PeerRelationTest(TestCase):
         self.addCleanup(mock_controller.stop)
         return mock
 
-    @patch.dict(os.environ, {"JUJU_UNIT_NAME": "haproxy-2"})
+    @patch.dict(os.environ, {"JUJU_UNIT_NAME": "haproxy/2"})
     def test_with_peer_same_services(self):
         self.unit_get.return_value = "1.2.4.5"
         self.get_relation_data.return_value = {
