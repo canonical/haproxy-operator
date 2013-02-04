@@ -495,10 +495,12 @@ def apply_peer_config(services_dict):
             if service_name in services_dict:
                 peer_service = peer_services.setdefault(service_name, {})
                 peer_service["service_name"] = service_name
+                peer_service["service_host"] = service["service_host"]
+                peer_service["service_port"] = service["service_port"]
                 servers = peer_service.setdefault("servers", [])
                 servers.append((unit_name,
                                 peer_data[unit_name]["private-address"],
-                                service["service_port"], ["check"]))
+                                service["service_port"] + 1, ["check"]))
 
     if not peer_services:
         return services_dict
@@ -510,7 +512,7 @@ def apply_peer_config(services_dict):
         servers = peer_service["servers"]
         # Add ourselves to the list of servers for the peer listen stanza.
         servers.append((unit_name, private_address,
-                        original_service["service_port"],
+                        original_service["service_port"] + 1,
                         ["check"]))
 
         # Make all but the first server in the peer listen stanza a backup

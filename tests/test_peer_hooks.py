@@ -31,6 +31,7 @@ class PeerRelationTest(TestCase):
                 "private-address": "1.2.4.4",
                 "all_services": yaml.dump([
                     {"service_name": "foo_service",
+                     "service_host": '0.0.0.0',
                      "service_port": 4242},
                     ])
                 }
@@ -39,29 +40,31 @@ class PeerRelationTest(TestCase):
         services_dict = {
             'foo_service': {
                 'service_name': 'foo_service',
+                'service_host': '0.0.0.0',
                 'service_port': 4242,
                 'server_options': ["maxconn 4"],
-                'servers': [('backend_1__4242', '1.2.3.4',
-                             4242, ["maxconn 4"])],
+                'servers': [('backend_1__8080', '1.2.3.4',
+                             8080, ["maxconn 4"])],
                 },
             }
 
         expected = {
             'foo_service': {
                 'service_name': 'foo_service',
+                'service_host': '0.0.0.0',
+                'service_port': 4242,
                 'servers': [
-                    ('haproxy-1', '1.2.4.4',
-                     4242, ["check"]),
-                    ('haproxy-2', '1.2.4.5',
-                     4242, ["check", "backup"])
+                    ('haproxy-1', '1.2.4.4', 4243, ["check"]),
+                    ('haproxy-2', '1.2.4.5', 4243, ["check", "backup"])
                     ],
                 },
             'foo_service_be': {
                 'service_name': 'foo_service_be',
+                'service_host': '0.0.0.0',
                 'service_port': 4243,
                 'server_options': ["maxconn 4"],
-                'servers': [('backend_1__4242', '1.2.3.4',
-                             4242, ["maxconn 4"])],
+                'servers': [('backend_1__8080', '1.2.3.4',
+                             8080, ["maxconn 4"])],
                 },
             }
         self.assertEqual(expected, hooks.apply_peer_config(services_dict))
