@@ -65,4 +65,3 @@ class PeerRelationTest(TestCase):
                 },
             }
         self.assertEqual(expected, hooks.apply_peer_config(services_dict))
-    

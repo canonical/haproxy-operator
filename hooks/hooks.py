@@ -51,6 +51,7 @@ def config_get(scope=None):
     finally:
         return(config_data)
 
+
 #------------------------------------------------------------------------------
 # unit_get:  Returns a string containing the value of the requested item
 #------------------------------------------------------------------------------
@@ -376,9 +377,9 @@ def get_config_services():
             # specify which service it is bound to.
             services[None] = {"service_name":
                               service["service_name"]}
-        if is_proxy(service_name) and (
-            "option forwardfor" not in service["service_options"]):
-                service["service_options"].append("option forwardfor")
+        if is_proxy(service_name) and ("option forwardfor" not in
+                                       service["service_options"]):
+            service["service_options"].append("option forwardfor")
 
         service["server_options"] = service["server_options"].split()
         services[service_name] = service
@@ -397,7 +398,7 @@ def get_config_service(service_name=None):
 def is_proxy(service_name):
     if os.path.exists(
         os.path.join(default_haproxy_service_config_dir,
-                      "%s.is.proxy" % service_name)):
+                     "%s.is.proxy" % service_name)):
         return True
     return False
 
@@ -416,7 +417,7 @@ def create_services():
 
     if relation_data is None:
         relation_data = {}
-        
+
     for unit in sorted(relation_data.keys()):
         relation_info = relation_data[unit]
         unit_name = unit.rpartition('-')[0]
@@ -521,10 +522,10 @@ def apply_peer_config(services_dict):
         # Remap original service to a new name, stuff peer listen stanza into
         # it's place.
         be_service = service_name + "_be"
-        original_service["service_name"] = be_service 
+        original_service["service_name"] = be_service
         services_dict[be_service] = original_service
         services_dict[service_name] = peer_service
-        
+
     return services_dict
 
 

@@ -230,8 +230,8 @@ class ReverseProxyRelationTest(TestCase):
             }
         self.get_relation_data.return_value = {
             "foo-1": {"port": 4242,
-                          "hostname": "backend.1",
-                          "private-address": "1.2.3.4"},
+                      "hostname": "backend.1",
+                      "private-address": "1.2.3.4"},
         }
 
         expected = {
