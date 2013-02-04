@@ -53,6 +53,20 @@ def config_get(scope=None):
 
 
 #------------------------------------------------------------------------------
+# unit_get:  Returns a string containing the value of the requested item
+#------------------------------------------------------------------------------
+def unit_get(item):
+    try:
+        cmd_line = ['unit-get', item]
+        data = subprocess.check_output(cmd_line)
+    except Exception, e:
+        log(str(e))
+        data = None
+    finally:
+        return(data)
+
+
+#------------------------------------------------------------------------------
 # relation_get:  Returns a dictionary containing the relation information
 #                Optional parameters: scope, relation_id
 #                scope:        limits the scope of the returned data to the
@@ -310,7 +324,7 @@ def create_listen_stanza(service_name=None, service_ip=None,
             server_line = "    server %s %s:%s" % \
                 (server_name, server_ip, server_port)
             if server_options is not None:
-                server_line += " %s" % server_options
+                server_line += " %s" % " ".join(server_options)
             service_config.append(server_line)
     return('\n'.join(service_config))
 
@@ -355,13 +369,21 @@ def create_monitoring_stanza(service_name="haproxy_monitoring"):
 def get_config_services():
     config_data = config_get()
     services = {}
-    for service_config in yaml.safe_load(config_data['services']):
+    for service in yaml.safe_load(config_data['services']):
+        service_name = service["service_name"]
         if not services:
             # 'None' is used as a marker for the first service defined, which
             # is used as the default service if a proxied server doesn't
             # specify which service it is bound to.
-            services[None] = service_config
-        services[service_config["service_name"]] = service_config
+            services[None] = {"service_name":
+                              service["service_name"]}
+        if is_proxy(service_name) and ("option forwardfor" not in
+                                       service["service_options"]):
+            service["service_options"].append("option forwardfor")
+
+        service["server_options"] = service["server_options"].split()
+        services[service_name] = service
+
     return services
 
 
@@ -375,8 +397,8 @@ def get_config_service(service_name=None):
 
 def is_proxy(service_name):
     if os.path.exists(
-        os.path.join((default_haproxy_service_config_dir,
-                      "%s.is.proxy" % service_name))):
+        os.path.join(default_haproxy_service_config_dir,
+                     "%s.is.proxy" % service_name)):
         return True
     return False
 
@@ -389,11 +411,13 @@ def create_services():
     services_dict = get_config_services()
     relation_data = get_relation_data(relation_name="reverseproxy")
 
-    if relation_data is None or len(relation_data) == 0:
-        log("No relation data, exiting.")
+    if len(services_dict) == 0:
+        log("No services configured, exiting.")
         return
 
-    servers_added = False
+    if relation_data is None:
+        relation_data = {}
+
     for unit in sorted(relation_data.keys()):
         relation_info = relation_data[unit]
         unit_name = unit.rpartition('-')[0]
@@ -415,34 +439,93 @@ def create_services():
         port = relation_info['port']
         server_name = ("%s__%s" % (hostname.replace('.', '_'), port))
 
-        # Optional switches ( service_name )
+        # Optional switches ( service_name, sitenames )
+        service_names = []
         if 'service_name' in relation_info:
             if relation_info['service_name'] in services_dict:
-                service_name = relation_info['service_name']
+                service_names.append(relation_info['service_name'])
             else:
                 log("Service '%s' does not exist." %
                     relation_info['service_name'])
                 continue
+        elif 'sitenames' in relation_info:
+            sitenames = relation_info['sitenames'].split()
+            for sitename in sitenames:
+                if sitename in services_dict:
+                    service_names.append(sitename)
         elif unit_name in services_dict:
-            service_name = unit_name
+            service_names.append(unit_name)
         else:
-            service_name = services_dict[None]["service_name"]
+            service_names.append(services_dict[None]["service_name"])
 
-        service = services_dict[service_name]
-        if is_proxy(service_name) and ("option forwardfor"
-                                       not in service["service_options"]):
-            service["service_options"].append("option forwardfor")
+        for service_name in service_names:
+            service = services_dict[service_name]
 
-        # Add the server entries
-        servers = service.setdefault("servers", [])
-        servers.append((server_name, host, port,
-                        services_dict[service_name]['server_options']))
-        servers_added = True
+            # Add the server entries
+            servers = service.setdefault("servers", [])
+            servers.append((server_name, host, port,
+                            services_dict[service_name].get(
+                                'server_options', [])))
 
-    if not servers_added:
+    has_servers = False
+    for service_name, service in services_dict.iteritems():
+        if service.get("servers", []):
+            has_servers = True
+
+    if not has_servers:
+        log("No backend servers, exiting.")
         return
 
+    del services_dict[None]
     write_service_config(services_dict)
+    return services_dict
+
+
+def apply_peer_config(services_dict):
+    peer_data = get_relation_data(relation_name="peer")
+
+    peer_services = {}
+    for unit_name in sorted(peer_data.keys()):
+        service_data = yaml.load(peer_data[unit_name]["all_services"])
+        for service in service_data:
+            service_name = service["service_name"]
+            if service_name in services_dict:
+                peer_service = peer_services.setdefault(service_name, {})
+                peer_service["service_name"] = service_name
+                servers = peer_service.setdefault("servers", [])
+                servers.append((unit_name,
+                                peer_data[unit_name]["private-address"],
+                                service["service_port"], ["check"]))
+
+    if not peer_services:
+        return services_dict
+
+    unit_name = os.environ["JUJU_UNIT_NAME"]
+    private_address = unit_get("private-address")
+    for service_name, peer_service in peer_services.iteritems():
+        original_service = services_dict[service_name]
+        servers = peer_service["servers"]
+        # Add ourselves to the list of servers for the peer listen stanza.
+        servers.append((unit_name, private_address,
+                        original_service["service_port"],
+                        ["check"]))
+
+        # Make all but the first server in the peer listen stanza a backup
+        # server.
+        servers.sort()
+        for server in servers[1:]:
+            server[3].append("backup")
+
+        # Remap original service port, will now be used by peer listen stanza.
+        original_service["service_port"] += 1
+
+        # Remap original service to a new name, stuff peer listen stanza into
+        # it's place.
+        be_service = service_name + "_be"
+        original_service["service_name"] = be_service
+        services_dict[be_service] = original_service
+        services_dict[service_name] = peer_service
+
     return services_dict
 
 
@@ -694,6 +777,10 @@ def main(hook_name):
         website_interface("joined")
     elif hook_name == "website-relation-changed":
         website_interface("changed")
+    elif hook_name == "peer-relation-joined":
+        reverseproxy_interface("joined")
+    elif hook_name == "peer-relation-changed":
+        reverseproxy_interface("changed")
     elif hook_name == "nrpe-external-master-relation-changed":
         update_nrpe_config()
     else:

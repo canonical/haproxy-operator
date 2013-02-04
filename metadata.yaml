@@ -10,6 +10,8 @@ description:
 requires:
   reverseproxy:
     interface: http
+  peer:
+    interface: http
 provides:
   website:
     interface: http
@@ -18,3 +20,4 @@ provides:
   nrpe-external-master:
     interface: nrpe-external-master
     scope: container
+  

@@ -31,7 +31,7 @@ def test():
 def lint():
     """Check for code style and other visual organization issues."""
     venv_dir = os.path.join(ROOT_DIR, VIRTUALENV)
-    cmd = 'flake8 %s --exclude=%s/*' % (ROOT_DIR, venv_dir)
+    cmd = 'flake8 %s --exclude=%s/* --ignore=E123' % (ROOT_DIR, venv_dir)
     virtualenv_local(cmd, capture=False)
 
 

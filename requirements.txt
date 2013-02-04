@@ -7,6 +7,7 @@ flake8==1.7.0
 mock==1.0.1
 nose==1.2.1
 nose-notify==0.4.2
+tdaemon==0.1.1
 termcolor==1.0.1
 testtools==0.9.26
 wsgiref==0.1.2
