@@ -328,6 +328,8 @@ def get_config_service(service_name=None):
 def create_services():
     services_list = get_config_services()
     services_dict = {}
+
+    # service definitions specified in config
     for service_item in services_list:
         service_name = service_item['service_name']
         service_host = service_item['service_host']
@@ -340,6 +342,7 @@ def create_services():
                                          'service_options': service_options,
                                          'server_options': server_options}
 
+    # service definitions specified directly from the relations
     try:
         relids = subprocess.Popen(['relation-ids', 'reverseproxy'],
             stdout=subprocess.PIPE)
