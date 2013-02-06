@@ -269,7 +269,7 @@ def get_listen_stanzas(haproxy_config_file="/etc/haproxy/haproxy.cfg"):
     if stanzas is None:
         return ()
     return tuple(((service, addr, int(port))
-                   for service, addr, port in stanzas))
+                  for service, addr, port in stanzas))
 
 
 #------------------------------------------------------------------------------
@@ -760,7 +760,7 @@ def website_interface(hook_name=None):
     if hook_name is None:
         return None
     # Notify website relation but only for the current relation in context.
-    notify_website(changed=hook_name=="changed",
+    notify_website(changed=hook_name == "changed",
                    relation_ids=(None,))
 
 

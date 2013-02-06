@@ -97,4 +97,3 @@ class NotifyWebsiteRelationTest(TestCase):
                 hostname="foo.local",
                 all_services=""),
             ])
-        

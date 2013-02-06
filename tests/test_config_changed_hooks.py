@@ -23,7 +23,7 @@ class ConfigChangedTest(TestCase):
         self.service_haproxy = self.patch_hook(
             "service_haproxy")
         self.notify_website = self.patch_hook("notify_website")
-        
+
     def patch_hook(self, hook_name):
         mock_controller = patch.object(hooks, hook_name)
         mock = mock_controller.start()
@@ -40,7 +40,7 @@ class ConfigChangedTest(TestCase):
         hooks.config_changed()
 
         self.notify_website.assert_called_once_with()
-            
+
     def test_config_changed_no_notify_website_not_changed(self):
         self.service_haproxy.return_value = True
         self.get_listen_stanzas.side_effect = (
