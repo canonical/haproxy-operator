@@ -200,18 +200,38 @@ class HelpersTest(TestCase):
     @patch('hooks.load_haproxy_config')
     def test_gets_service_ports(self, load_haproxy_config):
         load_haproxy_config.return_value = '''
-        listen foo port:123
-        listen port bar or whatever:234
+        listen foo.internal 1.2.3.4:123
+        listen bar.internal 1.2.3.5:234
         '''
 
         ports = hooks.get_service_ports()
 
-        self.assertEqual(ports, ['123', '234'])
+        self.assertEqual(ports, (123, 234))
 
-    def test_gets_none_port_if_config_doesnt_exist(self):
+    @patch('hooks.load_haproxy_config')
+    def test_get_listen_stanzas(self, load_haproxy_config):
+        load_haproxy_config.return_value = '''
+        listen   foo.internal  1.2.3.4:123
+        listen bar.internal    1.2.3.5:234
+        '''
+
+        stanzas = hooks.get_listen_stanzas()
+
+        self.assertEqual((('foo.internal', '1.2.3.4', 123),
+                          ('bar.internal', '1.2.3.5', 234)),
+                         stanzas)
+
+    @patch('hooks.load_haproxy_config')
+    def test_get_listen_stanzas_none_configured(self, load_haproxy_config):
+        load_haproxy_config.return_value = ""
+
+        stanzas = hooks.get_listen_stanzas()
+
+        self.assertEqual((), stanzas)
+
+    def test_gets_no_ports_if_config_doesnt_exist(self):
         ports = hooks.get_service_ports('/some/foo/path')
-
-        self.assertIsNone(ports)
+        self.assertEqual((), ports)
 
 
 class RelationHelpersTest(TestCase):
