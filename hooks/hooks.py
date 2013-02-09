@@ -315,11 +315,7 @@ def get_host_port(services_list):
     """
     host = services_list[0]["service_host"]
     port = int(services_list[0]["service_port"])
-    if host == "0.0.0.0":
-        host = unit_get("public-address")
-        port = 10001
     return (host, port)
-
 
 def get_config_services():
     """
@@ -411,11 +407,14 @@ def create_services():
 
 
     # service definitions specified directly from the relations
+    # skip in the case of a services entry in the relation
     all_relations = relation_get_all("reverseproxy")
     for relid, reldata in all_relations.iteritems():
         for unit, relation_info in reldata.iteritems():
             if not isinstance(relation_info, dict):
                 sys.exit(0)
+            if "services" in relation_info:
+                continue;
             juju_service_name = unit.rpartition('/')[0]
             # Mandatory switches ( hostname, port )
             server_name = "%s__%s" % (
@@ -437,11 +436,8 @@ def create_services():
                 service_name = services_list[0]['service_name']
             # Add the server entries
             if not 'servers' in services_dict[service_name]:
-                services_dict[service_name]['servers'] = \
-                [(server_name, server_ip, server_port,
-                services_dict[service_name]['server_options'])]
-            else:
-                services_dict[service_name]['servers'].append((
+                services_dict[service_name]['servers'] = []
+            services_dict[service_name]['servers'].append((
                 server_name, server_ip, server_port,
                 services_dict[service_name]['server_options']))
 

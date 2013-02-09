@@ -27,7 +27,7 @@ class CreateServiceTest(MockerTestCase):
             {"service_name": "bar_service",
             "service_options": ["balance leastconn"],
             "servers": [
-                ("A", "hA", "1", "oA1 oA2"), ("B", "bA", "2", "oB1 oB2")]}]
+                ("A", "hA", "1", "oA1 oA2"), ("B", "hB", "2", "oB1 oB2")]}]
         hooks.default_haproxy_config_dir = self.makeDir()
         hooks.default_haproxy_config = self.makeFile()
         hooks.default_haproxy_service_config_dir = self.makeDir()
@@ -38,6 +38,7 @@ class CreateServiceTest(MockerTestCase):
         obj("public-address")
         self.mocker.result("test-host.example.com")
         self.mocker.count(0, None)
+        self.maxDiff = None
     
     def _expect_config_get(self, **kwargs):
         result = {
@@ -71,7 +72,7 @@ class CreateServiceTest(MockerTestCase):
         obj(relation)
         relation = {"hostname": "10.0.1.2",
                     "private-address": "10.0.1.2",
-                    "port": "88"}
+                    "port": "10000"}
         relation.update(extra)
         result = {"1": {"unit/0": relation}}
         self.mocker.result(result)
@@ -95,7 +96,7 @@ class CreateServiceTest(MockerTestCase):
         stanza = """\
             listen haproxy_test 0.0.0.0:88
                 balance leastconn
-                server 10_0_1_2__88 10.0.1.2:88 maxconn 25
+                server 10_0_1_2__10000 10.0.1.2:10000 maxconn 25
 
         """
         self.assertEquals(services, dedent(stanza))
@@ -116,16 +117,16 @@ class CreateServiceTest(MockerTestCase):
         stanza = """\
             listen unit_service supplied-hostname:999
                 balance leastconn
-                server 10_0_1_2__88 10.0.1.2:88 maxconn 99
+                server 10_0_1_2__10000 10.0.1.2:10000 maxconn 99
 
         """
         self.assertEquals(dedent(stanza), services)
 
     def test_generation_pure_relation(self):
         """
-        In this case, the relation is in control of the file.  Each relation
-        chooses what server it creates in the haproxy file, it relies on
-        the haproxy service only for the hostname and front-end port.
+        In this case, the relation is in control of the haproxy config file.
+        Each relation chooses what server it creates in the haproxy file, it
+        relies on the haproxy service only for the hostname and front-end port.
         Each member of the relation will put a backend server entry under in
         the desired stanza.  Each realtion can in fact supply multiple
         entries from the same juju service unit if desired.
@@ -136,16 +137,18 @@ class CreateServiceTest(MockerTestCase):
         hooks.create_services()
         services = hooks.load_services()
         stanza = """\
-            listen foo_service supplied-hostname:997
+            listen foo_service 0.0.0.0:88
                 balance leastconn
-                server A__1 hA:1 oA1 oA2
-
-            listen bar_service supplied-hostname:998
-                balance leastconn
-                server A__1 hA:1 oA1 oA2
-                server B__1 hB:1 oB1 oB2
+                server A hA:1 oA1 oA2
         """
-        self.assertEquals(services, dedent(stanza))
+        self.assertIn(dedent(stanza), services)
+        stanza = """\
+            listen bar_service 0.0.0.0:89
+                balance leastconn
+                server A hA:1 oA1 oA2
+                server B hB:2 oB1 oB2
+        """
+        self.assertIn(dedent(stanza), services)
 
     def test_get_config_services_config_only(self):
         """
@@ -173,11 +176,14 @@ class CreateServiceTest(MockerTestCase):
     def test_get_config_services_relation_with_services(self):
         """
         Testing with both the config and relation providing services should
-        yield the union of the two
+        yield the just the relation
         """
         self._expect_config_get()
         self._expect_relation_get_all_with_services("reverseproxy")
         self.mocker.replay()
         result = hooks.get_config_services()
-        self.assertEquals(result, self.relation_services)
+        # Just test "servers" since hostname and port and maybe other keys
+        # will be added by the hook
+        self.assertEquals(result[0]["servers"],
+                self.relation_services[0]["servers"])
 
