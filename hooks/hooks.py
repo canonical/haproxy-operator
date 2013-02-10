@@ -415,6 +415,8 @@ def create_services():
                 sys.exit(0)
             if "services" in relation_info:
                 continue;
+            if "hostname" not in relation_info:
+                juju_log("hostname not in %s, %s" % (relid, unit))
             juju_service_name = unit.rpartition('/')[0]
             # Mandatory switches ( hostname, port )
             server_name = "%s__%s" % (
