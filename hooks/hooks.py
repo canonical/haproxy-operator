@@ -414,6 +414,10 @@ def create_services():
             if not isinstance(relation_info, dict):
                 sys.exit(0)
             if "services" in relation_info:
+                juju_log("Relation %s has services override defined" % relid)
+                continue;
+            if "hostname" not in relation_info or "port" not in relation_info:
+                juju_log("Relation %s needs hostname and port defined" % relid)
                 continue;
             juju_service_name = unit.rpartition('/')[0]
             # Mandatory switches ( hostname, port )
