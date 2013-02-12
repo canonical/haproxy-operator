@@ -84,7 +84,6 @@ joining with the same `service_name` under one listen stanza.
 `service-options` and `server_options` will be overwritten, so ensure they
 are set uniformly on all services with the same name.
 
-
 Website Relation
 ----------------
 
@@ -98,12 +97,19 @@ These settings can then be used when crafting your vhost template to make sure
 traffic goes to the correct haproxy listener which will in turn forward the
 traffic to the correct backend server/port
 
-
 Configuration
 -------------
 Many of the haproxy settings can be altered via the standard juju configuration
 settings.  Please see the config.yaml file as each is fairly clearly documented.
 
+Testing
+-------
+This charm has a simple unit-test program.  Please expand it and make sure new
+changes are covered by simple unit tests.  To run the unit tests:
+
+    sudo apt-get install python-mocker
+    sudo apt-get install python-twisted-core
+    cd hooks; trial test_hooks
 
 TODO:
 -----
