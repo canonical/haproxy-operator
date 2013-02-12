@@ -1,11 +1,9 @@
 import hooks
 import yaml
-import unittest
 from textwrap import dedent
 from mocker import MockerTestCase, ARGS
 
-
-class CreateServiceTest(MockerTestCase):
+class JujuHookTest(MockerTestCase):
 
     def setUp(self):
         self.config_services = [{
@@ -28,6 +26,10 @@ class CreateServiceTest(MockerTestCase):
             "service_options": ["balance leastconn"],
             "servers": [
                 ("A", "hA", "1", "oA1 oA2"), ("B", "hB", "2", "oB1 oB2")]}]
+        self.relation_services2 = [
+            {"service_name": "foo_service",
+            "service_options": ["balance leastconn"],
+            "servers": [("A2", "hA2", "12", "oA12 oA22")]}]
         hooks.default_haproxy_config_dir = self.makeDir()
         hooks.default_haproxy_config = self.makeFile()
         hooks.default_haproxy_service_config_dir = self.makeDir()
@@ -66,6 +68,7 @@ class CreateServiceTest(MockerTestCase):
         obj()
         result.update(kwargs)
         self.mocker.result(result)
+        self.mocker.count(1, None)
 
     def _expect_relation_get_all(self, relation, extra={}):
         obj = self.mocker.replace("hooks.relation_get_all")
@@ -75,6 +78,23 @@ class CreateServiceTest(MockerTestCase):
                     "port": "10000"}
         relation.update(extra)
         result = {"1": {"unit/0": relation}}
+        self.mocker.result(result)
+        self.mocker.count(1, None)
+
+    def _expect_relation_get_all_multiple(self, relation_name):
+        obj = self.mocker.replace("hooks.relation_get_all")
+        obj(relation_name)
+        result = {
+                "1": {"unit/0": {
+                    "hostname": "10.0.1.2",
+                    "private-address": "10.0.1.2",
+                    "port": "10000",
+                    "services": yaml.dump(self.relation_services)}},
+                "2": {"unit/1": {
+                    "hostname": "10.0.1.3",
+                    "private-address": "10.0.1.3",
+                    "port": "10001",
+                    "services": yaml.dump(self.relation_services2)}}}
         self.mocker.result(result)
         self.mocker.count(1, None)
 
@@ -150,6 +170,33 @@ class CreateServiceTest(MockerTestCase):
         """
         self.assertIn(dedent(stanza), services)
 
+    def test_create_services_pure_relation_multiple(self):
+        """
+        This is much liek the pure_relation case, where the relation specifies
+        a "services" override.  However, in this case we have multiple relations
+        that partially override each other.  We expect that the created haproxy
+        conf file will combine things appropriately.
+        """
+        self._expect_config_get()
+        self._expect_relation_get_all_multiple("reverseproxy")
+        self.mocker.replay()
+        hooks.create_services()
+        result = hooks.load_services()
+        stanza = """\
+            listen foo_service 0.0.0.0:88
+                balance leastconn
+                server A hA:1 oA1 oA2
+                server A2 hA2:12 oA12 oA22
+        """
+        self.assertIn(dedent(stanza), result)
+        stanza = """\
+            listen bar_service 0.0.0.0:89
+                balance leastconn
+                server A hA:1 oA1 oA2
+                server B hB:2 oB1 oB2
+        """
+        self.assertIn(dedent(stanza), result)
+
     def test_get_config_services_config_only(self):
         """
         Attempting to catch the case where a relation is not joined yet
@@ -186,4 +233,5 @@ class CreateServiceTest(MockerTestCase):
         # will be added by the hook
         self.assertEquals(result[0]["servers"],
                 self.relation_services[0]["servers"])
+
 

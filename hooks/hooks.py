@@ -327,9 +327,10 @@ def get_config_services():
     proxy configuration found, ensure the forward for option is set.
     """
     config_data = config_get()
-    services_list = yaml.load(config_data['services'])
-    (host, port) = get_host_port(services_list)
+    config_services_list = yaml.load(config_data['services'])
+    (host, port) = get_host_port(config_services_list)
     all_relations = relation_get_all("reverseproxy")
+    services_list = []
     if hasattr(all_relations, "iteritems"):
         for relid, reldata in all_relations.iteritems():
             for unit, relation_info in reldata.iteritems():
@@ -339,7 +340,9 @@ def get_config_services():
                         r["service_host"] = host
                         r["service_port"] = port
                         port += 1
-                    services_list = rservices
+                    services_list.extend(rservices)
+    if len(services_list) == 0:
+        services_list = config_services_list
     return(services_list)
 
 
@@ -383,31 +386,47 @@ def relation_get_all(relation_name):
     except Exception, e:
         subprocess.call(['juju-log', str(e)])
 
+def create_services_dict():
+    """
+    Transform the services list into a dict for easier comprehension,
+    and to ensure that we have only one entry per service type.  If multiple
+    relations specify the same server_name, try to union the servers
+    entries.
+    """
+    services_list = get_config_services()
+    services_dict = {}
+
+    for service_item in services_list:
+        if not hasattr(service_item, "iteritems"):
+            juju_log("Each 'services' entry must be a dict: %s" % service_item)
+            continue;
+        if "service_name" not in service_item:
+            juju_log("Missing 'service_name': %s" % service_item)
+            continue;
+        name = service_item["service_name"]
+        options = service_item["service_options"]
+        if name in services_dict:
+            if "servers" in services_dict[name]:
+                services_dict[name]["servers"].extend(service_item["servers"])
+        else:
+            services_dict[name] = service_item
+        if os.path.exists("%s/%s.is.proxy" % (
+            default_haproxy_service_config_dir, name)):
+            if 'option forwardfor' not in options:
+                options.append("option forwardfor")
+
+    return services_dict
+
 #------------------------------------------------------------------------------
 # create_services:  Function that will create the services configuration
 #                   from the config data and/or relation information
 #------------------------------------------------------------------------------
 def create_services():
     services_list = get_config_services()
-    services_dict = {}
+    services_dict = create_services_dict()
 
-    # service definitions specified in config
-    for service_item in services_list:
-        if (hasattr(service_item, "iteritems") and
-                service_item.has_key("service_name")):
-            name = service_item["service_name"]
-            options = service_item["service_options"]
-            services_dict[service_item["service_name"]] = service_item
-            if os.path.exists("%s/%s.is.proxy" % (
-                default_haproxy_service_config_dir, name)):
-                if 'option forwardfor' not in options:
-                    options.append("option forwardfor")
-        else:
-            juju_log("Must be a dict and have service_name: %s", service_item)
-
-
-    # service definitions specified directly from the relations
-    # skip in the case of a services entry in the relation
+    # service definitions overwrites user specified haproxy file in
+    # a pseudo-template form
     all_relations = relation_get_all("reverseproxy")
     for relid, reldata in all_relations.iteritems():
         for unit, relation_info in reldata.iteritems():
