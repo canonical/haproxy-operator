@@ -2,7 +2,6 @@ import hooks
 import yaml
 from textwrap import dedent
 from mocker import MockerTestCase, ARGS
-import socket
 
 class JujuHookTest(MockerTestCase):
 

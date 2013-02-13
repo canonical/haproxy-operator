@@ -37,14 +37,6 @@ def juju_log(*args):
     log_args.extend(args)
     subprocess.call(log_args)
 
-def relation_set(*args):
-    """
-    Arguments passed through unaltered to relation_set
-    """
-    set_args = ["relation-set"]
-    set_args.extend(args)
-    subprocess.call(set_args)
-
 #------------------------------------------------------------------------------
 # config_get:  Returns a dictionary containing all of the config information
 #              Optional parameter: scope
@@ -690,8 +682,8 @@ def website_interface(hook_name=None):
     # hostname
     if my_host == "localhost":
         my_host = socket.gethostname()
-    relation_set(
-            ['port=%d' % my_port, 'hostname=%s' % my_host,
+    subprocess.call(
+            ['relation-set', 'port=%d' % my_port, 'hostname=%s' % my_host,
              'all_services=%s' % yaml.dump(get_all_services())])
     if hook_name == "changed":
         if 'is-proxy' in relation_data:
