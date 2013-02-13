@@ -37,6 +37,14 @@ def juju_log(*args):
     log_args.extend(args)
     subprocess.call(log_args)
 
+def relation_set(*args):
+    """
+    Arguments passed through unaltered to relation_set
+    """
+    set_args = ["relation-set"]
+    set_args.extend(args)
+    subprocess.call(set_args)
+
 #------------------------------------------------------------------------------
 # config_get:  Returns a dictionary containing all of the config information
 #              Optional parameter: scope
@@ -386,7 +394,7 @@ def relation_get_all(relation_name):
     except Exception, e:
         subprocess.call(['juju-log', str(e)])
 
-def create_services_dict():
+def get_services_dict():
     """
     Transform the services list into a dict for easier comprehension,
     and to ensure that we have only one entry per service type.  If multiple
@@ -417,13 +425,27 @@ def create_services_dict():
 
     return services_dict
 
+def get_all_services():
+    """
+    Transform a services dict into an "all_services" relation setting expected
+    by apache2.  This is needed to ensure we have the port and hostname setting
+    correct and in the proper format
+    """
+    services = get_services_dict()
+    all_services = []
+    for name in services:
+        s = {"service_name": name,
+             "service_port": services[name]["service_port"]}
+        all_services.append(s)
+    return all_services
+
 #------------------------------------------------------------------------------
 # create_services:  Function that will create the services configuration
 #                   from the config data and/or relation information
 #------------------------------------------------------------------------------
 def create_services():
     services_list = get_config_services()
-    services_dict = create_services_dict()
+    services_dict = get_services_dict()
 
     # service definitions overwrites user specified haproxy file in
     # a pseudo-template form
@@ -668,9 +690,9 @@ def website_interface(hook_name=None):
     # hostname
     if my_host == "localhost":
         my_host = socket.gethostname()
-    subprocess.call(
-            ['relation-set', 'port=%d' % my_port, 'hostname=%s' % my_host,
-             'all_services=%s' % yaml.dump(get_config_services())])
+    relation_set(
+            ['port=%d' % my_port, 'hostname=%s' % my_host,
+             'all_services=%s' % yaml.dump(get_all_services())])
     if hook_name == "changed":
         if 'is-proxy' in relation_data:
             service_name = "%s__%d" % \
