@@ -93,7 +93,7 @@ def relation_set(arguments, relation_id=None):
     """
     set_args = ["relation-set"]
     if relation_id is not None:
-        set_args = ["-r", str(relation_id)]
+        set_args.extend(["-r", str(relation_id)])
     set_args.extend(arguments)
     subprocess.check_call(set_args)
 
