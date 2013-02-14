@@ -621,7 +621,7 @@ def website_notify():
     all_relations = relation_get_all("website")
     if hasattr(all_relations, "iteritems"):
         for relid, reldata in all_relations.iteritems():
-            relation_set("time=%s" % time.time(), relation_id=relid)
+            relation_set(["time=%s" % time.time()], relation_id=relid)
 
 
 ###############################################################################

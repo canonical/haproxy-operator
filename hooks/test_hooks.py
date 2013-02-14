@@ -109,15 +109,6 @@ class JujuHookTest(MockerTestCase):
         self.mocker.result(result)
         self.mocker.count(1, None)
 
-    def _expect_relation_set(self, args):
-        """
-        @param args: list of arguments expected to be passed to relation_set
-        """
-        obj = self.mocker.replace("hooks.relation_set")
-        obj(args)
-        self.relation_set = args
-        self.mocker.count(1,None)
-
     def test_create_services(self):
         """
         Simplest use case, config stanza seeded in config file, server line
