@@ -11,6 +11,7 @@ import subprocess
 import sys
 import yaml
 import nrpe
+import time
 
 
 ###############################################################################
@@ -84,6 +85,17 @@ def relation_get(scope=None, unit_name=None, relation_id=None):
     finally:
         return(relation_data)
 
+def relation_set(arguments, relation_id=None):
+    """
+    Wrapper around relation-set
+    @param arguments: list of command line arguments
+    @param relation_id: optional relation-id (passed to -r parameter) to use
+    """
+    set_args = ["relation-set"]
+    if relation_id is not None:
+        set_args = ["-r", str(relation_id)]
+    set_args.extend(arguments)
+    subprocess.check_call(set_args)
 
 #------------------------------------------------------------------------------
 # apt_get_install( package ):  Installs a package
@@ -601,6 +613,16 @@ def service_haproxy(action=None, haproxy_config=default_haproxy_config):
         else:
             return(False)
 
+def website_notify():
+    """
+    Notify any webiste relations of any configuration changes.
+    """
+    juju_log("Notifying all website relations of change")
+    all_relations = relation_get_all("website")
+    if hasattr(all_relations, "iteritems"):
+        for relid, reldata in all_relations.iteritems():
+            relation_set("time=%s" % time.time(), relation_id=relid)
+
 
 ###############################################################################
 # Hook functions
@@ -652,10 +674,12 @@ def stop_hook():
 def reverseproxy_interface(hook_name=None):
     if hook_name is None:
         return(None)
-    if hook_name == "changed":
+    elif hook_name == "changed":
         config_changed()
-    if hook_name=="departed":
+        website_notify()
+    elif hook_name=="departed":
         config_changed()
+        website_notify()
 
 def website_interface(hook_name=None):
     if hook_name is None:
