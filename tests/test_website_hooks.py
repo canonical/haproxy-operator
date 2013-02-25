@@ -1,5 +1,5 @@
 from testtools import TestCase
-from mock import patch, call
+from mock import patch, call, ANY
 
 import hooks
 
@@ -65,10 +65,8 @@ class NotifyWebsiteRelationTest(TestCase):
         self.get_hostname.assert_called_once_with()
         self.relation_get.assert_called_once_with(relation_id=None)
         self.relation_set.assert_called_once_with(
-            relation_id=None, port=80,
-            hostname="foo.local",
-            all_services="",
-            )
+            relation_id=None, port=80, hostname="foo.local",
+            all_services="", time=ANY)
         self.get_relation_ids.assert_not_called()
 
     def test_notify_website_with_relations(self):
@@ -89,11 +87,9 @@ class NotifyWebsiteRelationTest(TestCase):
 
         self.relation_set.assert_has_calls([
             call.relation_set(
-                relation_id="website:1", port=80,
-                hostname="foo.local",
-                all_services=""),
+                relation_id="website:1", port=80, hostname="foo.local",
+                all_services="", time=ANY),
             call.relation_set(
-                relation_id="website:2", port=80,
-                hostname="foo.local",
-                all_services=""),
+                relation_id="website:2", port=80, hostname="foo.local",
+                all_services="", time=ANY),
             ])

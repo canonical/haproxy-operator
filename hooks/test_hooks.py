@@ -3,6 +3,7 @@ import yaml
 from textwrap import dedent
 from mocker import MockerTestCase, ARGS
 
+
 class JujuHookTest(MockerTestCase):
 
     def setUp(self):
@@ -14,22 +15,22 @@ class JujuHookTest(MockerTestCase):
             "server_options": "maxconn 25"}]
         self.config_services_extended = [
             {"service_name": "unit_service",
-            "service_host": "supplied-hostname",
-            "service_port": "999",
-            "service_options": ["balance leastconn"],
-            "server_options": "maxconn 99"}]
+             "service_host": "supplied-hostname",
+             "service_port": "999",
+             "service_options": ["balance leastconn"],
+             "server_options": "maxconn 99"}]
         self.relation_services = [
             {"service_name": "foo_svc",
-            "service_options": ["balance leastconn"],
-            "servers": [("A", "hA", "1", "oA1 oA2")]},
+             "service_options": ["balance leastconn"],
+             "servers": [("A", "hA", "1", "oA1 oA2")]},
             {"service_name": "bar_svc",
-            "service_options": ["balance leastconn"],
-            "servers": [
-                ("A", "hA", "1", "oA1 oA2"), ("B", "hB", "2", "oB1 oB2")]}]
+             "service_options": ["balance leastconn"],
+             "servers": [
+                 ("A", "hA", "1", "oA1 oA2"), ("B", "hB", "2", "oB1 oB2")]}]
         self.relation_services2 = [
             {"service_name": "foo_svc",
-            "service_options": ["balance leastconn"],
-            "servers": [("A2", "hA2", "12", "oA12 oA22")]}]
+             "service_options": ["balance leastconn"],
+             "servers": [("A2", "hA2", "12", "oA12 oA22")]}]
         hooks.default_haproxy_config_dir = self.makeDir()
         hooks.default_haproxy_config = self.makeFile()
         hooks.default_haproxy_service_config_dir = self.makeDir()
@@ -41,10 +42,11 @@ class JujuHookTest(MockerTestCase):
         self.mocker.result("test-host.example.com")
         self.mocker.count(0, None)
         self.maxDiff = None
-    
+
     def _expect_config_get(self, **kwargs):
         result = {
-            "default_timeouts": "queue 1000, connect 1000, client 1000, server 1000",
+            "default_timeouts": ("queue 1000, connect 1000, client 1000, "
+                                 "server 1000"),
             "global_log": "127.0.0.1 local0, 127.0.0.1 local1 notice",
             "global_spread_checks": 0,
             "monitoring_allowed_cidr": "127.0.0.1/32",
@@ -85,16 +87,16 @@ class JujuHookTest(MockerTestCase):
         obj = self.mocker.replace("hooks.relation_get_all")
         obj(relation_name)
         result = {
-                "1": {"unit/0": {
-                    "hostname": "10.0.1.2",
-                    "private-address": "10.0.1.2",
-                    "port": "10000",
-                    "services": yaml.dump(self.relation_services)}},
-                "2": {"unit/1": {
-                    "hostname": "10.0.1.3",
-                    "private-address": "10.0.1.3",
-                    "port": "10001",
-                    "services": yaml.dump(self.relation_services2)}}}
+            "1": {"unit/0": {
+                "hostname": "10.0.1.2",
+                "private-address": "10.0.1.2",
+                "port": "10000",
+                "services": yaml.dump(self.relation_services)}},
+            "2": {"unit/1": {
+                "hostname": "10.0.1.3",
+                "private-address": "10.0.1.3",
+                "port": "10001",
+                "services": yaml.dump(self.relation_services2)}}}
         self.mocker.result(result)
         self.mocker.count(1, None)
 
@@ -131,12 +133,12 @@ class JujuHookTest(MockerTestCase):
     def test_create_services_extended_with_relation(self):
         """
         This case covers specifying an up-front services file to ha-proxy
-        in the config.  The relation then specifies a singular hostname, 
+        in the config.  The relation then specifies a singular hostname,
         port and server_options setting which is filled into the appropriate
         haproxy stanza based on multiple criteria.
         """
         self._expect_config_get(
-                services=yaml.dump(self.config_services_extended))
+            services=yaml.dump(self.config_services_extended))
         self._expect_relation_get_all("reverseproxy")
         self.mocker.replay()
         hooks.create_services()
@@ -180,9 +182,9 @@ class JujuHookTest(MockerTestCase):
     def test_create_services_pure_relation_multiple(self):
         """
         This is much liek the pure_relation case, where the relation specifies
-        a "services" override.  However, in this case we have multiple relations
-        that partially override each other.  We expect that the created haproxy
-        conf file will combine things appropriately.
+        a "services" override.  However, in this case we have multiple
+        relations that partially override each other.  We expect that the
+        created haproxy conf file will combine things appropriately.
         """
         self._expect_config_get()
         self._expect_relation_get_all_multiple("reverseproxy")
@@ -239,7 +241,7 @@ class JujuHookTest(MockerTestCase):
         # Just test "servers" since hostname and port and maybe other keys
         # will be added by the hook
         self.assertEquals(result[0]["servers"],
-                self.relation_services[0]["servers"])
+                          self.relation_services[0]["servers"])
 
     def test_config_generation_indempotent(self):
         self._expect_config_get()
