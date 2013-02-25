@@ -1,4 +1,10 @@
+revision
+basenode/
 _trial_temp
 .coverage
 coverage.xml
-.env
+.env/
+*.crt
+*.key
+.sourcedeps/*
+*.pyc
