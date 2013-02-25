@@ -11,6 +11,11 @@ import subprocess
 import sys
 import yaml
 import nrpe
+import time
+
+from charmsupport.hookenv import (
+    log,
+)
 
 
 ###############################################################################
@@ -23,13 +28,6 @@ default_haproxy_service_config_dir = "/var/run/haproxy"
 ###############################################################################
 # Supporting functions
 ###############################################################################
-
-
-#------------------------------------------------------------------------------
-# log:  Log a message via juju's logging mechanism.
-#------------------------------------------------------------------------------
-def log(msg):
-    subprocess.call(["juju-log", msg])
 
 
 #------------------------------------------------------------------------------
@@ -569,7 +567,7 @@ def apply_peer_config(services_dict):
 def write_service_config(services_dict):
     # Construct the new haproxy.cfg file
     for service in services_dict:
-        print "Service: ", service
+        log("Service: %s" % service)
         server_entries = None
         if 'servers' in services_dict[service]:
             server_entries = services_dict[service]['servers']
@@ -752,7 +750,7 @@ def stop_hook():
 def reverseproxy_interface(hook_name=None):
     if hook_name is None:
         return None
-    if hook_name == "changed":
+    if hook_name in ("changed", "departed"):
         config_changed()
 
 
@@ -797,7 +795,8 @@ def notify_website(changed=False, relation_ids=None):
 
         relation_set(relation_id=rid, port=my_port,
                      hostname=my_host,
-                     all_services=config_data['services'])
+                     all_services=config_data['services'],
+                     time=time.time())
 
         if changed:
             if 'is-proxy' in relation_data:
@@ -834,6 +833,8 @@ def main(hook_name):
         config_changed()
     elif hook_name == "reverseproxy-relation-changed":
         reverseproxy_interface("changed")
+    elif hook_name == "reverseproxy-relation-departed":
+        reverseproxy_interface("departed")
     elif hook_name == "website-relation-joined":
         website_interface("joined")
     elif hook_name == "website-relation-changed":

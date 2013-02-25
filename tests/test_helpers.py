@@ -59,14 +59,6 @@ class HelpersTest(TestCase):
         ])
         self.assertEqual(result, expected)
 
-    def test_log(self):
-        with patch('subprocess.call') as mock_call:
-            msg = 'some message'
-
-            hooks.log(msg)
-
-            mock_call.assert_called_with(["juju-log", msg])
-
     def test_gets_config(self):
         json_string = '{"foo": "BAR"}'
         with patch('subprocess.check_output') as check_output:
