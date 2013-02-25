@@ -1,4 +1,4 @@
-Juju charm haproxy
+Juju charm for HAProxy
 ==================
 
 HAProxy is a free, very fast and reliable solution offering high availability,
@@ -8,6 +8,16 @@ persistence or Layer7 processing. Supporting tens of thousands of connections
 is clearly realistic with todays hardware. Its mode of operation makes its
 integration into existing architectures very easy and riskless, while still
 offering the possibility not to expose fragile web servers to the Net.
+
+Preparing the charm for deployment
+----------------------------------
+
+This charm has a dependency on the `lp:charmsupport` project, which provides
+well-tested helper functions to be used in charm hooks.
+
+As part of the preparation for deployment, you should branch this charm locally
+and run the `make sourcedeps` command, which will fetch the known-good version
+of the charmsupport project to be used into a sub-directory of the charm.
 
 How to deploy the charm
 -----------------------
@@ -27,7 +37,7 @@ frontend this service with apache2 to handle the SSL negotiation, etc.  See
 the "Website Relation" section for more information about that.
 
 When your charm hooks into reverseproxy you have two general approaches
-which can be used to notify haproxy about what services you are running. 
+which can be used to notify haproxy about what services you are running.
 1) Single-service proxying or 2) Multi-service or relation-driven proxying.
 
 ** 1) Single-Service Proxying **
@@ -67,7 +77,7 @@ website-relation-changed hook would look something like this:
 
     #!/bin/bash
     # hooks/website-relation-changed
-  
+
     host=$(unit-get private-address)
     port=80
 
@@ -80,7 +90,7 @@ website-relation-changed hook would look something like this:
     "
 
 Once set, haproxy will union multiple `servers` stanzas from any units
-joining with the same `service_name` under one listen stanza. 
+joining with the same `service_name` under one listen stanza.
 `service-options` and `server_options` will be overwritten, so ensure they
 are set uniformly on all services with the same name.
 
@@ -102,14 +112,22 @@ Configuration
 Many of the haproxy settings can be altered via the standard juju configuration
 settings.  Please see the config.yaml file as each is fairly clearly documented.
 
-Testing
+Development
 -------
-This charm has a simple unit-test program.  Please expand it and make sure new
-changes are covered by simple unit tests.  To run the unit tests:
+The following steps are needed for testing and development of the charm,
+but **not** for deployment:
 
-    sudo apt-get install python-mocker
-    sudo apt-get install python-twisted-core
-    cd hooks; trial test_hooks
+    sudo apt-get install python-software-properties
+    sudo add-apt-repository ppa:chrisjohnston/flake8
+    sudo apt-get update
+    sudo apt-get install python-mocker python-mock config-manager flake8 python-nose
+
+To fetch additional source dependencies and run the tests:
+
+    make build
+
+... will run the unit tests, run flake8 over the source to warn about
+formatting issues and output a code coverage summary of the 'hooks.py' module.
 
 TODO:
 -----
