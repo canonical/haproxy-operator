@@ -1,5 +1,5 @@
 Juju charm for HAProxy
-==================
+======================
 
 HAProxy is a free, very fast and reliable solution offering high availability,
 load balancing, and proxying for TCP and HTTP-based applications. It is
@@ -8,6 +8,23 @@ persistence or Layer7 processing. Supporting tens of thousands of connections
 is clearly realistic with todays hardware. Its mode of operation makes its
 integration into existing architectures very easy and riskless, while still
 offering the possibility not to expose fragile web servers to the Net.
+
+Development
+-----------
+The following steps are needed for testing and development of the charm,
+but **not** for deployment:
+
+    sudo apt-get install python-software-properties
+    sudo add-apt-repository ppa:chrisjohnston/flake8
+    sudo apt-get update
+    sudo apt-get install python-mocker python-mock config-manager flake8 python-nose
+
+To fetch additional source dependencies and run the tests:
+
+    make build
+
+... will run the unit tests, run flake8 over the source to warn about
+formatting issues and output a code coverage summary of the 'hooks.py' module.
 
 Preparing the charm for deployment
 ----------------------------------
@@ -111,23 +128,6 @@ Configuration
 -------------
 Many of the haproxy settings can be altered via the standard juju configuration
 settings.  Please see the config.yaml file as each is fairly clearly documented.
-
-Development
--------
-The following steps are needed for testing and development of the charm,
-but **not** for deployment:
-
-    sudo apt-get install python-software-properties
-    sudo add-apt-repository ppa:chrisjohnston/flake8
-    sudo apt-get update
-    sudo apt-get install python-mocker python-mock config-manager flake8 python-nose
-
-To fetch additional source dependencies and run the tests:
-
-    make build
-
-... will run the unit tests, run flake8 over the source to warn about
-formatting issues and output a code coverage summary of the 'hooks.py' module.
 
 TODO:
 -----
