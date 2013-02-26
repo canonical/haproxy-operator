@@ -272,8 +272,7 @@ def get_listen_stanzas(haproxy_config_file="/etc/haproxy/haproxy.cfg"):
 def open_port(port=None, protocol="TCP"):
     if port is None:
         return None
-    return subprocess.call(['/usr/bin/open-port', "%d/%s" %
-                            (int(port), protocol)])
+    return subprocess.call(['open-port', "%d/%s" % (int(port), protocol)])
 
 
 #------------------------------------------------------------------------------
