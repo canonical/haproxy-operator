@@ -214,6 +214,15 @@ class HelpersTest(TestCase):
                          stanzas)
 
     @patch('hooks.load_haproxy_config')
+    def test_get_empty_tuple_when_no_stanzas(self, load_haproxy_config):
+        load_haproxy_config.return_value = '''
+        '''
+
+        stanzas = hooks.get_listen_stanzas()
+
+        self.assertEqual((), stanzas)
+
+    @patch('hooks.load_haproxy_config')
     def test_get_listen_stanzas_none_configured(self, load_haproxy_config):
         load_haproxy_config.return_value = ""
 

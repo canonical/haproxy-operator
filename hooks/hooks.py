@@ -261,8 +261,6 @@ def get_listen_stanzas(haproxy_config_file="/etc/haproxy/haproxy.cfg"):
     if haproxy_config is None:
         return ()
     stanzas = re.findall("listen\s+([^\s]+)\s+([^:]+):(.*)", haproxy_config)
-    if stanzas is None:
-        return ()
     return tuple(((service, addr, int(port))
                   for service, addr, port in stanzas))
 
