@@ -395,8 +395,7 @@ def get_config_services():
             # 'None' is used as a marker for the first service defined, which
             # is used as the default service if a proxied server doesn't
             # specify which service it is bound to.
-            services[None] = {"service_name":
-                              service["service_name"]}
+            services[None] = {"service_name": service_name}
         if is_proxy(service_name) and ("option forwardfor" not in
                                        service["service_options"]):
             service["service_options"].append("option forwardfor")
