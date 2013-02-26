@@ -282,8 +282,7 @@ def open_port(port=None, protocol="TCP"):
 def close_port(port=None, protocol="TCP"):
     if port is None:
         return None
-    return subprocess.call(['/usr/bin/close-port', "%d/%s" %
-                            (int(port), protocol)])
+    return subprocess.call(['close-port', "%d/%s" % (int(port), protocol)])
 
 
 #------------------------------------------------------------------------------

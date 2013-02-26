@@ -277,6 +277,29 @@ class HelpersTest(TestCase):
         self.assertIsNone(hooks.open_port())
         self.assertFalse(mock_call.called)
 
+    @patch('subprocess.call')
+    def test_closes_a_port(self, mock_call):
+        mock_call.return_value = 'some result'
+
+        result = hooks.close_port(1234)
+
+        self.assertEqual(result, 'some result')
+        mock_call.assert_called_with(['close-port', '1234/TCP'])
+
+    @patch('subprocess.call')
+    def test_closes_a_port_with_different_protocol(self, mock_call):
+        mock_call.return_value = 'some result'
+
+        result = hooks.close_port(1234, protocol='UDP')
+
+        self.assertEqual(result, 'some result')
+        mock_call.assert_called_with(['close-port', '1234/UDP'])
+
+    @patch('subprocess.call')
+    def test_does_nothing_to_close_port_as_none(self, mock_call):
+        self.assertIsNone(hooks.close_port())
+        self.assertFalse(mock_call.called)
+
 
 class RelationHelpersTest(TestCase):
 
