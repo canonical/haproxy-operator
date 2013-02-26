@@ -439,3 +439,16 @@ class RelationHelpersTest(TestCase):
         result = hooks.get_relation_data(relation_name='baz')
 
         self.assertIsNone(result)
+
+    @patch('subprocess.check_call')
+    def test_sets_a_relation(self, check_call):
+        hooks.relation_set('some-id', foo='bar')
+
+        check_call.assert_called_with(['relation-set', '-r', 'some-id',
+                                       'foo=bar'])
+
+    @patch('subprocess.check_call')
+    def test_sets_a_relation_with_default_id(self, check_call):
+        hooks.relation_set(foo='bar')
+
+        check_call.assert_called_with(['relation-set', 'foo=bar'])
