@@ -452,7 +452,7 @@ class HelpersTest(TestCase):
         create_listen_stanza.return_value = 'some result'
         get_monitoring_password.return_value = 'some-monitoring-pass'
 
-        result = hooks.create_monitoring_stanza(service_name="some-service")
+        hooks.create_monitoring_stanza(service_name="some-service")
 
         get_monitoring_password.assert_called_with()
         create_listen_stanza.assert_called_with(
@@ -486,7 +486,7 @@ class HelpersTest(TestCase):
         get_monitoring_password.return_value = None
         pwgen.return_value = 'some-new-pass'
 
-        result = hooks.create_monitoring_stanza(service_name="some-service")
+        hooks.create_monitoring_stanza(service_name="some-service")
 
         get_monitoring_password.assert_called_with()
         create_listen_stanza.assert_called_with(
