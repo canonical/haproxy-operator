@@ -556,13 +556,10 @@ def apply_peer_config(services_dict):
 
 def write_service_config(services_dict):
     # Construct the new haproxy.cfg file
-    for service in services_dict:
-        log("Service: %s" % service)
-        server_entries = None
-        if 'servers' in services_dict[service]:
-            server_entries = services_dict[service]['servers']
+    for service_key, service_config in services_dict.items():
+        log("Service: %s" % service_key)
+        server_entries = service_config.get('servers')
 
-        service_config = services_dict[service]
         service_name = service_config["service_name"]
         with open(os.path.join(default_haproxy_service_config_dir,
                                "%s.service" % service_name), 'w') as config:

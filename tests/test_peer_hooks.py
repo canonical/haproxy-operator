@@ -5,6 +5,7 @@ from testtools import TestCase
 from mock import patch
 
 import hooks
+from utils_for_tests import patch_open
 
 
 class PeerRelationTest(TestCase):
@@ -94,3 +95,24 @@ class PeerRelationTest(TestCase):
 
         expected = services_dict
         self.assertEqual(expected, hooks.apply_peer_config(services_dict))
+
+    @patch('hooks.create_listen_stanza')
+    def test_writes_service_config(self, create_listen_stanza):
+        create_listen_stanza.return_value = 'some content'
+        services_dict = {
+            'foo': {
+                'service_name': 'bar',
+                'service_host': 'some-host',
+                'service_port': 'some-port',
+                'service_options': 'some-options',
+                'servers': (1, 2),
+            },
+        }
+
+        with patch_open() as (mock_open, mock_file):
+            hooks.write_service_config(services_dict)
+
+            create_listen_stanza.assert_called_with(
+                'bar', 'some-host', 'some-port', 'some-options', (1, 2))
+            mock_open.assert_called_with('/var/run/haproxy/bar.service', 'w')
+            mock_file.write.assert_called_with('some content')
