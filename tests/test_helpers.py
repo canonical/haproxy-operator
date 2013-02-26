@@ -389,6 +389,118 @@ class HelpersTest(TestCase):
     def test_doesnt_create_listen_stanza_if_args_not_provided(self):
         self.assertIsNone(hooks.create_listen_stanza())
 
+    @patch('hooks.create_listen_stanza')
+    @patch('hooks.config_get')
+    @patch('hooks.get_monitoring_password')
+    def test_creates_a_monitoring_stanza(self, get_monitoring_password,
+                                         config_get, create_listen_stanza):
+        config_get.return_value = {
+            'enable_monitoring': True,
+            'monitoring_allowed_cidr': 'some-cidr',
+            'monitoring_password': 'some-pass',
+            'monitoring_username': 'some-user',
+            'monitoring_stats_refresh': 123,
+            'monitoring_port': 1234,
+        }
+        create_listen_stanza.return_value = 'some result'
+
+        result = hooks.create_monitoring_stanza(service_name="some-service")
+
+        self.assertEqual('some result', result)
+        get_monitoring_password.assert_called_with()
+        create_listen_stanza.assert_called_with(
+            'some-service', '0.0.0.0', 1234, [
+                'mode http',
+                'acl allowed_cidr src some-cidr',
+                'block unless allowed_cidr',
+                'stats enable',
+                'stats uri /',
+                'stats realm Haproxy\\ Statistics',
+                'stats auth some-user:some-pass',
+                'stats refresh 123',
+            ])
+
+    @patch('hooks.create_listen_stanza')
+    @patch('hooks.config_get')
+    @patch('hooks.get_monitoring_password')
+    def test_doesnt_create_a_monitoring_stanza_if_monitoring_disabled(
+            self, get_monitoring_password, config_get, create_listen_stanza):
+        config_get.return_value = {
+            'enable_monitoring': False,
+        }
+
+        result = hooks.create_monitoring_stanza(service_name="some-service")
+
+        self.assertIsNone(result)
+        self.assertFalse(get_monitoring_password.called)
+        self.assertFalse(create_listen_stanza.called)
+
+    @patch('hooks.create_listen_stanza')
+    @patch('hooks.config_get')
+    @patch('hooks.get_monitoring_password')
+    def test_uses_monitoring_password_for_stanza(self, get_monitoring_password,
+                                                 config_get,
+                                                 create_listen_stanza):
+        config_get.return_value = {
+            'enable_monitoring': True,
+            'monitoring_allowed_cidr': 'some-cidr',
+            'monitoring_password': 'changeme',
+            'monitoring_username': 'some-user',
+            'monitoring_stats_refresh': 123,
+            'monitoring_port': 1234,
+        }
+        create_listen_stanza.return_value = 'some result'
+        get_monitoring_password.return_value = 'some-monitoring-pass'
+
+        result = hooks.create_monitoring_stanza(service_name="some-service")
+
+        get_monitoring_password.assert_called_with()
+        create_listen_stanza.assert_called_with(
+            'some-service', '0.0.0.0', 1234, [
+                'mode http',
+                'acl allowed_cidr src some-cidr',
+                'block unless allowed_cidr',
+                'stats enable',
+                'stats uri /',
+                'stats realm Haproxy\\ Statistics',
+                'stats auth some-user:some-monitoring-pass',
+                'stats refresh 123',
+            ])
+
+    @patch('hooks.pwgen')
+    @patch('hooks.create_listen_stanza')
+    @patch('hooks.config_get')
+    @patch('hooks.get_monitoring_password')
+    def test_uses_new_password_for_stanza(self, get_monitoring_password,
+                                          config_get, create_listen_stanza,
+                                          pwgen):
+        config_get.return_value = {
+            'enable_monitoring': True,
+            'monitoring_allowed_cidr': 'some-cidr',
+            'monitoring_password': 'changeme',
+            'monitoring_username': 'some-user',
+            'monitoring_stats_refresh': 123,
+            'monitoring_port': 1234,
+        }
+        create_listen_stanza.return_value = 'some result'
+        get_monitoring_password.return_value = None
+        pwgen.return_value = 'some-new-pass'
+
+        result = hooks.create_monitoring_stanza(service_name="some-service")
+
+        get_monitoring_password.assert_called_with()
+        create_listen_stanza.assert_called_with(
+            'some-service', '0.0.0.0', 1234, [
+                'mode http',
+                'acl allowed_cidr src some-cidr',
+                'block unless allowed_cidr',
+                'stats enable',
+                'stats uri /',
+                'stats realm Haproxy\\ Statistics',
+                'stats auth some-user:some-new-pass',
+                'stats refresh 123',
+            ])
+
 
 class RelationHelpersTest(TestCase):
 
