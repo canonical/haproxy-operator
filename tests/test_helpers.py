@@ -632,6 +632,30 @@ class HelpersTest(TestCase):
 
         self.assertEqual(expected, result)
 
+    @patch('hooks.get_config_services')
+    def test_gets_a_service_config(self, get_config_services):
+        get_config_services.return_value = {
+            'foo': 'bar',
+        }
+
+        self.assertEqual('bar', hooks.get_config_service('foo'))
+
+    @patch('hooks.get_config_services')
+    def test_gets_a_service_config_from_none(self, get_config_services):
+        get_config_services.return_value = {
+            None: 'bar',
+        }
+
+        self.assertEqual('bar', hooks.get_config_service())
+
+    @patch('hooks.get_config_services')
+    def test_gets_a_service_config_as_none(self, get_config_services):
+        get_config_services.return_value = {
+            'baz': 'bar',
+        }
+
+        self.assertIsNone(hooks.get_config_service())
+
 
 class RelationHelpersTest(TestCase):
 
