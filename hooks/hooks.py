@@ -338,7 +338,7 @@ def create_listen_stanza(service_name=None, service_ip=None,
     if service_options is not None:
         for service_option in service_options:
             service_config.append("    %s" % service_option.strip())
-    if server_entries is not None and isinstance(server_entries, list):
+    if isinstance(server_entries, (list, tuple)):
         for (server_name, server_ip, server_port,
              server_options) in server_entries:
             server_line = "    server %s %s:%s" % \
