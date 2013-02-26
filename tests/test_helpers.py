@@ -656,6 +656,20 @@ class HelpersTest(TestCase):
 
         self.assertIsNone(hooks.get_config_service())
 
+    @patch('os.path.exists')
+    def test_mark_as_proxy_when_path_exists(self, path_exists):
+        path_exists.return_value = True
+
+        self.assertTrue(hooks.is_proxy('foo'))
+        path_exists.assert_called_with('/var/run/haproxy/foo.is.proxy')
+
+    @patch('os.path.exists')
+    def test_doesnt_mark_as_proxy_when_path_doesnt_exist(self, path_exists):
+        path_exists.return_value = False
+
+        self.assertFalse(hooks.is_proxy('foo'))
+        path_exists.assert_called_with('/var/run/haproxy/foo.is.proxy')
+
 
 class RelationHelpersTest(TestCase):
 

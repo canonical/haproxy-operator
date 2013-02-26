@@ -417,11 +417,9 @@ def get_config_service(service_name=None):
 
 
 def is_proxy(service_name):
-    if os.path.exists(
-        os.path.join(default_haproxy_service_config_dir,
-                     "%s.is.proxy" % service_name)):
-        return True
-    return False
+    flag_path = os.path.join(default_haproxy_service_config_dir,
+                             "%s.is.proxy" % service_name)
+    return os.path.exists(flag_path)
 
 
 #------------------------------------------------------------------------------
