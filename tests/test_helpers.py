@@ -225,6 +225,26 @@ class HelpersTest(TestCase):
         ports = hooks.get_service_ports('/some/foo/path')
         self.assertEqual((), ports)
 
+    @patch('subprocess.check_output')
+    def test_gets_unit(self, check_output):
+        check_output.return_value = ' some result   '
+
+        result = hooks.unit_get('some-item')
+
+        self.assertEqual(result, 'some result')
+        check_output.assert_called_with(['unit-get', 'some-item'])
+
+    @patch('subprocess.check_output')
+    @patch.object(hooks, 'log')
+    def test_logs_error_when_cant_get_unit(self, log, check_output):
+        error = Exception('something wrong')
+        check_output.side_effect = error
+
+        result = hooks.unit_get('some-item')
+
+        self.assertIsNone(result)
+        log.assert_called_with(str(error))
+
 
 class RelationHelpersTest(TestCase):
 

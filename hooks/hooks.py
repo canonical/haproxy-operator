@@ -45,8 +45,7 @@ def config_get(scope=None):
         config_data = json.loads(subprocess.check_output(config_cmd_line))
     except Exception, e:
         log(str(e))
-        config_data = None
-    finally:
+    else:
         return config_data
 
 
@@ -59,8 +58,7 @@ def unit_get(item):
         data = subprocess.check_output(cmd_line).strip()
     except Exception, e:
         log(str(e))
-        data = None
-    finally:
+    else:
         return data
 
 
@@ -87,8 +85,7 @@ def relation_get(scope=None, unit_name=None, relation_id=None):
         relation_data = json.loads(subprocess.check_output(relation_cmd_line))
     except Exception, e:
         log(str(e))
-        relation_data = None
-    finally:
+    else:
         return relation_data
 
 
