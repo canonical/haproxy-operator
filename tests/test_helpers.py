@@ -320,6 +320,24 @@ class HelpersTest(TestCase):
         self.assertFalse(close_port.called)
         self.assertFalse(open_port.called)
 
+    def test_generates_a_password(self):
+        password = hooks.pwgen()
+
+        self.assertIsInstance(password, str)
+        self.assertEqual(len(password), 20)
+
+    def test_generates_a_password_with_different_size(self):
+        password = hooks.pwgen(pwd_length=15)
+
+        self.assertIsInstance(password, str)
+        self.assertEqual(len(password), 15)
+
+    def test_generates_a_different_password_each_time(self):
+        password1 = hooks.pwgen()
+        password2 = hooks.pwgen()
+
+        self.assertNotEqual(password1, password2)
+
 
 class RelationHelpersTest(TestCase):
 
