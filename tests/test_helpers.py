@@ -300,6 +300,26 @@ class HelpersTest(TestCase):
         self.assertIsNone(hooks.close_port())
         self.assertFalse(mock_call.called)
 
+    @patch('hooks.open_port')
+    @patch('hooks.close_port')
+    def test_updates_service_ports(self, close_port, open_port):
+        old_service_ports = [123, 234, 345]
+        new_service_ports = [345, 456, 567]
+
+        hooks.update_service_ports(old_service_ports, new_service_ports)
+
+        self.assertEqual(close_port.mock_calls, [call(123), call(234)])
+        self.assertEqual(open_port.mock_calls, [call(456), call(567)])
+
+    @patch('hooks.open_port')
+    @patch('hooks.close_port')
+    def test_updates_none_if_service_ports_not_provided(self, close_port,
+                                                        open_port):
+        hooks.update_service_ports()
+
+        self.assertFalse(close_port.called)
+        self.assertFalse(open_port.called)
+
 
 class RelationHelpersTest(TestCase):
 
