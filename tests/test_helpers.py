@@ -214,6 +214,15 @@ class HelpersTest(TestCase):
                          stanzas)
 
     @patch('hooks.load_haproxy_config')
+    def test_get_empty_tuple_when_no_stanzas(self, load_haproxy_config):
+        load_haproxy_config.return_value = '''
+        '''
+
+        stanzas = hooks.get_listen_stanzas()
+
+        self.assertEqual((), stanzas)
+
+    @patch('hooks.load_haproxy_config')
     def test_get_listen_stanzas_none_configured(self, load_haproxy_config):
         load_haproxy_config.return_value = ""
 
@@ -224,6 +233,273 @@ class HelpersTest(TestCase):
     def test_gets_no_ports_if_config_doesnt_exist(self):
         ports = hooks.get_service_ports('/some/foo/path')
         self.assertEqual((), ports)
+
+    @patch('subprocess.check_output')
+    def test_gets_unit(self, check_output):
+        check_output.return_value = ' some result   '
+
+        result = hooks.unit_get('some-item')
+
+        self.assertEqual(result, 'some result')
+        check_output.assert_called_with(['unit-get', 'some-item'])
+
+    @patch('subprocess.check_output')
+    @patch.object(hooks, 'log')
+    def test_logs_error_when_cant_get_unit(self, log, check_output):
+        error = Exception('something wrong')
+        check_output.side_effect = error
+
+        result = hooks.unit_get('some-item')
+
+        self.assertIsNone(result)
+        log.assert_called_with(str(error))
+
+    @patch('subprocess.call')
+    def test_opens_a_port(self, mock_call):
+        mock_call.return_value = 'some result'
+
+        result = hooks.open_port(1234)
+
+        self.assertEqual(result, 'some result')
+        mock_call.assert_called_with(['open-port', '1234/TCP'])
+
+    @patch('subprocess.call')
+    def test_opens_a_port_with_different_protocol(self, mock_call):
+        mock_call.return_value = 'some result'
+
+        result = hooks.open_port(1234, protocol='UDP')
+
+        self.assertEqual(result, 'some result')
+        mock_call.assert_called_with(['open-port', '1234/UDP'])
+
+    @patch('subprocess.call')
+    def test_does_nothing_to_open_port_as_none(self, mock_call):
+        self.assertIsNone(hooks.open_port())
+        self.assertFalse(mock_call.called)
+
+    @patch('subprocess.call')
+    def test_closes_a_port(self, mock_call):
+        mock_call.return_value = 'some result'
+
+        result = hooks.close_port(1234)
+
+        self.assertEqual(result, 'some result')
+        mock_call.assert_called_with(['close-port', '1234/TCP'])
+
+    @patch('subprocess.call')
+    def test_closes_a_port_with_different_protocol(self, mock_call):
+        mock_call.return_value = 'some result'
+
+        result = hooks.close_port(1234, protocol='UDP')
+
+        self.assertEqual(result, 'some result')
+        mock_call.assert_called_with(['close-port', '1234/UDP'])
+
+    @patch('subprocess.call')
+    def test_does_nothing_to_close_port_as_none(self, mock_call):
+        self.assertIsNone(hooks.close_port())
+        self.assertFalse(mock_call.called)
+
+    @patch('hooks.open_port')
+    @patch('hooks.close_port')
+    def test_updates_service_ports(self, close_port, open_port):
+        old_service_ports = [123, 234, 345]
+        new_service_ports = [345, 456, 567]
+
+        hooks.update_service_ports(old_service_ports, new_service_ports)
+
+        self.assertEqual(close_port.mock_calls, [call(123), call(234)])
+        self.assertEqual(open_port.mock_calls, [call(456), call(567)])
+
+    @patch('hooks.open_port')
+    @patch('hooks.close_port')
+    def test_updates_none_if_service_ports_not_provided(self, close_port,
+                                                        open_port):
+        hooks.update_service_ports()
+
+        self.assertFalse(close_port.called)
+        self.assertFalse(open_port.called)
+
+    def test_generates_a_password(self):
+        password = hooks.pwgen()
+
+        self.assertIsInstance(password, str)
+        self.assertEqual(len(password), 20)
+
+    def test_generates_a_password_with_different_size(self):
+        password = hooks.pwgen(pwd_length=15)
+
+        self.assertIsInstance(password, str)
+        self.assertEqual(len(password), 15)
+
+    def test_generates_a_different_password_each_time(self):
+        password1 = hooks.pwgen()
+        password2 = hooks.pwgen()
+
+        self.assertNotEqual(password1, password2)
+
+    def test_creates_a_listen_stanza(self):
+        service_name = 'some-name'
+        service_ip = '10.11.12.13'
+        service_port = 1234
+        service_options = ('foo', 'bar')
+        server_entries = [
+            ('name-1', 'ip-1', 'port-1', ('foo1', 'bar1')),
+            ('name-2', 'ip-2', 'port-2', ('foo2', 'bar2')),
+        ]
+
+        result = hooks.create_listen_stanza(service_name, service_ip,
+                                            service_port, service_options,
+                                            server_entries)
+
+        expected = '\n'.join((
+            'listen some-name 10.11.12.13:1234',
+            '    foo',
+            '    bar',
+            '    server name-1 ip-1:port-1 foo1 bar1',
+            '    server name-2 ip-2:port-2 foo2 bar2',
+        ))
+
+        self.assertEqual(expected, result)
+
+    def test_creates_a_listen_stanza_with_tuple_entries(self):
+        service_name = 'some-name'
+        service_ip = '10.11.12.13'
+        service_port = 1234
+        service_options = ('foo', 'bar')
+        server_entries = (
+            ('name-1', 'ip-1', 'port-1', ('foo1', 'bar1')),
+            ('name-2', 'ip-2', 'port-2', ('foo2', 'bar2')),
+        )
+
+        result = hooks.create_listen_stanza(service_name, service_ip,
+                                            service_port, service_options,
+                                            server_entries)
+
+        expected = '\n'.join((
+            'listen some-name 10.11.12.13:1234',
+            '    foo',
+            '    bar',
+            '    server name-1 ip-1:port-1 foo1 bar1',
+            '    server name-2 ip-2:port-2 foo2 bar2',
+        ))
+
+        self.assertEqual(expected, result)
+
+    def test_doesnt_create_listen_stanza_if_args_not_provided(self):
+        self.assertIsNone(hooks.create_listen_stanza())
+
+    @patch('hooks.create_listen_stanza')
+    @patch('hooks.config_get')
+    @patch('hooks.get_monitoring_password')
+    def test_creates_a_monitoring_stanza(self, get_monitoring_password,
+                                         config_get, create_listen_stanza):
+        config_get.return_value = {
+            'enable_monitoring': True,
+            'monitoring_allowed_cidr': 'some-cidr',
+            'monitoring_password': 'some-pass',
+            'monitoring_username': 'some-user',
+            'monitoring_stats_refresh': 123,
+            'monitoring_port': 1234,
+        }
+        create_listen_stanza.return_value = 'some result'
+
+        result = hooks.create_monitoring_stanza(service_name="some-service")
+
+        self.assertEqual('some result', result)
+        get_monitoring_password.assert_called_with()
+        create_listen_stanza.assert_called_with(
+            'some-service', '0.0.0.0', 1234, [
+                'mode http',
+                'acl allowed_cidr src some-cidr',
+                'block unless allowed_cidr',
+                'stats enable',
+                'stats uri /',
+                'stats realm Haproxy\\ Statistics',
+                'stats auth some-user:some-pass',
+                'stats refresh 123',
+            ])
+
+    @patch('hooks.create_listen_stanza')
+    @patch('hooks.config_get')
+    @patch('hooks.get_monitoring_password')
+    def test_doesnt_create_a_monitoring_stanza_if_monitoring_disabled(
+            self, get_monitoring_password, config_get, create_listen_stanza):
+        config_get.return_value = {
+            'enable_monitoring': False,
+        }
+
+        result = hooks.create_monitoring_stanza(service_name="some-service")
+
+        self.assertIsNone(result)
+        self.assertFalse(get_monitoring_password.called)
+        self.assertFalse(create_listen_stanza.called)
+
+    @patch('hooks.create_listen_stanza')
+    @patch('hooks.config_get')
+    @patch('hooks.get_monitoring_password')
+    def test_uses_monitoring_password_for_stanza(self, get_monitoring_password,
+                                                 config_get,
+                                                 create_listen_stanza):
+        config_get.return_value = {
+            'enable_monitoring': True,
+            'monitoring_allowed_cidr': 'some-cidr',
+            'monitoring_password': 'changeme',
+            'monitoring_username': 'some-user',
+            'monitoring_stats_refresh': 123,
+            'monitoring_port': 1234,
+        }
+        create_listen_stanza.return_value = 'some result'
+        get_monitoring_password.return_value = 'some-monitoring-pass'
+
+        hooks.create_monitoring_stanza(service_name="some-service")
+
+        get_monitoring_password.assert_called_with()
+        create_listen_stanza.assert_called_with(
+            'some-service', '0.0.0.0', 1234, [
+                'mode http',
+                'acl allowed_cidr src some-cidr',
+                'block unless allowed_cidr',
+                'stats enable',
+                'stats uri /',
+                'stats realm Haproxy\\ Statistics',
+                'stats auth some-user:some-monitoring-pass',
+                'stats refresh 123',
+            ])
+
+    @patch('hooks.pwgen')
+    @patch('hooks.create_listen_stanza')
+    @patch('hooks.config_get')
+    @patch('hooks.get_monitoring_password')
+    def test_uses_new_password_for_stanza(self, get_monitoring_password,
+                                          config_get, create_listen_stanza,
+                                          pwgen):
+        config_get.return_value = {
+            'enable_monitoring': True,
+            'monitoring_allowed_cidr': 'some-cidr',
+            'monitoring_password': 'changeme',
+            'monitoring_username': 'some-user',
+            'monitoring_stats_refresh': 123,
+            'monitoring_port': 1234,
+        }
+        create_listen_stanza.return_value = 'some result'
+        get_monitoring_password.return_value = None
+        pwgen.return_value = 'some-new-pass'
+
+        hooks.create_monitoring_stanza(service_name="some-service")
+
+        get_monitoring_password.assert_called_with()
+        create_listen_stanza.assert_called_with(
+            'some-service', '0.0.0.0', 1234, [
+                'mode http',
+                'acl allowed_cidr src some-cidr',
+                'block unless allowed_cidr',
+                'stats enable',
+                'stats uri /',
+                'stats realm Haproxy\\ Statistics',
+                'stats auth some-user:some-new-pass',
+                'stats refresh 123',
+            ])
 
 
 class RelationHelpersTest(TestCase):
@@ -419,3 +695,16 @@ class RelationHelpersTest(TestCase):
         result = hooks.get_relation_data(relation_name='baz')
 
         self.assertIsNone(result)
+
+    @patch('subprocess.check_call')
+    def test_sets_a_relation(self, check_call):
+        hooks.relation_set('some-id', foo='bar')
+
+        check_call.assert_called_with(['relation-set', '-r', 'some-id',
+                                       'foo=bar'])
+
+    @patch('subprocess.check_call')
+    def test_sets_a_relation_with_default_id(self, check_call):
+        hooks.relation_set(foo='bar')
+
+        check_call.assert_called_with(['relation-set', 'foo=bar'])

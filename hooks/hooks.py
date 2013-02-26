@@ -45,8 +45,7 @@ def config_get(scope=None):
         config_data = json.loads(subprocess.check_output(config_cmd_line))
     except Exception, e:
         log(str(e))
-        config_data = None
-    finally:
+    else:
         return config_data
 
 
@@ -59,8 +58,7 @@ def unit_get(item):
         data = subprocess.check_output(cmd_line).strip()
     except Exception, e:
         log(str(e))
-        data = None
-    finally:
+    else:
         return data
 
 
@@ -87,8 +85,7 @@ def relation_get(scope=None, unit_name=None, relation_id=None):
         relation_data = json.loads(subprocess.check_output(relation_cmd_line))
     except Exception, e:
         log(str(e))
-        relation_data = None
-    finally:
+    else:
         return relation_data
 
 
@@ -264,8 +261,6 @@ def get_listen_stanzas(haproxy_config_file="/etc/haproxy/haproxy.cfg"):
     if haproxy_config is None:
         return ()
     stanzas = re.findall("listen\s+([^\s]+)\s+([^:]+):(.*)", haproxy_config)
-    if stanzas is None:
-        return ()
     return tuple(((service, addr, int(port))
                   for service, addr, port in stanzas))
 
@@ -277,8 +272,7 @@ def get_listen_stanzas(haproxy_config_file="/etc/haproxy/haproxy.cfg"):
 def open_port(port=None, protocol="TCP"):
     if port is None:
         return None
-    return subprocess.call(['/usr/bin/open-port', "%d/%s" %
-                            (int(port), protocol)])
+    return subprocess.call(['open-port', "%d/%s" % (int(port), protocol)])
 
 
 #------------------------------------------------------------------------------
@@ -288,8 +282,7 @@ def open_port(port=None, protocol="TCP"):
 def close_port(port=None, protocol="TCP"):
     if port is None:
         return None
-    return subprocess.call(['/usr/bin/close-port', "%d/%s" %
-                            (int(port), protocol)])
+    return subprocess.call(['close-port', "%d/%s" % (int(port), protocol)])
 
 
 #------------------------------------------------------------------------------
@@ -345,7 +338,7 @@ def create_listen_stanza(service_name=None, service_ip=None,
     if service_options is not None:
         for service_option in service_options:
             service_config.append("    %s" % service_option.strip())
-    if server_entries is not None and isinstance(server_entries, list):
+    if isinstance(server_entries, (list, tuple)):
         for (server_name, server_ip, server_port,
              server_options) in server_entries:
             server_line = "    server %s %s:%s" % \
