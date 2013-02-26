@@ -273,3 +273,33 @@ class ReverseProxyRelationTest(TestCase):
             }
         self.assertEqual(expected, hooks.create_services())
         self.write_service_config.assert_called_with(expected)
+
+    def test_with_juju_services_match_service_name(self):
+        self.get_config_services.return_value = {
+            None: {
+                "service_name": "service",
+                },
+            "foo_services": {
+                "service_name": "foo_service",
+                "server_options": ["maxconn 4"],
+                },
+            }
+        self.get_relation_data.return_value = {
+            "foo-bar1": {"port": 4242,
+                         "hostname": "backend.1",
+                         "private-address": "1.2.3.4"},
+        }
+
+        expected = {
+            'foo_services': {
+                'service_name': 'foo_service',
+                'server_options': ["maxconn 4"],
+                'servers': [('backend_1__4242', '1.2.3.4',
+                             4242, ["maxconn 4"])],
+                },
+            }
+
+        result = hooks.create_services()
+
+        self.assertEqual(expected, result)
+        self.write_service_config.assert_called_with(expected)
