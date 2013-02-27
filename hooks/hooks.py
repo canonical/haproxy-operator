@@ -580,16 +580,17 @@ def load_services(service_name=None):
     if service_name is not None:
         if os.path.exists("%s/%s.service" %
                           (default_haproxy_service_config_dir, service_name)):
-            services = open("%s/%s.service" %
-                            (default_haproxy_service_config_dir,
-                             service_name)).read()
+            with open("%s/%s.service" % (default_haproxy_service_config_dir,
+                                         service_name)) as f:
+                services = f.read()
         else:
             services = None
     else:
         for service in glob.glob("%s/*.service" %
                                  default_haproxy_service_config_dir):
-            services += open(service).read()
-            services += "\n\n"
+            with open(service) as f:
+                services += f.read()
+                services += "\n\n"
     return services
 
 

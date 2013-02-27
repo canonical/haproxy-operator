@@ -5,6 +5,7 @@ from testtools import TestCase
 from mock import patch, call, MagicMock
 
 import hooks
+from utils_for_tests import patch_open
 
 
 class HelpersTest(TestCase):
@@ -669,6 +670,39 @@ class HelpersTest(TestCase):
 
         self.assertFalse(hooks.is_proxy('foo'))
         path_exists.assert_called_with('/var/run/haproxy/foo.is.proxy')
+
+    @patch('os.path.exists')
+    def test_loads_services_by_name(self, path_exists):
+        with patch_open() as (mock_open, mock_file):
+            path_exists.return_value = True
+            mock_file.read.return_value = 'some content'
+
+            result = hooks.load_services('some-service')
+
+            self.assertEqual('some content', result)
+            mock_open.assert_called_with(
+                '/var/run/haproxy/some-service.service')
+            mock_file.read.assert_called_with()
+
+    @patch('os.path.exists')
+    def test_loads_no_service_if_path_doesnt_exist(self, path_exists):
+        path_exists.return_value = False
+
+        result = hooks.load_services('some-service')
+
+        self.assertIsNone(result)
+
+    @patch('glob.glob')
+    def test_loads_services_within_dir_if_no_name_provided(self, glob):
+        with patch_open() as (mock_open, mock_file):
+            mock_file.read.side_effect = ['foo', 'bar']
+            glob.return_value = ['foo-file', 'bar-file']
+
+            result = hooks.load_services()
+
+            self.assertEqual('foo\n\nbar\n\n', result)
+            mock_open.assert_has_calls([call('foo-file'), call('bar-file')])
+            mock_file.read.assert_has_calls([call(), call()])
 
 
 class RelationHelpersTest(TestCase):
