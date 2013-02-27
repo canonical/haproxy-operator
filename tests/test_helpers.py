@@ -704,6 +704,60 @@ class HelpersTest(TestCase):
             mock_open.assert_has_calls([call('foo-file'), call('bar-file')])
             mock_file.read.assert_has_calls([call(), call()])
 
+    @patch('hooks.os')
+    def test_removes_services_by_name(self, os_):
+        service_path = '/var/run/haproxy/some-service.service'
+        os_.path.exists.return_value = True
+
+        self.assertTrue(hooks.remove_services('some-service'))
+
+        os_.path.exists.assert_called_with(service_path)
+        os_.remove.assert_called_with(service_path)
+
+    @patch('hooks.os')
+    def test_removes_nothing_if_service_doesnt_exist(self, os_):
+        service_path = '/var/run/haproxy/some-service.service'
+        os_.path.exists.return_value = False
+
+        self.assertTrue(hooks.remove_services('some-service'))
+
+        os_.path.exists.assert_called_with(service_path)
+
+    @patch('hooks.os')
+    @patch('glob.glob')
+    def test_removes_all_services_in_dir_if_name_not_provided(self, glob, os_):
+        glob.return_value = ['foo', 'bar']
+
+        self.assertTrue(hooks.remove_services())
+
+        os_.remove.assert_has_calls([call('foo'), call('bar')])
+
+    @patch('hooks.os')
+    @patch('hooks.log')
+    def test_logs_error_when_failing_to_remove_service_by_name(self, log, os_):
+        error = Exception('some error')
+        os_.path.exists.return_value = True
+        os_.remove.side_effect = error
+
+        self.assertFalse(hooks.remove_services('some-service'))
+
+        log.assert_called_with(str(error))
+
+    @patch('hooks.os')
+    @patch('hooks.log')
+    @patch('glob.glob')
+    def test_logs_error_when_failing_to_remove_services(self, glob, log, os_):
+        errors = [Exception('some error 1'), Exception('some error 2')]
+        os_.remove.side_effect = errors
+        glob.return_value = ['foo', 'bar']
+
+        self.assertTrue(hooks.remove_services())
+
+        log.assert_has_calls([
+            call(str(errors[0])),
+            call(str(errors[1])),
+        ])
+
 
 class RelationHelpersTest(TestCase):
 

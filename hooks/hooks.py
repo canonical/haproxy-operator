@@ -602,15 +602,15 @@ def load_services(service_name=None):
 #------------------------------------------------------------------------------
 def remove_services(service_name=None):
     if service_name is not None:
-        if os.path.exists("%s/%s.service" %
-                          (default_haproxy_service_config_dir, service_name)):
+        path = "%s/%s.service" % (default_haproxy_service_config_dir,
+                                  service_name)
+        if os.path.exists(path):
             try:
-                os.remove("%s/%s.service" %
-                          (default_haproxy_service_config_dir, service_name))
-                return True
+                os.remove(path)
             except Exception, e:
                 log(str(e))
                 return False
+        return True
     else:
         for service in glob.glob("%s/*.service" %
                                  default_haproxy_service_config_dir):
