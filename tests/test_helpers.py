@@ -5,6 +5,7 @@ from testtools import TestCase
 from mock import patch, call, MagicMock
 
 import hooks
+from utils_for_tests import patch_open
 
 
 class HelpersTest(TestCase):
@@ -669,6 +670,148 @@ class HelpersTest(TestCase):
 
         self.assertFalse(hooks.is_proxy('foo'))
         path_exists.assert_called_with('/var/run/haproxy/foo.is.proxy')
+
+    @patch('os.path.exists')
+    def test_loads_services_by_name(self, path_exists):
+        with patch_open() as (mock_open, mock_file):
+            path_exists.return_value = True
+            mock_file.read.return_value = 'some content'
+
+            result = hooks.load_services('some-service')
+
+            self.assertEqual('some content', result)
+            mock_open.assert_called_with(
+                '/var/run/haproxy/some-service.service')
+            mock_file.read.assert_called_with()
+
+    @patch('os.path.exists')
+    def test_loads_no_service_if_path_doesnt_exist(self, path_exists):
+        path_exists.return_value = False
+
+        result = hooks.load_services('some-service')
+
+        self.assertIsNone(result)
+
+    @patch('glob.glob')
+    def test_loads_services_within_dir_if_no_name_provided(self, glob):
+        with patch_open() as (mock_open, mock_file):
+            mock_file.read.side_effect = ['foo', 'bar']
+            glob.return_value = ['foo-file', 'bar-file']
+
+            result = hooks.load_services()
+
+            self.assertEqual('foo\n\nbar\n\n', result)
+            mock_open.assert_has_calls([call('foo-file'), call('bar-file')])
+            mock_file.read.assert_has_calls([call(), call()])
+
+    @patch('hooks.os')
+    def test_removes_services_by_name(self, os_):
+        service_path = '/var/run/haproxy/some-service.service'
+        os_.path.exists.return_value = True
+
+        self.assertTrue(hooks.remove_services('some-service'))
+
+        os_.path.exists.assert_called_with(service_path)
+        os_.remove.assert_called_with(service_path)
+
+    @patch('hooks.os')
+    def test_removes_nothing_if_service_doesnt_exist(self, os_):
+        service_path = '/var/run/haproxy/some-service.service'
+        os_.path.exists.return_value = False
+
+        self.assertTrue(hooks.remove_services('some-service'))
+
+        os_.path.exists.assert_called_with(service_path)
+
+    @patch('hooks.os')
+    @patch('glob.glob')
+    def test_removes_all_services_in_dir_if_name_not_provided(self, glob, os_):
+        glob.return_value = ['foo', 'bar']
+
+        self.assertTrue(hooks.remove_services())
+
+        os_.remove.assert_has_calls([call('foo'), call('bar')])
+
+    @patch('hooks.os')
+    @patch('hooks.log')
+    def test_logs_error_when_failing_to_remove_service_by_name(self, log, os_):
+        error = Exception('some error')
+        os_.path.exists.return_value = True
+        os_.remove.side_effect = error
+
+        self.assertFalse(hooks.remove_services('some-service'))
+
+        log.assert_called_with(str(error))
+
+    @patch('hooks.os')
+    @patch('hooks.log')
+    @patch('glob.glob')
+    def test_logs_error_when_failing_to_remove_services(self, glob, log, os_):
+        errors = [Exception('some error 1'), Exception('some error 2')]
+        os_.remove.side_effect = errors
+        glob.return_value = ['foo', 'bar']
+
+        self.assertTrue(hooks.remove_services())
+
+        log.assert_has_calls([
+            call(str(errors[0])),
+            call(str(errors[1])),
+        ])
+
+    @patch('subprocess.call')
+    def test_calls_check_action(self, mock_call):
+        mock_call.return_value = 0
+
+        result = hooks.service_haproxy('check')
+
+        self.assertTrue(result)
+        mock_call.assert_called_with(['/usr/sbin/haproxy', '-f',
+                                      hooks.default_haproxy_config, '-c'])
+
+    @patch('subprocess.call')
+    def test_calls_check_action_with_different_config(self, mock_call):
+        mock_call.return_value = 0
+
+        result = hooks.service_haproxy('check', 'some-config')
+
+        self.assertTrue(result)
+        mock_call.assert_called_with(['/usr/sbin/haproxy', '-f',
+                                      'some-config', '-c'])
+
+    @patch('subprocess.call')
+    def test_fails_to_check_config(self, mock_call):
+        mock_call.return_value = 1
+
+        result = hooks.service_haproxy('check')
+
+        self.assertFalse(result)
+
+    @patch('subprocess.call')
+    def test_calls_different_actions(self, mock_call):
+        mock_call.return_value = 0
+
+        result = hooks.service_haproxy('foo')
+
+        self.assertTrue(result)
+        mock_call.assert_called_with(['service', 'haproxy', 'foo'])
+
+    @patch('subprocess.call')
+    def test_fails_to_call_different_actions(self, mock_call):
+        mock_call.return_value = 1
+
+        result = hooks.service_haproxy('foo')
+
+        self.assertFalse(result)
+
+    @patch('subprocess.call')
+    def test_doesnt_call_actions_if_action_not_provided(self, mock_call):
+        self.assertIsNone(hooks.service_haproxy())
+        self.assertFalse(mock_call.called)
+
+    @patch('subprocess.call')
+    def test_doesnt_call_actions_if_config_is_none(self, mock_call):
+        self.assertIsNone(hooks.service_haproxy('foo', None))
+        self.assertFalse(mock_call.called)
 
 
 class RelationHelpersTest(TestCase):

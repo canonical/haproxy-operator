@@ -580,16 +580,17 @@ def load_services(service_name=None):
     if service_name is not None:
         if os.path.exists("%s/%s.service" %
                           (default_haproxy_service_config_dir, service_name)):
-            services = open("%s/%s.service" %
-                            (default_haproxy_service_config_dir,
-                             service_name)).read()
+            with open("%s/%s.service" % (default_haproxy_service_config_dir,
+                                         service_name)) as f:
+                services = f.read()
         else:
             services = None
     else:
         for service in glob.glob("%s/*.service" %
                                  default_haproxy_service_config_dir):
-            services += open(service).read()
-            services += "\n\n"
+            with open(service) as f:
+                services += f.read()
+                services += "\n\n"
     return services
 
 
@@ -601,15 +602,15 @@ def load_services(service_name=None):
 #------------------------------------------------------------------------------
 def remove_services(service_name=None):
     if service_name is not None:
-        if os.path.exists("%s/%s.service" %
-                          (default_haproxy_service_config_dir, service_name)):
+        path = "%s/%s.service" % (default_haproxy_service_config_dir,
+                                  service_name)
+        if os.path.exists(path):
             try:
-                os.remove("%s/%s.service" %
-                          (default_haproxy_service_config_dir, service_name))
-                return True
+                os.remove(path)
             except Exception, e:
                 log(str(e))
                 return False
+        return True
     else:
         for service in glob.glob("%s/*.service" %
                                  default_haproxy_service_config_dir):
@@ -634,23 +635,15 @@ def construct_haproxy_config(haproxy_globals=None,
                              haproxy_defaults=None,
                              haproxy_monitoring=None,
                              haproxy_services=None):
-    if haproxy_globals is None or haproxy_defaults is None:
-        return None
+    if None in (haproxy_globals, haproxy_defaults):
+        return
     with open(default_haproxy_config, 'w') as haproxy_config:
-        haproxy_config.write(haproxy_globals)
-        haproxy_config.write("\n")
-        haproxy_config.write("\n")
-        haproxy_config.write(haproxy_defaults)
-        haproxy_config.write("\n")
-        haproxy_config.write("\n")
-        if haproxy_monitoring is not None:
-            haproxy_config.write(haproxy_monitoring)
-            haproxy_config.write("\n")
-            haproxy_config.write("\n")
-        if haproxy_services is not None:
-            haproxy_config.write(haproxy_services)
-            haproxy_config.write("\n")
-            haproxy_config.write("\n")
+        config_string = ''
+        for config in (haproxy_globals, haproxy_defaults, haproxy_monitoring,
+                       haproxy_services):
+            if config is not None:
+                config_string += config + '\n\n'
+        haproxy_config.write(config_string)
 
 
 #------------------------------------------------------------------------------
@@ -658,23 +651,14 @@ def construct_haproxy_config(haproxy_globals=None,
 #                   the haproxy service
 #------------------------------------------------------------------------------
 def service_haproxy(action=None, haproxy_config=default_haproxy_config):
-    if action is None or haproxy_config is None:
+    if None in (action, haproxy_config):
         return None
     elif action == "check":
-        retVal = subprocess.call(
-            ['/usr/sbin/haproxy', '-f', haproxy_config, '-c'])
-        if retVal == 1:
-            return False
-        elif retVal == 0:
-            return True
-        else:
-            return False
+        command = ['/usr/sbin/haproxy', '-f', haproxy_config, '-c']
     else:
-        retVal = subprocess.call(['service', 'haproxy', action])
-        if retVal == 0:
-            return True
-        else:
-            return False
+        command = ['service', 'haproxy', action]
+    return_value = subprocess.call(command)
+    return return_value == 0
 
 
 ###############################################################################
