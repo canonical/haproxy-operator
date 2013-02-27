@@ -24,6 +24,7 @@ class ConfigChangedTest(TestCase):
         self.service_haproxy = self.patch_hook(
             "service_haproxy")
         self.notify_website = self.patch_hook("notify_website")
+        self.notify_peer = self.patch_hook("notify_peer")
 
     def patch_hook(self, hook_name):
         mock_controller = patch.object(hooks, hook_name)
@@ -41,6 +42,7 @@ class ConfigChangedTest(TestCase):
         hooks.config_changed()
 
         self.notify_website.assert_called_once_with()
+        self.notify_peer.assert_called_once_with()
 
     def test_config_changed_no_notify_website_not_changed(self):
         self.service_haproxy.return_value = True
@@ -51,6 +53,7 @@ class ConfigChangedTest(TestCase):
         hooks.config_changed()
 
         self.notify_website.assert_not_called()
+        self.notify_peer.assert_not_called()
 
     def test_config_changed_no_notify_website_failed_check(self):
         self.service_haproxy.return_value = False
@@ -62,6 +65,7 @@ class ConfigChangedTest(TestCase):
         hooks.config_changed()
 
         self.notify_website.assert_not_called()
+        self.notify_peer.assert_not_called()
 
 
 class HelpersTest(TestCase):

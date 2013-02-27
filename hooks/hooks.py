@@ -11,7 +11,6 @@ import subprocess
 import sys
 import yaml
 import nrpe
-import time
 
 # Make sure that charmsupport is importable, or bail out.
 try:
@@ -519,7 +518,10 @@ def apply_peer_config(services_dict):
 
     peer_services = {}
     for unit_name in sorted(peer_data.keys()):
-        service_data = yaml.load(peer_data[unit_name]["all_services"])
+        peer_services_data = peer_data[unit_name].get("all_services")
+        if peer_services_data is None:
+            continue
+        service_data = yaml.load(peer_services_data)
         for service in service_data:
             service_name = service["service_name"]
             if service_name in services_dict:
@@ -709,6 +711,7 @@ def config_changed():
         service_haproxy("reload")
         if not (get_listen_stanzas() == old_stanzas):
             notify_website()
+            notify_peer()
     else:
         # XXX Ideally the config should be restored to a working state if the
         # check fails, otherwise an inadvertent reload will cause the service
@@ -758,17 +761,17 @@ def get_hostname(host=None):
     return host
 
 
-def notify_website(changed=False, relation_ids=None):
+def notify_relation(relation, changed=False, relation_ids=None):
     config_data = config_get()
     default_host = get_hostname()
     default_port = 80
 
-    for rid in relation_ids or get_relation_ids("website"):
+    for rid in relation_ids or get_relation_ids(relation):
         relation_data = relation_get(relation_id=rid)
 
         # If a specfic service has been asked for then return the ip:port for
         # that service, else pass back the default
-        if 'service_name' in relation_data:
+        if relation_data is not None and 'service_name' in relation_data:
             service_name = relation_data['service_name']
             requestedservice = get_config_service(service_name)
             my_host = get_hostname(requestedservice['service_host'])
@@ -779,15 +782,21 @@ def notify_website(changed=False, relation_ids=None):
 
         relation_set(relation_id=rid, port=my_port,
                      hostname=my_host,
-                     all_services=config_data['services'],
-                     time=time.time())
-
+                     all_services=config_data['services'])
         if changed:
             if 'is-proxy' in relation_data:
                 service_name = ("%s__%d" % (relation_data['hostname'],
                                             relation_data['port']))
                 open("%s/%s.is.proxy" % (default_haproxy_service_config_dir,
                                          service_name), 'a').close()
+
+
+def notify_website(changed=False, relation_ids=None):
+    notify_relation("website", changed=changed, relation_ids=relation_ids)
+
+
+def notify_peer(changed=False, relation_ids=None):
+    notify_relation("peer", changed=changed, relation_ids=relation_ids)
 
 
 def update_nrpe_config():

@@ -96,6 +96,31 @@ class PeerRelationTest(TestCase):
         expected = services_dict
         self.assertEqual(expected, hooks.apply_peer_config(services_dict))
 
+    @patch.dict(os.environ, {"JUJU_UNIT_NAME": "haproxy/2"})
+    def test_with_missing_all_services(self):
+        self.unit_get.return_value = "1.2.4.5"
+        self.get_relation_data.return_value = {
+            "haproxy-1": {
+                "hostname": "haproxy-1",
+                "private-address": "1.2.4.4",
+                }
+            }
+
+        services_dict = {
+            "foo_service": {
+                "service_name": "foo_service",
+                "service_host": "0.0.0.0",
+                "service_port": 4242,
+                "service_options": ["balance leastconn"],
+                "server_options": ["maxconn 4"],
+                "servers": [("backend_1__8080", "1.2.3.4",
+                             8080, ["maxconn 4"])],
+                },
+            }
+
+        expected = services_dict
+        self.assertEqual(expected, hooks.apply_peer_config(services_dict))
+
     @patch('hooks.create_listen_stanza')
     def test_writes_service_config(self, create_listen_stanza):
         create_listen_stanza.return_value = 'some content'
