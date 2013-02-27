@@ -651,23 +651,14 @@ def construct_haproxy_config(haproxy_globals=None,
 #                   the haproxy service
 #------------------------------------------------------------------------------
 def service_haproxy(action=None, haproxy_config=default_haproxy_config):
-    if action is None or haproxy_config is None:
+    if None in (action, haproxy_config):
         return None
     elif action == "check":
-        retVal = subprocess.call(
-            ['/usr/sbin/haproxy', '-f', haproxy_config, '-c'])
-        if retVal == 1:
-            return False
-        elif retVal == 0:
-            return True
-        else:
-            return False
+        command = ['/usr/sbin/haproxy', '-f', haproxy_config, '-c']
     else:
-        retVal = subprocess.call(['service', 'haproxy', action])
-        if retVal == 0:
-            return True
-        else:
-            return False
+        command = ['service', 'haproxy', action]
+    return_value = subprocess.call(command)
+    return return_value == 0
 
 
 ###############################################################################

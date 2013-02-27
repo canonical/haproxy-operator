@@ -758,6 +758,61 @@ class HelpersTest(TestCase):
             call(str(errors[1])),
         ])
 
+    @patch('subprocess.call')
+    def test_calls_check_action(self, mock_call):
+        mock_call.return_value = 0
+
+        result = hooks.service_haproxy('check')
+
+        self.assertTrue(result)
+        mock_call.assert_called_with(['/usr/sbin/haproxy', '-f',
+                                      hooks.default_haproxy_config, '-c'])
+
+    @patch('subprocess.call')
+    def test_calls_check_action_with_different_config(self, mock_call):
+        mock_call.return_value = 0
+
+        result = hooks.service_haproxy('check', 'some-config')
+
+        self.assertTrue(result)
+        mock_call.assert_called_with(['/usr/sbin/haproxy', '-f',
+                                      'some-config', '-c'])
+
+    @patch('subprocess.call')
+    def test_fails_to_check_config(self, mock_call):
+        mock_call.return_value = 1
+
+        result = hooks.service_haproxy('check')
+
+        self.assertFalse(result)
+
+    @patch('subprocess.call')
+    def test_calls_different_actions(self, mock_call):
+        mock_call.return_value = 0
+
+        result = hooks.service_haproxy('foo')
+
+        self.assertTrue(result)
+        mock_call.assert_called_with(['service', 'haproxy', 'foo'])
+
+    @patch('subprocess.call')
+    def test_fails_to_call_different_actions(self, mock_call):
+        mock_call.return_value = 1
+
+        result = hooks.service_haproxy('foo')
+
+        self.assertFalse(result)
+
+    @patch('subprocess.call')
+    def test_doesnt_call_actions_if_action_not_provided(self, mock_call):
+        self.assertIsNone(hooks.service_haproxy())
+        self.assertFalse(mock_call.called)
+
+    @patch('subprocess.call')
+    def test_doesnt_call_actions_if_config_is_none(self, mock_call):
+        self.assertIsNone(hooks.service_haproxy('foo', None))
+        self.assertFalse(mock_call.called)
+
 
 class RelationHelpersTest(TestCase):
 
