@@ -1,5 +1,5 @@
 from testtools import TestCase
-from mock import patch, call, ANY
+from mock import patch, call
 
 import hooks
 
