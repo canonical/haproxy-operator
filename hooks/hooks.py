@@ -635,23 +635,15 @@ def construct_haproxy_config(haproxy_globals=None,
                              haproxy_defaults=None,
                              haproxy_monitoring=None,
                              haproxy_services=None):
-    if haproxy_globals is None or haproxy_defaults is None:
-        return None
+    if None in (haproxy_globals, haproxy_defaults):
+        return
     with open(default_haproxy_config, 'w') as haproxy_config:
-        haproxy_config.write(haproxy_globals)
-        haproxy_config.write("\n")
-        haproxy_config.write("\n")
-        haproxy_config.write(haproxy_defaults)
-        haproxy_config.write("\n")
-        haproxy_config.write("\n")
-        if haproxy_monitoring is not None:
-            haproxy_config.write(haproxy_monitoring)
-            haproxy_config.write("\n")
-            haproxy_config.write("\n")
-        if haproxy_services is not None:
-            haproxy_config.write(haproxy_services)
-            haproxy_config.write("\n")
-            haproxy_config.write("\n")
+        config_string = ''
+        for config in (haproxy_globals, haproxy_defaults, haproxy_monitoring,
+                       haproxy_services):
+            if config is not None:
+                config_string += config + '\n\n'
+        haproxy_config.write(config_string)
 
 
 #------------------------------------------------------------------------------

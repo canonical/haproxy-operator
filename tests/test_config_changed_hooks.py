@@ -2,6 +2,7 @@ from testtools import TestCase
 from mock import patch
 
 import hooks
+from utils_for_tests import patch_open
 
 
 class ConfigChangedTest(TestCase):
@@ -61,3 +62,44 @@ class ConfigChangedTest(TestCase):
         hooks.config_changed()
 
         self.notify_website.assert_not_called()
+
+
+class HelpersTest(TestCase):
+    def test_constructs_haproxy_config(self):
+        with patch_open() as (mock_open, mock_file):
+            hooks.construct_haproxy_config('foo-globals', 'foo-defaults',
+                                           'foo-monitoring', 'foo-services')
+
+            mock_file.write.assert_called_with(
+                'foo-globals\n\n'
+                'foo-defaults\n\n'
+                'foo-monitoring\n\n'
+                'foo-services\n\n'
+            )
+            mock_open.assert_called_with(hooks.default_haproxy_config, 'w')
+
+    def test_constructs_nothing_if_globals_is_none(self):
+        with patch_open() as (mock_open, mock_file):
+            hooks.construct_haproxy_config(None, 'foo-defaults',
+                                           'foo-monitoring', 'foo-services')
+
+            self.assertFalse(mock_open.called)
+            self.assertFalse(mock_file.called)
+
+    def test_constructs_nothing_if_defaults_is_none(self):
+        with patch_open() as (mock_open, mock_file):
+            hooks.construct_haproxy_config('foo-globals', None,
+                                           'foo-monitoring', 'foo-services')
+
+            self.assertFalse(mock_open.called)
+            self.assertFalse(mock_file.called)
+
+    def test_constructs_haproxy_config_without_optionals(self):
+        with patch_open() as (mock_open, mock_file):
+            hooks.construct_haproxy_config('foo-globals', 'foo-defaults')
+
+            mock_file.write.assert_called_with(
+                'foo-globals\n\n'
+                'foo-defaults\n\n'
+            )
+            mock_open.assert_called_with(hooks.default_haproxy_config, 'w')
