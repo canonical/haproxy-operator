@@ -1,6 +1,6 @@
 # After making changes to this file, to ensure that your sourcedeps are
 # up-to-date do:
 #
-#   make clean-sourcedeps sourcedeps
+#   make sourcedeps
 
-./.sourcedeps/charmsupport                        bzr+ssh://bazaar.launchpad.net/+branch/charmsupport;revno=33
+./lib/charmsupport                        bzr+ssh://bazaar.launchpad.net/+branch/charmsupport;revno=33

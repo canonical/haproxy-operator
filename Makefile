@@ -3,7 +3,7 @@ HOOKS_DIR := $(PWD)/hooks
 TEST_PREFIX := PYTHONPATH=$(HOOKS_DIR)
 TEST_DIR := $(PWD)/tests
 CHARM_DIR := $(PWD)
-EXCLUDED_LINT_DIRS := $(PWD)/.env/*
+EXCLUDED_LINT_DIRS := $(PWD)/lib
 PYTHON := /usr/bin/env python
 
 

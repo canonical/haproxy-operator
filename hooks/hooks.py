@@ -13,6 +13,19 @@ import yaml
 import nrpe
 import time
 
+# Make sure that charmsupport is importable, or bail out.
+try:
+    import charmsupport
+    _ = charmsupport
+except ImportError:
+    local_copy = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "lib", "charmsupport")
+    if not os.path.exists(local_copy) or not os.path.isdir(local_copy):
+        raise SystemExit("Could not find required 'charmsupport' library.")
+    sys.path.insert(0, local_copy)
+
+
 from charmsupport.hookenv import (
     log,
 )
