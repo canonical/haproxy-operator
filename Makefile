@@ -11,7 +11,7 @@ build: sourcedeps test lint proof
 
 proof:
 	@echo Proofing charm...
-	@charm proof && echo OK
+	@charm proof $(PWD) && echo OK
 
 test:
 	@echo Starting tests...
