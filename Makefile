@@ -7,7 +7,11 @@ EXCLUDED_LINT_DIRS := $(PWD)/lib
 PYTHON := /usr/bin/env python
 
 
-build: sourcedeps test lint
+build: sourcedeps test lint proof
+
+proof:
+	@echo Proofing charm...
+	@charm proof && echo OK
 
 test:
 	@echo Starting tests...
@@ -15,7 +19,7 @@ test:
 
 lint:
 	@echo Checking for Python syntax...
-	@flake8 $(PWD) --ignore=E123 --exclude=$(EXCLUDED_LINT_DIRS)
+	@flake8 $(PWD) --ignore=E123 --exclude=$(EXCLUDED_LINT_DIRS) && echo OK
 
 sourcedeps: $(PWD)/config-manager.txt
 	@echo Updating source dependencies...
