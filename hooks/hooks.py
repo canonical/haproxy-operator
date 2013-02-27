@@ -22,7 +22,7 @@ except ImportError:
         os.path.dirname(os.path.dirname(__file__)),
         "lib", "charmsupport")
     if not os.path.exists(local_copy) or not os.path.isdir(local_copy):
-        raise SystemExit("Could not find required 'charmsupport' library.")
+        sys.exit("Could not find required 'charmsupport' library.")
     sys.path.insert(0, local_copy)
 
 
