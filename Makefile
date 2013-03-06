@@ -24,3 +24,5 @@ lint:
 sourcedeps: $(PWD)/config-manager.txt
 	@echo Updating source dependencies...
 	@$(PYTHON) /usr/lib/config-manager/cm.py update $(PWD)/config-manager.txt
+
+charm-payload: sourcedeps
