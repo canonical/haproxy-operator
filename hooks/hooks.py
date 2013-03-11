@@ -806,6 +806,22 @@ def update_nrpe_config():
                           'check_haproxy_queue_depth.sh')
     nrpe_compat.write()
 
+    nrpe_checks = [check.shortname for check in nrpe_compat.checks]
+    notify_local_monitors(nrpe_checks)
+
+
+def notify_local_monitors(nrpe_checks, relation_ids=None):
+    monitors = {"monitors":
+                {"local":
+                 {"nrpe": dict(zip(nrpe_checks,
+                                   [{}] * len(nrpe_checks))),
+                  },
+                 },
+                }
+
+    for rid in relation_ids or get_relation_ids("local-monitors"):
+        relation_set(relation_id=rid, monitors=monitors)
+
 
 ###############################################################################
 # Main section
