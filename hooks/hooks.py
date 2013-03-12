@@ -806,8 +806,9 @@ def update_nrpe_config():
                           'check_haproxy_queue_depth.sh')
     nrpe_compat.write()
 
-    nrpe_checks = [{check.shortname: {"command": "check_%s" % check.shortname}}
-                   for check in nrpe_compat.checks]
+    nrpe_checks = dict((
+        (check.shortname, {"command": "check_%s" % check.shortname})
+        for check in nrpe_compat.checks))
     notify_local_monitors(nrpe_checks)
 
 

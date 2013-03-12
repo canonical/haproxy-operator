@@ -24,20 +24,20 @@ class NRPEHooksTest(TestCase):
                             'check_haproxy_queue_depth.sh'),
              call.write()])
         self.assertEqual(notify_local_monitors.mock_calls,
-                         [call([{'haproxy':
-                                 {'command': 'check_haproxy'}},
-                                {'haproxy_queue':
-                                 {'command': 'check_haproxy_queue'}}])])
+                         [call({'haproxy':
+                                {'command': 'check_haproxy'},
+                                'haproxy_queue':
+                                {'command': 'check_haproxy_queue'}})])
 
     @patch('hooks.relation_set')
     @patch('hooks.get_relation_ids')
     def test_notify_local_monitors(self, get_relation_ids, relation_set):
         get_relation_ids.return_value = ['local-monitors:1']
 
-        nrpe_checks = [{'haproxy':
-                        {'command': 'check_haproxy'}},
-                       {'haproxy_queue':
-                        {'command': 'check_haproxy_queue'}}]
+        nrpe_checks = {'haproxy':
+                       {'command': 'check_haproxy'},
+                       'haproxy_queue':
+                       {'command': 'check_haproxy_queue'}}
         expected = {"monitors": {"remote": {"nrpe": nrpe_checks}}}
         hooks.notify_local_monitors(nrpe_checks)
         self.assertEqual(relation_set.mock_calls,
