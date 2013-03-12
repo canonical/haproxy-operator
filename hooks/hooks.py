@@ -521,7 +521,7 @@ def apply_peer_config(services_dict):
         peer_services_data = peer_data[unit_name].get("all_services")
         if peer_services_data is None:
             continue
-        service_data = yaml.load(peer_services_data)
+        service_data = yaml.safe_load(peer_services_data)
         for service in service_data:
             service_name = service["service_name"]
             if service_name in services_dict:
@@ -806,6 +806,23 @@ def update_nrpe_config():
                           'check_haproxy_queue_depth.sh')
     nrpe_compat.write()
 
+    nrpe_checks = dict((
+        (check.shortname, {"command": "check_%s" % check.shortname})
+        for check in nrpe_compat.checks))
+    notify_local_monitors(nrpe_checks)
+
+
+def notify_local_monitors(nrpe_checks, relation_ids=None):
+    monitors = {"monitors":
+                {"remote":
+                 {"nrpe": nrpe_checks,
+                  },
+                 },
+                }
+
+    for rid in relation_ids or get_relation_ids("local-monitors"):
+        relation_set(relation_id=rid, monitors=yaml.dump(monitors))
+
 
 ###############################################################################
 # Main section
@@ -836,7 +853,8 @@ def main(hook_name):
         website_interface("joined")
     elif hook_name == "peer-relation-changed":
         reverseproxy_interface("changed")
-    elif hook_name == "nrpe-external-master-relation-changed":
+    elif hook_name in ("nrpe-external-master-relation-changed",
+                       "local-monitors-relation-changed"):
         update_nrpe_config()
     else:
         print "Unknown hook"
