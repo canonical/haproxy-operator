@@ -8,7 +8,7 @@ import hooks
 class NRPEHooksTest(TestCase):
 
     @patch('hooks.notify_local_monitors')
-    @patch('nrpe.NRPE')
+    @patch('charmsupport.nrpe.NRPE')
     def test_update_nrpe_config(self, nrpe, notify_local_monitors):
         nrpe_compat = MagicMock()
         nrpe_compat.checks = [MagicMock(shortname="haproxy"),

@@ -10,7 +10,6 @@ import string
 import subprocess
 import sys
 import yaml
-import nrpe
 
 # Make sure that charmsupport is importable, or bail out.
 try:
@@ -28,6 +27,7 @@ except ImportError:
 from charmsupport.hookenv import (
     log,
 )
+from charmsupport import nrpe
 
 
 ###############################################################################
