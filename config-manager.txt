@@ -3,4 +3,4 @@
 #
 #   make sourcedeps
 
-./lib/charmsupport                        bzr+ssh://bazaar.launchpad.net/~ubuntuone-pqm-team/charmsupport/trunk;revno=40
+./lib/charmsupport                        bzr+ssh://bazaar.launchpad.net/~ubuntuone-pqm-team/charmsupport/trunk;revno=41
