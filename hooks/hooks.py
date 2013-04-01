@@ -309,8 +309,7 @@ def update_service_ports(old_service_ports=None, new_service_ports=None):
         if port not in new_service_ports:
             close_port(port)
     for port in new_service_ports:
-        if port not in old_service_ports:
-            open_port(port)
+        open_port(port)
 
 
 #------------------------------------------------------------------------------
