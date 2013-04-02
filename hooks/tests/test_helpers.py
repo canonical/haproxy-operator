@@ -719,52 +719,13 @@ class HelpersTest(TestCase):
 
 class RelationHelpersTest(TestCase):
 
-    @patch('subprocess.check_output')
-    @patch('hooks.log')
-    def test_gets_relation_list(self, log, check_output):
-        json_string = '{"foo": "BAR"}'
-        check_output.return_value = json_string
-
-        result = hooks.get_relation_list()
-
-        self.assertEqual(result['foo'], 'BAR')
-        check_output.assert_called_with(['relation-list', '--format=json'])
-        log.assert_called_with('Calling: %s' % ['relation-list',
-                                                '--format=json'])
-
-    @patch('subprocess.check_output')
-    @patch('hooks.log')
-    def test_gets_relation_list_by_id(self, log, check_output):
-        json_string = '{"foo": "BAR"}'
-        check_output.return_value = json_string
-
-        result = hooks.get_relation_list(relation_id=123)
-
-        self.assertEqual(result['foo'], 'BAR')
-        check_output.assert_called_with(['relation-list', '--format=json',
-                                         '-r', 123])
-        log.assert_called_with('Calling: %s' % ['relation-list',
-                                                '--format=json', '-r', 123])
-
-    @patch('subprocess.check_output')
-    @patch('hooks.log')
-    def test_returns_none_when_get_relation_list_fails(self, log,
-                                                       check_output):
-        check_output.side_effect = RuntimeError('some error')
-
-        result = hooks.get_relation_list()
-
-        log.assert_called_with('Calling: %s' % ['relation-list',
-                                                '--format=json'])
-        self.assertIsNone(result)
-
     @patch('hooks.get_relation_ids')
-    @patch('hooks.get_relation_list')
+    @patch('hooks.related_units')
     @patch('hooks.relation_get')
-    def test_gets_relation_data_by_name(self, relation_get, get_relation_list,
+    def test_gets_relation_data_by_name(self, relation_get, related_units,
                                         get_relation_ids):
         get_relation_ids.return_value = [1, 2]
-        get_relation_list.side_effect = [
+        related_units.side_effect = [
             ['foo/1', 'bar/1'],
             ['foo/2', 'bar/2'],
         ]
@@ -785,9 +746,9 @@ class RelationHelpersTest(TestCase):
 
         self.assertEqual(result, expected_data)
         get_relation_ids.assert_called_with('baz')
-        self.assertEqual(get_relation_list.mock_calls, [
-            call(relation_id=1),
-            call(relation_id=2),
+        self.assertEqual(related_units.mock_calls, [
+            call(1),
+            call(2),
         ])
         self.assertEqual(relation_get.mock_calls, [
             call(rid=1, unit='foo/1'),
@@ -807,11 +768,11 @@ class RelationHelpersTest(TestCase):
         get_relation_ids.assert_called_with('baz')
 
     @patch('hooks.get_relation_ids')
-    @patch('hooks.get_relation_list')
-    def test_returns_none_if_get_data_fails(self, get_relation_list,
+    @patch('hooks.related_units')
+    def test_returns_none_if_get_data_fails(self, related_units,
                                             get_relation_ids):
         get_relation_ids.return_value = [1, 2]
-        get_relation_list.side_effect = RuntimeError('some error')
+        related_units.side_effect = RuntimeError('some error')
 
         result = hooks.get_relation_data(relation_name='baz')
 

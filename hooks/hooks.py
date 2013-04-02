@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import json
 import glob
 import os
 import random
@@ -25,6 +24,7 @@ from charmsupport.hookenv import (
     relation_get,
     relation_set,
     relation_ids as get_relation_ids,
+    related_units,
     )
 from charmsupport import nrpe
 
@@ -41,19 +41,6 @@ default_haproxy_service_config_dir = "/var/run/haproxy"
 ###############################################################################
 
 
-def get_relation_list(relation_id=None):
-    try:
-        relation_cmd_line = ['relation-list', '--format=json']
-        if relation_id is not None:
-            relation_cmd_line.extend(('-r', relation_id))
-        log('Calling: %s' % relation_cmd_line)
-        relations = json.loads(subprocess.check_output(relation_cmd_line))
-    except Exception:
-        relations = None
-    finally:
-        return relations
-
-
 def get_relation_data(relation_name=None):
     relation_ids = get_relation_ids(relation_name)
     if relation_ids is None:
@@ -61,7 +48,7 @@ def get_relation_data(relation_name=None):
     try:
         all_relation_data = {}
         for rid in relation_ids:
-            units = get_relation_list(relation_id=rid)
+            units = related_units(rid)
             for unit in units:
                 all_relation_data[unit.replace('/', '-')] = relation_get(
                     rid=rid, unit=unit)
