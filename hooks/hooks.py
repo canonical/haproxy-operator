@@ -14,11 +14,15 @@ import yaml
 import _pythonpath
 _ = _pythonpath  # Silence pyflakes.
 
-from charmhelpers import open_port, close_port
+from charmhelpers import (
+    open_port,
+    close_port,
+    unit_get,
+    )
 from charmsupport.hookenv import (
     log,
     config as config_get,
-)
+    )
 from charmsupport import nrpe
 
 
@@ -32,19 +36,6 @@ default_haproxy_service_config_dir = "/var/run/haproxy"
 ###############################################################################
 # Supporting functions
 ###############################################################################
-
-
-#------------------------------------------------------------------------------
-# unit_get:  Returns a string containing the value of the requested item
-#------------------------------------------------------------------------------
-def unit_get(item):
-    try:
-        cmd_line = ['unit-get', item]
-        data = subprocess.check_output(cmd_line).strip()
-    except Exception, e:
-        log(str(e))
-    else:
-        return data
 
 
 #------------------------------------------------------------------------------
