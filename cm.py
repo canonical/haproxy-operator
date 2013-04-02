@@ -82,7 +82,7 @@ def main(config_file, parent_dir, target_dir, verbose):
 
         branch_url = ("bzr+ssh://%s@%s/%s" %
                       (quoted_username, host, quoted_branch_spec))
-        lp_url = "lp:" + quoted_branch_spec
+        lp_url = "lp:" + quoted_branch_spec.replace("+branch/", "")
 
         # Create the local mirror branch if it doesn't already exist
         if verbose:
