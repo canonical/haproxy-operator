@@ -721,45 +721,6 @@ class RelationHelpersTest(TestCase):
 
     @patch('subprocess.check_output')
     @patch('hooks.log')
-    def test_gets_relation_ids(self, log, check_output):
-        json_string = '{"foo": "BAR"}'
-        check_output.return_value = json_string
-
-        result = hooks.get_relation_ids()
-
-        self.assertEqual(result['foo'], 'BAR')
-        check_output.assert_called_with(['relation-ids', '--format=json'])
-        log.assert_called_with('Calling: %s' % ['relation-ids',
-                                                '--format=json'])
-
-    @patch('subprocess.check_output')
-    @patch('hooks.log')
-    def test_gets_relation_ids_by_name(self, log, check_output):
-        json_string = '{"foo": "BAR"}'
-        check_output.return_value = json_string
-
-        result = hooks.get_relation_ids(relation_name='baz')
-
-        self.assertEqual(result['foo'], 'BAR')
-        check_output.assert_called_with(['relation-ids', '--format=json',
-                                         'baz'])
-        log.assert_called_with('Calling: %s' % ['relation-ids',
-                                                '--format=json', 'baz'])
-
-    @patch('subprocess.check_output')
-    @patch('hooks.log')
-    def test_returns_none_when_get_relation_ids_fails(self, log,
-                                                      check_output):
-        check_output.side_effect = RuntimeError('some error')
-
-        result = hooks.get_relation_ids()
-
-        log.assert_called_with('Calling: %s' % ['relation-ids',
-                                                '--format=json'])
-        self.assertIsNone(result)
-
-    @patch('subprocess.check_output')
-    @patch('hooks.log')
     def test_gets_relation_list(self, log, check_output):
         json_string = '{"foo": "BAR"}'
         check_output.return_value = json_string

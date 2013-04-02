@@ -23,6 +23,8 @@ from charmsupport.hookenv import (
     log,
     config as config_get,
     relation_get,
+    relation_set,
+    relation_ids as get_relation_ids,
     )
 from charmsupport import nrpe
 
@@ -37,34 +39,6 @@ default_haproxy_service_config_dir = "/var/run/haproxy"
 ###############################################################################
 # Supporting functions
 ###############################################################################
-
-
-#------------------------------------------------------------------------------
-# relation_set:  Set values on a specific (or default) relation based on
-#                the given keyword arguments.
-#                Optional parameters: relation_id
-#                relation_id:  specify relation id for out of context usage.
-#------------------------------------------------------------------------------
-def relation_set(relation_id=None, **kwargs):
-    relation_cmd_line = ['relation-set']
-    if relation_id is not None:
-        relation_cmd_line.extend(('-r', relation_id))
-    for k, v in kwargs.items():
-        relation_cmd_line.append('{}={}'.format(k, v))
-    subprocess.check_call(relation_cmd_line)
-
-
-def get_relation_ids(relation_name=None):
-    try:
-        relation_cmd_line = ['relation-ids', '--format=json']
-        if relation_name is not None:
-            relation_cmd_line.append(relation_name)
-        log('Calling: %s' % relation_cmd_line)
-        relation_ids = json.loads(subprocess.check_output(relation_cmd_line))
-    except Exception:
-        relation_ids = None
-    finally:
-        return relation_ids
 
 
 def get_relation_list(relation_id=None):
