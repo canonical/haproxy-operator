@@ -22,6 +22,7 @@ from charmhelpers import (
 from charmsupport.hookenv import (
     log,
     config as config_get,
+    relation_get,
     )
 from charmsupport import nrpe
 
@@ -36,33 +37,6 @@ default_haproxy_service_config_dir = "/var/run/haproxy"
 ###############################################################################
 # Supporting functions
 ###############################################################################
-
-
-#------------------------------------------------------------------------------
-# relation_get:  Returns a dictionary containing the relation information
-#                Optional parameters: scope, relation_id
-#                scope:        limits the scope of the returned data to the
-#                              desired item.
-#                unit_name:    limits the data ( and optionally the scope )
-#                              to the specified unit
-#                relation_id:  specify relation id for out of context usage.
-#------------------------------------------------------------------------------
-def relation_get(scope=None, unit_name=None, relation_id=None):
-    try:
-        relation_cmd_line = ['relation-get', '--format=json']
-        if relation_id is not None:
-            relation_cmd_line.extend(('-r', relation_id))
-        if scope is not None:
-            relation_cmd_line.append(scope)
-        else:
-            relation_cmd_line.append('')
-        if unit_name is not None:
-            relation_cmd_line.append(unit_name)
-        relation_data = json.loads(subprocess.check_output(relation_cmd_line))
-    except Exception, e:
-        log(str(e))
-    else:
-        return relation_data
 
 
 #------------------------------------------------------------------------------
@@ -116,7 +90,7 @@ def get_relation_data(relation_name=None):
             units = get_relation_list(relation_id=rid)
             for unit in units:
                 all_relation_data[unit.replace('/', '-')] = relation_get(
-                    relation_id=rid, unit_name=unit)
+                    rid=rid, unit=unit)
     except Exception:
         all_relation_data = None
     finally:
@@ -710,7 +684,7 @@ def notify_relation(relation, changed=False, relation_ids=None):
     default_port = 80
 
     for rid in relation_ids or get_relation_ids(relation):
-        relation_data = relation_get(relation_id=rid)
+        relation_data = relation_get(rid=rid)
 
         # If a specfic service has been asked for then return the ip:port for
         # that service, else pass back the default

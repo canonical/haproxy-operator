@@ -3,6 +3,6 @@
 #
 #   make sourcedeps
 
-./lib/charmsupport                        bzr+ssh://bazaar.launchpad.net/~ubuntuone-pqm-team/charmsupport/trunk;revno=41
+./lib/charmsupport                        bzr+ssh://bazaar.launchpad.net/~ubuntuone-pqm-team/charmsupport/trunk;revno=43
 ./lib/charm-tools                         bzr+ssh://bazaar.launchpad.net/+branch/charm-tools;revno=172
 ./lib/shelltoolbox                        bzr+ssh://bazaar.launchpad.net/+branch/python-shelltoolbox;revno=17
