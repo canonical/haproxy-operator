@@ -4,7 +4,6 @@ HOOKS_DIR := $(PWD)/hooks
 TEST_PREFIX := PYTHONPATH=$(HOOKS_DIR)
 TEST_DIR := $(PWD)/hooks/tests
 CHARM_DIR := $(PWD)
-EXCLUDED_LINT_DIRS := $(PWD)/lib
 PYTHON := /usr/bin/env python
 
 
@@ -20,7 +19,7 @@ test:
 
 lint:
 	@echo Checking for Python syntax...
-	@flake8 $(PWD) --ignore=E123 --exclude=$(EXCLUDED_LINT_DIRS) && echo OK
+	@flake8 $(HOOKS_DIR) --ignore=E123 && echo OK
 
 sourcedeps: $(PWD)/config-manager.txt
 	@echo Updating source dependencies...

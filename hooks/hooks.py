@@ -24,7 +24,7 @@ from charmsupport.hookenv import (
     relation_get,
     relation_set,
     relation_ids as get_relation_ids,
-    related_units,
+    relations_of_type,
     )
 from charmsupport import nrpe
 
@@ -39,23 +39,6 @@ default_haproxy_service_config_dir = "/var/run/haproxy"
 ###############################################################################
 # Supporting functions
 ###############################################################################
-
-
-def get_relation_data(relation_name=None):
-    relation_ids = get_relation_ids(relation_name)
-    if relation_ids is None:
-        return ()
-    try:
-        all_relation_data = {}
-        for rid in relation_ids:
-            units = related_units(rid)
-            for unit in units:
-                all_relation_data[unit.replace('/', '-')] = relation_get(
-                    rid=rid, unit=unit)
-    except Exception:
-        all_relation_data = None
-    finally:
-        return all_relation_data
 
 
 #------------------------------------------------------------------------------
@@ -318,18 +301,15 @@ def is_proxy(service_name):
 #------------------------------------------------------------------------------
 def create_services():
     services_dict = get_config_services()
-    relation_data = get_relation_data(relation_name="reverseproxy")
-
     if len(services_dict) == 0:
         log("No services configured, exiting.")
         return
 
-    if relation_data is None:
-        relation_data = {}
+    relation_data = relations_of_type("reverseproxy")
 
-    for unit in sorted(relation_data.keys()):
-        relation_info = relation_data[unit]
-        juju_service_name = unit.rpartition('-')[0]
+    for relation_info in relation_data:
+        unit = relation_info['__unit__']
+        juju_service_name = unit.rpartition('/')[0]
 
         relation_ok = True
         for required in ("port", "private-address", "hostname"):
@@ -392,11 +372,12 @@ def create_services():
 
 
 def apply_peer_config(services_dict):
-    peer_data = get_relation_data(relation_name="peer")
+    peer_data = relations_of_type("peer")
 
     peer_services = {}
-    for unit_name in sorted(peer_data.keys()):
-        peer_services_data = peer_data[unit_name].get("all_services")
+    for relation_info in peer_data:
+        unit_name = relation_info["__unit__"]
+        peer_services_data = relation_info.get("all_services")
         if peer_services_data is None:
             continue
         service_data = yaml.safe_load(peer_services_data)
@@ -411,8 +392,8 @@ def apply_peer_config(services_dict):
                                                    "mode tcp",
                                                    "option tcplog"]
                 servers = peer_service.setdefault("servers", [])
-                servers.append((unit_name,
-                                peer_data[unit_name]["private-address"],
+                servers.append((unit_name.replace("/", "-"),
+                                relation_info["private-address"],
                                 service["service_port"] + 1, ["check"]))
 
     if not peer_services:
