@@ -60,38 +60,6 @@ class HelpersTest(TestCase):
         ])
         self.assertEqual(result, expected)
 
-    def test_gets_config(self):
-        json_string = '{"foo": "BAR"}'
-        with patch('subprocess.check_output') as check_output:
-            check_output.return_value = json_string
-
-            result = hooks.config_get()
-
-            self.assertEqual(result['foo'], 'BAR')
-            check_output.assert_called_with(['config-get', '--format=json'])
-
-    def test_gets_config_with_scope(self):
-        json_string = '{"foo": "BAR"}'
-        with patch('subprocess.check_output') as check_output:
-            check_output.return_value = json_string
-
-            result = hooks.config_get(scope='baz')
-
-            self.assertEqual(result['foo'], 'BAR')
-            check_output.assert_called_with(['config-get', 'baz',
-                                             '--format=json'])
-
-    @patch('subprocess.check_output')
-    @patch('hooks.log')
-    def test_logs_and_returns_none_if_config_get_fails(self, log,
-                                                       check_output):
-        check_output.side_effect = RuntimeError('some error')
-
-        result = hooks.config_get()
-
-        log.assert_called_with('some error')
-        self.assertIsNone(result)
-
     @patch('subprocess.call')
     def test_installs_packages(self, mock_call):
         mock_call.return_value = 'some result'

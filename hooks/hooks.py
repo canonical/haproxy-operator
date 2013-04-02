@@ -17,6 +17,7 @@ _ = _pythonpath  # Silence pyflakes.
 from charmhelpers import open_port, close_port
 from charmsupport.hookenv import (
     log,
+    config as config_get,
 )
 from charmsupport import nrpe
 
@@ -31,25 +32,6 @@ default_haproxy_service_config_dir = "/var/run/haproxy"
 ###############################################################################
 # Supporting functions
 ###############################################################################
-
-
-#------------------------------------------------------------------------------
-# config_get:  Returns a dictionary containing all of the config information
-#              Optional parameter: scope
-#              scope: limits the scope of the returned configuration to the
-#                     desired config item.
-#------------------------------------------------------------------------------
-def config_get(scope=None):
-    try:
-        config_cmd_line = ['config-get']
-        if scope is not None:
-            config_cmd_line.append(scope)
-        config_cmd_line.append('--format=json')
-        config_data = json.loads(subprocess.check_output(config_cmd_line))
-    except Exception, e:
-        log(str(e))
-    else:
-        return config_data
 
 
 #------------------------------------------------------------------------------
