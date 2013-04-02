@@ -1,4 +1,5 @@
 PWD := $(shell pwd)
+SOURCEDEPS_DIR ?= $(shell dirname $(PWD))/.sourcecode
 HOOKS_DIR := $(PWD)/hooks
 TEST_PREFIX := PYTHONPATH=$(HOOKS_DIR)
 TEST_DIR := $(PWD)/hooks/tests
@@ -23,6 +24,8 @@ lint:
 
 sourcedeps: $(PWD)/config-manager.txt
 	@echo Updating source dependencies...
-	@$(PYTHON) /usr/lib/config-manager/cm.py update $(PWD)/config-manager.txt
+	@$(PYTHON) cm.py -c $(PWD)/config-manager.txt \
+		-p $(SOURCEDEPS_DIR) \
+		-t $(PWD)
 
 charm-payload: sourcedeps

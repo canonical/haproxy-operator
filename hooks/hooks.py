@@ -11,19 +11,10 @@ import subprocess
 import sys
 import yaml
 
-# Make sure that charmsupport is importable, or bail out.
-try:
-    import charmsupport
-    _ = charmsupport
-except ImportError:
-    local_copy = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)),
-        "lib", "charmsupport")
-    if not os.path.exists(local_copy) or not os.path.isdir(local_copy):
-        sys.exit("Could not find required 'charmsupport' library.")
-    sys.path.insert(0, local_copy)
+import _pythonpath
+_ = _pythonpath  # Silence pyflakes.
 
-
+from charmhelpers import open_port, close_port
 from charmsupport.hookenv import (
     log,
 )
@@ -275,26 +266,6 @@ def get_listen_stanzas(haproxy_config_file="/etc/haproxy/haproxy.cfg"):
     stanzas = re.findall("listen\s+([^\s]+)\s+([^:]+):(.*)", haproxy_config)
     return tuple(((service, addr, int(port))
                   for service, addr, port in stanzas))
-
-
-#------------------------------------------------------------------------------
-# open_port:  Convenience function to open a port in juju to
-#             expose a service
-#------------------------------------------------------------------------------
-def open_port(port=None, protocol="TCP"):
-    if port is None:
-        return None
-    return subprocess.call(['open-port', "%d/%s" % (int(port), protocol)])
-
-
-#------------------------------------------------------------------------------
-# close_port:  Convenience function to close a port in juju to
-#              unexpose a service
-#------------------------------------------------------------------------------
-def close_port(port=None, protocol="TCP"):
-    if port is None:
-        return None
-    return subprocess.call(['close-port', "%d/%s" % (int(port), protocol)])
 
 
 #------------------------------------------------------------------------------
