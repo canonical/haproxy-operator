@@ -9,9 +9,13 @@ PYTHON := /usr/bin/env python
 
 build: sourcedeps test lint proof
 
-proof:
+revision:
+	@test -f revision || echo 0 > revision
+
+proof: revision
 	@echo Proofing charm...
 	@charm proof $(PWD) && echo OK
+	@test `cat revision` = 0 && rm revision
 
 test:
 	@echo Starting tests...
@@ -28,3 +32,5 @@ sourcedeps: $(PWD)/config-manager.txt
 		-t $(PWD)
 
 charm-payload: sourcedeps
+
+.PHONY: revision proof test lint sourcedeps charm-payload
