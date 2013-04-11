@@ -106,6 +106,12 @@ options:
         before the first variable, service_name, as above. Service options is a
         comma separated list, server options will be appended as a string to
         the individual server lines for a given listen stanza.
+  sysctl:
+    default: ""
+    type: string
+    description: >
+      YAML-formatted list of sysctl values, e.g.:
+      '{ net.ipv4.tcp_max_syn_backlog : 65536 }'
   nagios_context:
     default: "juju"
     type: string
