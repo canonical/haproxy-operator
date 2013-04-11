@@ -231,6 +231,19 @@ def pwgen(pwd_length=20):
 
 
 #------------------------------------------------------------------------------
+# update_sysctl: create a sysctl.conf file from YAML-formatted 'sysctl' config
+#------------------------------------------------------------------------------
+def update_sysctl(config_data):
+    sysctl_dict = yaml.load(config_data.get("sysctl", "{}"))
+    if sysctl_dict:
+        sysctl_file = open("/etc/sysctl.d/50-haproxy.conf", "w")
+        for key in sysctl_dict:
+            sysctl_file.write("{}={}\n".format(key, sysctl_dict[key]))
+        sysctl_file.close()
+        subprocess.call(["sysctl", "-p", "/etc/sysctl.d/50-haproxy.conf"])
+
+
+#------------------------------------------------------------------------------
 # create_listen_stanza: Function to create a generic listen section in the
 #                       haproxy config
 #                       service_name:  Arbitrary service name
@@ -531,6 +544,7 @@ def config_changed():
     remove_services()
     create_services()
     haproxy_services = load_services()
+    update_sysctl(config_data)
     construct_haproxy_config(haproxy_globals,
                              haproxy_defaults,
                              haproxy_monitoring,
