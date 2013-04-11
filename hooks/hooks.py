@@ -236,11 +236,11 @@ def pwgen(pwd_length=20):
 def update_sysctl(config_data):
     sysctl_dict = yaml.load(config_data.get("sysctl", "{}"))
     if sysctl_dict:
-        sysctl_file = open("/etc/sysctl.d/50-fenchurch.conf", "w")
+        sysctl_file = open("/etc/sysctl.d/50-haproxy.conf", "w")
         for key in sysctl_dict:
             sysctl_file.write("{}={}\n".format(key, sysctl_dict[key]))
         sysctl_file.close()
-        subprocess.call(["sysctl", "-p", "/etc/sysctl.d/50-fenchurch.conf"])
+        subprocess.call(["sysctl", "-p", "/etc/sysctl.d/50-haproxy.conf"])
 
 
 #------------------------------------------------------------------------------
