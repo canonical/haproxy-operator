@@ -20,4 +20,4 @@ juju-log 'Install charmsupport and dependencies'
 apt_get_install charm-tools python-charmsupport python-shelltoolbox
 
 juju-log 'Invoking python-based install hook'
-python ./hooks.py install
+python hooks/hooks.py install
