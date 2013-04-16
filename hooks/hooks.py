@@ -539,9 +539,6 @@ def service_haproxy(action=None, haproxy_config=default_haproxy_config):
 # Hook functions
 ###############################################################################
 def install_hook():
-    for f in glob.glob('exec.d/*/charm-pre-install'):
-        if os.path.isfile(f) and os.access(f, os.X_OK):
-            subprocess.check_call(['sh', '-c', f])
     if not os.path.exists(default_haproxy_service_config_dir):
         os.mkdir(default_haproxy_service_config_dir, 0600)
     return ((apt_get_install("haproxy") == enable_haproxy()) is True)
@@ -703,4 +700,10 @@ def main(hook_name):
         sys.exit(1)
 
 if __name__ == "__main__":
-    main(os.path.basename(sys.argv[0]))
+    hook_name = os.path.basename(sys.argv[0])
+    # Also support being invoked directly with hook as argument name.
+    if hook_name == "hooks.py":
+        if len(sys.argv) < 2:
+            sys.exit("Missing required hook name argument.")
+        hook_name = sys.argv[1]
+    main(hook_name)
