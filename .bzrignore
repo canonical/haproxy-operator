@@ -1,0 +1,9 @@
+revision
+_trial_temp
+.coverage
+coverage.xml
+*.crt
+*.key
+lib/*
+*.pyc
+exec.d
