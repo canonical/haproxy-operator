@@ -586,10 +586,8 @@ def config_changed():
         # XXX Ideally the config should be restored to a working state if the
         # check fails, otherwise an inadvertent reload will cause the service
         # to be broken.
-        #
-        # Additionally, perhaps a failed check should return an error so that
-        # the service is marked as broken to 'juju status'?
-        pass
+        log("HAProxy configuration check failed, exiting.")
+        sys.exit(1)
 
 
 def start_hook():
