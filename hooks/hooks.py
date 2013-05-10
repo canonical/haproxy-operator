@@ -638,7 +638,7 @@ def notify_relation(relation, changed=False, relation_ids=None):
         service_names = set()
         for relation_data in relations_for_id(rid):
             if 'service_name' in relation_data:
-                service_names.append(relation_data['service_name'])
+                service_names.add(relation_data['service_name'])
 
             if changed:
                 if 'is-proxy' in relation_data:
@@ -650,7 +650,7 @@ def notify_relation(relation, changed=False, relation_ids=None):
 
         service_name = None
         if len(service_names) == 1:
-            service_name = service_names[0]
+            service_name = service_names.pop()
         elif len(service_names) > 1:
             log("Remote units requested than a single service name."
                 "Falling back to default host/port.")
@@ -665,7 +665,7 @@ def notify_relation(relation, changed=False, relation_ids=None):
             my_host = default_host
             my_port = default_port
 
-        relation_set(relation_id=rid, port=my_port,
+        relation_set(relation_id=rid, port=int(my_port),
                      hostname=my_host,
                      all_services=config_data['services'])
 
