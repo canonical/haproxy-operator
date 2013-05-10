@@ -665,7 +665,7 @@ def notify_relation(relation, changed=False, relation_ids=None):
             my_host = default_host
             my_port = default_port
 
-        relation_set(relation_id=rid, port=int(my_port),
+        relation_set(relation_id=rid, port=str(my_port),
                      hostname=my_host,
                      all_services=config_data['services'])
 

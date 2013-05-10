@@ -67,7 +67,7 @@ class NotifyRelationTest(TestCase):
         self.get_hostname.assert_called_once_with()
         self.relations_for_id.assert_called_once_with(None)
         self.relation_set.assert_called_once_with(
-            relation_id=None, port=80, hostname="foo.local",
+            relation_id=None, port="80", hostname="foo.local",
             all_services="")
         self.get_relation_ids.assert_not_called()
 
@@ -88,12 +88,10 @@ class NotifyRelationTest(TestCase):
             ])
 
         self.relation_set.assert_has_calls([
-            call.relation_set(
-                relation_id="website:1", port=80, hostname="foo.local",
-                all_services=""),
-            call.relation_set(
-                relation_id="website:2", port=80, hostname="foo.local",
-                all_services=""),
+            call(relation_id="website:1", port="80", hostname="foo.local",
+                 all_services=""),
+            call(relation_id="website:2", port="80", hostname="foo.local",
+                 all_services=""),
             ])
 
     def test_notify_website_relation_with_different_sitenames(self):
@@ -113,7 +111,7 @@ class NotifyRelationTest(TestCase):
 
         self.relation_set.assert_has_calls([
             call.relation_set(
-                relation_id="website:1", port=80, hostname="foo.local",
+                relation_id="website:1", port="80", hostname="foo.local",
                 all_services=""),
             ])
         self.log.assert_called_once_with(
@@ -141,7 +139,7 @@ class NotifyRelationTest(TestCase):
 
         self.relation_set.assert_has_calls([
             call.relation_set(
-                relation_id="website:1", port=4242, hostname="bar.local",
+                relation_id="website:1", port="4242", hostname="bar.local",
                 all_services=""),
             ])
         self.log.assert_not_called()
