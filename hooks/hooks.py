@@ -21,10 +21,10 @@ from charmhelpers import (
 from charmsupport.hookenv import (
     log,
     config as config_get,
-    relation_get,
     relation_set,
     relation_ids as get_relation_ids,
     relations_of_type,
+    relations_for_id,
     )
 from charmsupport import nrpe
 
@@ -635,12 +635,29 @@ def notify_relation(relation, changed=False, relation_ids=None):
     default_port = 80
 
     for rid in relation_ids or get_relation_ids(relation):
-        relation_data = relation_get(rid=rid)
+        service_names = set()
+        for relation_data in relations_for_id(rid):
+            if 'service_name' in relation_data:
+                service_names.append(relation_data['service_name'])
 
-        # If a specfic service has been asked for then return the ip:port for
-        # that service, else pass back the default
-        if relation_data is not None and 'service_name' in relation_data:
-            service_name = relation_data['service_name']
+            if changed:
+                if 'is-proxy' in relation_data:
+                    remote_service = ("%s__%d" % (relation_data['hostname'],
+                                                  relation_data['port']))
+                    open("%s/%s.is.proxy" % (
+                        default_haproxy_service_config_dir,
+                        remote_service), 'a').close()
+
+        service_name = None
+        if len(service_names) == 1:
+            service_name = service_names[0]
+        elif len(service_names) > 1:
+            log("Remote units requested than a single service name."
+                "Falling back to default host/port.")
+
+        if service_name is not None:
+            # If a specfic service has been asked for then return the ip:port
+            # for that service, else pass back the default
             requestedservice = get_config_service(service_name)
             my_host = get_hostname(requestedservice['service_host'])
             my_port = requestedservice['service_port']
@@ -651,12 +668,6 @@ def notify_relation(relation, changed=False, relation_ids=None):
         relation_set(relation_id=rid, port=my_port,
                      hostname=my_host,
                      all_services=config_data['services'])
-        if changed:
-            if 'is-proxy' in relation_data:
-                service_name = ("%s__%d" % (relation_data['hostname'],
-                                            relation_data['port']))
-                open("%s/%s.is.proxy" % (default_haproxy_service_config_dir,
-                                         service_name), 'a').close()
 
 
 def notify_website(changed=False, relation_ids=None):
