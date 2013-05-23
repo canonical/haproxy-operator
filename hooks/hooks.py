@@ -708,7 +708,7 @@ def website_interface(hook_name=None):
         my_host = socket.gethostname()
     subprocess.call(
             ['relation-set', 'port=%d' % my_port, 'hostname=%s' % my_host,
-             'all_services=%s' % yaml.dump(get_all_services())])
+             'all_services=%s' % yaml.safe_dump(get_all_services())])
     if hook_name == "changed":
         if 'is-proxy' in relation_data:
             service_name = "%s__%d" % \
