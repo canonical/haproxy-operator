@@ -350,14 +350,20 @@ def create_services():
                 log("Service '%s' does not exist." %
                     relation_info['service_name'])
                 continue
-        elif 'sitenames' in relation_info:
+
+        if 'sitenames' in relation_info:
             sitenames = relation_info['sitenames'].split()
             for sitename in sitenames:
                 if sitename in services_dict:
                     service_names.append(sitename)
-        elif juju_service_name + "_services" in services_dict:
+
+        if juju_service_name + "_services" in services_dict:
             service_names.append(juju_service_name + "_services")
-        else:
+
+        if juju_service_name in services_dict:
+            service_names.append(juju_service_name)
+
+        if not service_names:
             service_names.append(services_dict[None]["service_name"])
 
         for service_name in service_names:

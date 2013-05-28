@@ -314,3 +314,32 @@ class ReverseProxyRelationTest(TestCase):
 
         self.assertEqual(expected, result)
         self.write_service_config.assert_called_with(expected)
+
+    def test_with_sitenames_no_match_but_unit_name(self):
+        self.get_config_services.return_value = {
+            None: {
+                "service_name": "service",
+                },
+            "foo": {
+                "service_name": "foo",
+                "server_options": ["maxconn 4"],
+                },
+            }
+        self.relations_of_type.return_value = [
+            {"port": 4242,
+             "hostname": "backend.1",
+             "sitenames": "bar_service baz_service",
+             "private-address": "1.2.3.4",
+             "__unit__": "foo/0"},
+        ]
+
+        expected = {
+            'foo': {
+                'service_name': 'foo',
+                'server_options': ["maxconn 4"],
+                'servers': [('backend_1__4242', '1.2.3.4',
+                             4242, ["maxconn 4"])],
+                },
+            }
+        self.assertEqual(expected, hooks.create_services())
+        self.write_service_config.assert_called_with(expected)
