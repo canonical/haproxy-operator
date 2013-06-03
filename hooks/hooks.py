@@ -357,8 +357,8 @@ def create_services():
                 if sitename in services_dict:
                     service_names.append(sitename)
 
-        if juju_service_name + "_services" in services_dict:
-            service_names.append(juju_service_name + "_services")
+        if juju_service_name + "_service" in services_dict:
+            service_names.append(juju_service_name + "_service")
 
         if juju_service_name in services_dict:
             service_names.append(juju_service_name)
