@@ -1,3 +1,5 @@
+import sys
+
 from testtools import TestCase
 from mock import patch
 
@@ -23,8 +25,14 @@ class ConfigChangedTest(TestCase):
             "construct_haproxy_config")
         self.service_haproxy = self.patch_hook(
             "service_haproxy")
+        self.update_sysctl = self.patch_hook(
+            "update_sysctl")
         self.notify_website = self.patch_hook("notify_website")
         self.notify_peer = self.patch_hook("notify_peer")
+        self.log = self.patch_hook("log")
+        sys_exit = patch.object(sys, "exit")
+        self.sys_exit = sys_exit.start()
+        self.addCleanup(sys_exit.stop)
 
     def patch_hook(self, hook_name):
         mock_controller = patch.object(hooks, hook_name)
@@ -66,6 +74,9 @@ class ConfigChangedTest(TestCase):
 
         self.notify_website.assert_not_called()
         self.notify_peer.assert_not_called()
+        self.log.assert_called_once_with(
+            "HAProxy configuration check failed, exiting.")
+        self.sys_exit.assert_called_once_with(1)
 
 
 class HelpersTest(TestCase):

@@ -14,7 +14,7 @@ revision:
 
 proof: revision
 	@echo Proofing charm...
-	@charm proof $(PWD) && echo OK
+	@(charm proof $(PWD) || [ $$? -eq 100 ]) && echo OK
 	@test `cat revision` = 0 && rm revision
 
 test:
