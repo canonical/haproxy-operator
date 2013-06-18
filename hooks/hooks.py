@@ -342,10 +342,10 @@ def create_services():
         server_name = ("%s__%s" % (hostname.replace('.', '_'), port))
 
         # Optional switches ( service_name, sitenames )
-        service_names = []
+        service_names = set()
         if 'service_name' in relation_info:
             if relation_info['service_name'] in services_dict:
-                service_names.append(relation_info['service_name'])
+                service_names.add(relation_info['service_name'])
             else:
                 log("Service '%s' does not exist." %
                     relation_info['service_name'])
@@ -355,16 +355,16 @@ def create_services():
             sitenames = relation_info['sitenames'].split()
             for sitename in sitenames:
                 if sitename in services_dict:
-                    service_names.append(sitename)
+                    service_names.add(sitename)
 
-        if juju_service_name + "_services" in services_dict:
-            service_names.append(juju_service_name + "_services")
+        if juju_service_name + "_service" in services_dict:
+            service_names.add(juju_service_name + "_service")
 
         if juju_service_name in services_dict:
-            service_names.append(juju_service_name)
+            service_names.add(juju_service_name)
 
         if not service_names:
-            service_names.append(services_dict[None]["service_name"])
+            service_names.add(services_dict[None]["service_name"])
 
         for service_name in service_names:
             service = services_dict[service_name]
