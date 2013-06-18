@@ -422,6 +422,13 @@ def apply_peer_config(services_dict):
     private_address = unit_get("private-address")
     for service_name, peer_service in peer_services.iteritems():
         original_service = services_dict[service_name]
+
+        # If the original service has timeout settings, copy them over to the
+        # peer service.
+        for option in original_service.get("service_options", ()):
+            if "timeout" in option:
+                peer_service["service_options"].append(option)
+
         servers = peer_service["servers"]
         # Add ourselves to the list of servers for the peer listen stanza.
         servers.append((unit_name, private_address,

@@ -77,6 +77,60 @@ class PeerRelationTest(TestCase):
         self.assertEqual(expected, hooks.apply_peer_config(services_dict))
 
     @patch.dict(os.environ, {"JUJU_UNIT_NAME": "haproxy/2"})
+    def test_inherit_timeout_settings(self):
+        self.unit_get.return_value = "1.2.4.5"
+        self.relations_of_type.return_value = [
+            {"__unit__": "haproxy/1",
+             "hostname": "haproxy-1",
+             "private-address": "1.2.4.4",
+             "all_services": yaml.dump([
+                 {"service_name": "foo_service",
+                  "service_host": "0.0.0.0",
+                  "service_options": ["timeout server 5000"],
+                  "service_port": 4242},
+                 ])
+             }
+            ]
+
+        services_dict = {
+            "foo_service": {
+                "service_name": "foo_service",
+                "service_host": "0.0.0.0",
+                "service_port": 4242,
+                "service_options": ["timeout server 5000"],
+                "server_options": ["maxconn 4"],
+                "servers": [("backend_1__8080", "1.2.3.4",
+                             8080, ["maxconn 4"])],
+                },
+            }
+
+        expected = {
+            "foo_service": {
+                "service_name": "foo_service",
+                "service_host": "0.0.0.0",
+                "service_port": 4242,
+                "service_options": ["balance leastconn",
+                                    "mode tcp",
+                                    "option tcplog",
+                                    "timeout server 5000"],
+                "servers": [
+                    ("haproxy-1", "1.2.4.4", 4243, ["check"]),
+                    ("haproxy-2", "1.2.4.5", 4243, ["check", "backup"])
+                    ],
+                },
+            "foo_service_be": {
+                "service_name": "foo_service_be",
+                "service_host": "0.0.0.0",
+                "service_port": 4243,
+                "service_options": ["timeout server 5000"],
+                "server_options": ["maxconn 4"],
+                "servers": [("backend_1__8080", "1.2.3.4",
+                             8080, ["maxconn 4"])],
+                },
+            }
+        self.assertEqual(expected, hooks.apply_peer_config(services_dict))
+
+    @patch.dict(os.environ, {"JUJU_UNIT_NAME": "haproxy/2"})
     def test_with_no_relation_data(self):
         self.unit_get.return_value = "1.2.4.5"
         self.relations_of_type.return_value = []
