@@ -59,7 +59,7 @@ options:
         restarting, a turn-around timer of 1 second is applied before a retry
         occurs.
   default_timeouts:
-    default: "queue 1000, connect 1000, client 1000, server 1000"
+    default: "queue 20000, client 50000, connect 5000, server 50000"
     type: string
     description: Default timeouts 
   enable_monitoring:
