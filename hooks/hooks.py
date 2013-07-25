@@ -560,7 +560,10 @@ def service_haproxy(action=None, haproxy_config=default_haproxy_config):
 def install_hook():
     if not os.path.exists(default_haproxy_service_config_dir):
         os.mkdir(default_haproxy_service_config_dir, 0600)
-    return ((apt_get_install("haproxy") == enable_haproxy()) is True)
+
+    install_status = apt_get_install('haproxy')
+    if install_status == 0:
+        enable_haproxy()
 
 
 def config_changed():
