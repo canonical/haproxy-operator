@@ -90,6 +90,12 @@ options:
     default: 3
     type: int
     description: Monitoring interface refresh interval (in seconds)
+  package_status:
+    default: "install"
+    type: "string"
+    description: |
+        The status of service-affecting packages will be set to this value in the dpkg database.
+        Useful valid values are "install" and "hold".
   services:
     default: |
               - service_name: haproxy_service
