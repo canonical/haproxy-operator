@@ -35,6 +35,7 @@ from charmsupport import nrpe
 default_haproxy_config_dir = "/etc/haproxy"
 default_haproxy_config = "%s/haproxy.cfg" % default_haproxy_config_dir
 default_haproxy_service_config_dir = "/var/run/haproxy"
+service_affecting_packages = ['haproxy']
 
 ###############################################################################
 # Supporting functions
@@ -50,6 +51,15 @@ def apt_get_install(packages=None):
     cmd_line = ['apt-get', '-y', 'install', '-qq']
     cmd_line.append(packages)
     return subprocess.call(cmd_line)
+
+
+def ensure_package_status(packages, status):
+    if status in ['install', 'hold']:
+        selections = ''.join(['{} {}\n'.format(package, status)
+                              for package in packages])
+        dpkg = subprocess.Popen(['dpkg', '--set-selections'],
+                                stdin=subprocess.PIPE)
+        dpkg.communicate(input=selections)
 
 
 #------------------------------------------------------------------------------
@@ -567,11 +577,20 @@ def service_haproxy(action=None, haproxy_config=default_haproxy_config):
 def install_hook():
     if not os.path.exists(default_haproxy_service_config_dir):
         os.mkdir(default_haproxy_service_config_dir, 0600)
-    return ((apt_get_install("haproxy") == enable_haproxy()) is True)
+
+    install_status = apt_get_install('haproxy')
+    if install_status == 0:
+        ensure_package_status(service_affecting_packages,
+                              config_get('package_status'))
+        enable_haproxy()
 
 
 def config_changed():
     config_data = config_get()
+
+    ensure_package_status(service_affecting_packages,
+                          config_data['package_status'])
+
     old_service_ports = get_service_ports()
     old_stanzas = get_listen_stanzas()
     haproxy_globals = create_haproxy_globals()
