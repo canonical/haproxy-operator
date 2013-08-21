@@ -23,7 +23,7 @@ test:
 
 lint:
 	@echo Checking for Python syntax...
-	@flake8 $(HOOKS_DIR) --ignore=E123 && echo OK
+	@flake8 $(HOOKS_DIR) --ignore=E123 --exclude=$(HOOKS_DIR)/charmhelpers && echo OK
 
 sourcedeps: $(PWD)/config-manager.txt
 	@echo Updating source dependencies...
@@ -34,6 +34,6 @@ sourcedeps: $(PWD)/config-manager.txt
 		-c charm-helpers.yaml \
 		-b build/charm-helpers \
 		-d hooks/charmhelpers
-	@echo Don't forget to commit the updated files if any.
+	@echo Do not forget to commit the updated files if any.
 
 .PHONY: revision proof test lint sourcedeps charm-payload

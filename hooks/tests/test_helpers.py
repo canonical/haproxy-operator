@@ -60,21 +60,6 @@ class HelpersTest(TestCase):
         ])
         self.assertEqual(result, expected)
 
-    @patch('subprocess.call')
-    def test_installs_packages(self, mock_call):
-        mock_call.return_value = 'some result'
-
-        result = hooks.apt_get_install('foo bar')
-
-        self.assertEqual(result, 'some result')
-        mock_call.assert_called_with(['apt-get', '-y', 'install', '-qq',
-                                      'foo bar'])
-
-    @patch('subprocess.call')
-    def test_installs_nothing_if_package_not_provided(self, mock_call):
-        self.assertFalse(hooks.apt_get_install())
-        self.assertFalse(mock_call.called)
-
     def test_enables_haproxy(self):
         mock_file = MagicMock()
 

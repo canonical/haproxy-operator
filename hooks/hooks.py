@@ -20,6 +20,7 @@ from charmhelpers.core.hookenv import (
     close_port,
     unit_get,
     )
+from charmhelpers.fetch import apt_install
 from charmhelpers.contrib.charmsupport import nrpe
 
 
@@ -34,17 +35,6 @@ service_affecting_packages = ['haproxy']
 ###############################################################################
 # Supporting functions
 ###############################################################################
-
-
-#------------------------------------------------------------------------------
-# apt_get_install( package ):  Installs a package
-#------------------------------------------------------------------------------
-def apt_get_install(packages=None):
-    if packages is None:
-        return False
-    cmd_line = ['apt-get', '-y', 'install', '-qq']
-    cmd_line.append(packages)
-    return subprocess.call(cmd_line)
 
 
 def ensure_package_status(packages, status):
@@ -559,11 +549,10 @@ def install_hook():
     if not os.path.exists(default_haproxy_service_config_dir):
         os.mkdir(default_haproxy_service_config_dir, 0600)
 
-    install_status = apt_get_install('haproxy')
-    if install_status == 0:
-        ensure_package_status(service_affecting_packages,
-                              config_get('package_status'))
-        enable_haproxy()
+    apt_install('haproxy', fatal=True)
+    ensure_package_status(service_affecting_packages,
+                          config_get('package_status'))
+    enable_haproxy()
 
 
 def config_changed():
