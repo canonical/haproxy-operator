@@ -7,3 +7,4 @@ coverage.xml
 lib/*
 *.pyc
 exec.d
+build/charm-helpers

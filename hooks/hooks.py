@@ -2,31 +2,25 @@
 
 import glob
 import os
-import random
 import re
 import socket
-import string
 import subprocess
 import sys
 import yaml
 
-import _pythonpath
-_ = _pythonpath  # Silence pyflakes.
-
-from charmhelpers import (
-    open_port,
-    close_port,
-    unit_get,
-    )
-from charmsupport.hookenv import (
+from charmhelpers.core.host import pwgen
+from charmhelpers.core.hookenv import (
     log,
     config as config_get,
     relation_set,
     relation_ids as get_relation_ids,
     relations_of_type,
     relations_for_id,
+    open_port,
+    close_port,
+    unit_get,
     )
-from charmsupport import nrpe
+from charmhelpers.contrib.charmsupport import nrpe
 
 
 ###############################################################################
@@ -185,19 +179,6 @@ def update_service_ports(old_service_ports=None, new_service_ports=None):
 
 
 #------------------------------------------------------------------------------
-# pwgen:  Generates a random password
-#         pwd_length:  Defines the length of the password to generate
-#                      default: 20
-#------------------------------------------------------------------------------
-def pwgen(pwd_length=20):
-    alphanumeric_chars = [l for l in (string.letters + string.digits)
-                          if l not in 'Iil0oO1']
-    random_chars = [random.choice(alphanumeric_chars)
-                    for i in range(pwd_length)]
-    return ''.join(random_chars)
-
-
-#------------------------------------------------------------------------------
 # update_sysctl: create a sysctl.conf file from YAML-formatted 'sysctl' config
 #------------------------------------------------------------------------------
 def update_sysctl(config_data):
@@ -258,7 +239,7 @@ def create_monitoring_stanza(service_name="haproxy_monitoring"):
         monitoring_password = config_data['monitoring_password']
     elif (monitoring_password is None and
           config_data['monitoring_password'] == "changeme"):
-        monitoring_password = pwgen()
+        monitoring_password = pwgen(length=20)
     monitoring_config = []
     monitoring_config.append("mode http")
     monitoring_config.append("acl allowed_cidr src %s" %

@@ -7,7 +7,7 @@ CHARM_DIR := $(PWD)
 PYTHON := /usr/bin/env python
 
 
-build: sourcedeps test lint proof
+build: test lint proof
 
 revision:
 	@test -f revision || echo 0 > revision
@@ -30,7 +30,10 @@ sourcedeps: $(PWD)/config-manager.txt
 	@$(PYTHON) cm.py -c $(PWD)/config-manager.txt \
 		-p $(SOURCEDEPS_DIR) \
 		-t $(PWD)
-
-charm-payload: sourcedeps
+	@$(PYTHON) build/charm-helpers/tools/charm_helpers_sync/charm_helpers_sync.py \
+		-c charm-helpers.yaml \
+		-b build/charm-helpers \
+		-d hooks/charmhelpers
+	@echo Don't forget to commit the updated files if any.
 
 .PHONY: revision proof test lint sourcedeps charm-payload
