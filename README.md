@@ -15,7 +15,7 @@ The following steps are needed for testing and development of the charm,
 but **not** for deployment:
 
     sudo apt-get install python-software-properties
-    sudo add-apt-repository ppa:chrisjohnston/flake8
+    sudo add-apt-repository ppa:cjohnston/flake8
     sudo apt-get update
     sudo apt-get install python-mock python-flake8 python-nose python-nosexcover
 
