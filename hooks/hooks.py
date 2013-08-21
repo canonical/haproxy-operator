@@ -683,7 +683,7 @@ def notify_peer(changed=False, relation_ids=None):
 
 def install_nrpe_scripts():
     scripts_src = os.path.join(os.environ["CHARM_DIR"], "files",
-                               "nrpe-external-master")
+                               "nrpe")
     scripts_dst = "/usr/lib/nagios/plugins"
     for fname in glob.glob(os.path.join(scripts_src, "*.sh")):
         shutil.copy2(fname,
