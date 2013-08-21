@@ -4,6 +4,7 @@ import glob
 import os
 import re
 import socket
+import shutil
 import subprocess
 import sys
 import yaml
@@ -680,7 +681,17 @@ def notify_peer(changed=False, relation_ids=None):
     notify_relation("peer", changed=changed, relation_ids=relation_ids)
 
 
+def install_nrpe_scripts():
+    scripts_src = os.path.join(os.environ["CHARM_DIR"], "files",
+                               "nrpe-external-master")
+    scripts_dst = "/usr/lib/nagios/plugins"
+    for fname in glob.glob(os.path.join(scripts_src, "*.sh")):
+        shutil.copy2(fname,
+                     os.path.join(scripts_dst, os.path.basename(fname)))
+
+
 def update_nrpe_config():
+    install_nrpe_scripts()
     nrpe_compat = nrpe.NRPE()
     nrpe_compat.add_check('haproxy', 'Check HAProxy', 'check_haproxy.sh')
     nrpe_compat.add_check('haproxy_queue', 'Check HAProxy queue depth',
@@ -696,7 +707,7 @@ def update_nrpe_config():
 def main(hook_name):
     if hook_name == "install":
         install_hook()
-    elif hook_name == "config-changed":
+    elif hook_name in ("config-changed", "upgrade-charm"):
         config_changed()
         update_nrpe_config()
     elif hook_name == "start":
@@ -717,8 +728,8 @@ def main(hook_name):
         website_interface("joined")
     elif hook_name == "peer-relation-changed":
         reverseproxy_interface("changed")
-    elif hook_name in ("nrpe-external-master-relation-changed",
-                       "local-monitors-relation-changed"):
+    elif hook_name in ("nrpe-external-master-relation-joined",
+                       "local-monitors-relation-joined"):
         update_nrpe_config()
     else:
         print "Unknown hook"
