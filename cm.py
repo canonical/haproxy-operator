@@ -1,5 +1,4 @@
-# Copyright 2010-2012 Canonical Ltd. All rights reserved.
-
+# Copyright 2010-2013 Canonical Ltd. All rights reserved.
 import os
 import re
 import sys
@@ -7,7 +6,6 @@ import errno
 import hashlib
 import subprocess
 import optparse
-import urllib
 
 from os import curdir
 from bzrlib.branch import Branch
@@ -23,25 +21,31 @@ else:
     _ = LocationConfiguration
 
 
-def get_ubunet_branch_config(config_file):
+def get_branch_config(config_file):
     """
-    Retrieves the sourcedeps configuration for an ubunet source dir.
+    Retrieves the sourcedeps configuration for an source dir.
     Returns a dict of (branch, revspec) tuples, keyed by branch name.
     """
     branches = {}
     with open(config_file, 'r') as stream:
         for line in stream:
             line = line.split('#')[0].strip()
-            match = re.match(r'(\S+)\s+'
-                             'bzr\+ssh://([^/]+)/([^;]+)'
-                             '(?:;revno=(\d+))?', line)
-            if match:
-                name, host, branch, revno = match.group(1, 2, 3, 4)
+            bzr_match = re.match(r'(\S+)\s+'
+                                 'lp:([^;]+)'
+                                 '(?:;revno=(\d+))?', line)
+            if bzr_match:
+                name, branch, revno = bzr_match.group(1, 2, 3)
                 if revno is None:
-                    revspec = "-1"
+                    revspec = -1
                 else:
                     revspec = revno
-                branches[name] = (host, branch, revspec)
+                branches[name] = (branch, revspec)
+                continue
+            dir_match = re.match(r'(\S+)\s+'
+                                 '\(directory\)', line)
+            if dir_match:
+                name = dir_match.group(1)
+                branches[name] = None
     return branches
 
 
@@ -54,15 +58,16 @@ def main(config_file, parent_dir, target_dir, verbose):
         if e.errno != errno.EEXIST:
             raise
 
-    bzr_config = LocationConfiguration(parent_dir)
-    get_lp_login = lp_account.get_lp_login
-    username = get_lp_login(bzr_config) or get_lp_login()
-    if username is None:
-        raise RuntimeError("Unable to determine launchpad login")
-    quoted_username = urllib.quote(username)
+    branches = sorted(get_branch_config(config_file).items())
+    for branch_name, spec in branches:
+        if spec is None:
+            # It's a directory, just create it and move on.
+            destination_path = os.path.join(target_dir, branch_name)
+            if not os.path.isdir(destination_path):
+                os.makedirs(destination_path)
+            continue
 
-    branches = sorted(get_ubunet_branch_config(config_file).iteritems())
-    for branch_name, (host, quoted_branch_spec, revspec) in branches:
+        (quoted_branch_spec, revspec) = spec
         revno = int(revspec)
 
         # qualify mirror branch name with hash of remote repo path to deal
@@ -80,9 +85,7 @@ def main(config_file, parent_dir, target_dir, verbose):
             if e.errno != errno.EISDIR and e.errno != errno.ENOENT:
                 raise
 
-        branch_url = ("bzr+ssh://%s@%s/%s" %
-                      (quoted_username, host, quoted_branch_spec))
-        lp_url = "lp:" + quoted_branch_spec.replace("+branch/", "")
+        lp_url = "lp:" + quoted_branch_spec
 
         # Create the local mirror branch if it doesn't already exist
         if verbose:
@@ -91,17 +94,23 @@ def main(config_file, parent_dir, target_dir, verbose):
 
         fresh = False
         if not os.path.exists(source_path):
-            subprocess.check_call(['bzr', 'branch', '-q',
-                                   '--', branch_url, source_path])
+            subprocess.check_call(['bzr', 'branch', '-q', '--no-tree',
+                                   '--', lp_url, source_path])
             fresh = True
 
-        source_branch = Branch.open(source_path)
+        if not fresh:
+            source_branch = Branch.open(source_path)
+            if revno == -1:
+                orig_branch = Branch.open(lp_url)
+                fresh = source_branch.revno() == orig_branch.revno()
+            else:
+                fresh = source_branch.revno() == revno
 
-        # Freshen the source branch if required (-1 means we want tip).
-        if not fresh and (revno == -1 or revno > source_branch.revno()):
+        # Freshen the source branch if required.
+        if not fresh:
             subprocess.check_call(['bzr', 'pull', '-q', '--overwrite', '-r',
                                    str(revno), '-d', source_path,
-                                   '--', branch_url])
+                                   '--', lp_url])
 
         if os.path.exists(destination_path):
             # Overwrite the destination with the appropriate revision.
@@ -137,7 +146,8 @@ if __name__ == '__main__':
             "corresponding file in <parent>."),
         add_help_option=False)
     parser.add_option(
-        '-p', '--parent', dest='parent', default=None,
+        '-p', '--parent', dest='parent',
+        default=None,
         help=("The directory of the parent tree."),
         metavar="DIR")
     parser.add_option(
@@ -152,6 +162,9 @@ if __name__ == '__main__':
         '-q', '--quiet', dest='verbose', action='store_false',
         help="Be less verbose.")
     parser.add_option(
+        '-v', '--verbose', dest='verbose', action='store_true',
+        help="Be more verbose.")
+    parser.add_option(
         '-h', '--help', action='help',
         help="Show this help message and exit.")
     parser.set_defaults(verbose=True)
@@ -159,12 +172,20 @@ if __name__ == '__main__':
     options, args = parser.parse_args()
 
     if options.parent is None:
-        parser.error(
-            "Parent directory not specified.")
+        options.parent = os.environ.get(
+            "SOURCEDEPS_DIR",
+            os.path.join(curdir, ".sourcecode"))
 
     if options.target is None:
         parser.error(
             "Target directory not specified.")
+
+    if options.config is None:
+        config = [arg for arg in args
+                  if arg != "update"]
+        if not config or len(config) > 1:
+            parser.error("Config not specified")
+        options.config = config[0]
 
     sys.exit(main(config_file=options.config,
                   parent_dir=options.parent,
