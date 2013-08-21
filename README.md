@@ -17,7 +17,7 @@ but **not** for deployment:
     sudo apt-get install python-software-properties
     sudo add-apt-repository ppa:chrisjohnston/flake8
     sudo apt-get update
-    sudo apt-get install python-mock config-manager flake8 python-nose
+    sudo apt-get install python-mock python-flake8 python-nose python-nosexcover
 
 To run the tests:
 
