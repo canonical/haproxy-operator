@@ -9,16 +9,5 @@ apt_get_install() {
 juju-log 'Invoking charm-pre-install hooks'
 [ -d exec.d ] && ( for f in exec.d/*/charm-pre-install; do [ -x $f ] && /bin/sh -c "$f"; done )
 
-juju-log 'Install dependencies'
-apt_get_install python-software-properties
-
-juju-log 'Add charm tools ppa'
-apt-add-repository -y ppa:charmsupport/ppa
-apt-add-repository -y ppa:charmers/charm-helpers
-apt-get -qq update
-
-juju-log 'Install charmsupport and dependencies'
-apt_get_install python-charmhelpers python-charmsupport python-shelltoolbox
-
 juju-log 'Invoking python-based install hook'
 python hooks/hooks.py install
