@@ -17,6 +17,7 @@ from charmhelpers.core.hookenv import (
     relation_ids as get_relation_ids,
     relations_of_type,
     relations_for_id,
+    relation_id,
     open_port,
     close_port,
     unit_get,
@@ -639,6 +640,8 @@ def notify_relation(relation, changed=False, relation_ids=None):
 
     for rid in relation_ids or get_relation_ids(relation):
         service_names = set()
+        if rid is None:
+            rid = relation_id()
         for relation_data in relations_for_id(rid):
             if 'service_name' in relation_data:
                 service_names.add(relation_data['service_name'])
