@@ -685,6 +685,8 @@ def install_nrpe_scripts():
     scripts_src = os.path.join(os.environ["CHARM_DIR"], "files",
                                "nrpe")
     scripts_dst = "/usr/lib/nagios/plugins"
+    if not os.path.exists(scripts_dst):
+        os.makedirs(scripts_dst)
     for fname in glob.glob(os.path.join(scripts_src, "*.sh")):
         shutil.copy2(fname,
                      os.path.join(scripts_dst, os.path.basename(fname)))
