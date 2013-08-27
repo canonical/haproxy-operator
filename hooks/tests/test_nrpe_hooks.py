@@ -6,8 +6,9 @@ import hooks
 
 class NRPEHooksTest(TestCase):
 
-    @patch('charmsupport.nrpe.NRPE')
-    def test_update_nrpe_config(self, nrpe):
+    @patch('hooks.install_nrpe_scripts')
+    @patch('charmhelpers.contrib.charmsupport.nrpe.NRPE')
+    def test_update_nrpe_config(self, nrpe, install_nrpe_scripts):
         nrpe_compat = MagicMock()
         nrpe_compat.checks = [MagicMock(shortname="haproxy"),
                               MagicMock(shortname="haproxy_queue")]

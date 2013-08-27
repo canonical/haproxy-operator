@@ -260,22 +260,22 @@ class ReverseProxyRelationTest(TestCase):
             None: {
                 "service_name": "service",
                 },
-            "foo_service": {
-                "service_name": "foo_service",
+            "foo_srv": {
+                "service_name": "foo_srv",
                 "server_options": ["maxconn 4"],
                 },
             }
         self.relations_of_type.return_value = [
             {"port": 4242,
              "hostname": "backend.1",
-             "sitenames": "foo_service bar_service",
+             "sitenames": "foo_srv bar_srv",
              "private-address": "1.2.3.4",
              "__unit__": "foo/0"},
         ]
 
         expected = {
-            'foo_service': {
-                'service_name': 'foo_service',
+            'foo_srv': {
+                'service_name': 'foo_srv',
                 'server_options': ["maxconn 4"],
                 'servers': [('backend_1__4242', '1.2.3.4',
                              4242, ["maxconn 4"])],
@@ -289,7 +289,7 @@ class ReverseProxyRelationTest(TestCase):
             None: {
                 "service_name": "service",
                 },
-            "foo_services": {
+            "foo_service": {
                 "service_name": "foo_service",
                 "server_options": ["maxconn 4"],
                 },
@@ -302,7 +302,7 @@ class ReverseProxyRelationTest(TestCase):
         ]
 
         expected = {
-            'foo_services': {
+            'foo_service': {
                 'service_name': 'foo_service',
                 'server_options': ["maxconn 4"],
                 'servers': [('backend_1__4242', '1.2.3.4',

@@ -60,21 +60,6 @@ class HelpersTest(TestCase):
         ])
         self.assertEqual(result, expected)
 
-    @patch('subprocess.call')
-    def test_installs_packages(self, mock_call):
-        mock_call.return_value = 'some result'
-
-        result = hooks.apt_get_install('foo bar')
-
-        self.assertEqual(result, 'some result')
-        mock_call.assert_called_with(['apt-get', '-y', 'install', '-qq',
-                                      'foo bar'])
-
-    @patch('subprocess.call')
-    def test_installs_nothing_if_package_not_provided(self, mock_call):
-        self.assertFalse(hooks.apt_get_install())
-        self.assertFalse(mock_call.called)
-
     def test_enables_haproxy(self):
         mock_file = MagicMock()
 
@@ -223,24 +208,6 @@ class HelpersTest(TestCase):
 
         self.assertFalse(close_port.called)
         self.assertFalse(open_port.called)
-
-    def test_generates_a_password(self):
-        password = hooks.pwgen()
-
-        self.assertIsInstance(password, str)
-        self.assertEqual(len(password), 20)
-
-    def test_generates_a_password_with_different_size(self):
-        password = hooks.pwgen(pwd_length=15)
-
-        self.assertIsInstance(password, str)
-        self.assertEqual(len(password), 15)
-
-    def test_generates_a_different_password_each_time(self):
-        password1 = hooks.pwgen()
-        password2 = hooks.pwgen()
-
-        self.assertNotEqual(password1, password2)
 
     def test_creates_a_listen_stanza(self):
         service_name = 'some-name'

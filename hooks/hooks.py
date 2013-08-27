@@ -2,31 +2,28 @@
 
 import glob
 import os
-import random
 import re
 import socket
-import string
+import shutil
 import subprocess
 import sys
 import yaml
 
-import _pythonpath
-_ = _pythonpath  # Silence pyflakes.
-
-from charmhelpers import (
-    open_port,
-    close_port,
-    unit_get,
-    )
-from charmsupport.hookenv import (
+from charmhelpers.core.host import pwgen
+from charmhelpers.core.hookenv import (
     log,
     config as config_get,
     relation_set,
     relation_ids as get_relation_ids,
     relations_of_type,
     relations_for_id,
+    relation_id,
+    open_port,
+    close_port,
+    unit_get,
     )
-from charmsupport import nrpe
+from charmhelpers.fetch import apt_install
+from charmhelpers.contrib.charmsupport import nrpe
 
 
 ###############################################################################
@@ -42,17 +39,6 @@ service_affecting_packages = ['haproxy']
 ###############################################################################
 
 
-#------------------------------------------------------------------------------
-# apt_get_install( package ):  Installs a package
-#------------------------------------------------------------------------------
-def apt_get_install(packages=None):
-    if packages is None:
-        return False
-    cmd_line = ['apt-get', '-y', 'install', '-qq']
-    cmd_line.append(packages)
-    return subprocess.call(cmd_line)
-
-
 def ensure_package_status(packages, status):
     if status in ['install', 'hold']:
         selections = ''.join(['{} {}\n'.format(package, status)
@@ -60,6 +46,7 @@ def ensure_package_status(packages, status):
         dpkg = subprocess.Popen(['dpkg', '--set-selections'],
                                 stdin=subprocess.PIPE)
         dpkg.communicate(input=selections)
+
 
 #------------------------------------------------------------------------------
 # enable_haproxy:  Enabled haproxy at boot time
@@ -184,19 +171,6 @@ def update_service_ports(old_service_ports=None, new_service_ports=None):
 
 
 #------------------------------------------------------------------------------
-# pwgen:  Generates a random password
-#         pwd_length:  Defines the length of the password to generate
-#                      default: 20
-#------------------------------------------------------------------------------
-def pwgen(pwd_length=20):
-    alphanumeric_chars = [l for l in (string.letters + string.digits)
-                          if l not in 'Iil0oO1']
-    random_chars = [random.choice(alphanumeric_chars)
-                    for i in range(pwd_length)]
-    return ''.join(random_chars)
-
-
-#------------------------------------------------------------------------------
 # update_sysctl: create a sysctl.conf file from YAML-formatted 'sysctl' config
 #------------------------------------------------------------------------------
 def update_sysctl(config_data):
@@ -257,7 +231,7 @@ def create_monitoring_stanza(service_name="haproxy_monitoring"):
         monitoring_password = config_data['monitoring_password']
     elif (monitoring_password is None and
           config_data['monitoring_password'] == "changeme"):
-        monitoring_password = pwgen()
+        monitoring_password = pwgen(length=20)
     monitoring_config = []
     monitoring_config.append("mode http")
     monitoring_config.append("acl allowed_cidr src %s" %
@@ -351,10 +325,10 @@ def create_services():
         server_name = ("%s__%s" % (hostname.replace('.', '_'), port))
 
         # Optional switches ( service_name, sitenames )
-        service_names = []
+        service_names = set()
         if 'service_name' in relation_info:
             if relation_info['service_name'] in services_dict:
-                service_names.append(relation_info['service_name'])
+                service_names.add(relation_info['service_name'])
             else:
                 log("Service '%s' does not exist." %
                     relation_info['service_name'])
@@ -364,16 +338,16 @@ def create_services():
             sitenames = relation_info['sitenames'].split()
             for sitename in sitenames:
                 if sitename in services_dict:
-                    service_names.append(sitename)
+                    service_names.add(sitename)
 
         if juju_service_name + "_service" in services_dict:
-            service_names.append(juju_service_name + "_service")
+            service_names.add(juju_service_name + "_service")
 
         if juju_service_name in services_dict:
-            service_names.append(juju_service_name)
+            service_names.add(juju_service_name)
 
         if not service_names:
-            service_names.append(services_dict[None]["service_name"])
+            service_names.add(services_dict[None]["service_name"])
 
         for service_name in service_names:
             service = services_dict[service_name]
@@ -431,6 +405,13 @@ def apply_peer_config(services_dict):
     private_address = unit_get("private-address")
     for service_name, peer_service in peer_services.iteritems():
         original_service = services_dict[service_name]
+
+        # If the original service has timeout settings, copy them over to the
+        # peer service.
+        for option in original_service.get("service_options", ()):
+            if "timeout" in option:
+                peer_service["service_options"].append(option)
+
         servers = peer_service["servers"]
         # Add ourselves to the list of servers for the peer listen stanza.
         servers.append((unit_name, private_address,
@@ -570,16 +551,17 @@ def install_hook():
     if not os.path.exists(default_haproxy_service_config_dir):
         os.mkdir(default_haproxy_service_config_dir, 0600)
 
-    install_status = apt_get_install('haproxy')
-    if install_status == 0:
-        ensure_package_status(service_affecting_packages, config_get('package_status'))
-        enable_haproxy()
+    apt_install('haproxy', fatal=True)
+    ensure_package_status(service_affecting_packages,
+                          config_get('package_status'))
+    enable_haproxy()
 
 
 def config_changed():
     config_data = config_get()
 
-    ensure_package_status(service_affecting_packages, config_data['package_status'])
+    ensure_package_status(service_affecting_packages,
+                          config_data['package_status'])
 
     old_service_ports = get_service_ports()
     old_stanzas = get_listen_stanzas()
@@ -658,6 +640,8 @@ def notify_relation(relation, changed=False, relation_ids=None):
 
     for rid in relation_ids or get_relation_ids(relation):
         service_names = set()
+        if rid is None:
+            rid = relation_id()
         for relation_data in relations_for_id(rid):
             if 'service_name' in relation_data:
                 service_names.add(relation_data['service_name'])
@@ -700,7 +684,19 @@ def notify_peer(changed=False, relation_ids=None):
     notify_relation("peer", changed=changed, relation_ids=relation_ids)
 
 
+def install_nrpe_scripts():
+    scripts_src = os.path.join(os.environ["CHARM_DIR"], "files",
+                               "nrpe")
+    scripts_dst = "/usr/lib/nagios/plugins"
+    if not os.path.exists(scripts_dst):
+        os.makedirs(scripts_dst)
+    for fname in glob.glob(os.path.join(scripts_src, "*.sh")):
+        shutil.copy2(fname,
+                     os.path.join(scripts_dst, os.path.basename(fname)))
+
+
 def update_nrpe_config():
+    install_nrpe_scripts()
     nrpe_compat = nrpe.NRPE()
     nrpe_compat.add_check('haproxy', 'Check HAProxy', 'check_haproxy.sh')
     nrpe_compat.add_check('haproxy_queue', 'Check HAProxy queue depth',
@@ -716,7 +712,7 @@ def update_nrpe_config():
 def main(hook_name):
     if hook_name == "install":
         install_hook()
-    elif hook_name == "config-changed":
+    elif hook_name in ("config-changed", "upgrade-charm"):
         config_changed()
         update_nrpe_config()
     elif hook_name == "start":
@@ -737,8 +733,8 @@ def main(hook_name):
         website_interface("joined")
     elif hook_name == "peer-relation-changed":
         reverseproxy_interface("changed")
-    elif hook_name in ("nrpe-external-master-relation-changed",
-                       "local-monitors-relation-changed"):
+    elif hook_name in ("nrpe-external-master-relation-joined",
+                       "local-monitors-relation-joined"):
         update_nrpe_config()
     else:
         print "Unknown hook"

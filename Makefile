@@ -7,7 +7,7 @@ CHARM_DIR := $(PWD)
 PYTHON := /usr/bin/env python
 
 
-build: sourcedeps test lint proof
+build: test lint proof
 
 revision:
 	@test -f revision || echo 0 > revision
@@ -23,14 +23,17 @@ test:
 
 lint:
 	@echo Checking for Python syntax...
-	@flake8 $(HOOKS_DIR) --ignore=E123 && echo OK
+	@flake8 $(HOOKS_DIR) --ignore=E123 --exclude=$(HOOKS_DIR)/charmhelpers && echo OK
 
 sourcedeps: $(PWD)/config-manager.txt
 	@echo Updating source dependencies...
 	@$(PYTHON) cm.py -c $(PWD)/config-manager.txt \
 		-p $(SOURCEDEPS_DIR) \
 		-t $(PWD)
-
-charm-payload: sourcedeps
+	@$(PYTHON) build/charm-helpers/tools/charm_helpers_sync/charm_helpers_sync.py \
+		-c charm-helpers.yaml \
+		-b build/charm-helpers \
+		-d hooks/charmhelpers
+	@echo Do not forget to commit the updated files if any.
 
 .PHONY: revision proof test lint sourcedeps charm-payload

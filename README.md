@@ -15,26 +15,16 @@ The following steps are needed for testing and development of the charm,
 but **not** for deployment:
 
     sudo apt-get install python-software-properties
-    sudo add-apt-repository ppa:chrisjohnston/flake8
+    sudo add-apt-repository ppa:cjohnston/flake8
     sudo apt-get update
-    sudo apt-get install python-mock config-manager flake8 python-nose
+    sudo apt-get install python-mock python-flake8 python-nose python-nosexcover
 
-To fetch additional source dependencies and run the tests:
+To run the tests:
 
     make build
 
 ... will run the unit tests, run flake8 over the source to warn about
 formatting issues and output a code coverage summary of the 'hooks.py' module.
-
-Preparing the charm for deployment
-----------------------------------
-
-This charm has a dependency on the `lp:charmsupport` project, which provides
-well-tested helper functions to be used in charm hooks.
-
-As part of the preparation for deployment, you should branch this charm locally
-and run the `make sourcedeps` command, which will fetch the known-good version
-of the charmsupport project to be used into a sub-directory of the charm.
 
 How to deploy the charm
 -----------------------
@@ -134,4 +124,3 @@ TODO:
 
   * Expand Single-Service section as I have not tested that mode fully.
   * Trigger website-relation-changed when the reverse-proxy relation changes
-
