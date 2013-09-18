@@ -150,9 +150,16 @@ def get_listen_stanzas(haproxy_config_file="/etc/haproxy/haproxy.cfg"):
     haproxy_config = load_haproxy_config(haproxy_config_file)
     if haproxy_config is None:
         return ()
-    stanzas = re.findall("listen\s+([^\s]+)\s+([^:]+):(.*)", haproxy_config)
-    return tuple(((service, addr, int(port))
-                  for service, addr, port in stanzas))
+    listen_stanzas = re.findall(
+        "listen\s+([^\s]+)\s+([^:]+):(.*)",
+        haproxy_config)
+    bind_stanzas = re.findall(
+        "\s+bind\s+([^:]+):(\d+)\s*\n\s+default_backend\s+([^\s]+)",
+        haproxy_config, re.M)
+    return (tuple(((service, addr, int(port))
+                   for service, addr, port in listen_stanzas)) +
+            tuple(((service, addr, int(port))
+                   for addr, port, service in bind_stanzas)))
 
 
 #------------------------------------------------------------------------------
@@ -202,8 +209,12 @@ def create_listen_stanza(service_name=None, service_ip=None,
     if service_name is None or service_ip is None or service_port is None:
         return None
     service_config = []
-    service_config.append("listen %s %s:%s" %
-                          (service_name, service_ip, service_port))
+    unit_name = os.environ["JUJU_UNIT_NAME"].replace("/", "-")
+    service_config.append("frontend %s-%s" % (unit_name, service_port))
+    service_config.append("    bind %s:%s" %
+                          (service_ip, service_port))
+    service_config.append("    default_backend %s" % (service_name,))
+    service_config.append("backend %s" % (service_name,))
     if service_options is not None:
         for service_option in service_options:
             service_config.append("    %s" % service_option.strip())

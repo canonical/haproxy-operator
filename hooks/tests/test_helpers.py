@@ -1,3 +1,5 @@
+import os
+
 from contextlib import contextmanager
 from StringIO import StringIO
 
@@ -168,6 +170,23 @@ class HelpersTest(TestCase):
                          stanzas)
 
     @patch('hooks.load_haproxy_config')
+    def test_get_listen_stanzas_with_frontend(self, load_haproxy_config):
+        load_haproxy_config.return_value = '''
+        frontend foo-2-123
+            bind 1.2.3.4:123
+            default_backend foo.internal
+        frontend foo-2-234
+            bind 1.2.3.5:234
+            default_backend bar.internal
+        '''
+
+        stanzas = hooks.get_listen_stanzas()
+
+        self.assertEqual((('foo.internal', '1.2.3.4', 123),
+                          ('bar.internal', '1.2.3.5', 234)),
+                         stanzas)
+
+    @patch('hooks.load_haproxy_config')
     def test_get_empty_tuple_when_no_stanzas(self, load_haproxy_config):
         load_haproxy_config.return_value = '''
         '''
@@ -209,6 +228,7 @@ class HelpersTest(TestCase):
         self.assertFalse(close_port.called)
         self.assertFalse(open_port.called)
 
+    @patch.dict(os.environ, {"JUJU_UNIT_NAME": "haproxy/2"})
     def test_creates_a_listen_stanza(self):
         service_name = 'some-name'
         service_ip = '10.11.12.13'
@@ -224,7 +244,10 @@ class HelpersTest(TestCase):
                                             server_entries)
 
         expected = '\n'.join((
-            'listen some-name 10.11.12.13:1234',
+            'frontend haproxy-2-1234',
+            '    bind 10.11.12.13:1234',
+            '    default_backend some-name',
+            'backend some-name',
             '    foo',
             '    bar',
             '    server name-1 ip-1:port-1 foo1 bar1',
@@ -233,6 +256,7 @@ class HelpersTest(TestCase):
 
         self.assertEqual(expected, result)
 
+    @patch.dict(os.environ, {"JUJU_UNIT_NAME": "haproxy/2"})
     def test_creates_a_listen_stanza_with_tuple_entries(self):
         service_name = 'some-name'
         service_ip = '10.11.12.13'
@@ -248,7 +272,10 @@ class HelpersTest(TestCase):
                                             server_entries)
 
         expected = '\n'.join((
-            'listen some-name 10.11.12.13:1234',
+            'frontend haproxy-2-1234',
+            '    bind 10.11.12.13:1234',
+            '    default_backend some-name',
+            'backend some-name',
             '    foo',
             '    bar',
             '    server name-1 ip-1:port-1 foo1 bar1',
