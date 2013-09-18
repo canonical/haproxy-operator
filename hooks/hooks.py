@@ -9,6 +9,8 @@ import subprocess
 import sys
 import yaml
 
+from itertools import izip, tee
+
 from charmhelpers.core.host import pwgen
 from charmhelpers.core.hookenv import (
     log,
@@ -33,6 +35,38 @@ default_haproxy_config_dir = "/etc/haproxy"
 default_haproxy_config = "%s/haproxy.cfg" % default_haproxy_config_dir
 default_haproxy_service_config_dir = "/var/run/haproxy"
 service_affecting_packages = ['haproxy']
+
+frontend_only_options = [
+    "backlog",
+    "bind",
+    "capture cookie",
+    "capture request header",
+    "capture response header",
+    "clitimeout",
+    "default_backend",
+    "maxconn",
+    "monitor fail",
+    "monitor-net",
+    "monitor-uri",
+    "option accept-invalid-http-request",
+    "option clitcpka",
+    "option contstats",
+    "option dontlog-normal",
+    "option dontlognull",
+    "option http-use-proxy-header",
+    "option log-separate-errors",
+    "option logasap",
+    "option socket-stats",
+    "option tcp-smart-accept",
+    "rate-limit sessions",
+    "tcp-request content accept",
+    "tcp-request content reject",
+    "tcp-request inspect-delay",
+    "timeout client",
+    "timeout clitimeout",
+    "use_backend",
+    ]
+
 
 ###############################################################################
 # Supporting functions
@@ -208,16 +242,29 @@ def create_listen_stanza(service_name=None, service_ip=None,
                          server_entries=None):
     if service_name is None or service_ip is None or service_port is None:
         return None
+    fe_options = []
+    be_options = []
+    if service_options is not None:
+        # Filter provided service options into frontend-only and backend-only.
+        results = izip(
+            (fe_options, be_options),
+            (True, False),
+            tee((o, any(map(o.strip().startswith,
+                            frontend_only_options)))
+                for o in service_options))
+        for out, cond, result in results:
+            out.extend(option for option, match in result if match is cond)
     service_config = []
     unit_name = os.environ["JUJU_UNIT_NAME"].replace("/", "-")
     service_config.append("frontend %s-%s" % (unit_name, service_port))
     service_config.append("    bind %s:%s" %
                           (service_ip, service_port))
     service_config.append("    default_backend %s" % (service_name,))
+    service_config.extend("    %s" % service_option.strip()
+                          for service_option in fe_options)
     service_config.append("backend %s" % (service_name,))
-    if service_options is not None:
-        for service_option in service_options:
-            service_config.append("    %s" % service_option.strip())
+    service_config.extend("    %s" % service_option.strip()
+                          for service_option in be_options)
     if isinstance(server_entries, (list, tuple)):
         for (server_name, server_ip, server_port,
              server_options) in server_entries:

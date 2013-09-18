@@ -257,6 +257,37 @@ class HelpersTest(TestCase):
         self.assertEqual(expected, result)
 
     @patch.dict(os.environ, {"JUJU_UNIT_NAME": "haproxy/2"})
+    def test_create_listen_stanza_filters_frontend_options(self):
+        service_name = 'some-name'
+        service_ip = '10.11.12.13'
+        service_port = 1234
+        service_options = ('capture request header X-Man',
+                           'retries 3', 'balance uri', 'option logasap')
+        server_entries = [
+            ('name-1', 'ip-1', 'port-1', ('foo1', 'bar1')),
+            ('name-2', 'ip-2', 'port-2', ('foo2', 'bar2')),
+        ]
+
+        result = hooks.create_listen_stanza(service_name, service_ip,
+                                            service_port, service_options,
+                                            server_entries)
+
+        expected = '\n'.join((
+            'frontend haproxy-2-1234',
+            '    bind 10.11.12.13:1234',
+            '    default_backend some-name',
+            '    capture request header X-Man',
+            '    option logasap',
+            'backend some-name',
+            '    retries 3',
+            '    balance uri',
+            '    server name-1 ip-1:port-1 foo1 bar1',
+            '    server name-2 ip-2:port-2 foo2 bar2',
+        ))
+
+        self.assertEqual(expected, result)
+
+    @patch.dict(os.environ, {"JUJU_UNIT_NAME": "haproxy/2"})
     def test_creates_a_listen_stanza_with_tuple_entries(self):
         service_name = 'some-name'
         service_ip = '10.11.12.13'
