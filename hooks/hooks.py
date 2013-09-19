@@ -377,11 +377,10 @@ def create_services():
         if not relation_ok:
             continue
 
-        # Mandatory switches ( hostname, port )
-        hostname = relation_info['hostname']
+        # Mandatory switches ( private-address, port )
         host = relation_info['private-address']
         port = relation_info['port']
-        server_name = ("%s__%s" % (hostname.replace('.', '_'), port))
+        server_name = ("%s-%s" % (unit.replace("/", "-"), port))
 
         # Optional switches ( service_name, sitenames )
         service_names = set()
@@ -422,13 +421,14 @@ def create_services():
         if service.get("servers", []):
             has_servers = True
 
+    del services_dict[None]
+    write_service_config(services_dict)
+
     if not has_servers:
         log("No backend servers, exiting.")
         return
 
-    del services_dict[None]
     services_dict = apply_peer_config(services_dict)
-    write_service_config(services_dict)
     return services_dict
 
 
@@ -700,6 +700,8 @@ def notify_relation(relation, changed=False, relation_ids=None):
     default_port = 80
 
     for rid in relation_ids or get_relation_ids(relation):
+        if not rid:
+            continue
         service_names = set()
         if rid is None:
             rid = relation_id()

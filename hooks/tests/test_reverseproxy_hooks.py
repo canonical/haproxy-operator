@@ -164,7 +164,7 @@ class ReverseProxyRelationTest(TestCase):
         expected = {
             'service': {
                 'service_name': 'service',
-                'servers': [('backend_1__4242', '1.2.3.4', 4242, [])],
+                'servers': [('foo-0-4242', '1.2.3.4', 4242, [])],
                 },
             }
         self.assertEqual(expected, hooks.create_services())
@@ -191,7 +191,7 @@ class ReverseProxyRelationTest(TestCase):
             'service': {
                 'service_name': 'service',
                 'server_options': ["maxconn 4"],
-                'servers': [('backend_1__4242', '1.2.3.4',
+                'servers': [('foo-0-4242', '1.2.3.4',
                              4242, ["maxconn 4"])],
                 },
             }
@@ -220,7 +220,7 @@ class ReverseProxyRelationTest(TestCase):
             'foo_service': {
                 'service_name': 'foo_service',
                 'server_options': ["maxconn 4"],
-                'servers': [('backend_1__4242', '1.2.3.4',
+                'servers': [('foo-0-4242', '1.2.3.4',
                              4242, ["maxconn 4"])],
                 },
             }
@@ -248,7 +248,7 @@ class ReverseProxyRelationTest(TestCase):
             'foo_service': {
                 'service_name': 'foo_service',
                 'server_options': ["maxconn 4"],
-                'servers': [('backend_1__4242', '1.2.3.4',
+                'servers': [('foo-1-4242', '1.2.3.4',
                              4242, ["maxconn 4"])],
                 },
             }
@@ -277,7 +277,7 @@ class ReverseProxyRelationTest(TestCase):
             'foo_srv': {
                 'service_name': 'foo_srv',
                 'server_options': ["maxconn 4"],
-                'servers': [('backend_1__4242', '1.2.3.4',
+                'servers': [('foo-0-4242', '1.2.3.4',
                              4242, ["maxconn 4"])],
                 },
             }
@@ -305,7 +305,7 @@ class ReverseProxyRelationTest(TestCase):
             'foo_service': {
                 'service_name': 'foo_service',
                 'server_options': ["maxconn 4"],
-                'servers': [('backend_1__4242', '1.2.3.4',
+                'servers': [('foo-1-4242', '1.2.3.4',
                              4242, ["maxconn 4"])],
                 },
             }
@@ -337,7 +337,7 @@ class ReverseProxyRelationTest(TestCase):
             'foo': {
                 'service_name': 'foo',
                 'server_options': ["maxconn 4"],
-                'servers': [('backend_1__4242', '1.2.3.4',
+                'servers': [('foo-0-4242', '1.2.3.4',
                              4242, ["maxconn 4"])],
                 },
             }
