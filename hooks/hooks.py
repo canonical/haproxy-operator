@@ -262,6 +262,7 @@ def create_listen_stanza(service_name=None, service_ip=None,
     service_config.append("    default_backend %s" % (service_name,))
     service_config.extend("    %s" % service_option.strip()
                           for service_option in fe_options)
+    service_config.append("")
     service_config.append("backend %s" % (service_name,))
     service_config.extend("    %s" % service_option.strip()
                           for service_option in be_options)

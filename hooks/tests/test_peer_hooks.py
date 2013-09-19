@@ -188,10 +188,13 @@ class PeerRelationTest(TestCase):
             },
         }
 
-        with patch_open() as (mock_open, mock_file):
-            hooks.write_service_config(services_dict)
+        with patch.object(os.path, "exists") as exists:
+            exists.return_value = True
+            with patch_open() as (mock_open, mock_file):
+                hooks.write_service_config(services_dict)
 
-            create_listen_stanza.assert_called_with(
-                'bar', 'some-host', 'some-port', 'some-options', (1, 2))
-            mock_open.assert_called_with('/var/run/haproxy/bar.service', 'w')
-            mock_file.write.assert_called_with('some content')
+                create_listen_stanza.assert_called_with(
+                    'bar', 'some-host', 'some-port', 'some-options', (1, 2))
+                mock_open.assert_called_with(
+                    '/var/run/haproxy/bar.service', 'w')
+                mock_file.write.assert_called_with('some content')
