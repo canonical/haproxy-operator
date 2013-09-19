@@ -502,6 +502,8 @@ def write_service_config(services_dict):
         server_entries = service_config.get('servers')
 
         service_name = service_config["service_name"]
+        if not os.path.exists(default_haproxy_service_config_dir):
+            os.mkdir(default_haproxy_service_config_dir, 0600)
         with open(os.path.join(default_haproxy_service_config_dir,
                                "%s.service" % service_name), 'w') as config:
             config.write(create_listen_stanza(
