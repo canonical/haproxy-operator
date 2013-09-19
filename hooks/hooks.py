@@ -377,11 +377,10 @@ def create_services():
         if not relation_ok:
             continue
 
-        # Mandatory switches ( hostname, port )
-        hostname = relation_info['hostname']
+        # Mandatory switches ( private-address, port )
         host = relation_info['private-address']
         port = relation_info['port']
-        server_name = ("%s__%s" % (hostname.replace('.', '_'), port))
+        server_name = ("%s-%s" % (unit.replace("/", "-"), port))
 
         # Optional switches ( service_name, sitenames )
         service_names = set()
