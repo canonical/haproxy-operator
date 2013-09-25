@@ -9,6 +9,8 @@ import subprocess
 import sys
 import yaml
 
+from itertools import izip, tee
+
 from charmhelpers.core.host import pwgen
 from charmhelpers.core.hookenv import (
     log,
@@ -33,6 +35,38 @@ default_haproxy_config_dir = "/etc/haproxy"
 default_haproxy_config = "%s/haproxy.cfg" % default_haproxy_config_dir
 default_haproxy_service_config_dir = "/var/run/haproxy"
 service_affecting_packages = ['haproxy']
+
+frontend_only_options = [
+    "backlog",
+    "bind",
+    "capture cookie",
+    "capture request header",
+    "capture response header",
+    "clitimeout",
+    "default_backend",
+    "maxconn",
+    "monitor fail",
+    "monitor-net",
+    "monitor-uri",
+    "option accept-invalid-http-request",
+    "option clitcpka",
+    "option contstats",
+    "option dontlog-normal",
+    "option dontlognull",
+    "option http-use-proxy-header",
+    "option log-separate-errors",
+    "option logasap",
+    "option socket-stats",
+    "option tcp-smart-accept",
+    "rate-limit sessions",
+    "tcp-request content accept",
+    "tcp-request content reject",
+    "tcp-request inspect-delay",
+    "timeout client",
+    "timeout clitimeout",
+    "use_backend",
+    ]
+
 
 ###############################################################################
 # Supporting functions
@@ -150,9 +184,16 @@ def get_listen_stanzas(haproxy_config_file="/etc/haproxy/haproxy.cfg"):
     haproxy_config = load_haproxy_config(haproxy_config_file)
     if haproxy_config is None:
         return ()
-    stanzas = re.findall("listen\s+([^\s]+)\s+([^:]+):(.*)", haproxy_config)
-    return tuple(((service, addr, int(port))
-                  for service, addr, port in stanzas))
+    listen_stanzas = re.findall(
+        "listen\s+([^\s]+)\s+([^:]+):(.*)",
+        haproxy_config)
+    bind_stanzas = re.findall(
+        "\s+bind\s+([^:]+):(\d+)\s*\n\s+default_backend\s+([^\s]+)",
+        haproxy_config, re.M)
+    return (tuple(((service, addr, int(port))
+                   for service, addr, port in listen_stanzas)) +
+            tuple(((service, addr, int(port))
+                   for addr, port, service in bind_stanzas)))
 
 
 #------------------------------------------------------------------------------
@@ -201,12 +242,30 @@ def create_listen_stanza(service_name=None, service_ip=None,
                          server_entries=None):
     if service_name is None or service_ip is None or service_port is None:
         return None
-    service_config = []
-    service_config.append("listen %s %s:%s" %
-                          (service_name, service_ip, service_port))
+    fe_options = []
+    be_options = []
     if service_options is not None:
-        for service_option in service_options:
-            service_config.append("    %s" % service_option.strip())
+        # Filter provided service options into frontend-only and backend-only.
+        results = izip(
+            (fe_options, be_options),
+            (True, False),
+            tee((o, any(map(o.strip().startswith,
+                            frontend_only_options)))
+                for o in service_options))
+        for out, cond, result in results:
+            out.extend(option for option, match in result if match is cond)
+    service_config = []
+    unit_name = os.environ["JUJU_UNIT_NAME"].replace("/", "-")
+    service_config.append("frontend %s-%s" % (unit_name, service_port))
+    service_config.append("    bind %s:%s" %
+                          (service_ip, service_port))
+    service_config.append("    default_backend %s" % (service_name,))
+    service_config.extend("    %s" % service_option.strip()
+                          for service_option in fe_options)
+    service_config.append("")
+    service_config.append("backend %s" % (service_name,))
+    service_config.extend("    %s" % service_option.strip()
+                          for service_option in be_options)
     if isinstance(server_entries, (list, tuple)):
         for (server_name, server_ip, server_port,
              server_options) in server_entries:
@@ -318,11 +377,10 @@ def create_services():
         if not relation_ok:
             continue
 
-        # Mandatory switches ( hostname, port )
-        hostname = relation_info['hostname']
+        # Mandatory switches ( private-address, port )
         host = relation_info['private-address']
         port = relation_info['port']
-        server_name = ("%s__%s" % (hostname.replace('.', '_'), port))
+        server_name = ("%s-%s" % (unit.replace("/", "-"), port))
 
         # Optional switches ( service_name, sitenames )
         service_names = set()
@@ -445,6 +503,8 @@ def write_service_config(services_dict):
         server_entries = service_config.get('servers')
 
         service_name = service_config["service_name"]
+        if not os.path.exists(default_haproxy_service_config_dir):
+            os.mkdir(default_haproxy_service_config_dir, 0600)
         with open(os.path.join(default_haproxy_service_config_dir,
                                "%s.service" % service_name), 'w') as config:
             config.write(create_listen_stanza(
