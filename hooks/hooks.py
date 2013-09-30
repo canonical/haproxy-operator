@@ -678,7 +678,7 @@ def website_interface(hook_name=None):
         return None
     # Notify website relation but only for the current relation in context.
     notify_website(changed=hook_name == "changed",
-                   relation_ids=[relation_id()])
+                   relation_ids=(relation_id(),))
 
 
 def get_hostname(host=None):
