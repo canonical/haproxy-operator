@@ -36,6 +36,13 @@ default_haproxy_config = "%s/haproxy.cfg" % default_haproxy_config_dir
 default_haproxy_service_config_dir = "/var/run/haproxy"
 service_affecting_packages = ['haproxy']
 
+dupe_options = [
+    "mode tcp",
+    "option tcplog",
+    "mode http",
+    "option httplog",
+    ]
+
 frontend_only_options = [
     "backlog",
     "bind",
@@ -245,6 +252,12 @@ def create_listen_stanza(service_name=None, service_ip=None,
     fe_options = []
     be_options = []
     if service_options is not None:
+        # For options that should be duplicated in both frontend and backend,
+        # copy them to both.
+        for o in dupe_options:
+            if any(map(o.strip().startswith, service_options)):
+                fe_options.append(o)
+                be_options.append(o)
         # Filter provided service options into frontend-only and backend-only.
         results = izip(
             (fe_options, be_options),
@@ -253,7 +266,8 @@ def create_listen_stanza(service_name=None, service_ip=None,
                             frontend_only_options)))
                 for o in service_options))
         for out, cond, result in results:
-            out.extend(option for option, match in result if match is cond)
+            out.extend(option for option, match in result
+                       if match is cond and option not in out)
     service_config = []
     unit_name = os.environ["JUJU_UNIT_NAME"].replace("/", "-")
     service_config.append("frontend %s-%s" % (unit_name, service_port))

@@ -262,8 +262,9 @@ class HelpersTest(TestCase):
         service_name = 'some-name'
         service_ip = '10.11.12.13'
         service_port = 1234
-        service_options = ('capture request header X-Man',
-                           'retries 3', 'balance uri', 'option logasap')
+        service_options = ('capture request header X-Man', 'mode http',
+                           'option httplog', 'retries 3', 'balance uri',
+                           'option logasap')
         server_entries = [
             ('name-1', 'ip-1', 'port-1', ('foo1', 'bar1')),
             ('name-2', 'ip-2', 'port-2', ('foo2', 'bar2')),
@@ -277,10 +278,14 @@ class HelpersTest(TestCase):
             'frontend haproxy-2-1234',
             '    bind 10.11.12.13:1234',
             '    default_backend some-name',
+            '    mode http',
+            '    option httplog',
             '    capture request header X-Man',
             '    option logasap',
             '',
             'backend some-name',
+            '    mode http',
+            '    option httplog',
             '    retries 3',
             '    balance uri',
             '    server name-1 ip-1:port-1 foo1 bar1',
