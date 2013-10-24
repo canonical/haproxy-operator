@@ -1,3 +1,5 @@
+import yaml
+
 from testtools import TestCase
 from mock import patch, call
 
@@ -84,22 +86,6 @@ class ReverseProxyRelationTest(TestCase):
         self.assertIs(None, hooks.create_services())
         self.log.assert_has_calls([call.log(
             "No private-address in relation data for 'foo/0', skipping.")])
-        self.write_service_config.assert_not_called()
-
-    def test_no_hostname_in_relation_data(self):
-        self.get_config_services.return_value = {
-            "service": {
-                "service_name": "service",
-                },
-            }
-        self.relations_of_type.return_value = [
-            {"port": 4242,
-             "private-address": "1.2.3.4",
-             "__unit__": "foo/0"},
-        ]
-        self.assertIs(None, hooks.create_services())
-        self.log.assert_has_calls([call.log(
-            "No hostname in relation data for 'foo/0', skipping.")])
         self.write_service_config.assert_not_called()
 
     def test_relation_unknown_service(self):
@@ -338,6 +324,36 @@ class ReverseProxyRelationTest(TestCase):
                 'service_name': 'foo',
                 'server_options': ["maxconn 4"],
                 'servers': [('foo-0-4242', '1.2.3.4',
+                             4242, ["maxconn 4"])],
+                },
+            }
+        self.assertEqual(expected, hooks.create_services())
+        self.write_service_config.assert_called_with(expected)
+
+    def test_with_service_options_in_relation(self):
+        self.get_config_services.return_value = {
+            None: {
+                "service_name": "service",
+                },
+            }
+        self.relations_of_type.return_value = [
+            {"port": 4242,
+             "private-address": "1.2.3.4",
+             "__unit__": "foo/0",
+             "services": yaml.safe_dump([{
+                 "service_name": "service",
+                 "server_options": ["maxconn 4"],
+                 "servers": [('foo-0', '1.2.3.4',
+                              4242, ["maxconn 4"])]
+                 }])
+             },
+        ]
+
+        expected = {
+            'service': {
+                'service_name': 'service',
+                'server_options': ["maxconn 4"],
+                'servers': [('foo-0', '1.2.3.4',
                              4242, ["maxconn 4"])],
                 },
             }
