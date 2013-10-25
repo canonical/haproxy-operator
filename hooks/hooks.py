@@ -79,6 +79,10 @@ frontend_only_options = [
 # Supporting functions
 ###############################################################################
 
+def comma_split(value):
+    values = value.split(",")
+    return filter(None, (v.strip() for v in values))
+
 
 def ensure_package_status(packages, status):
     if status in ['install', 'hold']:
@@ -105,7 +109,7 @@ def enable_haproxy():
 #------------------------------------------------------------------------------
 def create_haproxy_globals():
     config_data = config_get()
-    global_log = config_data['global_log'].split(',')
+    global_log = comma_split(config_data['global_log'])
     haproxy_globals = []
     haproxy_globals.append('global')
     for global_log_item in global_log:
@@ -127,8 +131,8 @@ def create_haproxy_globals():
 #------------------------------------------------------------------------------
 def create_haproxy_defaults():
     config_data = config_get()
-    default_options = config_data['default_options'].split(',')
-    default_timeouts = config_data['default_timeouts'].split(',')
+    default_options = comma_split(config_data['default_options'])
+    default_timeouts = comma_split(config_data['default_timeouts'])
     haproxy_defaults = []
     haproxy_defaults.append("defaults")
     haproxy_defaults.append("    log %s" % config_data['default_log'])
@@ -342,12 +346,19 @@ def parse_services_yaml(services, yaml_data):
             # is used as the default service if a proxied server doesn't
             # specify which service it is bound to.
             services[None] = {"service_name": service_name}
-        if is_proxy(service_name) and ("option forwardfor" not in
-                                       service["service_options"]):
-            service["service_options"].append("option forwardfor")
 
-        if isinstance(service["server_options"], basestring):
-            service["server_options"] = service["server_options"].split()
+        if "service_options" in service:
+            if isinstance(service["service_options"], basestring):
+                service["service_options"] = comma_split(
+                    service["service_options"])
+
+            if is_proxy(service_name) and ("option forwardfor" not in
+                                           service["service_options"]):
+                service["service_options"].append("option forwardfor")
+
+        if (("server_options" in service and
+             isinstance(service["server_options"], basestring))):
+            service["server_options"] = comma_split(service["server_options"])
 
         services[service_name] = merge_service(
             services.get(service_name, {}), service)
@@ -373,6 +384,29 @@ def merge_service(old_service, new_service):
                 servers.iteritems())]
 
     return old_service
+
+
+def ensure_service_host_port(services):
+    config_data = config_get()
+    seen = []
+    missing = []
+    for service, options in sorted(services.iteritems()):
+        if not "service_host" in options:
+            missing.append(options)
+            continue
+        if not "service_port" in options:
+            missing.append(options)
+            continue
+        seen.append((options["service_host"], int(options["service_port"])))
+
+    seen.sort()
+    last_port = seen and seen[-1][1] or int(config_data["monitoring_port"])
+    for options in missing:
+        last_port += 2
+        options["service_host"] = "0.0.0.0"
+        options["service_port"] = last_port
+
+    return services
 
 
 #------------------------------------------------------------------------------
@@ -479,6 +513,7 @@ def create_services():
         return
 
     del services_dict[None]
+    services_dict = ensure_service_host_port(services_dict)
     services_dict = apply_peer_config(services_dict)
     write_service_config(services_dict)
     return services_dict

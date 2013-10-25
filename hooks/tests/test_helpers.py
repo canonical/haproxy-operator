@@ -540,12 +540,12 @@ class HelpersTest(TestCase):
                     'foo-1': 123,
                 },
                 'service_options': ['foo1', 'foo2'],
-                'server_options': 'baz1 baz2',
+                'server_options': 'baz1, baz2',
             },
             {
                 'service_name': 'bar',
                 'service_options': ['bar1', 'bar2'],
-                'server_options': 'baz1 baz2',
+                'server_options': 'baz1, baz2',
             },
         ]
         is_proxy.return_value = False
@@ -563,6 +563,87 @@ class HelpersTest(TestCase):
             'bar': {
                 'service_name': 'bar',
                 'service_options': ['bar1', 'bar2'],
+                'server_options': ['baz1', 'baz2'],
+            },
+        }
+
+        self.assertEqual(expected, result)
+
+    @patch('hooks.is_proxy')
+    @patch('hooks.config_get')
+    @patch('yaml.safe_load')
+    def test_gets_config_services_with_proxy_no_forward(self, safe_load,
+                                                        config_get, is_proxy):
+        config_get.return_value = {
+            'services': 'some-services',
+        }
+        safe_load.return_value = [
+            {
+                'service_name': 'foo',
+                'service_options': {
+                    'foo-1': 123,
+                },
+                'service_options': ['foo1', 'foo2'],
+                'server_options': 'baz1, baz2',
+            },
+            {
+                'service_name': 'bar',
+                'service_options': ['bar1', 'bar2'],
+                'server_options': 'baz1, baz2',
+            },
+        ]
+        is_proxy.return_value = True
+
+        result = hooks.get_config_services()
+        expected = {
+            None: {
+                'service_name': 'foo',
+            },
+            'foo': {
+                'service_name': 'foo',
+                'service_options': ['foo1', 'foo2', 'option forwardfor'],
+                'server_options': ['baz1', 'baz2'],
+            },
+            'bar': {
+                'service_name': 'bar',
+                'service_options': ['bar1', 'bar2', 'option forwardfor'],
+                'server_options': ['baz1', 'baz2'],
+            },
+        }
+
+        self.assertEqual(expected, result)
+
+    @patch('hooks.is_proxy')
+    @patch('hooks.config_get')
+    @patch('yaml.safe_load')
+    def test_gets_config_services_no_service_options(self, safe_load,
+                                                     config_get, is_proxy):
+        config_get.return_value = {
+            'services': '',
+        }
+        safe_load.return_value = [
+            {
+                'service_name': 'foo',
+                'server_options': 'baz1, baz2',
+            },
+            {
+                'service_name': 'bar',
+                'server_options': 'baz1, baz2',
+            },
+        ]
+        is_proxy.return_value = True
+
+        result = hooks.get_config_services()
+        expected = {
+            None: {
+                'service_name': 'foo',
+            },
+            'foo': {
+                'service_name': 'foo',
+                'server_options': ['baz1', 'baz2'],
+            },
+            'bar': {
+                'service_name': 'bar',
                 'server_options': ['baz1', 'baz2'],
             },
         }
