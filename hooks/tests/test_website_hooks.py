@@ -36,13 +36,14 @@ class NotifyRelationTest(TestCase):
     def setUp(self):
         super(NotifyRelationTest, self).setUp()
 
+        self.relations_of_type = self.patch_hook("relations_of_type")
         self.relations_for_id = self.patch_hook("relations_for_id")
         self.relation_set = self.patch_hook("relation_set")
         self.config_get = self.patch_hook("config_get")
         self.get_relation_ids = self.patch_hook("get_relation_ids")
         self.get_hostname = self.patch_hook("get_hostname")
         self.log = self.patch_hook("log")
-        self.get_config_services = self.patch_hook("get_config_service")
+        self.get_config_service = self.patch_hook("get_config_service")
 
     def patch_hook(self, hook_name):
         mock_controller = patch.object(hooks, hook_name)
@@ -114,9 +115,12 @@ class NotifyRelationTest(TestCase):
                 relation_id="website:1", port="80", hostname="foo.local",
                 all_services=""),
             ])
-        self.log.assert_called_once_with(
-            "Remote units requested than a single service name."
-            "Falling back to default host/port.")
+        self.log.assert_has_calls([
+            call.log(
+                "Remote units requested more than a single service name."
+                "Falling back to default host/port."),
+            call.log("No services configured, exiting."),
+            ])
 
     def test_notify_website_relation_with_same_sitenames(self):
         self.get_relation_ids.return_value = ("website:1",)
@@ -124,8 +128,8 @@ class NotifyRelationTest(TestCase):
         self.relations_for_id.return_value = [{"service_name": "bar"},
                                               {"service_name": "bar"}]
         self.config_get.return_value = {"services": ""}
-        self.get_config_services.return_value = {"service_host": "bar.local",
-                                                 "service_port": "4242"}
+        self.get_config_service.return_value = {"service_host": "bar.local",
+                                                "service_port": "4242"}
 
         hooks.notify_relation("website")
 

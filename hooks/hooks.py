@@ -342,7 +342,11 @@ def get_config_services():
 
 
 def parse_services_yaml(services, yaml_data):
-    for service in yaml.safe_load(yaml_data):
+    yaml_services = yaml.safe_load(yaml_data)
+    if yaml_services is None:
+        return services
+
+    for service in yaml_services:
         service_name = service["service_name"]
         if not services:
             # 'None' is used as a marker for the first service defined, which
@@ -365,6 +369,7 @@ def parse_services_yaml(services, yaml_data):
 
         services[service_name] = merge_service(
             services.get(service_name, {}), service)
+
     return services
 
 
@@ -435,6 +440,7 @@ def create_services():
 
     # Augment services_dict with service definitions from relation data.
     relation_data = relations_of_type("reverseproxy")
+
     for relation_info in relation_data:
         if "services" in relation_info:
             services_dict = parse_services_yaml(services_dict,
@@ -443,8 +449,6 @@ def create_services():
     if len(services_dict) == 0:
         log("No services configured, exiting.")
         return
-
-    relation_data = relations_of_type("reverseproxy")
 
     for relation_info in relation_data:
         unit = relation_info['__unit__']
@@ -785,7 +789,6 @@ def get_hostname(host=None):
 
 
 def notify_relation(relation, changed=False, relation_ids=None):
-    config_data = config_get()
     default_host = get_hostname()
     default_port = 80
 
@@ -809,7 +812,7 @@ def notify_relation(relation, changed=False, relation_ids=None):
         if len(service_names) == 1:
             service_name = service_names.pop()
         elif len(service_names) > 1:
-            log("Remote units requested than a single service name."
+            log("Remote units requested more than a single service name."
                 "Falling back to default host/port.")
 
         if service_name is not None:
@@ -822,9 +825,14 @@ def notify_relation(relation, changed=False, relation_ids=None):
             my_host = default_host
             my_port = default_port
 
+        all_services = ""
+        services_dict = create_services()
+        if services_dict is not None:
+            all_services = yaml.safe_dump(sorted(services_dict.itervalues()))
+
         relation_set(relation_id=rid, port=str(my_port),
                      hostname=my_host,
-                     all_services=config_data['services'])
+                     all_services=all_services)
 
 
 def notify_website(changed=False, relation_ids=None):
