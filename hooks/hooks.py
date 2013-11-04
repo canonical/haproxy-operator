@@ -79,6 +79,10 @@ frontend_only_options = [
 # Supporting functions
 ###############################################################################
 
+def comma_split(value):
+    values = value.split(",")
+    return filter(None, (v.strip() for v in values))
+
 
 def ensure_package_status(packages, status):
     if status in ['install', 'hold']:
@@ -105,7 +109,7 @@ def enable_haproxy():
 #------------------------------------------------------------------------------
 def create_haproxy_globals():
     config_data = config_get()
-    global_log = config_data['global_log'].split(',')
+    global_log = comma_split(config_data['global_log'])
     haproxy_globals = []
     haproxy_globals.append('global')
     for global_log_item in global_log:
@@ -127,8 +131,8 @@ def create_haproxy_globals():
 #------------------------------------------------------------------------------
 def create_haproxy_defaults():
     config_data = config_get()
-    default_options = config_data['default_options'].split(',')
-    default_timeouts = config_data['default_timeouts'].split(',')
+    default_options = comma_split(config_data['default_options'])
+    default_timeouts = comma_split(config_data['default_timeouts'])
     haproxy_defaults = []
     haproxy_defaults.append("defaults")
     haproxy_defaults.append("    log %s" % config_data['default_log'])
@@ -286,7 +290,10 @@ def create_listen_stanza(service_name=None, service_ip=None,
             server_line = "    server %s %s:%s" % \
                 (server_name, server_ip, server_port)
             if server_options is not None:
-                server_line += " %s" % " ".join(server_options)
+                if isinstance(server_options, basestring):
+                    server_line += " " + server_options
+                else:
+                    server_line += " " + " ".join(server_options)
             service_config.append(server_line)
     return '\n'.join(service_config)
 
@@ -331,21 +338,76 @@ def create_monitoring_stanza(service_name="haproxy_monitoring"):
 def get_config_services():
     config_data = config_get()
     services = {}
-    for service in yaml.safe_load(config_data['services']):
+    return parse_services_yaml(services, config_data['services'])
+
+
+def parse_services_yaml(services, yaml_data):
+    for service in yaml.safe_load(yaml_data):
         service_name = service["service_name"]
         if not services:
             # 'None' is used as a marker for the first service defined, which
             # is used as the default service if a proxied server doesn't
             # specify which service it is bound to.
             services[None] = {"service_name": service_name}
-        if is_proxy(service_name) and ("option forwardfor" not in
-                                       service["service_options"]):
-            service["service_options"].append("option forwardfor")
 
-        if isinstance(service["server_options"], basestring):
-            service["server_options"] = service["server_options"].split()
+        if "service_options" in service:
+            if isinstance(service["service_options"], basestring):
+                service["service_options"] = comma_split(
+                    service["service_options"])
 
-        services[service_name] = service
+            if is_proxy(service_name) and ("option forwardfor" not in
+                                           service["service_options"]):
+                service["service_options"].append("option forwardfor")
+
+        if (("server_options" in service and
+             isinstance(service["server_options"], basestring))):
+            service["server_options"] = comma_split(service["server_options"])
+
+        services[service_name] = merge_service(
+            services.get(service_name, {}), service)
+    return services
+
+
+def merge_service(old_service, new_service):
+    # Stomp over all but servers
+    for key in new_service:
+        if key not in ("services",):
+            old_service[key] = new_service[key]
+
+    # Stomp over duplicate server definitions.
+    if old_service.get("servers") and new_service.get("servers"):
+        servers = {}
+        for service in (old_service, new_service):
+            for server_name, host, port, options in service.get("servers", ()):
+                servers[(host, port)] = (server_name, options)
+
+        old_service["servers"] = [
+            (server_name, host, port, options)
+            for (host, port), (server_name, options) in sorted(
+                servers.iteritems())]
+
+    return old_service
+
+
+def ensure_service_host_port(services):
+    config_data = config_get()
+    seen = []
+    missing = []
+    for service, options in sorted(services.iteritems()):
+        if not "service_host" in options:
+            missing.append(options)
+            continue
+        if not "service_port" in options:
+            missing.append(options)
+            continue
+        seen.append((options["service_host"], int(options["service_port"])))
+
+    seen.sort()
+    last_port = seen and seen[-1][1] or int(config_data["monitoring_port"])
+    for options in missing:
+        last_port += 2
+        options["service_host"] = "0.0.0.0"
+        options["service_port"] = last_port
 
     return services
 
@@ -370,6 +432,14 @@ def is_proxy(service_name):
 #------------------------------------------------------------------------------
 def create_services():
     services_dict = get_config_services()
+
+    # Augment services_dict with service definitions from relation data.
+    relation_data = relations_of_type("reverseproxy")
+    for relation_info in relation_data:
+        if "services" in relation_info:
+            services_dict = parse_services_yaml(services_dict,
+                                                relation_info['services'])
+
     if len(services_dict) == 0:
         log("No services configured, exiting.")
         return
@@ -378,10 +448,16 @@ def create_services():
 
     for relation_info in relation_data:
         unit = relation_info['__unit__']
+
+        if "services" in relation_info:
+            log("Unit '%s' overrides 'services', "
+                "skipping further processing." % unit)
+            continue
+
         juju_service_name = unit.rpartition('/')[0]
 
         relation_ok = True
-        for required in ("port", "private-address", "hostname"):
+        for required in ("port", "private-address"):
             if not required in relation_info:
                 log("No %s in relation data for '%s', skipping." %
                     (required, unit))
@@ -440,6 +516,7 @@ def create_services():
         return
 
     del services_dict[None]
+    services_dict = ensure_service_host_port(services_dict)
     services_dict = apply_peer_config(services_dict)
     write_service_config(services_dict)
     return services_dict

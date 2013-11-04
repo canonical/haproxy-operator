@@ -1,3 +1,5 @@
+import yaml
+
 from testtools import TestCase
 from mock import patch, call
 
@@ -9,6 +11,8 @@ class ReverseProxyRelationTest(TestCase):
     def setUp(self):
         super(ReverseProxyRelationTest, self).setUp()
 
+        self.config_get = self.patch_hook("config_get")
+        self.config_get.return_value = {"monitoring_port": "10000"}
         self.relations_of_type = self.patch_hook("relations_of_type")
         self.get_config_services = self.patch_hook("get_config_services")
         self.log = self.patch_hook("log")
@@ -86,22 +90,6 @@ class ReverseProxyRelationTest(TestCase):
             "No private-address in relation data for 'foo/0', skipping.")])
         self.write_service_config.assert_not_called()
 
-    def test_no_hostname_in_relation_data(self):
-        self.get_config_services.return_value = {
-            "service": {
-                "service_name": "service",
-                },
-            }
-        self.relations_of_type.return_value = [
-            {"port": 4242,
-             "private-address": "1.2.3.4",
-             "__unit__": "foo/0"},
-        ]
-        self.assertIs(None, hooks.create_services())
-        self.log.assert_has_calls([call.log(
-            "No hostname in relation data for 'foo/0', skipping.")])
-        self.write_service_config.assert_not_called()
-
     def test_relation_unknown_service(self):
         self.get_config_services.return_value = {
             "service": {
@@ -137,6 +125,8 @@ class ReverseProxyRelationTest(TestCase):
         expected = {
             'service': {
                 'service_name': 'service',
+                'service_host': '0.0.0.0',
+                'service_port': 10002,
                 'servers': [
                     ("legacy-backend", "1.2.3.1", 4242, ["maxconn 42"]),
                     ],
@@ -164,6 +154,8 @@ class ReverseProxyRelationTest(TestCase):
         expected = {
             'service': {
                 'service_name': 'service',
+                'service_host': '0.0.0.0',
+                'service_port': 10002,
                 'servers': [('foo-0-4242', '1.2.3.4', 4242, [])],
                 },
             }
@@ -190,6 +182,8 @@ class ReverseProxyRelationTest(TestCase):
         expected = {
             'service': {
                 'service_name': 'service',
+                'service_host': '0.0.0.0',
+                'service_port': 10002,
                 'server_options': ["maxconn 4"],
                 'servers': [('foo-0-4242', '1.2.3.4',
                              4242, ["maxconn 4"])],
@@ -219,6 +213,8 @@ class ReverseProxyRelationTest(TestCase):
         expected = {
             'foo_service': {
                 'service_name': 'foo_service',
+                'service_host': '0.0.0.0',
+                'service_port': 10002,
                 'server_options': ["maxconn 4"],
                 'servers': [('foo-0-4242', '1.2.3.4',
                              4242, ["maxconn 4"])],
@@ -247,6 +243,8 @@ class ReverseProxyRelationTest(TestCase):
         expected = {
             'foo_service': {
                 'service_name': 'foo_service',
+                'service_host': '0.0.0.0',
+                'service_port': 10002,
                 'server_options': ["maxconn 4"],
                 'servers': [('foo-1-4242', '1.2.3.4',
                              4242, ["maxconn 4"])],
@@ -276,6 +274,8 @@ class ReverseProxyRelationTest(TestCase):
         expected = {
             'foo_srv': {
                 'service_name': 'foo_srv',
+                'service_host': '0.0.0.0',
+                'service_port': 10002,
                 'server_options': ["maxconn 4"],
                 'servers': [('foo-0-4242', '1.2.3.4',
                              4242, ["maxconn 4"])],
@@ -304,6 +304,8 @@ class ReverseProxyRelationTest(TestCase):
         expected = {
             'foo_service': {
                 'service_name': 'foo_service',
+                'service_host': '0.0.0.0',
+                'service_port': 10002,
                 'server_options': ["maxconn 4"],
                 'servers': [('foo-1-4242', '1.2.3.4',
                              4242, ["maxconn 4"])],
@@ -336,8 +338,40 @@ class ReverseProxyRelationTest(TestCase):
         expected = {
             'foo': {
                 'service_name': 'foo',
+                'service_host': '0.0.0.0',
+                'service_port': 10002,
                 'server_options': ["maxconn 4"],
                 'servers': [('foo-0-4242', '1.2.3.4',
+                             4242, ["maxconn 4"])],
+                },
+            }
+        self.assertEqual(expected, hooks.create_services())
+        self.write_service_config.assert_called_with(expected)
+
+    def test_with_service_options_in_relation(self):
+        self.get_config_services.return_value = {
+            None: {
+                "service_name": "service",
+                },
+            }
+        self.relations_of_type.return_value = [
+            {"port": 4242,
+             "private-address": "1.2.3.4",
+             "__unit__": "foo/0",
+             "services": yaml.safe_dump([{
+                 "service_name": "service",
+                 "servers": [('foo-0', '1.2.3.4',
+                              4242, ["maxconn 4"])]
+                 }])
+             },
+        ]
+
+        expected = {
+            'service': {
+                'service_name': 'service',
+                'service_host': '0.0.0.0',
+                'service_port': 10002,
+                'servers': [('foo-0', '1.2.3.4',
                              4242, ["maxconn 4"])],
                 },
             }

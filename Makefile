@@ -19,7 +19,7 @@ proof: revision
 
 test:
 	@echo Starting tests...
-	@CHARM_DIR=$(CHARM_DIR) $(TEST_PREFIX) nosetests $(TEST_DIR)
+	@CHARM_DIR=$(CHARM_DIR) $(TEST_PREFIX) nosetests -s $(TEST_DIR)
 
 lint:
 	@echo Checking for Python syntax...

@@ -258,6 +258,35 @@ class HelpersTest(TestCase):
         self.assertEqual(expected, result)
 
     @patch.dict(os.environ, {"JUJU_UNIT_NAME": "haproxy/2"})
+    def test_creates_a_listen_stanza_string_server_options(self):
+        service_name = 'some-name'
+        service_ip = '10.11.12.13'
+        service_port = 1234
+        service_options = ('foo', 'bar')
+        server_entries = [
+            ('name-1', 'ip-1', 'port-1', 'foo1 bar1'),
+            ('name-2', 'ip-2', 'port-2', 'foo2 bar2'),
+        ]
+
+        result = hooks.create_listen_stanza(service_name, service_ip,
+                                            service_port, service_options,
+                                            server_entries)
+
+        expected = '\n'.join((
+            'frontend haproxy-2-1234',
+            '    bind 10.11.12.13:1234',
+            '    default_backend some-name',
+            '',
+            'backend some-name',
+            '    foo',
+            '    bar',
+            '    server name-1 ip-1:port-1 foo1 bar1',
+            '    server name-2 ip-2:port-2 foo2 bar2',
+        ))
+
+        self.assertEqual(expected, result)
+
+    @patch.dict(os.environ, {"JUJU_UNIT_NAME": "haproxy/2"})
     def test_create_listen_stanza_filters_frontend_options(self):
         service_name = 'some-name'
         service_ip = '10.11.12.13'
@@ -540,12 +569,12 @@ class HelpersTest(TestCase):
                     'foo-1': 123,
                 },
                 'service_options': ['foo1', 'foo2'],
-                'server_options': 'baz1 baz2',
+                'server_options': 'baz1, baz2',
             },
             {
                 'service_name': 'bar',
                 'service_options': ['bar1', 'bar2'],
-                'server_options': 'baz1 baz2',
+                'server_options': 'baz1, baz2',
             },
         ]
         is_proxy.return_value = False
@@ -563,6 +592,87 @@ class HelpersTest(TestCase):
             'bar': {
                 'service_name': 'bar',
                 'service_options': ['bar1', 'bar2'],
+                'server_options': ['baz1', 'baz2'],
+            },
+        }
+
+        self.assertEqual(expected, result)
+
+    @patch('hooks.is_proxy')
+    @patch('hooks.config_get')
+    @patch('yaml.safe_load')
+    def test_gets_config_services_with_proxy_no_forward(self, safe_load,
+                                                        config_get, is_proxy):
+        config_get.return_value = {
+            'services': 'some-services',
+        }
+        safe_load.return_value = [
+            {
+                'service_name': 'foo',
+                'service_options': {
+                    'foo-1': 123,
+                },
+                'service_options': ['foo1', 'foo2'],
+                'server_options': 'baz1, baz2',
+            },
+            {
+                'service_name': 'bar',
+                'service_options': ['bar1', 'bar2'],
+                'server_options': 'baz1, baz2',
+            },
+        ]
+        is_proxy.return_value = True
+
+        result = hooks.get_config_services()
+        expected = {
+            None: {
+                'service_name': 'foo',
+            },
+            'foo': {
+                'service_name': 'foo',
+                'service_options': ['foo1', 'foo2', 'option forwardfor'],
+                'server_options': ['baz1', 'baz2'],
+            },
+            'bar': {
+                'service_name': 'bar',
+                'service_options': ['bar1', 'bar2', 'option forwardfor'],
+                'server_options': ['baz1', 'baz2'],
+            },
+        }
+
+        self.assertEqual(expected, result)
+
+    @patch('hooks.is_proxy')
+    @patch('hooks.config_get')
+    @patch('yaml.safe_load')
+    def test_gets_config_services_no_service_options(self, safe_load,
+                                                     config_get, is_proxy):
+        config_get.return_value = {
+            'services': '',
+        }
+        safe_load.return_value = [
+            {
+                'service_name': 'foo',
+                'server_options': 'baz1, baz2',
+            },
+            {
+                'service_name': 'bar',
+                'server_options': 'baz1, baz2',
+            },
+        ]
+        is_proxy.return_value = True
+
+        result = hooks.get_config_services()
+        expected = {
+            None: {
+                'service_name': 'foo',
+            },
+            'foo': {
+                'service_name': 'foo',
+                'server_options': ['baz1', 'baz2'],
+            },
+            'bar': {
+                'service_name': 'bar',
                 'server_options': ['baz1', 'baz2'],
             },
         }
