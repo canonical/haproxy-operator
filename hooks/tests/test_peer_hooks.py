@@ -1,3 +1,4 @@
+import base64
 import os
 import yaml
 
@@ -194,7 +195,36 @@ class PeerRelationTest(TestCase):
                 hooks.write_service_config(services_dict)
 
                 create_listen_stanza.assert_called_with(
-                    'bar', 'some-host', 'some-port', 'some-options', (1, 2))
+                    'bar', 'some-host', 'some-port', 'some-options', (1, 2), [])
                 mock_open.assert_called_with(
                     '/var/run/haproxy/bar.service', 'w')
                 mock_file.write.assert_called_with('some content')
+
+    @patch('hooks.create_listen_stanza')
+    def test_writes_errorfiles(self, create_listen_stanza):
+        create_listen_stanza.return_value = 'some content'
+        services_dict = {
+            'foo': {
+                'service_name': 'bar',
+                'service_host': 'some-host',
+                'service_port': 'some-port',
+                'service_options': 'some-options',
+                'servers': (1, 2),
+                'errorfiles': [{
+                    'http_status': 403,
+                    'path': '/foo/bar/baz.html',
+                    'content': base64.b64encode('<html></html>')
+                }]
+            },
+        }
+
+        with patch.object(os.path, "exists") as exists:
+            exists.return_value = True
+            with patch_open() as (mock_open, mock_file):
+                hooks.write_service_config(services_dict)
+
+                mock_open.assert_any_call(
+                    '/var/lib/haproxy/service_bar/403.html', 'w')
+                mock_file.write.assert_any_call('<html></html>')
+                self.assertTrue(create_listen_stanza.called)
+

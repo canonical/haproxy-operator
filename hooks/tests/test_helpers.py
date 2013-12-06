@@ -1,3 +1,4 @@
+import base64
 import os
 
 from contextlib import contextmanager
@@ -351,6 +352,39 @@ class HelpersTest(TestCase):
         ))
 
         self.assertEqual(expected, result)
+
+    @patch.dict(os.environ, {"JUJU_UNIT_NAME": "haproxy/2"})
+    def test_creates_a_listen_stanza_with_errorfiles(self):
+        service_name = 'some-name'
+        service_ip = '10.11.12.13'
+        service_port = 1234
+        service_options = ('foo', 'bar')
+        server_entries = [
+            ('name-1', 'ip-1', 'port-1', ('foo1', 'bar1')),
+            ('name-2', 'ip-2', 'port-2', ('foo2', 'bar2')),
+        ]
+        errorfiles = [{'http_status': 403, 'path': '/path/403.html',
+                       'content': base64.b64encode('<html></html>')}]
+
+        result = hooks.create_listen_stanza(service_name, service_ip,
+                                            service_port, service_options,
+                                            server_entries, errorfiles)
+
+        expected = '\n'.join((
+            'frontend haproxy-2-1234',
+            '    bind 10.11.12.13:1234',
+            '    default_backend some-name',
+            '',
+            'backend some-name',
+            '    foo',
+            '    bar',
+            '    errorfile 403 /var/lib/haproxy/service_some-name/403.html',
+            '    server name-1 ip-1:port-1 foo1 bar1',
+            '    server name-2 ip-2:port-2 foo2 bar2',
+        ))
+
+        self.assertEqual(expected, result)
+
 
     def test_doesnt_create_listen_stanza_if_args_not_provided(self):
         self.assertIsNone(hooks.create_listen_stanza())
