@@ -727,7 +727,8 @@ def config_changed():
     else:
         haproxy_monitoring = None
     remove_services()
-    create_services()
+    if not create_services():
+        sys.exit()
     haproxy_services = load_services()
     update_sysctl(config_data)
     construct_haproxy_config(haproxy_globals,
