@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import base64
 import glob
 import os
 import re
@@ -8,7 +9,6 @@ import shutil
 import subprocess
 import sys
 import yaml
-import base64
 
 from itertools import izip, tee
 
@@ -292,9 +292,9 @@ def create_listen_stanza(service_name=None, service_ip=None,
                           for service_option in be_options)
     if service_errorfiles is not None:
         for errorfile in service_errorfiles:
-            path = "%s/service_%s/%s.html" % (
-                default_haproxy_lib_dir, service_name,
-                errorfile["http_status"])
+            path = os.path.join(default_haproxy_lib_dir,
+                                "service_%s" % service_name,
+                                "%s.html" % errorfile["http_status"])
             service_config.append(
                 "    errorfile %s %s" % (errorfile["http_status"], path))
     if isinstance(server_entries, (list, tuple)):
@@ -615,7 +615,7 @@ def write_service_config(services_dict):
             path = "%s/service_%s" % (default_haproxy_lib_dir, service_name)
             if not os.path.exists(path):
                 os.makedirs(path)
-            full_path = "%s/%s.html" % (path, errorfile["http_status"])
+            full_path = os.path.join(path, "%s.html" % errorfile["http_status"])
             with open(full_path, 'w') as f:
                 f.write(base64.b64decode(errorfile["content"]))
 
@@ -633,7 +633,7 @@ def write_service_config(services_dict):
 
 
 #------------------------------------------------------------------------------
-# load_services: Convenience function that load the service snippet
+# load_services: Convenience function that loads the service snippet
 #                configuration from the filesystem.
 #------------------------------------------------------------------------------
 def load_services(service_name=None):

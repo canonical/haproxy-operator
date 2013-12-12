@@ -226,5 +226,5 @@ class PeerRelationTest(TestCase):
                 mock_open.assert_any_call(
                     '/var/lib/haproxy/service_bar/403.html', 'w')
                 mock_file.write.assert_any_call('<html></html>')
-                self.assertTrue(create_listen_stanza.called)
+        self.assertTrue(create_listen_stanza.called)
 

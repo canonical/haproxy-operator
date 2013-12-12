@@ -385,7 +385,6 @@ class HelpersTest(TestCase):
 
         self.assertEqual(expected, result)
 
-
     def test_doesnt_create_listen_stanza_if_args_not_provided(self):
         self.assertIsNone(hooks.create_listen_stanza())
 
