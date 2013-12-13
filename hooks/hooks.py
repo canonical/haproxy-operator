@@ -612,7 +612,8 @@ def write_service_config(services_dict):
         errorfiles = service_config.get('errorfiles', [])
         for errorfile in errorfiles:
             service_name = services_dict[service_key]['service_name']
-            path = "%s/service_%s" % (default_haproxy_lib_dir, service_name)
+            path = os.path.join(default_haproxy_lib_dir,
+                                "service_%s" % service_name)
             if not os.path.exists(path):
                 os.makedirs(path)
             full_path = os.path.join(path, "%s.html" % errorfile["http_status"])
