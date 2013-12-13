@@ -252,7 +252,8 @@ def update_sysctl(config_data):
 #                       errorfiles: List of dicts
 #                                   http_status: status to handle
 #                                   path: original path on disk
-#                                   content: base 64 content to serve as doc
+#                                   content: base 64 content for HAProxy to
+#                                            write to socket
 #------------------------------------------------------------------------------
 def create_listen_stanza(service_name=None, service_ip=None,
                          service_port=None, service_options=None,
@@ -294,7 +295,7 @@ def create_listen_stanza(service_name=None, service_ip=None,
         for errorfile in service_errorfiles:
             path = os.path.join(default_haproxy_lib_dir,
                                 "service_%s" % service_name,
-                                "%s.html" % errorfile["http_status"])
+                                "%s.http" % errorfile["http_status"])
             service_config.append(
                 "    errorfile %s %s" % (errorfile["http_status"], path))
     if isinstance(server_entries, (list, tuple)):
@@ -616,7 +617,7 @@ def write_service_config(services_dict):
                                 "service_%s" % service_name)
             if not os.path.exists(path):
                 os.makedirs(path)
-            full_path = os.path.join(path, "%s.html" % errorfile["http_status"])
+            full_path = os.path.join(path, "%s.http" % errorfile["http_status"])
             with open(full_path, 'w') as f:
                 f.write(base64.b64decode(errorfile["content"]))
 

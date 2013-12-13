@@ -203,6 +203,11 @@ class PeerRelationTest(TestCase):
     @patch('hooks.create_listen_stanza')
     def test_writes_errorfiles(self, create_listen_stanza):
         create_listen_stanza.return_value = 'some content'
+
+        content = ("HTTP/1.0 403 Forbidden\r\n"
+                   "Content-Type: text/html\r\n"
+                   "\r\n"
+                   "<html></html>")
         services_dict = {
             'foo': {
                 'service_name': 'bar',
@@ -212,8 +217,8 @@ class PeerRelationTest(TestCase):
                 'servers': (1, 2),
                 'errorfiles': [{
                     'http_status': 403,
-                    'path': '/foo/bar/baz.html',
-                    'content': base64.b64encode('<html></html>')
+                    'path': '/foo/bar/baz.http',
+                    'content': base64.b64encode(content)
                 }]
             },
         }
@@ -224,7 +229,7 @@ class PeerRelationTest(TestCase):
                 hooks.write_service_config(services_dict)
 
                 mock_open.assert_any_call(
-                    '/var/lib/haproxy/service_bar/403.html', 'w')
-                mock_file.write.assert_any_call('<html></html>')
+                    '/var/lib/haproxy/service_bar/403.http', 'w')
+                mock_file.write.assert_any_call(content)
         self.assertTrue(create_listen_stanza.called)
 

@@ -363,8 +363,12 @@ class HelpersTest(TestCase):
             ('name-1', 'ip-1', 'port-1', ('foo1', 'bar1')),
             ('name-2', 'ip-2', 'port-2', ('foo2', 'bar2')),
         ]
-        errorfiles = [{'http_status': 403, 'path': '/path/403.html',
-                       'content': base64.b64encode('<html></html>')}]
+        content = ("HTTP/1.0 403 Forbidden\r\n"
+                   "Content-Type: text/html\r\n"
+                   "\r\n"
+                   "<html></html>")
+        errorfiles = [{'http_status': 403, 'path': '/path/403.http',
+                       'content': base64.b64encode(content)}]
 
         result = hooks.create_listen_stanza(service_name, service_ip,
                                             service_port, service_options,
@@ -378,7 +382,7 @@ class HelpersTest(TestCase):
             'backend some-name',
             '    foo',
             '    bar',
-            '    errorfile 403 /var/lib/haproxy/service_some-name/403.html',
+            '    errorfile 403 /var/lib/haproxy/service_some-name/403.http',
             '    server name-1 ip-1:port-1 foo1 bar1',
             '    server name-2 ip-2:port-2 foo2 bar2',
         ))
