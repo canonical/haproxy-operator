@@ -251,7 +251,6 @@ def update_sysctl(config_data):
 #                                         server_options
 #                       errorfiles: List of dicts
 #                                   http_status: status to handle
-#                                   path: original path on disk
 #                                   content: base 64 content for HAProxy to
 #                                            write to socket
 #------------------------------------------------------------------------------

@@ -367,7 +367,7 @@ class HelpersTest(TestCase):
                    "Content-Type: text/html\r\n"
                    "\r\n"
                    "<html></html>")
-        errorfiles = [{'http_status': 403, 'path': '/path/403.http',
+        errorfiles = [{'http_status': 403,
                        'content': base64.b64encode(content)}]
 
         result = hooks.create_listen_stanza(service_name, service_ip,

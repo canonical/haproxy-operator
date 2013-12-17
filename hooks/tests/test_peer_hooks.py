@@ -217,7 +217,6 @@ class PeerRelationTest(TestCase):
                 'servers': (1, 2),
                 'errorfiles': [{
                     'http_status': 403,
-                    'path': '/foo/bar/baz.http',
                     'content': base64.b64encode(content)
                 }]
             },
