@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import base64
 import glob
 import os
 import re
@@ -34,6 +35,7 @@ from charmhelpers.contrib.charmsupport import nrpe
 default_haproxy_config_dir = "/etc/haproxy"
 default_haproxy_config = "%s/haproxy.cfg" % default_haproxy_config_dir
 default_haproxy_service_config_dir = "/var/run/haproxy"
+default_haproxy_lib_dir = "/var/lib/haproxy"
 service_affecting_packages = ['haproxy']
 
 dupe_options = [
@@ -247,10 +249,14 @@ def update_sysctl(config_data):
 #                                         server_ip
 #                                         server_port
 #                                         server_options
+#                       errorfiles: List of dicts
+#                                   http_status: status to handle
+#                                   content: base 64 content for HAProxy to
+#                                            write to socket
 #------------------------------------------------------------------------------
 def create_listen_stanza(service_name=None, service_ip=None,
                          service_port=None, service_options=None,
-                         server_entries=None):
+                         server_entries=None, service_errorfiles=None):
     if service_name is None or service_ip is None or service_port is None:
         return None
     fe_options = []
@@ -284,6 +290,13 @@ def create_listen_stanza(service_name=None, service_ip=None,
     service_config.append("backend %s" % (service_name,))
     service_config.extend("    %s" % service_option.strip()
                           for service_option in be_options)
+    if service_errorfiles is not None:
+        for errorfile in service_errorfiles:
+            path = os.path.join(default_haproxy_lib_dir,
+                                "service_%s" % service_name,
+                                "%s.http" % errorfile["http_status"])
+            service_config.append(
+                "    errorfile %s %s" % (errorfile["http_status"], path))
     if isinstance(server_entries, (list, tuple)):
         for (server_name, server_ip, server_port,
              server_options) in server_entries:
@@ -596,6 +609,17 @@ def write_service_config(services_dict):
         log("Service: %s" % service_key)
         server_entries = service_config.get('servers')
 
+        errorfiles = service_config.get('errorfiles', [])
+        for errorfile in errorfiles:
+            service_name = services_dict[service_key]['service_name']
+            path = os.path.join(default_haproxy_lib_dir,
+                                "service_%s" % service_name)
+            if not os.path.exists(path):
+                os.makedirs(path)
+            full_path = os.path.join(path, "%s.http" % errorfile["http_status"])
+            with open(full_path, 'w') as f:
+                f.write(base64.b64decode(errorfile["content"]))
+
         service_name = service_config["service_name"]
         if not os.path.exists(default_haproxy_service_config_dir):
             os.mkdir(default_haproxy_service_config_dir, 0600)
@@ -606,11 +630,11 @@ def write_service_config(services_dict):
                 service_config['service_host'],
                 service_config['service_port'],
                 service_config['service_options'],
-                server_entries))
+                server_entries, errorfiles))
 
 
 #------------------------------------------------------------------------------
-# load_services: Convenience function that load the service snippet
+# load_services: Convenience function that loads the service snippet
 #                configuration from the filesystem.
 #------------------------------------------------------------------------------
 def load_services(service_name=None):
