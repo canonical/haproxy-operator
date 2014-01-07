@@ -1,41 +1,16 @@
-Juju charm for HAProxy
-======================
+# Overview
 
-HAProxy is a free, very fast and reliable solution offering high availability,
-load balancing, and proxying for TCP and HTTP-based applications. It is
-particularly suited for web sites crawling under very high loads while needing
-persistence or Layer7 processing. Supporting tens of thousands of connections
-is clearly realistic with todays hardware. Its mode of operation makes its
-integration into existing architectures very easy and riskless, while still
-offering the possibility not to expose fragile web servers to the Net.
+This charm deploys a reverse proxy in front of other servies. You can use this to load balance existing deployments.
 
-Development
------------
-The following steps are needed for testing and development of the charm,
-but **not** for deployment:
+# Usage
 
-    sudo apt-get install python-software-properties
-    sudo add-apt-repository ppa:cjohnston/flake8
-    sudo apt-get update
-    sudo apt-get install python-mock python-flake8 python-nose python-nosexcover
-
-To run the tests:
-
-    make build
-
-... will run the unit tests, run flake8 over the source to warn about
-formatting issues and output a code coverage summary of the 'hooks.py' module.
-
-How to deploy the charm
------------------------
     juju deploy haproxy
     juju deploy my-web-app
     juju add-relation my-web-app:website haproxy:reverseproxy
     juju add-unit my-web-app
     ...
 
-Reverseproxy Relation
----------------------
+## Reverse Proxy Relation
 
 The reverse proxy relation is used to distribute connections from one frontend
 port to many backend services (typically different Juju _units_).  You can use
@@ -47,7 +22,7 @@ When your charm hooks into reverseproxy you have two general approaches
 which can be used to notify haproxy about what services you are running.
 1) Single-service proxying or 2) Multi-service or relation-driven proxying.
 
-** 1) Single-Service Proxying **
+1. Single-Service Proxying
 
 In this case, your website relation will join underneath a single `listen`
 stanza in haproxy.  This stanza will have one `service` entry for each unit
@@ -76,7 +51,7 @@ name.
     set each item as an option under the listen stanza.
 
 
-** 2) Relation-Driven Proxying **
+2. Relation-Driven Proxying 
 
 In this relation style, your charm should specify these relation settings
 directly as relation variables when joining reverseproxy.  Your charm's
@@ -101,8 +76,8 @@ joining with the same `service_name` under one listen stanza.
 `service-options` and `server_options` will be overwritten, so ensure they
 are set uniformly on all services with the same name.
 
-Website Relation
-----------------
+## Website Relation
+
 
 The website relation is the other side of haproxy.  It can communicate with
 charms written like apache2 that can act as a front-end for haproxy to take of
@@ -114,13 +89,36 @@ These settings can then be used when crafting your vhost template to make sure
 traffic goes to the correct haproxy listener which will in turn forward the
 traffic to the correct backend server/port
 
-Configuration
--------------
+## Development
+
+The following steps are needed for testing and development of the charm,
+but **not** for deployment:
+
+    sudo apt-get install python-software-properties
+    sudo add-apt-repository ppa:cjohnston/flake8
+    sudo apt-get update
+    sudo apt-get install python-mock python-flake8 python-nose python-nosexcover
+
+To run the tests:
+
+    make build
+
+... will run the unit tests, run flake8 over the source to warn about
+formatting issues and output a code coverage summary of the 'hooks.py' module.
+
+
+## Known Limitations and Issues
+
+- Expand Single-Service section as I have not tested that mode fully.
+- Trigger website-relation-changed when the reverse-proxy relation changes
+
+
+# Configuration
+
 Many of the haproxy settings can be altered via the standard juju configuration
 settings.  Please see the config.yaml file as each is fairly clearly documented.
 
-TODO:
------
+## HAProxy Project Information
 
-  * Expand Single-Service section as I have not tested that mode fully.
-  * Trigger website-relation-changed when the reverse-proxy relation changes
+- [HAProxy Homepage](http://haproxy.1wt.eu/)
+- [HAProxy mailing list](http://haproxy.1wt.eu/#tact)
