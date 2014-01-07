@@ -28,7 +28,7 @@ options:
   global_spread_checks:
     default: 0
     type: int
-    descriptions: |
+    description: |
         Sometimes it is desirable to avoid sending health checks to servers at
         exact intervals, for instance when many logical servers are located on
         the same physical server. With the help of this parameter, it becomes 
