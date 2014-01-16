@@ -195,7 +195,8 @@ class PeerRelationTest(TestCase):
                 hooks.write_service_config(services_dict)
 
                 create_listen_stanza.assert_called_with(
-                    'bar', 'some-host', 'some-port', 'some-options', (1, 2), [])
+                    'bar', 'some-host', 'some-port', 'some-options',
+                    (1, 2), [])
                 mock_open.assert_called_with(
                     '/var/run/haproxy/bar.service', 'w')
                 mock_file.write.assert_called_with('some content')
@@ -231,4 +232,3 @@ class PeerRelationTest(TestCase):
                     '/var/lib/haproxy/service_bar/403.http', 'w')
                 mock_file.write.assert_any_call(content)
         self.assertTrue(create_listen_stanza.called)
-
