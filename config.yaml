@@ -34,6 +34,11 @@ options:
         the same physical server. With the help of this parameter, it becomes 
         possible to add some randomness in the check interval between 0 and 
         +/- 50%. A value between 2 and 5 seems to show good results.
+  global_stats_socket:
+    default: False
+    type: boolean
+    description: |
+        Whether to enable the stats UNIX socket.
   default_log:
     default: "global"
     type: string
