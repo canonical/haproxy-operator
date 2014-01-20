@@ -349,6 +349,10 @@ class ReverseProxyRelationTest(TestCase):
         self.write_service_config.assert_called_with(expected)
 
     def test_with_multiple_units_in_relation(self):
+        """
+        Have multiple units specifying "services" in the relation.
+        Make sure data is created correctly with create_services()
+        """
         self.get_config_services.return_value = {
             None: {
                 "service_name": "service",
