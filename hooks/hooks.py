@@ -475,6 +475,8 @@ def create_services():
     for relation_info in relation_data:
         unit = relation_info['__unit__']
 
+        # Skip entries that specify their own services clauses, this was
+        # handled earlier.
         if "services" in relation_info:
             log("Unit '%s' overrides 'services', "
                 "skipping further processing." % unit)
