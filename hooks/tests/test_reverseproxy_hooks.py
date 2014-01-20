@@ -348,7 +348,7 @@ class ReverseProxyRelationTest(TestCase):
         self.assertEqual(expected, hooks.create_services())
         self.write_service_config.assert_called_with(expected)
 
-    def test_with_service_options_in_relation(self):
+    def test_with_multiple_units_in_relation(self):
         self.get_config_services.return_value = {
             None: {
                 "service_name": "service",
@@ -364,6 +364,15 @@ class ReverseProxyRelationTest(TestCase):
                               4242, ["maxconn 4"])]
                  }])
              },
+            {"port": 4242,
+             "private-address": "1.2.3.5",
+             "__unit__": "foo/1",
+             "services": yaml.safe_dump([{
+                 "service_name": "service",
+                 "servers": [('foo-0', '1.2.3.5',
+                              4242, ["maxconn 4"])]
+                 }])
+             },
         ]
 
         expected = {
@@ -371,9 +380,22 @@ class ReverseProxyRelationTest(TestCase):
                 'service_name': 'service',
                 'service_host': '0.0.0.0',
                 'service_port': 10002,
-                'servers': [('foo-0', '1.2.3.4',
-                             4242, ["maxconn 4"])],
+                'servers': [
+                    ['foo-0', '1.2.3.4', 4242, ["maxconn 4"]],
+                    ['foo-0', '1.2.3.5', 4242, ["maxconn 4"]]
+                    ]
                 },
             }
         self.assertEqual(expected, hooks.create_services())
         self.write_service_config.assert_called_with(expected)
+
+    def test_merge_service(self):
+        """ Make sure merge_services maintains "server" entries """
+        s1 = {'service_name': 'f', 'servers': [['f', '4', 4, ['maxconn 4']]]}
+        s2 = {'service_name': 'f', 'servers': [['f', '5', 5, ['maxconn 4']]]}
+
+        expected = {'service_name': 'f', 'servers': [
+            ['f', '4', 4, ['maxconn 4']],
+            ['f', '5', 5, ['maxconn 4']]]}
+
+        self.assertEqual(expected, hooks.merge_service(s1, s2))

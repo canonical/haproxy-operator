@@ -355,6 +355,11 @@ def get_config_services():
 
 
 def parse_services_yaml(services, yaml_data):
+    """
+    Parse given yaml services data.  Add it into the "services" dict.  Ensure
+    that you union multiple services "server" entries, as these are the haproxy
+    backends that are contacted.
+    """
     yaml_services = yaml.safe_load(yaml_data)
     if yaml_services is None:
         return services
@@ -387,24 +392,27 @@ def parse_services_yaml(services, yaml_data):
 
 
 def merge_service(old_service, new_service):
-    # Stomp over all but servers
-    for key in new_service:
-        if key not in ("services",):
-            old_service[key] = new_service[key]
+    """
+    Helper function to merge two serivce entries correctly.
+    Everything will get trampled, except "servers" which will be
+    unioned acrosss both entries.
+    """
+    service = {}
+    # First come, first serve, make sure all options other than
+    # "servers" are represented in the combined dict
+    for key in old_service.keys():
+        service[key] = old_service[key]
+    for key in new_service.keys():
+        if key not in service:
+            service[key] = new_service[key]
 
-    # Stomp over duplicate server definitions.
-    if old_service.get("servers") and new_service.get("servers"):
-        servers = {}
-        for service in (old_service, new_service):
-            for server_name, host, port, options in service.get("servers", ()):
-                servers[(host, port)] = (server_name, options)
+    # Union all server entries, if present in either
+    if "servers" in old_service or "servers" in new_service:
+        old_servers = old_service.get("servers", [])
+        new_servers = new_service.get("servers", [])
+        service["servers"] = old_servers + new_servers
 
-        old_service["servers"] = [
-            (server_name, host, port, options)
-            for (host, port), (server_name, options) in sorted(
-                servers.iteritems())]
-
-    return old_service
+    return service
 
 
 def ensure_service_host_port(services):
@@ -454,6 +462,7 @@ def create_services():
     # Augment services_dict with service definitions from relation data.
     relation_data = relations_of_type("reverseproxy")
 
+    # Handle relations which specify their own services clauses
     for relation_info in relation_data:
         if "services" in relation_info:
             services_dict = parse_services_yaml(services_dict,
