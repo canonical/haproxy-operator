@@ -626,7 +626,8 @@ def write_service_config(services_dict):
                                 "service_%s" % service_name)
             if not os.path.exists(path):
                 os.makedirs(path)
-            full_path = os.path.join(path, "%s.http" % errorfile["http_status"])
+            full_path = os.path.join(
+                path, "%s.http" % errorfile["http_status"])
             with open(full_path, 'w') as f:
                 f.write(base64.b64decode(errorfile["content"]))
 
