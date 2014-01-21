@@ -400,8 +400,7 @@ def merge_service(old_service, new_service):
     service = {}
     # First come, first serve, make sure all options other than
     # "servers" are represented in the combined dict
-    for key in old_service.keys():
-        service[key] = old_service[key]
+    service = old_service.copy()
     for key in new_service.keys():
         if key not in service:
             service[key] = new_service[key]
