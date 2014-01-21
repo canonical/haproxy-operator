@@ -394,7 +394,7 @@ class ReverseProxyRelationTest(TestCase):
         self.write_service_config.assert_called_with(expected)
 
     def test_merge_service(self):
-        """ Make sure merge_services maintains "server" entries """
+        """ Make sure merge_services maintains "server" entries. """
         s1 = {'service_name': 'f', 'servers': [['f', '4', 4, ['maxconn 4']]]}
         s2 = {'service_name': 'f', 'servers': [['f', '5', 5, ['maxconn 4']]]}
 
@@ -404,8 +404,18 @@ class ReverseProxyRelationTest(TestCase):
 
         self.assertEqual(expected, hooks.merge_service(s1, s2))
 
+    def test_merge_service_removes_duplicates(self):
+        """
+        Make sure merge services strips strict duplicates from the
+        'servers' entries.
+        """
+        s1 = {'servers': [['f', '4', 4, ['maxconn 4']]]}
+        s2 = {'servers': [['f', '4', 4, ['maxconn 4']]]}
+        expected = {'servers': [['f', '4', 4, ['maxconn 4']]]}
+        self.assertEqual(expected, hooks.merge_service(s1, s2))
+
     def test_merge_service_merge_order(self):
-        """ Make sure merge_services prefers the left side """
+        """ Make sure merge_services prefers the left side. """
         s1 = {'service_name': 'left', 'foo': 'bar'}
         s2 = {'service_name': 'right', 'bar': 'baz'}
 

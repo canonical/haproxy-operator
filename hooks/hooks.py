@@ -10,7 +10,7 @@ import subprocess
 import sys
 import yaml
 
-from itertools import izip, tee
+from itertools import izip, tee, groupby
 
 from charmhelpers.core.host import pwgen
 from charmhelpers.core.hookenv import (
@@ -395,15 +395,17 @@ def merge_service(old_service, new_service):
     """
     Helper function to merge two serivce entries correctly.
     Everything will get trampled (preferring old_service), except "servers"
-    which will be unioned acrosss both entries.
+    which will be unioned acrosss both entries, stripping strict dups.
     """
     service = {}
     service = new_service.copy()
     service.update(old_service)
-    if "servers" in old_service or "servers" in new_service:
-        old_servers = old_service.get("servers", [])
-        new_servers = new_service.get("servers", [])
-        service["servers"] = old_servers + new_servers
+    if "servers" in service:
+        servers = service["servers"]
+        if "servers" in new_service:
+            servers.extend(new_service["servers"])
+            servers.sort()
+            service["servers"] = list(x for x, _ in groupby(servers))
     return service
 
 
