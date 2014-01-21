@@ -403,3 +403,11 @@ class ReverseProxyRelationTest(TestCase):
             ['f', '5', 5, ['maxconn 4']]]}
 
         self.assertEqual(expected, hooks.merge_service(s1, s2))
+
+    def test_merge_service_merge_order(self):
+        """ Make sure merge_services prefers the left side """
+        s1 = {'service_name': 'left', 'foo': 'bar'}
+        s2 = {'service_name': 'right', 'bar': 'baz'}
+
+        expected = {'service_name': 'left', 'foo': 'bar', 'bar': 'baz'}
+        self.assertEqual(expected, hooks.merge_service(s1, s2))

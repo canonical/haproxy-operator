@@ -394,23 +394,16 @@ def parse_services_yaml(services, yaml_data):
 def merge_service(old_service, new_service):
     """
     Helper function to merge two serivce entries correctly.
-    Everything will get trampled, except "servers" which will be
-    unioned acrosss both entries.
+    Everything will get trampled (preferring old_service), except "servers"
+    which will be unioned acrosss both entries.
     """
     service = {}
-    # First come, first serve, make sure all options other than
-    # "servers" are represented in the combined dict
-    service = old_service.copy()
-    for key in new_service.keys():
-        if key not in service:
-            service[key] = new_service[key]
-
-    # Union all server entries, if present in either
+    service = new_service.copy()
+    service.update(old_service)
     if "servers" in old_service or "servers" in new_service:
         old_servers = old_service.get("servers", [])
         new_servers = new_service.get("servers", [])
         service["servers"] = old_servers + new_servers
-
     return service
 
 
