@@ -10,7 +10,7 @@ import subprocess
 import sys
 import yaml
 
-from itertools import izip, tee
+from itertools import izip, tee, groupby
 
 from charmhelpers.core.host import pwgen
 from charmhelpers.core.hookenv import (
@@ -355,6 +355,11 @@ def get_config_services():
 
 
 def parse_services_yaml(services, yaml_data):
+    """
+    Parse given yaml services data.  Add it into the "services" dict.  Ensure
+    that you union multiple services "server" entries, as these are the haproxy
+    backends that are contacted.
+    """
     yaml_services = yaml.safe_load(yaml_data)
     if yaml_services is None:
         return services
@@ -387,24 +392,21 @@ def parse_services_yaml(services, yaml_data):
 
 
 def merge_service(old_service, new_service):
-    # Stomp over all but servers
-    for key in new_service:
-        if key not in ("services",):
-            old_service[key] = new_service[key]
-
-    # Stomp over duplicate server definitions.
-    if old_service.get("servers") and new_service.get("servers"):
-        servers = {}
-        for service in (old_service, new_service):
-            for server_name, host, port, options in service.get("servers", ()):
-                servers[(host, port)] = (server_name, options)
-
-        old_service["servers"] = [
-            (server_name, host, port, options)
-            for (host, port), (server_name, options) in sorted(
-                servers.iteritems())]
-
-    return old_service
+    """
+    Helper function to merge two serivce entries correctly.
+    Everything will get trampled (preferring old_service), except "servers"
+    which will be unioned acrosss both entries, stripping strict dups.
+    """
+    service = {}
+    service = new_service.copy()
+    service.update(old_service)
+    if "servers" in service:
+        servers = service["servers"]
+        if "servers" in new_service:
+            servers.extend(new_service["servers"])
+            servers.sort()
+            service["servers"] = list(x for x, _ in groupby(servers))
+    return service
 
 
 def ensure_service_host_port(services):
@@ -454,6 +456,7 @@ def create_services():
     # Augment services_dict with service definitions from relation data.
     relation_data = relations_of_type("reverseproxy")
 
+    # Handle relations which specify their own services clauses
     for relation_info in relation_data:
         if "services" in relation_info:
             services_dict = parse_services_yaml(services_dict,
@@ -466,6 +469,8 @@ def create_services():
     for relation_info in relation_data:
         unit = relation_info['__unit__']
 
+        # Skip entries that specify their own services clauses, this was
+        # handled earlier.
         if "services" in relation_info:
             log("Unit '%s' overrides 'services', "
                 "skipping further processing." % unit)
@@ -616,7 +621,8 @@ def write_service_config(services_dict):
                                 "service_%s" % service_name)
             if not os.path.exists(path):
                 os.makedirs(path)
-            full_path = os.path.join(path, "%s.http" % errorfile["http_status"])
+            full_path = os.path.join(
+                path, "%s.http" % errorfile["http_status"])
             with open(full_path, 'w') as f:
                 f.write(base64.b64decode(errorfile["content"]))
 
