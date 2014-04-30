@@ -53,6 +53,11 @@ page = requests.get('http://%s/index.html' % haproxy_address)
 page.raise_for_status()
 print('Successfully got the Apache2 web page through haproxy IP address.')
 
+# Test that sticky session cookie is present
+if page.cookies.get('SRVNAME') != 'S0':
+    msg = 'Missing or invalid sticky session cookie value: %s' % page.cookies.get('SRVNAME')
+    amulet.raise_status(amulet.FAIL, msg=msg)
+
 # Test that the apache2 relation data is saved on the haproxy server.
 
 # Get the sentry for apache and get the private IP address.

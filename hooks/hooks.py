@@ -298,8 +298,8 @@ def create_listen_stanza(service_name=None, service_ip=None,
             service_config.append(
                 "    errorfile %s %s" % (errorfile["http_status"], path))
     if isinstance(server_entries, (list, tuple)):
-        for (server_name, server_ip, server_port,
-             server_options) in server_entries:
+        for i, (server_name, server_ip, server_port,
+                server_options) in enumerate(server_entries):
             server_line = "    server %s %s:%s" % \
                 (server_name, server_ip, server_port)
             if server_options is not None:
@@ -307,6 +307,7 @@ def create_listen_stanza(service_name=None, service_ip=None,
                     server_line += " " + server_options
                 else:
                     server_line += " " + " ".join(server_options)
+            server_line = server_line.format(i=i)
             service_config.append(server_line)
     return '\n'.join(service_config)
 
