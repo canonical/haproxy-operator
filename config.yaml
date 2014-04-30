@@ -101,8 +101,8 @@ options:
               - service_name: haproxy_service
                 service_host: "0.0.0.0"
                 service_port: 80
-                service_options: [balance leastconn]
-                server_options: maxconn 100
+                service_options: [balance leastconn, cookie SRVNAME insert]
+                server_options: maxconn 100 cookie S{i} check
     type: string
     description: |
         Services definition(s). Although the variable type is a string, this is
@@ -112,6 +112,15 @@ options:
         before the first variable, service_name, as above. Service options is a
         comma separated list, server options will be appended as a string to
         the individual server lines for a given listen stanza.
+
+        If your web application serves dynamic content based on users' login
+        sessions, a visitor will experience unexpected behaviour if each request
+        is proxied to a different backend web server. Session stickiness ensures
+        that a visitor 'sticks' to the backend web server which served their
+        first request. This is made possible by tagging each backend server
+        with a cookie. Session are sticky by default. To turn off sticky sessions,
+        remove the 'cookie SRVNAME insert' and 'cookie S{i}' stanzas from
+        `service_options` and `server_options`.
   sysctl:
     default: ""
     type: string
