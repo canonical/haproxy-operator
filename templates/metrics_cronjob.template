@@ -1,0 +1,3 @@
+# crontab for pushing haproxy metrics to carbon
+*/{{ metrics_sample_interval }} * * * * root bash {{ script }} {{ metrics_prefix }} {{ metrics_sample_interval }}min {{ haproxy_hostport }} {{ haproxy_httpauth }} | nc {{ statsd_host }} {{ statsd_port }}
+

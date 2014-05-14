@@ -29,6 +29,7 @@ class ConfigChangedTest(TestCase):
             "update_sysctl")
         self.notify_website = self.patch_hook("notify_website")
         self.notify_peer = self.patch_hook("notify_peer")
+        self.write_metrics_cronjob = self.patch_hook("write_metrics_cronjob")
         self.log = self.patch_hook("log")
         sys_exit = patch.object(sys, "exit")
         self.sys_exit = sys_exit.start()

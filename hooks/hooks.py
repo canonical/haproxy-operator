@@ -16,6 +16,7 @@ from charmhelpers.core.host import pwgen
 from charmhelpers.core.hookenv import (
     log,
     config as config_get,
+    local_unit,
     relation_set,
     relation_ids as get_relation_ids,
     relations_of_type,
@@ -36,6 +37,8 @@ default_haproxy_config_dir = "/etc/haproxy"
 default_haproxy_config = "%s/haproxy.cfg" % default_haproxy_config_dir
 default_haproxy_service_config_dir = "/var/run/haproxy"
 default_haproxy_lib_dir = "/var/lib/haproxy"
+metrics_cronjob_path = "/etc/cron.d/haproxy_metrics"
+metrics_script_path = "/usr/local/bin/haproxy_to_carbon.sh"
 service_affecting_packages = ['haproxy']
 
 dupe_options = [
@@ -93,6 +96,15 @@ def ensure_package_status(packages, status):
         dpkg = subprocess.Popen(['dpkg', '--set-selections'],
                                 stdin=subprocess.PIPE)
         dpkg.communicate(input=selections)
+
+
+def render_template(template_name, vars):
+    # deferred import so install hook can install jinja2
+    from jinja2 import Environment, FileSystemLoader
+    templates_dir = os.path.join(os.environ['CHARM_DIR'], 'templates')
+    template_env = Environment(loader=FileSystemLoader(templates_dir))
+    template = template_env.get_template(template_name)
+    return template.render(vars)
 
 
 #------------------------------------------------------------------------------
@@ -766,6 +778,9 @@ def config_changed():
                              haproxy_monitoring,
                              haproxy_services)
 
+    write_metrics_cronjob(metrics_script_path,
+                          metrics_cronjob_path)
+
     if service_haproxy("check"):
         update_service_ports(old_service_ports, get_service_ports())
         service_haproxy("reload")
@@ -892,6 +907,60 @@ def update_nrpe_config():
     nrpe_compat.add_check('haproxy_queue', 'Check HAProxy queue depth',
                           'check_haproxy_queue_depth.sh')
     nrpe_compat.write()
+
+
+def delete_metrics_cronjob(cron_path):
+    try:
+        os.unlink(cron_path)
+    except OSError:
+        pass
+
+
+def write_metrics_cronjob(script_path, cron_path):
+    config_data = config_get()
+
+    if config_data['enable_monitoring'] is False:
+        log("enable_monitoring must be set to true for metrics")
+        delete_metrics_cronjob(cron_path)
+        return
+
+    # need the following two configs to be valid
+    metrics_target = config_data['metrics_target'].strip()
+    metrics_sample_interval = config_data['metrics_sample_interval']
+    if (not metrics_target
+            or ':' not in metrics_target
+            or not metrics_sample_interval):
+        log("Required config not found or invalid "
+            "(metrics_target, metrics_sample_interval), "
+            "disabling metrics")
+        delete_metrics_cronjob(cron_path)
+        return
+
+    charm_dir = os.environ['CHARM_DIR']
+    statsd_host, statsd_port = metrics_target.split(':', 1)
+    metrics_prefix = config_data['metrics_prefix'].strip()
+    metrics_prefix = metrics_prefix.replace("$UNIT", local_unit())
+    haproxy_hostport = ":".join(['localhost',
+                                config_data['monitoring_port'].strip()])
+    haproxy_httpauth = ":".join([config_data['monitoring_username'].strip(),
+                                get_monitoring_password()])
+
+    # ensure script installed
+    shutil.copy2('%s/files/haproxy_to_carbon.sh' % charm_dir,
+                 metrics_script_path)
+
+    # write the crontab
+    with open(cron_path, 'w') as cronjob:
+        cronjob.write(render_template("metrics_cronjob.template", {
+            'interval': config_data['metrics_sample_interval'],
+            'script': script_path,
+            'metrics_prefix': metrics_prefix,
+            'metrics_sample_interval': metrics_sample_interval,
+            'haproxy_hostport': haproxy_hostport,
+            'haproxy_httpauth': haproxy_httpauth,
+            'statsd_host': statsd_host,
+            'statsd_port': statsd_port,
+        }))
 
 
 ###############################################################################
