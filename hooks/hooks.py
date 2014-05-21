@@ -748,7 +748,7 @@ def install_hook():
     if not os.path.exists(default_haproxy_service_config_dir):
         os.mkdir(default_haproxy_service_config_dir, 0600)
 
-    apt_install('haproxy', fatal=True)
+    apt_install('haproxy python-jinja2', fatal=True)
     ensure_package_status(service_affecting_packages,
                           config_get('package_status'))
     enable_haproxy()
@@ -939,14 +939,15 @@ def write_metrics_cronjob(script_path, cron_path):
     charm_dir = os.environ['CHARM_DIR']
     statsd_host, statsd_port = metrics_target.split(':', 1)
     metrics_prefix = config_data['metrics_prefix'].strip()
-    metrics_prefix = metrics_prefix.replace("$UNIT", local_unit())
+    metrics_prefix = metrics_prefix.replace(
+        "$UNIT", local_unit().replace('.', '-').replace('/', '-'))
     haproxy_hostport = ":".join(['localhost',
-                                config_data['monitoring_port'].strip()])
+                                str(config_data['monitoring_port'])])
     haproxy_httpauth = ":".join([config_data['monitoring_username'].strip(),
                                 get_monitoring_password()])
 
     # ensure script installed
-    shutil.copy2('%s/files/haproxy_to_carbon.sh' % charm_dir,
+    shutil.copy2('%s/files/metrics/haproxy_to_carbon.sh' % charm_dir,
                  metrics_script_path)
 
     # write the crontab

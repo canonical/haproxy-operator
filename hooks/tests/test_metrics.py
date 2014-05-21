@@ -28,7 +28,7 @@ class MetricsTestCase(TestCase):
 
         self.config_get.return_value = {
             'metrics_sample_interval': 5,
-            'metrics_prefix': 'prefix',
+            'metrics_prefix': 'prefix.$UNIT',
             'metrics_target': 'localhost:4321',
             'enable_monitoring': True,
             'monitoring_port': '1234',
@@ -67,7 +67,9 @@ class MetricsTestCase(TestCase):
         cron_write = self.open.mock_calls[2][1][0]
         expected_cron = textwrap.dedent("""
            # crontab for pushing haproxy metrics to carbon
-           */5 * * * * root bash /script prefix 5min localhost:1234\
- monitor:monitorpass | nc localhost 4321
+           */5 * * * * root bash /script prefix.unit-0 5min localhost:1234\
+ monitor:monitorpass | python -c "import socket, sys; sock =\
+ socket.socket(socket.AF_INET, socket.SOCK_DGRAM); map(lambda line:\
+ sock.sendto(line, ('localhost', 4321)), sys.stdin)"
         """).lstrip()
         self.assertEqual(expected_cron, cron_write)

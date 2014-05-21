@@ -20,8 +20,8 @@ get_metrics() {
 /^[^#]/{ for(i=3;i<NF;i++) if(length($i) > 0) printf("%s.%s.%s %d\n", $1, $2, fieldname[i], $i);}'
 }
 
-# Add carbon-isms to <var> <value> lines
-carbonify() {
-    sed -r "s/([^ ]+) (.*)/${PREFIX}.\1.${PERIOD} \2 ${TSTAMP}/"
+# Add statsd-isms to <var> <value> lines
+statsdify() {
+    sed -r "s/([^ ]+) (.*)/${PREFIX}.\1.${PERIOD}:\2|g/"
 }
-get_metrics | carbonify
+get_metrics | statsdify

@@ -132,8 +132,9 @@ options:
     default: ""
     type: string
     description: |
-        Destination for carbon-format metrics, format "host:port". If
-        not present and valid, metrics disabled.
+        Destination for statsd-format metrics, format "host:port". If
+        not present and valid, metrics disabled. Requires "enable_monitoring"
+        to be set to true to work.
   metrics_prefix:
     default: "dev.$UNIT.haproxy"
     type: string
