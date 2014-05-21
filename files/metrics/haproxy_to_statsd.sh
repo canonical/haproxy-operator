@@ -1,12 +1,12 @@
 #!/bin/bash
-# haproxy-to-carbon.sh: query haproxy CSV status page, transform it
-# to stdout suitable for carbon linereceiver
+# haproxy-to-stasd: query haproxy CSV status page, transform it
+# to stdout suitable for statsd
 #
 # Author: JuanJo Ciarlante <jjo@canonical.com>
 # Copyright 2012, Canonical Ltd.
 # License: GPLv3
 set -u
-PREFIX=${1:?missing carbon node prefix, e.g.: production.host.${HOSTNAME}.haproxy.stats}
+PREFIX=${1:?missing statsd node prefix, e.g.: production.host.${HOSTNAME}.haproxy.stats}
 PERIOD=${2:?missing period, e.g.: 10min}
 HOSTPORT=${3:?missing haproxy hostport, e.g.: localhost:10000}
 HTTPAUTH=${4:?missing httpauth, e.g.: user:pass}

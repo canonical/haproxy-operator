@@ -66,7 +66,7 @@ class MetricsTestCase(TestCase):
 
         cron_write = self.open.mock_calls[2][1][0]
         expected_cron = textwrap.dedent("""
-           # crontab for pushing haproxy metrics to carbon
+           # crontab for pushing haproxy metrics to statsd
            */5 * * * * root bash /script prefix.unit-0 5min localhost:1234\
  monitor:monitorpass | python -c "import socket, sys; sock =\
  socket.socket(socket.AF_INET, socket.SOCK_DGRAM); map(lambda line:\

@@ -38,7 +38,7 @@ default_haproxy_config = "%s/haproxy.cfg" % default_haproxy_config_dir
 default_haproxy_service_config_dir = "/var/run/haproxy"
 default_haproxy_lib_dir = "/var/lib/haproxy"
 metrics_cronjob_path = "/etc/cron.d/haproxy_metrics"
-metrics_script_path = "/usr/local/bin/haproxy_to_carbon.sh"
+metrics_script_path = "/usr/local/bin/haproxy_to_statsd.sh"
 service_affecting_packages = ['haproxy']
 
 dupe_options = [
@@ -947,7 +947,7 @@ def write_metrics_cronjob(script_path, cron_path):
                                 get_monitoring_password()])
 
     # ensure script installed
-    shutil.copy2('%s/files/metrics/haproxy_to_carbon.sh' % charm_dir,
+    shutil.copy2('%s/files/metrics/haproxy_to_statsd.sh' % charm_dir,
                  metrics_script_path)
 
     # write the crontab
