@@ -118,6 +118,18 @@ formatting issues and output a code coverage summary of the 'hooks.py' module.
 Many of the haproxy settings can be altered via the standard juju configuration
 settings.  Please see the config.yaml file as each is fairly clearly documented.
 
+## statsd
+
+This charm supports sending metrics to statsd.
+
+This is done by setting config values (metrics_target being the primary one)
+to a host/port of a (UDP) statsd server.
+
+This could instead be done using a relation, but it is common to have
+one statsd server that serves multiple environments. Once juju supports
+cross-environment relations then that will be the best way to handle 
+this configuration, as it will work in either scenario.
+
 ## HAProxy Project Information
 
 - [HAProxy Homepage](http://haproxy.1wt.eu/)

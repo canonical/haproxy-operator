@@ -137,3 +137,20 @@ options:
             juju-postgresql-0
         If you're running multiple environments with the same services in them
         this allows you to differentiate between them.
+  metrics_target:
+    default: ""
+    type: string
+    description: |
+        Destination for statsd-format metrics, format "host:port". If
+        not present and valid, metrics disabled. Requires "enable_monitoring"
+        to be set to true to work.
+  metrics_prefix:
+    default: "dev.$UNIT.haproxy"
+    type: string
+    description: |
+        Prefix for metrics. Special value $UNIT can be used to include the
+        name of the unit in the prefix.
+  metrics_sample_interval:
+    default: 5
+    type: int
+    description: Period for metrics cron job to run in minutes
