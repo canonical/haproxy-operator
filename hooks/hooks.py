@@ -748,7 +748,7 @@ def install_hook():
     if not os.path.exists(default_haproxy_service_config_dir):
         os.mkdir(default_haproxy_service_config_dir, 0600)
 
-    apt_install('haproxy python-jinja2', fatal=True)
+    apt_install(['haproxy', 'python-jinja2'], fatal=True)
     ensure_package_status(service_affecting_packages,
                           config_get('package_status'))
     enable_haproxy()
