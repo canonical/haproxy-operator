@@ -746,6 +746,7 @@ def service_haproxy(action=None, haproxy_config=default_haproxy_config):
 # Hook functions
 ###############################################################################
 def install_hook():
+    # Run both during initial install and during upgrade-charm.
     if not os.path.exists(default_haproxy_service_config_dir):
         os.mkdir(default_haproxy_service_config_dir, 0600)
 
@@ -973,7 +974,11 @@ def write_metrics_cronjob(script_path, cron_path):
 def main(hook_name):
     if hook_name == "install":
         install_hook()
-    elif hook_name in ("config-changed", "upgrade-charm"):
+    elif hook_name == "upgrade-charm":
+        install_hook()
+        config_changed()
+        update_nrpe_config()
+    elif hook_name == "config-changed":
         config_changed()
         update_nrpe_config()
     elif hook_name == "start":
