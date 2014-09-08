@@ -137,6 +137,9 @@ def create_haproxy_globals():
         haproxy_globals.append("    quiet")
     haproxy_globals.append("    spread-checks %d" %
                            config_data['global_spread_checks'])
+    if config_data['global_stats_socket'] is True:
+        sock_path = "/var/run/haproxy/haproxy.sock"
+        haproxy_globals.append("    stats socket %s mode 0600" % sock_path)
     return '\n'.join(haproxy_globals)
 
 
