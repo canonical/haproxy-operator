@@ -23,9 +23,11 @@ class HelpersTest(TestCase):
             'global_spread_checks': 234,
             'global_debug': False,
             'global_quiet': False,
+            'global_stats_socket': True,
         }
         result = hooks.create_haproxy_globals()
 
+        sock_path = "/var/run/haproxy/haproxy.sock"
         expected = '\n'.join([
             'global',
             '    log foo-log',
@@ -34,6 +36,7 @@ class HelpersTest(TestCase):
             '    user foo-user',
             '    group foo-group',
             '    spread-checks 234',
+            '    stats socket %s mode 0600' % sock_path,
         ])
         self.assertEqual(result, expected)
 
@@ -47,6 +50,7 @@ class HelpersTest(TestCase):
             'global_spread_checks': 234,
             'global_debug': True,
             'global_quiet': True,
+            'global_stats_socket': False,
         }
         result = hooks.create_haproxy_globals()
 

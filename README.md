@@ -97,7 +97,7 @@ but **not** for deployment:
     sudo apt-get install python-software-properties
     sudo add-apt-repository ppa:cjohnston/flake8
     sudo apt-get update
-    sudo apt-get install python-mock python-flake8 python-nose python-nosexcover
+    sudo apt-get install python-mock python-flake8 python-nose python-nosexcover python-testtools charm-tools
 
 To run the tests:
 

@@ -17,9 +17,14 @@ proof: revision
 	@(charm proof $(PWD) || [ $$? -eq 100 ]) && echo OK
 	@test `cat revision` = 0 && rm revision
 
-test:
+.venv:
+	sudo apt-get install python-apt
+	virtualenv .venv --system-site-packages
+	.venv/bin/pip install -I nose testtools mock pyyaml
+
+test: .venv
 	@echo Starting tests...
-	@CHARM_DIR=$(CHARM_DIR) $(TEST_PREFIX) nosetests -s $(TEST_DIR)
+	@CHARM_DIR=$(CHARM_DIR) $(TEST_PREFIX) .venv/bin/nosetests -s $(TEST_DIR)
 
 lint:
 	@echo Checking for Python syntax...
