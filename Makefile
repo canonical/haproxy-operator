@@ -18,7 +18,7 @@ proof: revision
 	@test `cat revision` = 0 && rm revision
 
 .venv:
-	sudo apt-get install -y python-apt python-virtualenv
+	sudo apt-get install -y python-apt python-virtualenv python-jinja2
 	virtualenv .venv --system-site-packages
 	.venv/bin/pip install -I nose testtools mock pyyaml
 
