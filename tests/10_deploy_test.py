@@ -7,7 +7,7 @@ import amulet
 import requests
 import base64
 
-d = amulet.Deployment()
+d = amulet.Deployment(series='trusty')
 # Add the haproxy charm to the deployment.
 d.add('haproxy')
 d.add('apache2')
@@ -20,7 +20,7 @@ with open(template_path) as f:
     template = f.read()
     encodedTemplate = base64.b64encode(template.encode('utf-8'))
 # Create a dictionary with configuration values for apache2.
-configuration = {'vhost_https_template': encodedTemplate.decode('ascii')}
+configuration = {'vhost_http_template': encodedTemplate.decode('ascii')}
 # Apache2 needs a base64 encoded template to configure the web site.
 d.configure('apache2', configuration)
 
