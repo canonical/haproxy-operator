@@ -159,3 +159,21 @@ options:
     default: 5
     type: int
     description: Period for metrics cron job to run in minutes
+  source:
+    type: string
+    default:
+    description: |
+        Optional configuration to support use of additional sources such as:
+        .
+        - ppa:myteam/ppa
+        - cloud:precise-proposed/folsom
+        - http://my.archive.com/ubuntu main
+        .
+        The last option should be used in conjunction with the key configuration
+        option.
+  key:
+    type: string
+    default:
+    description: |
+        Key ID to import to the apt keyring to support use with arbitary source
+        configuration from outside of Launchpad archives or PPA's.

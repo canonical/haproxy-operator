@@ -9,6 +9,8 @@ class InstallTests(TestCase):
 
     def setUp(self):
         super(InstallTests, self).setUp()
+        self.add_source = self.patch_hook('add_source')
+        self.apt_update = self.patch_hook('apt_update')
         self.apt_install = self.patch_hook('apt_install')
         self.ensure_package_status = self.patch_hook('ensure_package_status')
         self.enable_haproxy = self.patch_hook('enable_haproxy')
@@ -45,11 +47,23 @@ class InstallTests(TestCase):
         self.apt_install.assert_called_once_with(
             ['haproxy', 'python-jinja2'], fatal=True)
 
+    def test_add_source(self):
+        hooks.install_hook()
+        self.config_get.assert_called_once()
+        self.add_source.assert_called_once_with(
+            self.config_get.return_value.get("source"),
+            self.config_get.return_value.get("key"))
+
+    def test_apt_update(self):
+        hooks.install_hook()
+        self.apt_update.assert_called_once_with(fatal=True)
+
     def test_ensures_package_status(self):
         hooks.install_hook()
-        self.config_get.assert_called_once_with('package_status')
+        self.config_get.assert_called_once()
         self.ensure_package_status.assert_called_once_with(
-            hooks.service_affecting_packages, self.config_get.return_value)
+            hooks.service_affecting_packages,
+            self.config_get.return_value["package_status"])
 
     def test_calls_enable_haproxy(self):
         hooks.install_hook()
