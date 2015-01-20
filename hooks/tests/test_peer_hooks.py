@@ -1,6 +1,7 @@
 import base64
 import os
 import yaml
+import subprocess
 
 from testtools import TestCase
 from mock import patch
@@ -196,7 +197,7 @@ class PeerRelationTest(TestCase):
 
                 create_listen_stanza.assert_called_with(
                     'bar', 'some-host', 'some-port', 'some-options',
-                    (1, 2), [])
+                    (1, 2), [], [])
                 mock_open.assert_called_with(
                     '/var/run/haproxy/bar.service', 'w')
                 mock_file.write.assert_called_with('some content')
@@ -231,4 +232,67 @@ class PeerRelationTest(TestCase):
                 mock_open.assert_any_call(
                     '/var/lib/haproxy/service_bar/403.http', 'w')
                 mock_file.write.assert_any_call(content)
+        self.assertTrue(create_listen_stanza.called)
+
+    @patch('hooks.create_listen_stanza')
+    def test_writes_crtfiles(self, create_listen_stanza):
+        create_listen_stanza.return_value = 'some content'
+
+        content = ("-----BEGIN CERTIFICATE-----\n"
+                   "<data>\n"
+                   "-----END CERTIFICATE-----\n")
+        services_dict = {
+            'foo': {
+                'service_name': 'bar',
+                'service_host': 'some-host',
+                'service_port': 'some-port',
+                'service_options': 'some-options',
+                'servers': (1, 2),
+                'crtfiles': [base64.b64encode(content)]
+            },
+        }
+
+        with patch.object(os.path, "exists") as exists:
+            exists.return_value = True
+            with patch_open() as (mock_open, mock_file):
+                hooks.write_service_config(services_dict)
+
+                mock_open.assert_any_call(
+                    '/var/lib/haproxy/service_bar/0.pem', 'w')
+                mock_file.write.assert_any_call(content)
+        self.assertTrue(create_listen_stanza.called)
+
+    @patch.dict(os.environ, {"CHARM_DIR": "/foo/bar"})
+    @patch('hooks.create_listen_stanza')
+    def test_writes_crtfiles_selfsigned(self, create_listen_stanza):
+        create_listen_stanza.return_value = 'some content'
+        self.unit_get.return_value = "1.2.4.5"
+
+        content = "SELFSIGNED"
+        services_dict = {
+            'foo': {
+                'service_name': 'bar',
+                'service_host': 'some-host',
+                'service_port': 'some-port',
+                'service_options': 'some-options',
+                'servers': (1, 2),
+                'crtfiles': [content]
+            },
+        }
+
+        with patch.object(os.path, "exists") as exists:
+            def exists_side_effect(path):
+                if os.path.basename(path) == "selfsigned_ca.crt":
+                    return False
+                return True
+            exists.side_effect = exists_side_effect
+            with patch.object(os, "makedirs"):
+                with patch.object(subprocess, "call"):
+                    with patch_open() as (mock_open, mock_file):
+                        hooks.write_service_config(services_dict)
+
+                        mock_open.assert_any_call(
+                            '/var/lib/haproxy/service_bar/0.pem', 'w')
+                        self.assertTrue(mock_file.write.called)
+                        #mock_file.write.assert_any_call(content)
         self.assertTrue(create_listen_stanza.called)

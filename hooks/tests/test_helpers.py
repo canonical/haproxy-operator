@@ -21,6 +21,7 @@ class HelpersTest(TestCase):
             'global_user': 'foo-user',
             'global_group': 'foo-group',
             'global_spread_checks': 234,
+            'global_default_dh_param': 345,
             'global_debug': False,
             'global_quiet': False,
             'global_stats_socket': True,
@@ -36,6 +37,7 @@ class HelpersTest(TestCase):
             '    user foo-user',
             '    group foo-group',
             '    spread-checks 234',
+            '    tune.ssl.default-dh-param 345',
             '    stats socket %s mode 0600' % sock_path,
         ])
         self.assertEqual(result, expected)
@@ -48,6 +50,7 @@ class HelpersTest(TestCase):
             'global_user': 'foo-user',
             'global_group': 'foo-group',
             'global_spread_checks': 234,
+            'global_default_dh_param': 345,
             'global_debug': True,
             'global_quiet': True,
             'global_stats_socket': False,
@@ -64,6 +67,7 @@ class HelpersTest(TestCase):
             '    debug',
             '    quiet',
             '    spread-checks 234',
+            '    tune.ssl.default-dh-param 345',
         ])
         self.assertEqual(result, expected)
 
@@ -179,6 +183,23 @@ class HelpersTest(TestCase):
         load_haproxy_config.return_value = '''
         frontend foo-2-123
             bind 1.2.3.4:123
+            default_backend foo.internal
+        frontend foo-2-234
+            bind 1.2.3.5:234
+            default_backend bar.internal
+        '''
+
+        stanzas = hooks.get_listen_stanzas()
+
+        self.assertEqual((('foo.internal', '1.2.3.4', 123),
+                          ('bar.internal', '1.2.3.5', 234)),
+                         stanzas)
+
+    @patch('hooks.load_haproxy_config')
+    def test_get_listen_stanzas_with_ssl_frontend(self, load_haproxy_config):
+        load_haproxy_config.return_value = '''
+        frontend foo-2-123
+            bind 1.2.3.4:123 ssl crt /foo/bar
             default_backend foo.internal
         frontend foo-2-234
             bind 1.2.3.5:234
@@ -389,6 +410,35 @@ class HelpersTest(TestCase):
             '    errorfile 403 /var/lib/haproxy/service_some-name/403.http',
             '    server name-1 ip-1:port-1 foo1 bar1',
             '    server name-2 ip-2:port-2 foo2 bar2',
+        ))
+
+        self.assertEqual(expected, result)
+
+    @patch.dict(os.environ, {"JUJU_UNIT_NAME": "haproxy/2"})
+    def test_creates_a_listen_stanza_with_crtfiles(self):
+        service_name = 'foo'
+        service_ip = '1.2.3.4'
+        service_port = 443
+        server_entries = [
+            ('name-1', 'ip-1', 'port-1', ('foo1', 'bar1')),
+        ]
+        content = ("-----BEGIN CERTIFICATE-----\n"
+                   "<data>\n"
+                   "-----END CERTIFICATE-----\n")
+        crtfiles = [base64.b64encode(content)]
+
+        result = hooks.create_listen_stanza(service_name, service_ip,
+                                            service_port,
+                                            server_entries=server_entries,
+                                            service_crtfiles=crtfiles)
+
+        expected = '\n'.join((
+            'frontend haproxy-2-443',
+            '    bind 1.2.3.4:443 ssl crt /var/lib/haproxy/service_foo/0.pem',
+            '    default_backend foo',
+            '',
+            'backend foo',
+            '    server name-1 ip-1:port-1 foo1 bar1',
         ))
 
         self.assertEqual(expected, result)

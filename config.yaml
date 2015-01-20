@@ -39,6 +39,14 @@ options:
     type: boolean
     description: |
         Whether to enable the stats UNIX socket.
+  global_default_dh_param:
+    default: 1024
+    type: int
+    description: |
+        Sets the maximum size of the Diffie-Hellman parameters used for generating
+        the ephemeral/temporary Diffie-Hellman key in case of DHE key exchange.
+        Default value if 1024, higher values will increase the CPU load, and values
+        greater than 1024 bits are not supported by Java 7 and earlier clients.
   default_log:
     default: "global"
     type: string
