@@ -62,6 +62,17 @@ class InstallTests(TestCase):
         hooks.install_hook()
         self.apt_update.assert_called_once_with(fatal=True)
 
+    def test_add_source(self):
+        hooks.install_hook()
+        self.config_get.assert_called_once()
+        self.add_source.assert_called_once_with(
+            self.config_get.return_value.get("source"),
+            self.config_get.return_value.get("key"))
+
+    def test_apt_update(self):
+        hooks.install_hook()
+        self.apt_update.assert_called_once_with(fatal=True)
+
     def test_ensures_package_status(self):
         hooks.install_hook()
         self.config_get.assert_called_once()

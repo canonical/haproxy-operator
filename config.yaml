@@ -182,8 +182,8 @@ options:
     type: int
     description: Period for metrics cron job to run in minutes
   source:
-    type: string
     default:
+    type: string
     description: |
         Optional configuration to support use of additional sources such as:
         .
@@ -194,8 +194,8 @@ options:
         The last option should be used in conjunction with the key configuration
         option.
   key:
-    type: string
     default:
+    type: string
     description: |
         Key ID to import to the apt keyring to support use with arbitary source
         configuration from outside of Launchpad archives or PPA's.
