@@ -1,7 +1,6 @@
 import base64
 import os
 import yaml
-import subprocess
 
 from testtools import TestCase
 from mock import patch
@@ -256,19 +255,14 @@ class PeerRelationTest(TestCase):
             exists.return_value = True
             with patch_open() as (mock_open, mock_file):
                 hooks.write_service_config(services_dict)
-
                 mock_open.assert_any_call(
                     '/var/lib/haproxy/service_bar/0.pem', 'w')
                 mock_file.write.assert_any_call(content)
         self.assertTrue(create_listen_stanza.called)
 
-    @patch.dict(os.environ, {"CHARM_DIR": "/foo/bar"})
     @patch('hooks.create_listen_stanza')
-    def test_writes_crtfiles_selfsigned(self, create_listen_stanza):
+    def test_skip_crtfiles_default(self, create_listen_stanza):
         create_listen_stanza.return_value = 'some content'
-        self.unit_get.return_value = "1.2.4.5"
-
-        content = "SELFSIGNED"
         services_dict = {
             'foo': {
                 'service_name': 'bar',
@@ -276,23 +270,16 @@ class PeerRelationTest(TestCase):
                 'service_port': 'some-port',
                 'service_options': 'some-options',
                 'servers': (1, 2),
-                'crtfiles': [content]
+                'crtfiles': ["DEFAULT"]
             },
         }
 
         with patch.object(os.path, "exists") as exists:
-            def exists_side_effect(path):
-                if os.path.basename(path) == "selfsigned_ca.crt":
-                    return False
-                return True
-            exists.side_effect = exists_side_effect
+            exists.return_value = True
             with patch.object(os, "makedirs"):
-                with patch.object(subprocess, "call"):
-                    with patch_open() as (mock_open, mock_file):
-                        hooks.write_service_config(services_dict)
-
-                        mock_open.assert_any_call(
-                            '/var/lib/haproxy/service_bar/0.pem', 'w')
-                        self.assertTrue(mock_file.write.called)
-                        #mock_file.write.assert_any_call(content)
+                with patch_open() as (mock_open, mock_file):
+                    hooks.write_service_config(services_dict)
+                    self.assertNotEqual(
+                        mock_open.call_args,
+                        ('/var/lib/haproxy/service_bar/0.pem', 'w'))
         self.assertTrue(create_listen_stanza.called)

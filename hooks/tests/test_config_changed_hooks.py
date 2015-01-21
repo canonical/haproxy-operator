@@ -27,6 +27,8 @@ class ConfigChangedTest(TestCase):
             "service_haproxy")
         self.update_sysctl = self.patch_hook(
             "update_sysctl")
+        self.update_ssl_cert = self.patch_hook(
+            "update_ssl_cert")
         self.notify_website = self.patch_hook("notify_website")
         self.notify_peer = self.patch_hook("notify_peer")
         self.write_metrics_cronjob = self.patch_hook("write_metrics_cronjob")

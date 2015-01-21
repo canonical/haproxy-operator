@@ -26,7 +26,13 @@ from charmhelpers.core.hookenv import (
     close_port,
     unit_get,
     )
-from charmhelpers.fetch import apt_install
+
+from charmhelpers.fetch import (
+    apt_install,
+    add_source,
+    apt_update
+)
+
 from charmhelpers.contrib.charmsupport import nrpe
 
 
@@ -255,6 +261,31 @@ def update_sysctl(config_data):
 
 
 # -----------------------------------------------------------------------------
+# update_ssl_cert: write the default SSL certificate using the values from the
+#                 'ssl-cert'/'ssl-key' and configuration keys
+# -----------------------------------------------------------------------------
+def update_ssl_cert(config_data):
+    ssl_cert = config_data.get("ssl_cert")
+    if not ssl_cert:
+        return
+    if ssl_cert == "SELFSIGNED":
+        log("Using self-signed certificate")
+        content = get_selfsigned_cert()
+    else:
+        ssl_key = config_data.get("ssl_key")
+        if not ssl_key:
+            log("No ssl_key provided, proceeding without default certificate")
+            return
+        log("Using config-provided certificate")
+        content = base64.b64decode(ssl_cert)
+        content += base64.b64decode(ssl_key)
+
+    pem_path = os.path.join(default_haproxy_lib_dir, "default.pem")
+    with open(pem_path, 'w') as f:
+        f.write(content)
+
+
+# -----------------------------------------------------------------------------
 # create_listen_stanza: Function to create a generic listen section in the
 #                       haproxy config
 #                       service_name:  Arbitrary service name
@@ -304,10 +335,12 @@ def create_listen_stanza(service_name=None, service_ip=None,
     bind_stanza = "    bind %s:%s" % (service_ip, service_port)
     if service_crtfiles:
         bind_stanza += " ssl"
-        for i in range(len(service_crtfiles)):
-            path = os.path.join(default_haproxy_lib_dir,
-                                "service_%s" % service_name,
-                                "%d.pem" % i)
+        for i, crtfile in enumerate(service_crtfiles):
+            if crtfile == "DEFAULT":
+                path = os.path.join(default_haproxy_lib_dir, "default.pem")
+            else:
+                path = os.path.join(default_haproxy_lib_dir,
+                                    "service_%s" % service_name, "%d.pem" % i)
             bind_stanza += " crt %s" % path
     service_config.append(bind_stanza)
     service_config.append("    default_backend %s" % (service_name,))
@@ -653,12 +686,11 @@ def write_service_config(services_dict):
 
         crtfiles = service_config.get('crtfiles', [])
         for i, crtfile in enumerate(crtfiles):
+            if crtfile == "DEFAULT":
+                continue
+            content = base64.b64decode(crtfile)
             path = get_service_lib_path(service_name)
             full_path = os.path.join(path, "%d.pem" % i)
-            if crtfile == "SELFSIGNED":
-                content = get_selfsigned_cert()
-            else:
-                content = base64.b64decode(crtfile)
             with open(full_path, 'w') as f:
                 f.write(content)
 
@@ -781,9 +813,14 @@ def install_hook():
     if not os.path.exists(default_haproxy_service_config_dir):
         os.mkdir(default_haproxy_service_config_dir, 0600)
 
+    config_data = config_get()
+    add_source(config_data.get('source'), config_data.get('key'))
+    apt_update(fatal=True)
     apt_install(['haproxy', 'python-jinja2'], fatal=True)
+    # Install pyasn1 library and modules for inspecting SSL certificates
+    apt_install(['python-pyasn1', 'python-pyasn1-modules'], fatal=False)
     ensure_package_status(service_affecting_packages,
-                          config_get('package_status'))
+                          config_data['package_status'])
     enable_haproxy()
 
 
@@ -806,6 +843,7 @@ def config_changed():
         sys.exit()
     haproxy_services = load_services()
     update_sysctl(config_data)
+    update_ssl_cert(config_data)
     construct_haproxy_config(haproxy_globals,
                              haproxy_defaults,
                              haproxy_monitoring,
@@ -1001,6 +1039,7 @@ def get_selfsigned_cert():
     cert_file = os.path.join(default_haproxy_lib_dir, "selfsigned_ca.crt")
     key_file = os.path.join(default_haproxy_lib_dir, "selfsigned.key")
     if is_selfsigned_cert_stale(cert_file, key_file):
+        log("Generating self-signed certificate")
         gen_selfsigned_cert(cert_file, key_file)
     content = ""
     for content_file in [cert_file, key_file]:
@@ -1024,8 +1063,9 @@ def is_selfsigned_cert_stale(cert_file, key_file):
 
     # Common Name
     from OpenSSL import crypto
-    cert = crypto.load_certificate(
-        crypto.FILETYPE_PEM, file(cert_file).read())
+    with open(cert_file) as fd:
+        cert = crypto.load_certificate(
+            crypto.FILETYPE_PEM, fd.read())
     cn = cert.get_subject().commonName
     if unit_get('public-address') != cn:
         return True
