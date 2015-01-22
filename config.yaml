@@ -159,7 +159,7 @@ options:
     default: 5
     type: int
     description: Period for metrics cron job to run in minutes
-  source:
+  source: ""
     default:
     type: string
     description: |
@@ -171,7 +171,7 @@ options:
         .
         The last option should be used in conjunction with the key configuration
         option.
-  key:
+  key: ""
     default:
     type: string
     description: |
