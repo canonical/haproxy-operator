@@ -26,7 +26,13 @@ from charmhelpers.core.hookenv import (
     close_port,
     unit_get,
     )
-from charmhelpers.fetch import apt_install
+
+from charmhelpers.fetch import (
+    apt_install,
+    add_source,
+    apt_update
+)
+
 from charmhelpers.contrib.charmsupport import nrpe
 
 
@@ -753,9 +759,12 @@ def install_hook():
     if not os.path.exists(default_haproxy_service_config_dir):
         os.mkdir(default_haproxy_service_config_dir, 0600)
 
+    config_data = config_get()
+    add_source(config_data.get('source'), config_data.get('key'))
+    apt_update(fatal=True)
     apt_install(['haproxy', 'python-jinja2'], fatal=True)
     ensure_package_status(service_affecting_packages,
-                          config_get('package_status'))
+                          config_data['package_status'])
     enable_haproxy()
 
 
