@@ -6,6 +6,7 @@ import os
 import amulet
 import requests
 import base64
+import yaml
 
 d = amulet.Deployment(series='trusty')
 # Add the haproxy charm to the deployment.
@@ -80,6 +81,34 @@ else:
     message = 'Unable to find the Apache IP address %s in the haproxy ' \
               'configuration file.' % apache_private
     amulet.raise_status(amulet.FAIL, msg=message)
+
+d.configure('haproxy', {
+    'source': 'backports',
+    'ssl_cert': 'SELFSIGNED',
+    'services': yaml.safe_dump([
+        {'service_name': 'apache',
+         'service_host': '0.0.0.0',
+         'service_port': 80,
+         'service_options': [
+             'mode http', 'balance leastconn', 'option httpchk GET / HTTP/1.0'
+         ],
+         'servers': [
+             ['apache', apache_private, 80, 'maxconn 50']]},
+        {'service_name': 'apache-ssl',
+         'service_port': 443,
+         'service_host': '0.0.0.0',
+         'service_options': [
+             'mode http', 'balance leastconn', 'option httpchk GET / HTTP/1.0'
+         ],
+         'crts': ['DEFAULT'],
+         'servers': [['apache', apache_private, 80, 'maxconn 50']]}])
+})
+
+page = requests.get('http://%s/index.html' % haproxy_address)
+page.raise_for_status()
+page = requests.get('https://%s/index.html' % haproxy_address, verify=False)
+page.raise_for_status()
+print('Successfully got the Apache2 web page through haproxy SSL termination.')
 
 # Send a message that the tests are complete.
 print('The haproxy tests are complete.')
