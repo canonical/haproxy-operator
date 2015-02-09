@@ -13,7 +13,7 @@ import apt_pkg
 
 from itertools import izip, tee, groupby
 
-from charmhelpers.core.host import pwgen
+from charmhelpers.core.host import pwgen, lsb_release
 from charmhelpers.core.hookenv import (
     log,
     config as config_get,
@@ -47,6 +47,11 @@ default_haproxy_lib_dir = "/var/lib/haproxy"
 metrics_cronjob_path = "/etc/cron.d/haproxy_metrics"
 metrics_script_path = "/usr/local/bin/haproxy_to_statsd.sh"
 service_affecting_packages = ['haproxy']
+apt_backports_template = (
+    "deb http://archive.ubuntu.com/ubuntu %(release)s-backports "
+    "main restricted universe multiverse")
+haproxy_preferences_path = "/etc/apt/preferences.d/haproxy"
+
 
 dupe_options = [
     "mode tcp",
@@ -819,7 +824,12 @@ def install_hook():
         os.mkdir(default_haproxy_service_config_dir, 0600)
 
     config_data = config_get()
-    add_source(config_data.get('source'), config_data.get('key'))
+    source = config_data.get('source')
+    if source == 'backports':
+        release = lsb_release()['DISTRIB_CODENAME']
+        source = apt_backports_template % {'release': release}
+        add_backports_preferences(release)
+    add_source(source, config_data.get('key'))
     apt_update(fatal=True)
     apt_install(['haproxy', 'python-jinja2'], fatal=True)
     # Install pyasn1 library and modules for inspecting SSL certificates
@@ -1040,6 +1050,14 @@ def write_metrics_cronjob(script_path, cron_path):
         }))
 
 
+def add_backports_preferences(release):
+    with open(haproxy_preferences_path, "w") as preferences:
+        preferences.write(
+            "Package: haproxy\n"
+            "Pin: release a=%(release)s-backports\n"
+            "Pin-Priority: 500\n" % {'release': release})
+
+
 def has_ssl_support():
     apt_pkg.init()
     cache = apt_pkg.Cache()
@@ -1140,6 +1158,9 @@ def main(hook_name):
         config_changed()
         update_nrpe_config()
     elif hook_name == "config-changed":
+        config_data = config_get()
+        if config_data.changed("source"):
+            install_hook()
         config_changed()
         update_nrpe_config()
     elif hook_name == "start":
