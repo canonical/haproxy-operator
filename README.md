@@ -112,6 +112,11 @@ options and then using the `crts` key in the services yaml, e.g.:
 where the DEFAULT keyword means use the certificate set with `ssl_cert`/`ssl_key` (or
 alternatively you can inline different base64-encode certificates).
 
+Note that in order to use SSL termination you need haproxy 1.5 or later, which
+is not available in stock trusty, but you can get it from trusty-backports setting
+the `source` configuration option to `backports` or to whatever PPA/archive you
+wish to use.
+
 ## Development
 
 The following steps are needed for testing and development of the charm,
