@@ -89,6 +89,29 @@ These settings can then be used when crafting your vhost template to make sure
 traffic goes to the correct haproxy listener which will in turn forward the
 traffic to the correct backend server/port
 
+## SSL Termination
+
+You can turn on SSL termination by using the `ssl_cert`/`ssl_key` service configuration
+options and then using the `crts` key in the services yaml, e.g.:
+
+    #!/bin/bash
+    # hooks/website-relation-changed
+
+    host=$(unit-get private-address)
+    port=80
+
+    relation-set "services=
+    - { service_name: my_web_app,
+        service_options: [mode http, balance leastconn],
+        crts: [DEFAULT]
+        servers: [[my_web_app_1, $host, $port, option httpchk GET / HTTP/1.0],
+                  [... optionally more servers here ...]]}
+    - { ... optionally more services here ... }
+    "
+
+where the DEFAULT keyword means use the certificate set with `ssl_cert`/`ssl_key` (or
+alternatively you can inline different base64-encode certificates).
+
 ## Development
 
 The following steps are needed for testing and development of the charm,
