@@ -1163,6 +1163,8 @@ def main(hook_name):
             install_hook()
         config_changed()
         update_nrpe_config()
+        if config_data.implicit_save:
+            config_data.save()
     elif hook_name == "start":
         start_hook()
     elif hook_name == "stop":
