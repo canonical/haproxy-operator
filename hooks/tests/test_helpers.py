@@ -13,8 +13,9 @@ from utils_for_tests import patch_open
 
 class HelpersTest(TestCase):
 
+    @patch('hooks.has_ssl_support')
     @patch('hooks.config_get')
-    def test_creates_haproxy_globals(self, config_get):
+    def test_creates_haproxy_globals(self, config_get, has_ssl_support):
         config_get.return_value = {
             'global_log': 'foo-log, bar-log',
             'global_maxconn': 123,
@@ -26,6 +27,7 @@ class HelpersTest(TestCase):
             'global_quiet': False,
             'global_stats_socket': True,
         }
+        has_ssl_support.return_value = True
         result = hooks.create_haproxy_globals()
 
         sock_path = "/var/run/haproxy/haproxy.sock"
@@ -42,8 +44,10 @@ class HelpersTest(TestCase):
         ])
         self.assertEqual(result, expected)
 
+    @patch('hooks.has_ssl_support')
     @patch('hooks.config_get')
-    def test_creates_haproxy_globals_quietly_with_debug(self, config_get):
+    def test_creates_haproxy_globals_quietly_with_debug(
+            self, config_get, has_ssl_support):
         config_get.return_value = {
             'global_log': 'foo-log, bar-log',
             'global_maxconn': 123,
@@ -55,6 +59,7 @@ class HelpersTest(TestCase):
             'global_quiet': True,
             'global_stats_socket': False,
         }
+        has_ssl_support.return_value = True
         result = hooks.create_haproxy_globals()
 
         expected = '\n'.join([
@@ -68,6 +73,36 @@ class HelpersTest(TestCase):
             '    quiet',
             '    spread-checks 234',
             '    tune.ssl.default-dh-param 345',
+        ])
+        self.assertEqual(result, expected)
+
+    @patch('hooks.has_ssl_support')
+    @patch('hooks.config_get')
+    def test_creates_haproxy_globals_no_ssl_support(
+            self, config_get, has_ssl_support):
+        config_get.return_value = {
+            'global_log': 'foo-log, bar-log',
+            'global_maxconn': 123,
+            'global_user': 'foo-user',
+            'global_group': 'foo-group',
+            'global_spread_checks': 234,
+            'global_debug': False,
+            'global_quiet': False,
+            'global_stats_socket': True,
+        }
+        has_ssl_support.return_value = False
+        result = hooks.create_haproxy_globals()
+
+        sock_path = "/var/run/haproxy/haproxy.sock"
+        expected = '\n'.join([
+            'global',
+            '    log foo-log',
+            '    log bar-log',
+            '    maxconn 123',
+            '    user foo-user',
+            '    group foo-group',
+            '    spread-checks 234',
+            '    stats socket %s mode 0600' % sock_path,
         ])
         self.assertEqual(result, expected)
 
@@ -415,7 +450,7 @@ class HelpersTest(TestCase):
         self.assertEqual(expected, result)
 
     @patch.dict(os.environ, {"JUJU_UNIT_NAME": "haproxy/2"})
-    def test_creates_a_listen_stanza_with_crtfiles(self):
+    def test_creates_a_listen_stanza_with_crts(self):
         service_name = 'foo'
         service_ip = '1.2.3.4'
         service_port = 443
@@ -425,12 +460,12 @@ class HelpersTest(TestCase):
         content = ("-----BEGIN CERTIFICATE-----\n"
                    "<data>\n"
                    "-----END CERTIFICATE-----\n")
-        crtfiles = [base64.b64encode(content)]
+        crts = [base64.b64encode(content)]
 
         result = hooks.create_listen_stanza(service_name, service_ip,
                                             service_port,
                                             server_entries=server_entries,
-                                            service_crtfiles=crtfiles)
+                                            service_crts=crts)
 
         expected = '\n'.join((
             'frontend haproxy-2-443',

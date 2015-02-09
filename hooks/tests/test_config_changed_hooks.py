@@ -1,4 +1,6 @@
 import sys
+import base64
+import os
 
 from testtools import TestCase
 from mock import patch
@@ -121,3 +123,27 @@ class HelpersTest(TestCase):
                 'foo-defaults\n\n'
             )
             mock_open.assert_called_with(hooks.default_haproxy_config, 'w')
+
+    def test_update_ssl_cert_custom_certificate(self):
+        config_data = {
+            "ssl_cert": base64.b64encode("cert-data\n"),
+            "ssl_key": base64.b64encode("key-data\n")}
+        with patch("hooks.log"):
+            with patch_open() as (mock_open, mock_file):
+                hooks.update_ssl_cert(config_data)
+                default_pem_path = os.path.join(
+                    hooks.default_haproxy_lib_dir, "default.pem")
+                mock_open.assert_called_with(default_pem_path, 'w')
+                mock_file.write.assert_called_with("cert-data\nkey-data\n")
+
+    def test_update_ssl_cert_selfsigned(self):
+        config_data = {"ssl_cert": "SELFSIGNED"}
+        with patch("hooks.log"):
+            with patch("hooks.get_selfsigned_cert") as selfsigned_mock:
+                selfsigned_mock.return_value = "data"
+                with patch_open() as (mock_open, mock_file):
+                    hooks.update_ssl_cert(config_data)
+                    default_pem_path = os.path.join(
+                        hooks.default_haproxy_lib_dir, "default.pem")
+                    mock_open.assert_called_with(default_pem_path, 'w')
+                    mock_file.write.assert_called_with("data")

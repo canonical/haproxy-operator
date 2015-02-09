@@ -234,7 +234,7 @@ class PeerRelationTest(TestCase):
         self.assertTrue(create_listen_stanza.called)
 
     @patch('hooks.create_listen_stanza')
-    def test_writes_crtfiles(self, create_listen_stanza):
+    def test_writes_crts(self, create_listen_stanza):
         create_listen_stanza.return_value = 'some content'
 
         content = ("-----BEGIN CERTIFICATE-----\n"
@@ -247,7 +247,7 @@ class PeerRelationTest(TestCase):
                 'service_port': 'some-port',
                 'service_options': 'some-options',
                 'servers': (1, 2),
-                'crtfiles': [base64.b64encode(content)]
+                'crts': [base64.b64encode(content)]
             },
         }
 
@@ -261,7 +261,7 @@ class PeerRelationTest(TestCase):
         self.assertTrue(create_listen_stanza.called)
 
     @patch('hooks.create_listen_stanza')
-    def test_skip_crtfiles_default(self, create_listen_stanza):
+    def test_skip_crts_default(self, create_listen_stanza):
         create_listen_stanza.return_value = 'some content'
         services_dict = {
             'foo': {
@@ -270,7 +270,7 @@ class PeerRelationTest(TestCase):
                 'service_port': 'some-port',
                 'service_options': 'some-options',
                 'servers': (1, 2),
-                'crtfiles': ["DEFAULT"]
+                'crts': ["DEFAULT"]
             },
         }
 

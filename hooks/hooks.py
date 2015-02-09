@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import yaml
+import apt_pkg
 
 from itertools import izip, tee, groupby
 
@@ -143,8 +144,9 @@ def create_haproxy_globals():
         haproxy_globals.append("    quiet")
     haproxy_globals.append("    spread-checks %d" %
                            config_data['global_spread_checks'])
-    haproxy_globals.append("    tune.ssl.default-dh-param %d" %
-                           config_data['global_default_dh_param'])
+    if has_ssl_support():
+        haproxy_globals.append("    tune.ssl.default-dh-param %d" %
+                               config_data['global_default_dh_param'])
     if config_data['global_stats_socket'] is True:
         sock_path = "/var/run/haproxy/haproxy.sock"
         haproxy_globals.append("    stats socket %s mode 0600" % sock_path)
@@ -301,13 +303,13 @@ def update_ssl_cert(config_data):
 #                                   http_status: status to handle
 #                                   content: base 64 content for HAProxy to
 #                                            write to socket
-#                       crtfiles: List of base 64 content for SSL certificate
-#                                 files that will be used in the bind line.
+#                       crts: List of base 64 contents for SSL certificate
+#                             files that will be used in the bind line.
 # -----------------------------------------------------------------------------
 def create_listen_stanza(service_name=None, service_ip=None,
                          service_port=None, service_options=None,
                          server_entries=None, service_errorfiles=None,
-                         service_crtfiles=None):
+                         service_crts=None):
     if service_name is None or service_ip is None or service_port is None:
         return None
     fe_options = []
@@ -333,10 +335,12 @@ def create_listen_stanza(service_name=None, service_ip=None,
     unit_name = os.environ["JUJU_UNIT_NAME"].replace("/", "-")
     service_config.append("frontend %s-%s" % (unit_name, service_port))
     bind_stanza = "    bind %s:%s" % (service_ip, service_port)
-    if service_crtfiles:
+    if service_crts:
+        # Enable SSL termination for this frontend, using the given
+        # certificates.
         bind_stanza += " ssl"
-        for i, crtfile in enumerate(service_crtfiles):
-            if crtfile == "DEFAULT":
+        for i, crt in enumerate(service_crts):
+            if crt == "DEFAULT":
                 path = os.path.join(default_haproxy_lib_dir, "default.pem")
             else:
                 path = os.path.join(default_haproxy_lib_dir,
@@ -684,11 +688,12 @@ def write_service_config(services_dict):
             with open(full_path, 'w') as f:
                 f.write(base64.b64decode(errorfile["content"]))
 
-        crtfiles = service_config.get('crtfiles', [])
-        for i, crtfile in enumerate(crtfiles):
-            if crtfile == "DEFAULT":
+        # Write to disk the content of the given SSL certificates.
+        crts = service_config.get('crts', [])
+        for i, crt in enumerate(crts):
+            if crt == "DEFAULT":
                 continue
-            content = base64.b64decode(crtfile)
+            content = base64.b64decode(crt)
             path = get_service_lib_path(service_name)
             full_path = os.path.join(path, "%d.pem" % i)
             with open(full_path, 'w') as f:
@@ -703,7 +708,7 @@ def write_service_config(services_dict):
                 service_config['service_host'],
                 service_config['service_port'],
                 service_config['service_options'],
-                server_entries, errorfiles, crtfiles))
+                server_entries, errorfiles, crts))
 
 
 def get_service_lib_path(service_name):
@@ -1035,6 +1040,13 @@ def write_metrics_cronjob(script_path, cron_path):
         }))
 
 
+def has_ssl_support():
+    apt_pkg.init()
+    cache = apt_pkg.Cache()
+    package = cache["haproxy"]
+    return package.current_ver.ver_str.split(".")[0:2] >= ["1", "5"]
+
+
 def get_selfsigned_cert():
     cert_file = os.path.join(default_haproxy_lib_dir, "selfsigned_ca.crt")
     key_file = os.path.join(default_haproxy_lib_dir, "selfsigned.key")
@@ -1048,6 +1060,7 @@ def get_selfsigned_cert():
     return content
 
 
+# XXX taken from the apache2 charm.
 def is_selfsigned_cert_stale(cert_file, key_file):
     """
     Do we need to generate a new self-signed cert?
@@ -1097,6 +1110,7 @@ def is_selfsigned_cert_stale(cert_file, key_file):
     return False
 
 
+# XXX taken from the apache2 charm.
 def gen_selfsigned_cert(cert_file, key_file):
     """
     Create a self-signed certificate.
