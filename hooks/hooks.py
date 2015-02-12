@@ -693,7 +693,7 @@ def write_service_config(services_dict):
             with open(full_path, 'w') as f:
                 f.write(base64.b64decode(errorfile["content"]))
 
-        # Write to disk the content of the given SSL certificates.
+        # Write to disk the content of the given SSL certificates
         crts = service_config.get('crts', [])
         for i, crt in enumerate(crts):
             if crt == "DEFAULT":
