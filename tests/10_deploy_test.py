@@ -7,6 +7,7 @@ import amulet
 import requests
 import base64
 import yaml
+import time
 
 d = amulet.Deployment(series='trusty')
 # Add the haproxy charm to the deployment.
@@ -104,10 +105,22 @@ d.configure('haproxy', {
          'servers': [['apache', apache_private, 80, 'maxconn 50']]}])
 })
 
-page = requests.get('http://%s/index.html' % haproxy_address)
-page.raise_for_status()
-page = requests.get('https://%s/index.html' % haproxy_address, verify=False)
-page.raise_for_status()
+# We need a retry loop here, since there's no way to tell when the new
+# configuration is in place.
+url = 'https://%s/index.html' % haproxy_address
+retries = 10
+for i in range(retries):
+    try:
+        page = requests.get(url, verify=False)
+        page.raise_for_status()
+    except requests.exceptions.ConnectionError:
+        if i == retries - 1:
+            # This was the last one, let's fail
+            raise
+        time.sleep(6)
+    else:
+        break
+
 print('Successfully got the Apache2 web page through haproxy SSL termination.')
 
 # Send a message that the tests are complete.
