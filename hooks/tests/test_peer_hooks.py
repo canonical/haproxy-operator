@@ -1,6 +1,7 @@
 import base64
 import os
 import yaml
+import pwd
 
 from testtools import TestCase
 from mock import patch
@@ -254,10 +255,16 @@ class PeerRelationTest(TestCase):
         with patch.object(os.path, "exists") as exists:
             exists.return_value = True
             with patch_open() as (mock_open, mock_file):
-                hooks.write_service_config(services_dict)
-                mock_open.assert_any_call(
-                    '/var/lib/haproxy/service_bar/0.pem', 'w')
-                mock_file.write.assert_any_call(content)
+                with patch.object(pwd, "getpwnam") as getpwnam:
+                    class DB(object):
+                        pw_uid = 9999
+                    getpwnam.return_value = DB()
+                    with patch.object(os, "chown") as chown:
+                        hooks.write_service_config(services_dict)
+                        path = '/var/lib/haproxy/service_bar/0.pem'
+                        mock_open.assert_any_call(path, 'w')
+                        mock_file.write.assert_any_call(content)
+                        chown.assert_called_with(path, 9999, - 1)
         self.assertTrue(create_listen_stanza.called)
 
     @patch('hooks.create_listen_stanza')

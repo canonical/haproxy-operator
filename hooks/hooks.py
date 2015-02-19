@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import yaml
+import pwd
 
 from itertools import izip, tee, groupby
 
@@ -292,8 +293,7 @@ def update_ssl_cert(config_data):
         content += base64.b64decode(ssl_key)
 
     pem_path = os.path.join(default_haproxy_lib_dir, "default.pem")
-    with open(pem_path, 'w') as f:
-        f.write(content)
+    write_ssl_pem(pem_path, content)
 
 
 # -----------------------------------------------------------------------------
@@ -705,6 +705,7 @@ def write_service_config(services_dict):
             content = base64.b64decode(crt)
             path = get_service_lib_path(service_name)
             full_path = os.path.join(path, "%d.pem" % i)
+            write_ssl_pem(full_path, content)
             with open(full_path, 'w') as f:
                 f.write(content)
 
@@ -1148,10 +1149,30 @@ def gen_selfsigned_cert(cert_file, key_file):
     os.environ['OPENSSL_CN'] = unit_get('public-address')
     os.environ['OPENSSL_PUBLIC'] = unit_get("public-address")
     os.environ['OPENSSL_PRIVATE'] = unit_get("private-address")
+    # Set the umask so the child process will inherit it and
+    # the generated files will be readable only by root..
+    old_mask = os.umask(077)
     subprocess.call(
         ['openssl', 'req', '-new', '-x509', '-nodes', '-config',
          os.path.join(os.environ['CHARM_DIR'], 'data', 'openssl.cnf'),
-         '-keyout', key_file, '-out', cert_file])
+         '-keyout', key_file, '-out', cert_file],)
+    os.umask(old_mask)
+    uid = pwd.getpwnam('haproxy').pw_uid
+    os.chown(key_file, uid, -1)
+    os.chown(cert_file, uid, -1)
+
+
+def write_ssl_pem(path, content):
+    """Write an SSL pem file and set permissions on it."""
+    # Set the umask so the child process will inherit it and we
+    # can make certificate files readable only by the 'haproxy'
+    # user (see below).
+    old_mask = os.umask(077)
+    with open(path, 'w') as f:
+        f.write(content)
+    os.umask(old_mask)
+    uid = pwd.getpwnam('haproxy').pw_uid
+    os.chown(path, uid, -1)
 
 
 # #############################################################################

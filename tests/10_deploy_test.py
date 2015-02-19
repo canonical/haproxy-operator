@@ -107,11 +107,14 @@ d.configure('haproxy', {
 
 # We need a retry loop here, since there's no way to tell when the new
 # configuration is in place.
-url = 'https://%s/index.html' % haproxy_address
+url = 'http://%s/index.html' % haproxy_address
+secure_url = 'https://%s/index.html' % haproxy_address
 retries = 10
 for i in range(retries):
     try:
-        page = requests.get(url, verify=False)
+        page = requests.get(url)
+        page.raise_for_status()
+        page = requests.get(secure_url, verify=False)
         page.raise_for_status()
     except requests.exceptions.ConnectionError:
         if i == retries - 1:
