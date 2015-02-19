@@ -9,7 +9,6 @@ import shutil
 import subprocess
 import sys
 import yaml
-import apt_pkg
 
 from itertools import izip, tee, groupby
 
@@ -31,7 +30,8 @@ from charmhelpers.core.hookenv import (
 from charmhelpers.fetch import (
     apt_install,
     add_source,
-    apt_update
+    apt_update,
+    apt_cache
 )
 
 from charmhelpers.contrib.charmsupport import nrpe
@@ -230,6 +230,10 @@ def get_listen_stanzas(haproxy_config_file="/etc/haproxy/haproxy.cfg"):
     listen_stanzas = re.findall(
         "listen\s+([^\s]+)\s+([^:]+):(.*)",
         haproxy_config)
+    # Match bind stanzas like:
+    #
+    # bind 1.2.3.5:234
+    # bind 1.2.3.4:123 ssl crt /foo/bar
     bind_stanzas = re.findall(
         "\s+bind\s+([^:]+):(\d+).*\n\s+default_backend\s+([^\s]+)",
         haproxy_config, re.M)
@@ -1059,13 +1063,18 @@ def add_backports_preferences(release):
 
 
 def has_ssl_support():
-    apt_pkg.init()
-    cache = apt_pkg.Cache()
+    """Return True if the locally installed haproxy package supports SSL."""
+    cache = apt_cache()
     package = cache["haproxy"]
     return package.current_ver.ver_str.split(".")[0:2] >= ["1", "5"]
 
 
 def get_selfsigned_cert():
+    """Return the content of the self-signed certificate.
+
+    If no self-signed certificate is there or the existing one doesn't match
+    our unit data, a new one will be created.
+    """
     cert_file = os.path.join(default_haproxy_lib_dir, "selfsigned_ca.crt")
     key_file = os.path.join(default_haproxy_lib_dir, "selfsigned.key")
     if is_selfsigned_cert_stale(cert_file, key_file):
