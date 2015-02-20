@@ -1,6 +1,7 @@
 import base64
 import os
 import yaml
+import pwd
 
 from testtools import TestCase
 from mock import patch
@@ -196,7 +197,7 @@ class PeerRelationTest(TestCase):
 
                 create_listen_stanza.assert_called_with(
                     'bar', 'some-host', 'some-port', 'some-options',
-                    (1, 2), [])
+                    (1, 2), [], [])
                 mock_open.assert_called_with(
                     '/var/run/haproxy/bar.service', 'w')
                 mock_file.write.assert_called_with('some content')
@@ -231,4 +232,61 @@ class PeerRelationTest(TestCase):
                 mock_open.assert_any_call(
                     '/var/lib/haproxy/service_bar/403.http', 'w')
                 mock_file.write.assert_any_call(content)
+        self.assertTrue(create_listen_stanza.called)
+
+    @patch('hooks.create_listen_stanza')
+    def test_writes_crts(self, create_listen_stanza):
+        create_listen_stanza.return_value = 'some content'
+
+        content = ("-----BEGIN CERTIFICATE-----\n"
+                   "<data>\n"
+                   "-----END CERTIFICATE-----\n")
+        services_dict = {
+            'foo': {
+                'service_name': 'bar',
+                'service_host': 'some-host',
+                'service_port': 'some-port',
+                'service_options': 'some-options',
+                'servers': (1, 2),
+                'crts': [base64.b64encode(content)]
+            },
+        }
+
+        with patch.object(os.path, "exists") as exists:
+            exists.return_value = True
+            with patch_open() as (mock_open, mock_file):
+                with patch.object(pwd, "getpwnam") as getpwnam:
+                    class DB(object):
+                        pw_uid = 9999
+                    getpwnam.return_value = DB()
+                    with patch.object(os, "chown") as chown:
+                        hooks.write_service_config(services_dict)
+                        path = '/var/lib/haproxy/service_bar/0.pem'
+                        mock_open.assert_any_call(path, 'w')
+                        mock_file.write.assert_any_call(content)
+                        chown.assert_called_with(path, 9999, - 1)
+        self.assertTrue(create_listen_stanza.called)
+
+    @patch('hooks.create_listen_stanza')
+    def test_skip_crts_default(self, create_listen_stanza):
+        create_listen_stanza.return_value = 'some content'
+        services_dict = {
+            'foo': {
+                'service_name': 'bar',
+                'service_host': 'some-host',
+                'service_port': 'some-port',
+                'service_options': 'some-options',
+                'servers': (1, 2),
+                'crts': ["DEFAULT"]
+            },
+        }
+
+        with patch.object(os.path, "exists") as exists:
+            exists.return_value = True
+            with patch.object(os, "makedirs"):
+                with patch_open() as (mock_open, mock_file):
+                    hooks.write_service_config(services_dict)
+                    self.assertNotEqual(
+                        mock_open.call_args,
+                        ('/var/lib/haproxy/service_bar/0.pem', 'w'))
         self.assertTrue(create_listen_stanza.called)

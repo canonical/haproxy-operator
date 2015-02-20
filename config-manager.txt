@@ -3,4 +3,4 @@
 #
 #   make sourcedeps
 
-./build/charm-helpers                   lp:charm-helpers;revno=70
+./build/charm-helpers                   lp:charm-helpers;revno=303
