@@ -393,6 +393,72 @@ class ReverseProxyRelationTest(TestCase):
         self.assertEqual(expected, hooks.create_services())
         self.write_service_config.assert_called_with(expected)
 
+    def test_with_multiple_units_and_backends_in_relation(self):
+        """
+        Have multiple units specifying "services" in the relation
+        using the "backends" option. Make sure data is created correctly
+        with create_services()
+        """
+        self.get_config_services.return_value = {
+            None: {
+                "service_name": "service",
+                },
+            }
+        self.relations_of_type.return_value = [
+            {"port": 4242,
+             "private-address": "1.2.3.4",
+             "__unit__": "foo/0",
+             "services": yaml.safe_dump([{
+                 "service_name": "service",
+                 "servers": [('foo-0', '1.2.3.4',
+                              4242, ["maxconn 4"])],
+                 "backends": [
+                     {"backend_name": "foo-bar",
+                      "servers": [('foo-bar-0', '2.2.2.2',
+                                   2222, ["maxconn 4"])],
+                      },
+                 ]
+                 }])
+             },
+            {"port": 4242,
+             "private-address": "1.2.3.5",
+             "__unit__": "foo/1",
+             "services": yaml.safe_dump([{
+                 "service_name": "service",
+                 "servers": [('foo-0', '1.2.3.5',
+                              4242, ["maxconn 4"])],
+                 "backends": [
+                     {"backend_name": "foo-bar",
+                      "servers": [('foo-bar-1', '2.2.2.3',
+                                   3333, ["maxconn 4"])],
+                      },
+                 ]
+                 }])
+             },
+        ]
+
+        expected = {
+            'service': {
+                'service_name': 'service',
+                'service_host': '0.0.0.0',
+                'service_port': 10002,
+                'servers': [
+                    ['foo-0', '1.2.3.4', 4242, ["maxconn 4"]],
+                    ['foo-0', '1.2.3.5', 4242, ["maxconn 4"]]
+                    ],
+                'backends': [
+                    {"backend_name": "foo-bar",
+                     "servers": [
+                         ['foo-bar-0', '2.2.2.2', 2222, ["maxconn 4"]],
+                         ['foo-bar-1', '2.2.2.3', 3333, ["maxconn 4"]],
+                     ],
+                     },
+                ]
+                },
+            }
+        self.assertEqual(expected, hooks.create_services())
+        self.write_service_config.assert_called_with(expected)
+
     def test_merge_service(self):
         """ Make sure merge_services maintains "server" entries. """
         s1 = {'service_name': 'f', 'servers': [['f', '4', 4, ['maxconn 4']]]}

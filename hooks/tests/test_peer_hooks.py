@@ -197,7 +197,7 @@ class PeerRelationTest(TestCase):
 
                 create_listen_stanza.assert_called_with(
                     'bar', 'some-host', 'some-port', 'some-options',
-                    (1, 2), [], [])
+                    (1, 2), [], [], [])
                 mock_open.assert_called_with(
                     '/var/run/haproxy/bar.service', 'w')
                 mock_file.write.assert_called_with('some content')

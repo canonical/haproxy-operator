@@ -62,6 +62,7 @@ dupe_options = [
     ]
 
 frontend_only_options = [
+    "acl",
     "backlog",
     "bind",
     "capture cookie",
@@ -69,6 +70,7 @@ frontend_only_options = [
     "capture response header",
     "clitimeout",
     "default_backend",
+    "http-request",
     "maxconn",
     "monitor fail",
     "monitor-net",
@@ -84,6 +86,7 @@ frontend_only_options = [
     "option socket-stats",
     "option tcp-smart-accept",
     "rate-limit sessions",
+    "redirect",
     "tcp-request content accept",
     "tcp-request content reject",
     "tcp-request inspect-delay",
@@ -303,11 +306,14 @@ def update_ssl_cert(config_data):
 #                       service_ip:  IP address to listen for connections
 #                       service_port:  Port to listen for connections
 #                       service_options:  Comma separated list of options
-#                       server_entries:   List of tuples
+#                       server_entries:  List of tuples
 #                                         server_name
 #                                         server_ip
 #                                         server_port
 #                                         server_options
+#                       backends:  List of dicts
+#                                  backend_name: backend name,
+#                                  servers: list of tuples as in server_entries
 #                       errorfiles: List of dicts
 #                                   http_status: status to handle
 #                                   content: base 64 content for HAProxy to
@@ -318,7 +324,7 @@ def update_ssl_cert(config_data):
 def create_listen_stanza(service_name=None, service_ip=None,
                          service_port=None, service_options=None,
                          server_entries=None, service_errorfiles=None,
-                         service_crts=None):
+                         service_crts=None, service_backends=None):
     if service_name is None or service_ip is None or service_port is None:
         return None
     fe_options = []
@@ -359,17 +365,38 @@ def create_listen_stanza(service_name=None, service_ip=None,
     service_config.append("    default_backend %s" % (service_name,))
     service_config.extend("    %s" % service_option.strip()
                           for service_option in fe_options)
-    service_config.append("")
-    service_config.append("backend %s" % (service_name,))
-    service_config.extend("    %s" % service_option.strip()
-                          for service_option in be_options)
+
+    # For now errorfiles are common for all backends, in the future we might
+    # offer support for per-backend error files.
+    backend_errorfiles = []  # List of (status, path) tuples
     if service_errorfiles is not None:
         for errorfile in service_errorfiles:
             path = os.path.join(default_haproxy_lib_dir,
                                 "service_%s" % service_name,
                                 "%s.http" % errorfile["http_status"])
-            service_config.append(
-                "    errorfile %s %s" % (errorfile["http_status"], path))
+            backend_errorfiles.append((errorfile["http_status"], path))
+
+    # Default backend
+    _append_backend(
+        service_config, service_name, be_options, backend_errorfiles,
+        server_entries)
+
+    # Extra backends
+    if service_backends is not None:
+        for service_backend in service_backends:
+            _append_backend(
+                service_config, service_backend["backend_name"],
+                be_options, backend_errorfiles, service_backend["servers"])
+
+    return '\n'.join(service_config)
+
+
+def _append_backend(service_config, name, options, errorfiles, server_entries):
+    service_config.append("")
+    service_config.append("backend %s" % (name,))
+    service_config.extend("    %s" % option.strip() for option in options)
+    for status, path in errorfiles:
+        service_config.append("    errorfile %s %s" % (status, path))
     if isinstance(server_entries, (list, tuple)):
         for i, (server_name, server_ip, server_port,
                 server_options) in enumerate(server_entries):
@@ -382,7 +409,6 @@ def create_listen_stanza(service_name=None, service_ip=None,
                     server_line += " " + " ".join(server_options)
             server_line = server_line.format(i=i)
             service_config.append(server_line)
-    return '\n'.join(service_config)
 
 
 # -----------------------------------------------------------------------------
@@ -480,6 +506,13 @@ def merge_service(old_service, new_service):
             servers.extend(new_service["servers"])
             servers.sort()
             service["servers"] = list(x for x, _ in groupby(servers))
+    if "backends" in service and "backends" in new_service:
+        for i, backend in enumerate(service["backends"]):
+            servers = backend["servers"]
+            servers.extend(new_service["backends"][i]["servers"])
+            servers.sort()
+            service["backends"][i]["servers"] = list(
+                x for x, _ in groupby(servers))
     return service
 
 
@@ -688,6 +721,7 @@ def write_service_config(services_dict):
         log("Service: %s" % service_key)
         service_name = service_config["service_name"]
         server_entries = service_config.get('servers')
+        backends = service_config.get('backends', [])
 
         errorfiles = service_config.get('errorfiles', [])
         for errorfile in errorfiles:
@@ -718,7 +752,7 @@ def write_service_config(services_dict):
                 service_config['service_host'],
                 service_config['service_port'],
                 service_config['service_options'],
-                server_entries, errorfiles, crts))
+                server_entries, errorfiles, crts, backends))
 
 
 def get_service_lib_path(service_name):

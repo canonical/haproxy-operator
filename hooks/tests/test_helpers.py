@@ -478,6 +478,38 @@ class HelpersTest(TestCase):
 
         self.assertEqual(expected, result)
 
+    @patch.dict(os.environ, {"JUJU_UNIT_NAME": "haproxy/2"})
+    def test_creates_a_listen_stanza_with_backends(self):
+        service_name = 'foo'
+        service_ip = '1.2.3.4'
+        service_port = 80
+        server_entries = [
+            ('name-1', 'ip-1', 'port-1', ('foo1', 'bar1')),
+        ]
+        service_backends = [
+            {"backend_name": "foo-bar",
+             "servers": [
+                 ('bar-name-1', 'bar-ip-1', 'bar-port-1', ('bar2', 'bar3'))
+             ]}
+        ]
+        result = hooks.create_listen_stanza(
+            service_name, service_ip, service_port,
+            server_entries=server_entries, service_backends=service_backends)
+
+        expected = '\n'.join((
+            'frontend haproxy-2-80',
+            '    bind 1.2.3.4:80',
+            '    default_backend foo',
+            '',
+            'backend foo',
+            '    server name-1 ip-1:port-1 foo1 bar1',
+            '',
+            'backend foo-bar',
+            '    server bar-name-1 bar-ip-1:bar-port-1 bar2 bar3',
+        ))
+
+        self.assertEqual(expected, result)
+
     def test_doesnt_create_listen_stanza_if_args_not_provided(self):
         self.assertIsNone(hooks.create_listen_stanza())
 
