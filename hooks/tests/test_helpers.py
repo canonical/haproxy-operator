@@ -536,7 +536,7 @@ class HelpersTest(TestCase):
             'some-service', '0.0.0.0', 1234, [
                 'mode http',
                 'acl allowed_cidr src some-cidr',
-                'block unless allowed_cidr',
+                'http-request deny unless allowed_cidr',
                 'stats enable',
                 'stats uri /',
                 'stats realm Haproxy\\ Statistics',
@@ -583,7 +583,7 @@ class HelpersTest(TestCase):
             'some-service', '0.0.0.0', 1234, [
                 'mode http',
                 'acl allowed_cidr src some-cidr',
-                'block unless allowed_cidr',
+                'http-request deny unless allowed_cidr',
                 'stats enable',
                 'stats uri /',
                 'stats realm Haproxy\\ Statistics',
@@ -617,7 +617,7 @@ class HelpersTest(TestCase):
             'some-service', '0.0.0.0', 1234, [
                 'mode http',
                 'acl allowed_cidr src some-cidr',
-                'block unless allowed_cidr',
+                'http-request deny unless allowed_cidr',
                 'stats enable',
                 'stats uri /',
                 'stats realm Haproxy\\ Statistics',

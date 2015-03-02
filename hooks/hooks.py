@@ -429,7 +429,7 @@ def create_monitoring_stanza(service_name="haproxy_monitoring"):
     monitoring_config.append("mode http")
     monitoring_config.append("acl allowed_cidr src %s" %
                              config_data['monitoring_allowed_cidr'])
-    monitoring_config.append("block unless allowed_cidr")
+    monitoring_config.append("http-request deny unless allowed_cidr")
     monitoring_config.append("stats enable")
     monitoring_config.append("stats uri /")
     monitoring_config.append("stats realm Haproxy\ Statistics")
