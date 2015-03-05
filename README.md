@@ -65,6 +65,8 @@ website-relation-changed hook would look something like this:
 
     relation-set "services=
     - { service_name: my_web_app,
+        service_host: 0.0.0.0,
+        service_port: 80,
         service_options: [mode http, balance leastconn],
         servers: [[my_web_app_1, $host, $port, option httpchk GET / HTTP/1.0],
                   [... optionally more servers here ...]]}
@@ -72,9 +74,28 @@ website-relation-changed hook would look something like this:
     "
 
 Once set, haproxy will union multiple `servers` stanzas from any units
-joining with the same `service_name` under one listen stanza.
-`service-options` and `server_options` will be overwritten, so ensure they
-are set uniformly on all services with the same name.
+joining with the same `service_name` under one backend stanza, which will be
+the default backend for the service (requests against the given service_port on
+the haproxy unit will be forwarded to that backend). Note that `service-options`
+and `server_options` will be overwritten, so ensure they are set uniformly on
+all services with the same name.
+
+If you need additional backends, possibly handling ACL-filtered requests, you
+can add a 'backends' entry to a service stanza. For example in order to redirect
+to a different backend all requests to URLs starting with '/foo', you could have:
+
+    relation-set "services=
+    - { service_name: my_web_app,
+        service_host: 0.0.0.0,
+        service_port: 80,
+        service_options: [mode http, acl foo path_beg -i /foo, use_backend foo if foo],
+        servers: [[my_web_app_1, $host, $port, option httpchk GET / HTTP/1.0],
+                  [... optionally more servers here ...]]
+        backends:
+        - { backend_name: foo,
+            servers: [[my_web_app2, $host, $port2, option httpchk GET / HTTP/1.0],
+                      [... optionally more servers here ...]]}}
+
 
 ## Website Relation
 
