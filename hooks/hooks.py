@@ -392,6 +392,11 @@ def create_listen_stanza(service_name=None, service_ip=None,
 
 
 def _append_backend(service_config, name, options, errorfiles, server_entries):
+    """Append a new backend stanza to the given service_config.
+
+    A backend stanza consists in a 'backend <name>' line followed by option
+    lines, errorfile lines and server line.
+    """
     service_config.append("")
     service_config.append("backend %s" % (name,))
     service_config.extend("    %s" % option.strip() for option in options)
