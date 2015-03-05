@@ -506,12 +506,14 @@ def merge_service(old_service, new_service):
     service = new_service.copy()
     service.update(old_service)
     if "servers" in service:
+        # Merge all 'servers' entries of the default backend
         servers = service["servers"]
         if "servers" in new_service:
             servers.extend(new_service["servers"])
             servers.sort()
             service["servers"] = list(x for x, _ in groupby(servers))
     if "backends" in service and "backends" in new_service:
+        # Merge all 'servers' entries of the additional backends
         for i, backend in enumerate(service["backends"]):
             servers = backend["servers"]
             servers.extend(new_service["backends"][i]["servers"])
