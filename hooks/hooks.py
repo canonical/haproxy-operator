@@ -366,8 +366,8 @@ def create_listen_stanza(service_name=None, service_ip=None,
     service_config.extend("    %s" % service_option.strip()
                           for service_option in fe_options)
 
-    # For now errorfiles are common for all backends, in the future we might
-    # offer support for per-backend error files.
+    # For now errorfiles are common for all backends, in the future we
+    # might offer support for per-backend error files.
     backend_errorfiles = []  # List of (status, path) tuples
     if service_errorfiles is not None:
         for errorfile in service_errorfiles:
