@@ -12,7 +12,7 @@ import time
 d = amulet.Deployment(series='trusty')
 # Add the haproxy charm to the deployment.
 d.add('haproxy')
-d.add('apache2')
+d.add('apache2', units=2)
 
 # Get the directory this way to load the file when CWD is different.
 path = os.path.abspath(os.path.dirname(__file__))
@@ -127,18 +127,6 @@ for i in range(retries):
         break
 
 print('Successfully got the Apache2 web page through haproxy SSL termination.')
-
-# Test extra backends
-d.add_unit('apache2')
-d.sentry.wait(seconds)
-try:
-    d.sentry.wait(seconds)
-except amulet.helpers.TimeoutError:
-    message = 'The second apache2 unit did not setup in %d seconds.' % seconds
-    # The SKIP status enables skip or fail the test based on configuration.
-    amulet.raise_status(amulet.SKIP, msg=message)
-except:
-    raise
 
 apache_unit2 = d.sentry.unit['apache2/1']
 apache_private2 = apache_unit2.run("unit-get private-address")[0]
