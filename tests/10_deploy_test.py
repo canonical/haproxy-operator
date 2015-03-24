@@ -12,7 +12,7 @@ import time
 d = amulet.Deployment(series='trusty')
 # Add the haproxy charm to the deployment.
 d.add('haproxy')
-d.add('apache2')
+d.add('apache2', units=2)
 
 # Get the directory this way to load the file when CWD is different.
 path = os.path.abspath(os.path.dirname(__file__))
@@ -83,6 +83,7 @@ else:
               'configuration file.' % apache_private
     amulet.raise_status(amulet.FAIL, msg=message)
 
+# Test SSL termination
 d.configure('haproxy', {
     'source': 'backports',
     'ssl_cert': 'SELFSIGNED',
@@ -116,6 +117,7 @@ for i in range(retries):
         page.raise_for_status()
         page = requests.get(secure_url, verify=False)
         page.raise_for_status()
+        success = True
     except requests.exceptions.ConnectionError:
         if i == retries - 1:
             # This was the last one, let's fail
@@ -125,6 +127,52 @@ for i in range(retries):
         break
 
 print('Successfully got the Apache2 web page through haproxy SSL termination.')
+
+apache_unit2 = d.sentry.unit['apache2/1']
+apache_private2 = apache_unit2.run("unit-get private-address")[0]
+
+# Create a file on the second apache unit's www directory.
+apache_unit2.run("echo foo > /var/www/html/foo")
+
+d.configure('haproxy', {
+    'services': yaml.safe_dump([
+        {'service_name': 'apache',
+         'service_host': '0.0.0.0',
+         'service_port': 80,
+         'service_options': [
+             'mode http', 'balance leastconn', 'option httpchk GET / HTTP/1.0',
+             'acl foo path_beg -i /foo', 'use_backend foo if foo',
+         ],
+         'servers': [
+             ['apache', apache_private, 80, 'maxconn 50']],
+         'backends': [
+             {'backend_name': 'foo',
+              'servers': [
+                  ['apache2', apache_private2, 80, 'maxconn 50']]}
+         ]}])
+})
+
+# Let's exercise our URL-based routing by trying to fetch a URL that will
+# only work for the second apache unit (which is configured as server
+# of the extra backend).
+url = 'http://%s/foo' % haproxy_address
+
+# We need a retry loop here, since there's no way to tell when the new
+# configuration is in place.
+retries = 10
+for i in range(retries):
+    try:
+        page = requests.get(url)
+        page.raise_for_status()
+    except:
+        if i == retries - 1:
+            # This was the last one, let's fail
+            raise
+        time.sleep(6)
+    else:
+        break
+
+print('Successfully got the /foo URL from the second Apache unit.')
 
 # Send a message that the tests are complete.
 print('The haproxy tests are complete.')
