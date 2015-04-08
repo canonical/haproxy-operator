@@ -487,3 +487,33 @@ class ReverseProxyRelationTest(TestCase):
 
         expected = {'service_name': 'left', 'foo': 'bar', 'bar': 'baz'}
         self.assertEqual(expected, hooks.merge_service(s1, s2))
+
+    def test_join_reverseproxy_relation(self):
+        """
+        When haproxy joins a reverseproxy relation it advertises its public
+        IP and public certificate by setting values on the relation.
+        """
+        self.config_get.return_value = {"ssl_cert": "xxx"}
+        unit_get = self.patch_hook("unit_get")
+        unit_get.return_value = "1.2.3.4"
+        relation_set = self.patch_hook("relation_set")
+        hooks.reverseproxy_interface(hook_name="joined")
+        unit_get.assert_called_once_with("public-address")
+        relation_set.assert_called_once_with(
+            relation_settings={"public-address": "1.2.3.4", "ssl_cert": "xxx"})
+
+    def test_join_reverseproxy_relation_with_selfsigned_cert(self):
+        """
+        When haproxy joins a reverseproxy relation and a self-signed
+        certificate is configured, then it's included in the relation.
+        """
+        self.config_get.return_value = {"ssl_cert": "SELFSIGNED"}
+        unit_get = self.patch_hook("unit_get")
+        unit_get.return_value = "1.2.3.4"
+        get_selfsigned_cert = self.patch_hook("get_selfsigned_cert")
+        get_selfsigned_cert.return_value = ("yyy", None)
+        relation_set = self.patch_hook("relation_set")
+        hooks.reverseproxy_interface(hook_name="joined")
+        unit_get.assert_called_once_with("public-address")
+        relation_set.assert_called_once_with(
+            relation_settings={"public-address": "1.2.3.4", "ssl_cert": "yyy"})

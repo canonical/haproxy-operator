@@ -285,7 +285,7 @@ def update_ssl_cert(config_data):
         return
     if ssl_cert == "SELFSIGNED":
         log("Using self-signed certificate")
-        content = get_selfsigned_cert()
+        content = "".join(get_selfsigned_cert())
     else:
         ssl_key = config_data.get("ssl_key")
         if not ssl_key:
@@ -942,6 +942,21 @@ def stop_hook():
 def reverseproxy_interface(hook_name=None):
     if hook_name is None:
         return None
+    if hook_name == "joined":
+        # When we join a new reverseproxy relation we communicate to the
+        # remote unit our public IP and public SSL certificate, since
+        # some applications might need it in order to tell third parties
+        # how to interact with them.
+        config_data = config_get()
+        ssl_cert = config_data.get("ssl_cert")
+        if ssl_cert == "SELFSIGNED":
+            ssl_cert = get_selfsigned_cert()[0]
+        relation_settings = {
+            "public-address": unit_get("public-address"),
+            "ssl_cert": ssl_cert,
+        }
+        relation_set(relation_settings=relation_settings)
+        return
     if hook_name in ("changed", "departed"):
         config_changed()
 
@@ -1116,17 +1131,20 @@ def get_selfsigned_cert():
 
     If no self-signed certificate is there or the existing one doesn't match
     our unit data, a new one will be created.
+
+    @return: A 2-tuple whose first item holds the content of the public
+        certificate and the second item the content of the private key.
     """
     cert_file = os.path.join(default_haproxy_lib_dir, "selfsigned_ca.crt")
     key_file = os.path.join(default_haproxy_lib_dir, "selfsigned.key")
     if is_selfsigned_cert_stale(cert_file, key_file):
         log("Generating self-signed certificate")
         gen_selfsigned_cert(cert_file, key_file)
-    content = ""
+    result = ()
     for content_file in [cert_file, key_file]:
         with open(content_file, "r") as fd:
-            content += fd.read()
-    return content
+            result += (fd.read(),)
+    return result
 
 
 # XXX taken from the apache2 charm.
@@ -1246,6 +1264,8 @@ def main(hook_name):
         reverseproxy_interface("changed")
     elif hook_name == "reverseproxy-relation-departed":
         reverseproxy_interface("departed")
+    elif hook_name == "reverseproxy-relation-departed":
+        reverseproxy_interface("joined")
     elif hook_name == "website-relation-joined":
         website_interface("joined")
     elif hook_name == "website-relation-changed":
