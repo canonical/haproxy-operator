@@ -1264,7 +1264,7 @@ def main(hook_name):
         reverseproxy_interface("changed")
     elif hook_name == "reverseproxy-relation-departed":
         reverseproxy_interface("departed")
-    elif hook_name == "reverseproxy-relation-departed":
+    elif hook_name == "reverseproxy-relation-joined":
         reverseproxy_interface("joined")
     elif hook_name == "website-relation-joined":
         website_interface("joined")
