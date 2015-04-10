@@ -1,3 +1,4 @@
+import base64
 import yaml
 
 from testtools import TestCase
@@ -493,14 +494,17 @@ class ReverseProxyRelationTest(TestCase):
         When haproxy joins a reverseproxy relation it advertises its public
         IP and public certificate by setting values on the relation.
         """
-        self.config_get.return_value = {"ssl_cert": "xxx"}
+        ssl_cert = base64.b64encode("<cert data>")
+        self.config_get.return_value = {"ssl_cert": ssl_cert}
         unit_get = self.patch_hook("unit_get")
         unit_get.return_value = "1.2.3.4"
         relation_set = self.patch_hook("relation_set")
         hooks.reverseproxy_interface(hook_name="joined")
         unit_get.assert_called_once_with("public-address")
         relation_set.assert_called_once_with(
-            relation_settings={"public-address": "1.2.3.4", "ssl_cert": "xxx"})
+            relation_settings={
+                "public-address": "1.2.3.4",
+                "ssl_cert": ssl_cert})
 
     def test_join_reverseproxy_relation_with_selfsigned_cert(self):
         """
@@ -511,9 +515,12 @@ class ReverseProxyRelationTest(TestCase):
         unit_get = self.patch_hook("unit_get")
         unit_get.return_value = "1.2.3.4"
         get_selfsigned_cert = self.patch_hook("get_selfsigned_cert")
-        get_selfsigned_cert.return_value = ("yyy", None)
+        get_selfsigned_cert.return_value = ("<self-signed>", None)
         relation_set = self.patch_hook("relation_set")
         hooks.reverseproxy_interface(hook_name="joined")
         unit_get.assert_called_once_with("public-address")
+        ssl_cert = base64.b64encode("<self-signed>")
         relation_set.assert_called_once_with(
-            relation_settings={"public-address": "1.2.3.4", "ssl_cert": "yyy"})
+            relation_settings={
+                "public-address": "1.2.3.4",
+                "ssl_cert": ssl_cert})
