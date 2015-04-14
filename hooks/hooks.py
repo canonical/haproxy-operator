@@ -901,6 +901,8 @@ def config_changed():
         haproxy_monitoring = None
     remove_services()
     if config_data.changed("ssl_cert"):
+        # TODO: handle also the case where it's the public-address value
+        # that changes
         _notify_reverseproxy()
     if not create_services():
         sys.exit()
