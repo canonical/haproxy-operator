@@ -14,6 +14,7 @@ class ConfigChangedTest(TestCase):
     def setUp(self):
         super(ConfigChangedTest, self).setUp()
         self.config_get = self.patch_hook("config_get")
+        self.config_get().changed.return_value = False
         self.get_service_ports = self.patch_hook("get_service_ports")
         self.get_listen_stanzas = self.patch_hook("get_listen_stanzas")
         self.create_haproxy_globals = self.patch_hook(
@@ -82,6 +83,19 @@ class ConfigChangedTest(TestCase):
         self.log.assert_called_once_with(
             "HAProxy configuration check failed, exiting.")
         self.sys_exit.assert_called_once_with(1)
+
+    def test_config_changed_notify_reverseproxy(self):
+        """
+        If the ssl_cert config value changes, the reverseproxy relations get
+        updated.
+        """
+        config_data = self.config_get()
+        config_data.changed.return_value = True
+        _notify_reverseproxy = self.patch_hook("_notify_reverseproxy")
+
+        hooks.config_changed()
+        config_data.changed.assert_called_once_with("ssl_cert")
+        _notify_reverseproxy.assert_called_once()
 
 
 class HelpersTest(TestCase):

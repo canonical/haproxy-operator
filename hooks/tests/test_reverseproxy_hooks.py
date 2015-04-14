@@ -498,10 +498,13 @@ class ReverseProxyRelationTest(TestCase):
         self.config_get.return_value = {"ssl_cert": ssl_cert}
         unit_get = self.patch_hook("unit_get")
         unit_get.return_value = "1.2.3.4"
+        relation_id = self.patch_hook("relation_id")
+        relation_id.return_value = "reverseproxy:1"
         relation_set = self.patch_hook("relation_set")
         hooks.reverseproxy_interface(hook_name="joined")
         unit_get.assert_called_once_with("public-address")
         relation_set.assert_called_once_with(
+            relation_id="reverseproxy:1",
             relation_settings={
                 "public-address": "1.2.3.4",
                 "ssl_cert": ssl_cert})
@@ -514,6 +517,8 @@ class ReverseProxyRelationTest(TestCase):
         self.config_get.return_value = {"ssl_cert": "SELFSIGNED"}
         unit_get = self.patch_hook("unit_get")
         unit_get.return_value = "1.2.3.4"
+        relation_id = self.patch_hook("relation_id")
+        relation_id.return_value = "reverseproxy:1"
         get_selfsigned_cert = self.patch_hook("get_selfsigned_cert")
         get_selfsigned_cert.return_value = ("<self-signed>", None)
         relation_set = self.patch_hook("relation_set")
@@ -521,6 +526,7 @@ class ReverseProxyRelationTest(TestCase):
         unit_get.assert_called_once_with("public-address")
         ssl_cert = base64.b64encode("<self-signed>")
         relation_set.assert_called_once_with(
+            relation_id="reverseproxy:1",
             relation_settings={
                 "public-address": "1.2.3.4",
                 "ssl_cert": ssl_cert})

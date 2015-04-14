@@ -900,6 +900,8 @@ def config_changed():
     else:
         haproxy_monitoring = None
     remove_services()
+    if config_data.changed("ssl_cert"):
+        _notify_reverseproxy()
     if not create_services():
         sys.exit()
     haproxy_services = load_services()
@@ -947,18 +949,23 @@ def reverseproxy_interface(hook_name=None):
         # remote unit our public IP and public SSL certificate, since
         # some applications might need it in order to tell third parties
         # how to interact with them.
-        config_data = config_get()
-        ssl_cert = config_data.get("ssl_cert")
-        if ssl_cert == "SELFSIGNED":
-            ssl_cert = base64.b64encode(get_selfsigned_cert()[0])
-        relation_settings = {
-            "public-address": unit_get("public-address"),
-            "ssl_cert": ssl_cert,
-        }
-        relation_set(relation_settings=relation_settings)
+        _notify_reverseproxy(relation_ids=(relation_id(),))
         return
     if hook_name in ("changed", "departed"):
         config_changed()
+
+
+def _notify_reverseproxy(relation_ids=None):
+    config_data = config_get()
+    ssl_cert = config_data.get("ssl_cert")
+    if ssl_cert == "SELFSIGNED":
+        ssl_cert = base64.b64encode(get_selfsigned_cert()[0])
+    relation_settings = {
+        "public-address": unit_get("public-address"),
+        "ssl_cert": ssl_cert,
+    }
+    for rid in relation_ids or get_relation_ids("reverseproxy"):
+        relation_set(relation_id=rid, relation_settings=relation_settings)
 
 
 def website_interface(hook_name=None):
