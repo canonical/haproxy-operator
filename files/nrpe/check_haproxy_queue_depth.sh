@@ -16,8 +16,8 @@ HAPROXYSTATS=$(/usr/lib/nagios/plugins/check_http -a ${AUTH} -I 127.0.0.1 -p 100
 
 for BACKEND in $(echo $HAPROXYSTATS| xargs -n1 | grep BACKEND | awk -F , '{print $1}')
 do
-    CURRQ=$(echo "$HAPROXYSTATS" | grep $BACKEND | grep BACKEND | cut -d , -f 3)
-    MAXQ=$(echo "$HAPROXYSTATS"  | grep $BACKEND | grep BACKEND | cut -d , -f 4)
+    CURRQ=$(echo "$HAPROXYSTATS" | grep ^$BACKEND, | grep BACKEND | cut -d , -f 3)
+    MAXQ=$(echo "$HAPROXYSTATS"  | grep ^$BACKEND, | grep BACKEND | cut -d , -f 4)
 
     if [[ $CURRQ -gt $CURRQthrsh || $MAXQ -gt $MAXQthrsh ]] ; then
         echo "CRITICAL: queue depth for $BACKEND - CURRENT:$CURRQ MAX:$MAXQ"
