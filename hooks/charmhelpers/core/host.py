@@ -90,7 +90,7 @@ def service_available(service_name):
             ['service', service_name, 'status'],
             stderr=subprocess.STDOUT).decode('UTF-8')
     except subprocess.CalledProcessError as e:
-        return 'unrecognized service' not in e.output
+        return b'unrecognized service' not in e.output
     else:
         return True
 
@@ -339,12 +339,16 @@ def lsb_release():
 def pwgen(length=None):
     """Generate a random pasword."""
     if length is None:
+        # A random length is ok to use a weak PRNG
         length = random.choice(range(35, 45))
     alphanumeric_chars = [
         l for l in (string.ascii_letters + string.digits)
         if l not in 'l0QD1vAEIOUaeiou']
+    # Use a crypto-friendly PRNG (e.g. /dev/urandom) for making the
+    # actual password
+    random_generator = random.SystemRandom()
     random_chars = [
-        random.choice(alphanumeric_chars) for _ in range(length)]
+        random_generator.choice(alphanumeric_chars) for _ in range(length)]
     return(''.join(random_chars))
 
 
