@@ -531,17 +531,9 @@ def merge_service(old_service, new_service):
     # Merge all 'backends' and their contained "servers".
     if "backends" in old_service and "backends" in new_service:
         backends_by_name = {}
-        # Populate backends_by_name with backends from (old_)service.
-        for backend in service["backends"]:
-            backend_name = backend.get("backend_name")
-            if backend_name is None:
-                raise InvalidRelationDataError(
-                    "Each backend must have backend_name.")
-            backends_by_name.setdefault(backend_name, backend)
-
-        # Go through backends in new_service and add them to backends_by_name,
-        # merging 'servers' while at it.
-        for backend in new_service["backends"]:
+        # Go through backends in old and new configs and add them to
+        # backends_by_name, merging 'servers' while at it.
+        for backend in service["backends"] + new_service["backends"]:
             backend_name = backend.get("backend_name")
             if backend_name is None:
                 raise InvalidRelationDataError(
