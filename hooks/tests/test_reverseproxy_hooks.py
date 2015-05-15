@@ -489,27 +489,29 @@ class ReverseProxyRelationTest(TestCase):
         expected = {'service_name': 'left', 'foo': 'bar', 'bar': 'baz'}
         self.assertEqual(expected, hooks.merge_service(s1, s2))
 
-    def test_merge_service_bug(self):
+    def test_merge_service_backend_name_matching(self):
         """ Make sure merge_services maintains "server" entries. """
 
         s1 = {'backends': [
-            {'backend_name': 'webapp',
-             'servers': [['webapp-0', '10.0.3.170', 8090, []]]},
             {'backend_name': 'api',
-             'servers': [['api-0', '10.0.3.170', 9080, []]]}]}
+             'servers': [['api-0', '10.0.0.1', 9080, []]]},
+            {'backend_name': 'webapp',
+             'servers': [['webapp-0', '10.0.0.1', 8090, []]]},
+        ]}
         s2 = {'backends': [
             {'backend_name': 'webapp',
-             'servers': [['webapp-1', '10.0.3.121', 8090, []]]}]}
+             'servers': [['webapp-1', '10.0.0.2', 8090, []]]},
+        ]}
         expected = {
             'backends': [
                 {'backend_name': 'api',
-                 'servers': [['api-0', '10.0.3.121', 9080, []]]},
+                 'servers': [['api-0', '10.0.0.1', 9080, []]]},
                 {'backend_name': 'webapp',
-                 'servers': [['webapp-0', '10.0.3.170', 8090, []],
-                             ['webapp-1', '10.0.3.121', 8090, []]]},
+                 'servers': [['webapp-0', '10.0.0.1', 8090, []],
+                             ['webapp-1', '10.0.0.2', 8090, []]]},
             ]
         }
-        self.assertItemsEqual(expected, hooks.merge_service(s1, s2))
+        self.assertEqual(expected, hooks.merge_service(s1, s2))
 
     def test_join_reverseproxy_relation(self):
         """
