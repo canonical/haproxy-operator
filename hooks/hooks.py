@@ -498,11 +498,10 @@ def parse_services_yaml(services, yaml_data):
 
 def merge_service(old_service, new_service):
     """
-    Helper function to merge two serivce entries correctly.
+    Helper function to merge two service entries correctly.
     Everything will get trampled (preferring old_service), except "servers"
     which will be unioned acrosss both entries, stripping strict dups.
     """
-    service = {}
     service = new_service.copy()
     service.update(old_service)
     if "servers" in service:
@@ -516,7 +515,8 @@ def merge_service(old_service, new_service):
         # Merge all 'servers' entries of the additional backends
         for i, backend in enumerate(service["backends"]):
             servers = backend["servers"]
-            servers.extend(new_service["backends"][i]["servers"])
+            if len(new_service["backends"]) > i:
+                servers.extend(new_service["backends"][i]["servers"])
             servers.sort()
             service["backends"][i]["servers"] = list(
                 x for x, _ in groupby(servers))
