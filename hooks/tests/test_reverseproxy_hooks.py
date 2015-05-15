@@ -489,8 +489,24 @@ class ReverseProxyRelationTest(TestCase):
         expected = {'service_name': 'left', 'foo': 'bar', 'bar': 'baz'}
         self.assertEqual(expected, hooks.merge_service(s1, s2))
 
+    def test_merge_service_old_backend_without_name(self):
+        """Backends in old_service without name raise an exception."""
+
+        s1 = {'backends': [{'servers': []}]}
+        s2 = {'backends': []}
+        self.assertRaises(
+            hooks.InvalidRelationDataError, hooks.merge_service, s1, s2)
+
+    def test_merge_service_new_backend_without_name(self):
+        """Backends in new_service without name raise an exception."""
+
+        s1 = {'backends': []}
+        s2 = {'backends': [{'servers': []}]}
+        self.assertRaises(
+            hooks.InvalidRelationDataError, hooks.merge_service, s1, s2)
+
     def test_merge_service_backend_name_matching(self):
-        """ Make sure merge_services maintains "server" entries. """
+        """Backends are merged by backend_name."""
 
         s1 = {'backends': [
             {'backend_name': 'api',

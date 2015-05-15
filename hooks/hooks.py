@@ -97,6 +97,10 @@ frontend_only_options = [
     ]
 
 
+class InvalidRelationDataError(Exception):
+    """Invalid data has been provided in the relation."""
+
+
 # #############################################################################
 # Supporting functions
 # #############################################################################
@@ -522,7 +526,7 @@ def merge_service(old_service, new_service):
     # Merge all 'servers' entries of the default backend.
     if "servers" in old_service and "servers" in new_service:
         service["servers"] = _add_items_if_missing(
-            service["servers"], new_service["servers"])
+            old_service["servers"], new_service["servers"])
 
     # Merge all 'backends' and their contained "servers".
     if "backends" in old_service and "backends" in new_service:
@@ -531,7 +535,8 @@ def merge_service(old_service, new_service):
         for backend in service["backends"]:
             backend_name = backend.get("backend_name")
             if backend_name is None:
-                raise Exception("Each backend must have backend_name.")
+                raise InvalidRelationDataError(
+                    "Each backend must have backend_name.")
             backends_by_name.setdefault(backend_name, backend)
 
         # Go through backends in new_service and add them to backends_by_name,
@@ -539,7 +544,8 @@ def merge_service(old_service, new_service):
         for backend in new_service["backends"]:
             backend_name = backend.get("backend_name")
             if backend_name is None:
-                raise Exception("Each backend must have backend_name.")
+                raise InvalidRelationDataError(
+                    "Each backend must have backend_name.")
             if backend_name in backends_by_name:
                 # Merge servers.
                 target_backend = backends_by_name[backend_name]
