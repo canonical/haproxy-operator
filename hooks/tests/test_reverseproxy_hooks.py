@@ -489,6 +489,72 @@ class ReverseProxyRelationTest(TestCase):
         expected = {'service_name': 'left', 'foo': 'bar', 'bar': 'baz'}
         self.assertEqual(expected, hooks.merge_service(s1, s2))
 
+    def test_merge_service_old_backend_without_name(self):
+        """Backends in old_service without name raise an exception."""
+
+        s1 = {'backends': [{'servers': []}]}
+        s2 = {'backends': []}
+        self.assertRaises(
+            hooks.InvalidRelationDataError, hooks.merge_service, s1, s2)
+
+    def test_merge_service_new_backend_without_name(self):
+        """Backends in new_service without name raise an exception."""
+
+        s1 = {'backends': []}
+        s2 = {'backends': [{'servers': []}]}
+        self.assertRaises(
+            hooks.InvalidRelationDataError, hooks.merge_service, s1, s2)
+
+    def test_merge_service_no_old_backend(self):
+        """
+        If the old service config has no backends, the backends from the
+        new config is used..
+        """
+
+        s1 = {}
+        s2 = {'backends': [
+            {'backend_name': 'webapp',
+             'servers': [['webapp-1', '10.0.0.2', 8090, []]]},
+        ]}
+        self.assertEqual(s2, hooks.merge_service(s1, s2))
+
+    def test_merge_service_no_new_backend(self):
+        """
+        If the new service config has no backends, the backends from the
+        old config is used..
+        """
+
+        s1 = {'backends': [
+            {'backend_name': 'webapp',
+             'servers': [['webapp-1', '10.0.0.2', 8090, []]]},
+        ]}
+        s2 = {}
+        self.assertEqual(s1, hooks.merge_service(s1, s2))
+
+    def test_merge_service_backend_name_matching(self):
+        """Backends are merged by backend_name."""
+
+        s1 = {'backends': [
+            {'backend_name': 'api',
+             'servers': [['api-0', '10.0.0.1', 9080, []]]},
+            {'backend_name': 'webapp',
+             'servers': [['webapp-0', '10.0.0.1', 8090, []]]},
+        ]}
+        s2 = {'backends': [
+            {'backend_name': 'webapp',
+             'servers': [['webapp-1', '10.0.0.2', 8090, []]]},
+        ]}
+        expected = {
+            'backends': [
+                {'backend_name': 'api',
+                 'servers': [['api-0', '10.0.0.1', 9080, []]]},
+                {'backend_name': 'webapp',
+                 'servers': [['webapp-0', '10.0.0.1', 8090, []],
+                             ['webapp-1', '10.0.0.2', 8090, []]]},
+            ]
+        }
+        self.assertEqual(expected, hooks.merge_service(s1, s2))
+
     def test_join_reverseproxy_relation(self):
         """
         When haproxy joins a reverseproxy relation it advertises its public

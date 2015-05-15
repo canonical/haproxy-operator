@@ -11,7 +11,8 @@ import sys
 import yaml
 import pwd
 
-from itertools import izip, tee, groupby
+from itertools import izip, tee
+from operator import itemgetter
 
 from charmhelpers.core.host import pwgen, lsb_release
 from charmhelpers.core.hookenv import (
@@ -94,6 +95,10 @@ frontend_only_options = [
     "timeout clitimeout",
     "use_backend",
     ]
+
+
+class InvalidRelationDataError(Exception):
+    """Invalid data has been provided in the relation."""
 
 
 # #############################################################################
@@ -496,30 +501,53 @@ def parse_services_yaml(services, yaml_data):
     return services
 
 
+def _add_items_if_missing(target, additions):
+    """
+    Append items from `additions` to `target` if they are not present already.
+
+    Returns a new list.
+    """
+    result = target[:]
+    for addition in additions:
+        if addition not in result:
+            result.append(addition)
+    return result
+
+
 def merge_service(old_service, new_service):
     """
-    Helper function to merge two serivce entries correctly.
+    Helper function to merge two service entries correctly.
     Everything will get trampled (preferring old_service), except "servers"
     which will be unioned acrosss both entries, stripping strict dups.
     """
-    service = {}
     service = new_service.copy()
     service.update(old_service)
-    if "servers" in service:
-        # Merge all 'servers' entries of the default backend
-        servers = service["servers"]
-        if "servers" in new_service:
-            servers.extend(new_service["servers"])
-            servers.sort()
-            service["servers"] = list(x for x, _ in groupby(servers))
-    if "backends" in service and "backends" in new_service:
-        # Merge all 'servers' entries of the additional backends
-        for i, backend in enumerate(service["backends"]):
-            servers = backend["servers"]
-            servers.extend(new_service["backends"][i]["servers"])
-            servers.sort()
-            service["backends"][i]["servers"] = list(
-                x for x, _ in groupby(servers))
+
+    # Merge all 'servers' entries of the default backend.
+    if "servers" in old_service and "servers" in new_service:
+        service["servers"] = _add_items_if_missing(
+            old_service["servers"], new_service["servers"])
+
+    # Merge all 'backends' and their contained "servers".
+    if "backends" in old_service and "backends" in new_service:
+        backends_by_name = {}
+        # Go through backends in old and new configs and add them to
+        # backends_by_name, merging 'servers' while at it.
+        for backend in service["backends"] + new_service["backends"]:
+            backend_name = backend.get("backend_name")
+            if backend_name is None:
+                raise InvalidRelationDataError(
+                    "Each backend must have backend_name.")
+            if backend_name in backends_by_name:
+                # Merge servers.
+                target_backend = backends_by_name[backend_name]
+                target_backend["servers"] = _add_items_if_missing(
+                    target_backend["servers"], backend["servers"])
+            else:
+                backends_by_name[backend_name] = backend
+
+        service["backends"] = sorted(
+            backends_by_name.values(), key=itemgetter('backend_name'))
     return service
 
 
