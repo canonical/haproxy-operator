@@ -524,10 +524,6 @@ def merge_service(old_service, new_service):
         service["servers"] = _add_items_if_missing(
             service["servers"], new_service["servers"])
 
-    # We sort results for higher stability.
-    if "servers" in service:
-        service["servers"].sort()
-
     # Merge all 'backends' and their contained "servers".
     if "backends" in old_service and "backends" in new_service:
         backends_by_name = {}
@@ -547,11 +543,9 @@ def merge_service(old_service, new_service):
             if backend_name in backends_by_name:
                 # Merge servers.
                 target_backend = backends_by_name[backend_name]
-                target_backend["servers"] = sorted(
-                    _add_items_if_missing(
-                        target_backend["servers"], backend["servers"]))
+                target_backend["servers"] = _add_items_if_missing(
+                    target_backend["servers"], backend["servers"])
             else:
-                backend["servers"].sort()
                 backends_by_name[backend_name] = backend
 
         service["backends"] = sorted(
