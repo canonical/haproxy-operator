@@ -9,13 +9,9 @@ PYTHON := /usr/bin/env python
 
 build: test lint proof
 
-revision:
-	@test -f revision || echo 0 > revision
-
-proof: revision
+proof:
 	@echo Proofing charm...
-	@(charm proof $(PWD) || [ $$? -eq 100 ]) && echo OK
-	@test `cat revision` = 0 && rm revision
+	@charm proof
 
 .venv:
 	sudo apt-get install -y python-apt python-virtualenv python-jinja2
@@ -28,7 +24,7 @@ test: .venv
 
 lint:
 	@echo Checking for Python syntax...
-	@flake8 $(HOOKS_DIR) --ignore=E123 --exclude=$(HOOKS_DIR)/charmhelpers && echo OK
+	@flake8 $(HOOKS_DIR) --ignore=E123 --exclude=$(HOOKS_DIR)/charmhelpers
 
 sourcedeps: $(PWD)/config-manager.txt
 	@echo Updating source dependencies...

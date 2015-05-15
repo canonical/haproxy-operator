@@ -7,7 +7,7 @@ description:
  cookies, load balancing, header addition, modification, deletion both ways. It
  has request blocking capabilities and provides interface to display server
  status.
-categories: ["cache-proxy"]
+tags: ["cache-proxy"]
 requires:
   reverseproxy:
     interface: http
