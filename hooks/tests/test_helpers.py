@@ -278,7 +278,7 @@ class HelpersTest(TestCase):
 
         self.assertEqual(close_port.mock_calls, [call(123), call(234)])
         self.assertEqual(open_port.mock_calls,
-                         [call(345), call(456), call(567)])
+                         [call(456), call(567)])
 
     @patch('hooks.open_port')
     @patch('hooks.close_port')

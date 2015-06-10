@@ -594,6 +594,7 @@ def is_proxy(service_name):
 # -----------------------------------------------------------------------------
 def create_services():
     services_dict = get_config_services()
+    config_data = config_get()
 
     # Augment services_dict with service definitions from relation data.
     relation_data = relations_of_type("reverseproxy")
@@ -681,7 +682,8 @@ def create_services():
 
     del services_dict[None]
     services_dict = ensure_service_host_port(services_dict)
-    services_dict = apply_peer_config(services_dict)
+    if config_data["peering_mode"] != "active-active":
+        services_dict = apply_peer_config(services_dict)
     write_service_config(services_dict)
     return services_dict
 
