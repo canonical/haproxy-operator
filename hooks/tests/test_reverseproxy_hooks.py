@@ -13,7 +13,7 @@ class ReverseProxyRelationTest(TestCase):
         super(ReverseProxyRelationTest, self).setUp()
 
         self.config_get = self.patch_hook("config_get")
-        self.config_get.return_value = {"monitoring_port": "10000"}
+        self.config_get.return_value = {"monitoring_port": "10000", "peering_mode": "active-passive"}
         self.relations_of_type = self.patch_hook("relations_of_type")
         self.get_config_services = self.patch_hook("get_config_services")
         self.log = self.patch_hook("log")
@@ -455,6 +455,55 @@ class ReverseProxyRelationTest(TestCase):
                      ],
                      },
                 ]
+                },
+            }
+        self.assertEqual(expected, hooks.create_services())
+        self.write_service_config.assert_called_with(expected)
+
+    @patch.dict(os.environ, {"JUJU_UNIT_NAME": "foo/1"})
+    def test_with_multiple_units_in_relation_scaleout(self):
+        """
+        Test multiple units in scaleout mode.
+        Ensure no indirection layer gets created.
+        """
+        self.config_get.return_value["peering_mode"] = "active-active"
+        self.get_config_services.return_value = {
+            None: {
+                "service_name": "service",
+                },
+            }
+        self.unit_get.return_value = "1.2.4.5"
+        self.relations_of_type.return_value = [
+            {"port": 4242,
+             "private-address": "1.2.4.4",
+             "__unit__": "foo/0",
+             "services": yaml.safe_dump([{
+                 "service_name": "service",
+                 "servers": [('foo-0', '1.2.3.4',
+                              4242, ["maxconn 4"])]
+                 }])
+             },
+
+            {"__unit__": "foo/1",
+             "hostname": "foo-1",
+             "private-address": "1.2.4.4",
+             "all_services": yaml.dump([
+                 {"service_name": "service",
+                  "service_host": "0.0.0.0",
+                  "service_options": ["balance leastconn"],
+                  "service_port": 4242},
+                 ])
+             },
+        ]
+
+        expected = {
+            'service': {
+                'service_name': 'service',
+                'service_host': '0.0.0.0',
+                'service_port': 10002,
+                'servers': [
+                    ['foo-0', '1.2.3.4', 4242, ["maxconn 4"]],
+                    ]
                 },
             }
         self.assertEqual(expected, hooks.create_services())

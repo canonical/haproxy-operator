@@ -202,3 +202,13 @@ options:
     description: |
         Key ID to import to the apt keyring to support use with arbitary source
         configuration from outside of Launchpad archives or PPA's.
+  peering_mode:
+    default: "active-passive"
+    type: string
+    description: |
+        Possible values : "active-passive", "active-active". This is only used
+        if several units are spawned.  In "active-passive" mode, all the units will
+        forward traffic to the first working haproxy unit, which will then forward it
+        to configured backends. In "active-active" mode, each unit will proxy the
+        traffic directly to the backends. The "active-passive" mode gives a better
+        control of the maximum connection that will be opened to a backend server.

@@ -106,7 +106,6 @@ reverseproxy relation.
 
 ## Website Relation
 
-
 The website relation is the other side of haproxy.  It can communicate with
 charms written like apache2 that can act as a front-end for haproxy to take of
 things like ssl encryption.  When joining a service like apache2 on its
@@ -186,7 +185,57 @@ one statsd server that serves multiple environments. Once juju supports
 cross-environment relations then that will be the best way to handle 
 this configuration, as it will work in either scenario.
 
-## HAProxy Project Information
+## peering\_mode and the indirection layer
+
+If you are going to spawn multiple haproxy units, you should pay special
+attention to the peering\_mode configuration option.
+
+### active-passive mode
+
+The peering\_mode option defaults to "active-passive" and in this mode, all
+haproxy units ("peers") will proxy traffic to the first working peer (i.e. that
+passes a basic layer4 check). What this means is that extra peers are working
+as "hot spares", and so adding units doesn't add global bandwidth to the
+haproxy layer.
+
+In order to achieve this, the charm configures a new service in haproxy that
+will simply forward the traffic to the first working peer. The haproxy service
+that actually load-balances between the backends is renamed, and its port
+number is increased by one.
+
+For example, if you have 3 working haproxy units haproxy/0, haproxy/1 and
+haproxy/2 configured to listen on port 80, in active-passive mode, and
+haproxy/2 gets a request, the request is routed through the following path :
+
+haproxy/2:80 ==> haproxy/0:81 ==> \[backends\]
+
+In the same fashion, if haproxy/1 receives a request, it's routed in the following way :
+
+haproxy/1:80 ==> haproxy/0:81 ==> \[backends\]
+
+If haproxy/0 was to go down, then all the requests would be forwarded to the
+next working peer, i.e. haproxy/1. In this case, a request received by
+haproxy/2 would be routed as follows :
+
+haproxy/2:80 ==> haproxy/1:81 ==> \[backends\]
+
+This mode allows a strict control of the maximum number of connections the
+backends will receive, and guarantees you'll have enough bandwidth to the
+backends should an haproxy unit die, at the cost of having less overall
+bandwidth to the backends.
+
+### active-active mode
+
+If the peering\_mode option is set to "active-active", then any haproxy unit
+will be independant from each other and will simply load-balance the traffic to
+the backends. In this case, the indirection layer described above is not
+created in this case.
+
+This mode allows increasing the bandwidth to the backends by adding additional
+units, at the cost of having less control over the number of connections that
+they will receive.
+
+# HAProxy Project Information
 
 - [HAProxy Homepage](http://haproxy.1wt.eu/)
 - [HAProxy mailing list](http://haproxy.1wt.eu/#tact)
