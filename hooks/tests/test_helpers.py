@@ -23,6 +23,7 @@ class HelpersTest(TestCase):
             'global_group': 'foo-group',
             'global_spread_checks': 234,
             'global_default_dh_param': 345,
+            'global_default_bind_ciphers': "my:ciphers",
             'global_debug': False,
             'global_quiet': False,
             'global_stats_socket': True,
@@ -40,6 +41,7 @@ class HelpersTest(TestCase):
             '    group foo-group',
             '    spread-checks 234',
             '    tune.ssl.default-dh-param 345',
+            '    ssl-default-bind-ciphers my:ciphers',
             '    stats socket %s mode 0600' % sock_path,
         ])
         self.assertEqual(result, expected)
@@ -55,6 +57,7 @@ class HelpersTest(TestCase):
             'global_group': 'foo-group',
             'global_spread_checks': 234,
             'global_default_dh_param': 345,
+            'global_default_bind_ciphers': "my:ciphers",
             'global_debug': True,
             'global_quiet': True,
             'global_stats_socket': False,
@@ -73,6 +76,7 @@ class HelpersTest(TestCase):
             '    quiet',
             '    spread-checks 234',
             '    tune.ssl.default-dh-param 345',
+            '    ssl-default-bind-ciphers my:ciphers',
         ])
         self.assertEqual(result, expected)
 

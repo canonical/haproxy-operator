@@ -1,3 +1,4 @@
+import os
 import base64
 import yaml
 
@@ -472,7 +473,8 @@ class ReverseProxyRelationTest(TestCase):
                 "service_name": "service",
                 },
             }
-        self.unit_get.return_value = "1.2.4.5"
+        unit_get = self.patch_hook("unit_get")
+        unit_get.return_value = "1.2.4.5"
         self.relations_of_type.return_value = [
             {"port": 4242,
              "private-address": "1.2.4.4",
