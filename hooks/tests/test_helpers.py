@@ -238,7 +238,7 @@ class HelpersTest(TestCase):
     def test_get_listen_stanzas_with_ssl_frontend(self, load_haproxy_config):
         load_haproxy_config.return_value = '''
         frontend foo-2-123
-            bind 1.2.3.4:123 ssl crt /foo/bar
+            bind 1.2.3.4:123 ssl crt /foo/bar no-sslv3
             default_backend foo.internal
         frontend foo-2-234
             bind 1.2.3.5:234
@@ -471,9 +471,10 @@ class HelpersTest(TestCase):
                                             server_entries=server_entries,
                                             service_crts=crts)
 
+        crt_path = '/var/lib/haproxy/service_foo/0.pem'
         expected = '\n'.join((
             'frontend haproxy-2-443',
-            '    bind 1.2.3.4:443 ssl crt /var/lib/haproxy/service_foo/0.pem',
+            '    bind 1.2.3.4:443 ssl crt %s no-sslv3' % crt_path,
             '    default_backend foo',
             '',
             'backend foo',
