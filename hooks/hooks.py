@@ -14,7 +14,7 @@ import pwd
 from itertools import izip, tee
 from operator import itemgetter
 
-from charmhelpers.core.host import pwgen, lsb_release
+from charmhelpers.core.host import pwgen, lsb_release, service_restart
 from charmhelpers.core.hookenv import (
     log,
     config as config_get,
@@ -917,6 +917,8 @@ def install_hook():
     ensure_package_status(service_affecting_packages,
                           config_data['package_status'])
     enable_haproxy()
+    # restart rsyslog to pickup haproxy config
+    service_restart("rsyslog")
 
 
 def config_changed():

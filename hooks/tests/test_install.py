@@ -14,6 +14,7 @@ class InstallTests(TestCase):
         self.apt_install = self.patch_hook('apt_install')
         self.ensure_package_status = self.patch_hook('ensure_package_status')
         self.enable_haproxy = self.patch_hook('enable_haproxy')
+        self.service_restart = self.patch_hook('service_restart')
         self.config_get = self.patch_hook('config_get')
         path_exists = patch.object(os.path, "exists")
         self.path_exists = path_exists.start()
@@ -87,3 +88,7 @@ class InstallTests(TestCase):
     def test_calls_enable_haproxy(self):
         hooks.install_hook()
         self.enable_haproxy.assert_called_once_with()
+
+    def test_restart_rsyslog_after_install(self):
+        hooks.install_hook()
+        self.service_restart.assert_called_once_with('rsyslog')
