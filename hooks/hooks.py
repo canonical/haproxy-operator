@@ -918,6 +918,8 @@ def install_hook():
                           config_data['package_status'])
     enable_haproxy()
     # restart rsyslog to pickup haproxy config
+    # this could be removed once this bug fixed in the haproxy package:
+    #  https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=790871
     service_restart("rsyslog")
 
 
