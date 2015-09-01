@@ -14,7 +14,8 @@ class ReverseProxyRelationTest(TestCase):
         super(ReverseProxyRelationTest, self).setUp()
 
         self.config_get = self.patch_hook("config_get")
-        self.config_get.return_value = {"monitoring_port": "10000", "peering_mode": "active-passive"}
+        self.config_get.return_value = {"monitoring_port": "10000",
+                                        "peering_mode": "active-passive"}
         self.relations_of_type = self.patch_hook("relations_of_type")
         self.get_config_services = self.patch_hook("get_config_services")
         self.log = self.patch_hook("log")
