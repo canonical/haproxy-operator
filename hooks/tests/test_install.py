@@ -66,7 +66,7 @@ class InstallTests(TestCase):
     def test_add_source_with_backports(self):
         self.config_get.return_value = {
             'source': 'backports', 'package_status': 'install'}
-        with patch("charmhelpers.core.host.lsb_release") as lsb_release:
+        with patch("hooks.lsb_release") as lsb_release:
             lsb_release.return_value = {'DISTRIB_CODENAME': 'trusty'}
             with patch("hooks.add_backports_preferences") as add_apt_prefs:
                 add_apt_prefs.assert_called_once()
