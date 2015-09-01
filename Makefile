@@ -14,13 +14,13 @@ proof:
 	@charm proof
 
 .venv:
-	sudo apt-get install -y python-apt python-virtualenv python-jinja2
+	sudo apt-get install -y python-apt python-virtualenv python-jinja2 python-mock python-yaml python-testtools python-nose
 	virtualenv .venv --system-site-packages
-	.venv/bin/pip install -I nose testtools mock pyyaml
+	.venv/bin/pip install bundletester
 
 test: .venv
 	@echo Starting tests...
-	@CHARM_DIR=$(CHARM_DIR) $(TEST_PREFIX) .venv/bin/nosetests -s $(TEST_DIR)
+	@CHARM_DIR=$(CHARM_DIR) $(TEST_PREFIX) nosetests -s $(TEST_DIR)
 
 lint:
 	@echo Checking for Python syntax...
