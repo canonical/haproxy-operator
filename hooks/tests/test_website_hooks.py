@@ -146,4 +146,5 @@ class NotifyRelationTest(TestCase):
                 relation_id="website:1", port="4242", hostname="bar.local",
                 all_services=""),
             ])
-        self.log.assert_not_called()
+        self.log.assert_has_calls([call("No services configured, exiting.")])
+

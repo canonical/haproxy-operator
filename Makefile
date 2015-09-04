@@ -14,7 +14,7 @@ proof:
 	@charm proof
 
 .venv:
-	sudo apt-get install -y python-apt python-virtualenv python-jinja2 python-mock python-yaml python-testtools python-nose
+	sudo apt-get install -y python-apt python-virtualenv python-jinja2 python-mock python-yaml python-testtools python-nose python-yaml
 	virtualenv .venv --system-site-packages
 	.venv/bin/pip install bundletester
 

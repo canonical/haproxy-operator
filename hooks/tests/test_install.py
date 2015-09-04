@@ -54,7 +54,7 @@ class InstallTests(TestCase):
 
     def test_add_source(self):
         hooks.install_hook()
-        self.config_get.assert_called_once()
+        self.config_get.assert_called_once_with()
         self.add_source.assert_called_once_with(
             self.config_get.return_value.get("source"),
             self.config_get.return_value.get("key"))
@@ -69,9 +69,9 @@ class InstallTests(TestCase):
         with patch("hooks.lsb_release") as lsb_release:
             lsb_release.return_value = {'DISTRIB_CODENAME': 'trusty'}
             with patch("hooks.add_backports_preferences") as add_apt_prefs:
-                add_apt_prefs.assert_called_once()
                 hooks.install_hook()
-        self.config_get.assert_called_once()
+                add_apt_prefs.assert_called_once_with('trusty')
+        self.config_get.assert_called_once_with()
         source = ("deb http://archive.ubuntu.com/ubuntu trusty-backports "
                   "main restricted universe multiverse")
         self.add_source.assert_called_once_with(
@@ -80,7 +80,7 @@ class InstallTests(TestCase):
 
     def test_ensures_package_status(self):
         hooks.install_hook()
-        self.config_get.assert_called_once()
+        self.config_get.assert_called_once_with()
         self.ensure_package_status.assert_called_once_with(
             hooks.service_affecting_packages,
             self.config_get.return_value["package_status"])

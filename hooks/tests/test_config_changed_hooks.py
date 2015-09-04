@@ -95,7 +95,7 @@ class ConfigChangedTest(TestCase):
 
         hooks.config_changed()
         config_data.changed.assert_called_once_with("ssl_cert")
-        _notify_reverseproxy.assert_called_once()
+        _notify_reverseproxy.assert_called_once_with()
 
 
 class HelpersTest(TestCase):
