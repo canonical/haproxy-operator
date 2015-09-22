@@ -895,6 +895,17 @@ def service_haproxy(action=None, haproxy_config=default_haproxy_config):
     return return_value == 0
 
 
+# -----------------------------------------------------------------------------
+# restart_rsyslog:  Convenience function to restart rsyslog to pickup haproxy
+#                   config changes
+#                   This could be removed once this bug fixed in the haproxy
+#                   package:
+#                     https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=790871
+# -----------------------------------------------------------------------------
+def restart_rsyslog():
+    service_restart("rsyslog")
+
+
 # #############################################################################
 # Hook functions
 # #############################################################################
@@ -917,10 +928,6 @@ def install_hook():
     ensure_package_status(service_affecting_packages,
                           config_data['package_status'])
     enable_haproxy()
-    # restart rsyslog to pickup haproxy config
-    # this could be removed once this bug fixed in the haproxy package:
-    #  https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=790871
-    service_restart("rsyslog")
 
 
 def config_changed():
@@ -961,6 +968,8 @@ def config_changed():
         if not (get_listen_stanzas() == old_stanzas):
             notify_website()
             notify_peer()
+        if config_data.changed("global_log"):
+            restart_rsyslog()
     else:
         # XXX Ideally the config should be restored to a working state if the
         # check fails, otherwise an inadvertent reload will cause the service
