@@ -3,7 +3,7 @@ import base64
 import os
 
 from testtools import TestCase
-from mock import patch
+from mock import patch, call
 
 import hooks
 from utils_for_tests import patch_open
@@ -94,8 +94,32 @@ class ConfigChangedTest(TestCase):
         _notify_reverseproxy = self.patch_hook("_notify_reverseproxy")
 
         hooks.config_changed()
-        config_data.changed.assert_called_once_with("ssl_cert")
+        self.assertIn(call('ssl_cert'), config_data.changed.mock_calls)
         _notify_reverseproxy.assert_called_once()
+
+    def test_config_changed_restart_rsyslog(self):
+        """
+        If the gloabl_log or source config value changes, rsyslog is
+        restarted
+        """
+        config_data = self.config_get()
+        called = []
+
+        def changed(a):
+            if a in called or a == 'ssl_cert':
+                return False
+            called.append(a)
+            return True
+
+        config_data.changed.side_effect = changed
+        service_restart = self.patch_hook('service_restart')
+
+        hooks.config_changed()
+        self.assertIn(call('global_log'), config_data.changed.mock_calls)
+        service_restart.assert_called_once_with('rsyslog')
+        hooks.config_changed()
+        self.assertIn(call('source'), config_data.changed.mock_calls)
+        service_restart.assert_called_with('rsyslog')
 
 
 class HelpersTest(TestCase):
