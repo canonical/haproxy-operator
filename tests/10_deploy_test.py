@@ -105,6 +105,8 @@ d.configure('haproxy', {
          'crts': ['DEFAULT'],
          'servers': [['apache', apache_private, 80, 'maxconn 50']]}])
 })
+time.sleep(10)
+d.sentry.wait(seconds)
 
 # We need a retry loop here, since there's no way to tell when the new
 # configuration is in place.
@@ -151,6 +153,8 @@ d.configure('haproxy', {
                   ['apache2', apache_private2, 80, 'maxconn 50']]}
          ]}])
 })
+time.sleep(10)
+d.sentry.wait(seconds)
 
 # Let's exercise our URL-based routing by trying to fetch a URL that will
 # only work for the second apache unit (which is configured as server
