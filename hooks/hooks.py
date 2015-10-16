@@ -1257,7 +1257,7 @@ def gen_selfsigned_cert(cert_file, key_file):
     subprocess.call(
         ['openssl', 'req', '-new', '-x509', '-nodes', '-config',
          os.path.join(os.environ['CHARM_DIR'], 'data', 'openssl.cnf'),
-         '-keyout', key_file, '-out', cert_file],)
+         '-keyout', key_file, '-out', cert_file, '-days', '3650'],)
     os.umask(old_mask)
     uid = pwd.getpwnam('haproxy').pw_uid
     os.chown(key_file, uid, -1)
