@@ -1,7 +1,6 @@
 RANDFILE                = /dev/urandom
 
 [ req ]
-default_days            = 3650
 default_bits            = 1024
 default_keyfile         = privkey.pem
 distinguished_name      = req_distinguished_name
