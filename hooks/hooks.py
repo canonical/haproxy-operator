@@ -957,18 +957,18 @@ def config_changed():
         if not (get_listen_stanzas() == old_stanzas):
             notify_website()
             notify_peer()
-        if config_data.changed("global_log") or config_data.changed("source"):
-            # restart rsyslog to pickup haproxy rsyslog config
-            # This could be removed once the following bug is fixed in the
-            # haproxy package:
-            #   https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=790871
-            service_restart("rsyslog")
     else:
         # XXX Ideally the config should be restored to a working state if the
         # check fails, otherwise an inadvertent reload will cause the service
         # to be broken.
         log("HAProxy configuration check failed, exiting.")
         sys.exit(1)
+    if config_data.changed("global_log") or config_data.changed("source"):
+        # restart rsyslog to pickup haproxy rsyslog config
+        # This could be removed once the following bug is fixed in the haproxy
+        # package:
+        #   https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=790871
+        service_restart("rsyslog")
 
 
 def start_hook():
