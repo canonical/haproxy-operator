@@ -92,10 +92,12 @@ class ConfigChangedTest(TestCase):
         config_data = self.config_get()
         config_data.changed.return_value = True
         _notify_reverseproxy = self.patch_hook("_notify_reverseproxy")
+        service_restart = self.patch_hook('service_restart')
 
         hooks.config_changed()
         self.assertIn(call('ssl_cert'), config_data.changed.mock_calls)
         _notify_reverseproxy.assert_called_once_with()
+        service_restart.assert_called_once_with('rsyslog')
 
     def test_config_changed_restart_rsyslog(self):
         """
