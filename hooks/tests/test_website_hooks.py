@@ -147,4 +147,3 @@ class NotifyRelationTest(TestCase):
                 all_services=""),
             ])
         self.log.assert_has_calls([call("No services configured, exiting.")])
-
