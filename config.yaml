@@ -1,6 +1,6 @@
 options:
   global_log:
-    default: "127.0.0.1 local0, 127.0.0.1 local1 notice"
+    default: "/dev/log local0, /dev/log local1 notice"
     type: string
     description: Global log line ( multiples ... comma separated list )
   global_maxconn:

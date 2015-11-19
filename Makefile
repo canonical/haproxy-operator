@@ -14,15 +14,15 @@ proof:
 	@charm proof
 
 .venv:
-	sudo apt-get install -y python-apt python-virtualenv python-jinja2
+	sudo apt-get install -y python-apt python-virtualenv python-jinja2 python-mock python-yaml python-testtools python-nose python-yaml python-flake8
 	virtualenv .venv --system-site-packages
-	.venv/bin/pip install -I nose testtools mock pyyaml
+	.venv/bin/pip install bundletester
 
 test: .venv
 	@echo Starting tests...
-	@CHARM_DIR=$(CHARM_DIR) $(TEST_PREFIX) .venv/bin/nosetests -s $(TEST_DIR)
+	@CHARM_DIR=$(CHARM_DIR) $(TEST_PREFIX) nosetests -s $(TEST_DIR)
 
-lint:
+lint: .venv
 	@echo Checking for Python syntax...
 	@flake8 $(HOOKS_DIR) --ignore=E123 --exclude=$(HOOKS_DIR)/charmhelpers
 
