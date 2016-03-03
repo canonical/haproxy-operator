@@ -18,7 +18,8 @@ class StatisticsRelationTest(TestCase):
         # patch changed and save methods to do nothing
         self.config_get().changed = lambda x: False
         self.config_get().save = lambda: None
-        self.get_monitoring_password = self.patch_hook("get_monitoring_password")
+        self.get_monitoring_password = \
+            self.patch_hook("get_monitoring_password")
         self.get_monitoring_password.return_value = "this-is-a-secret"
         self.relation_set = self.patch_hook("relation_set")
         self.get_relation_ids = self.patch_hook("get_relation_ids")
@@ -34,18 +35,20 @@ class StatisticsRelationTest(TestCase):
     def test_relation_joined(self):
         hooks.statistics_interface()
         self.get_relation_ids.assert_called_once_with('statistics')
-        self.relation_set.assert_called_once_with(relation_id=self.get_relation_ids()[0],
-                                                  enabled=True,
-                                                  port=10001,
-                                                  password="this-is-a-secret",
-                                                  user="mon_user")
+        self.relation_set.assert_called_once_with(
+            relation_id=self.get_relation_ids()[0],
+            enabled=True,
+            port=10001,
+            password="this-is-a-secret",
+            user="mon_user")
 
     def test_relation_joined_monitoring_disabled(self):
         self.config_get.return_value['enable_monitoring'] = False
         hooks.statistics_interface()
         self.get_relation_ids.assert_called_once_with('statistics')
-        self.relation_set.assert_called_once_with(relation_id=self.get_relation_ids()[0],
-                                                  enabled=False)
+        self.relation_set.assert_called_once_with(
+            relation_id=self.get_relation_ids()[0],
+            enabled=False)
 
     def test_called_on_config_change(self):
         config_changed = self.patch_hook('config_changed')
