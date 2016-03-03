@@ -22,6 +22,9 @@ provides:
   local-monitors:
     interface: local-monitors
     scope: container
+  statistics:
+    interface: statistics
+    scope: container
 peers:
   peer:
     interface: haproxy-peer
