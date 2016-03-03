@@ -1123,9 +1123,9 @@ def write_metrics_cronjob(script_path, cron_path):
     # need the following two configs to be valid
     metrics_target = config_data['metrics_target'].strip()
     metrics_sample_interval = config_data['metrics_sample_interval']
-    if (not metrics_target
-            or ':' not in metrics_target
-            or not metrics_sample_interval):
+    if (not metrics_target or
+            ':' not in metrics_target or not
+            metrics_sample_interval):
         log("Required config not found or invalid "
             "(metrics_target, metrics_sample_interval), "
             "disabling metrics")
