@@ -1283,6 +1283,24 @@ def write_ssl_pem(path, content):
     os.chown(path, uid, -1)
 
 
+def statistics_interface():
+    config = config_get()
+    enable_monitoring = config['enable_monitoring']
+    monitoring_port = config['monitoring_port']
+    monitoring_password = get_monitoring_password()
+    monitoring_username = config['monitoring_username']
+    for relid in get_relation_ids('statistics'):
+        if not enable_monitoring:
+            relation_set(relation_id=relid,
+                         enabled=enable_monitoring)
+        else:
+            relation_set(relation_id=relid,
+                         enabled=enable_monitoring,
+                         port=monitoring_port,
+                         password=monitoring_password,
+                         user=monitoring_username)
+
+
 # #############################################################################
 # Main section
 # #############################################################################
@@ -1301,6 +1319,7 @@ def main(hook_name):
             install_hook()
         config_changed()
         update_nrpe_config()
+        statistics_interface()
         if config_data.implicit_save:
             config_data.save()
     elif hook_name == "start":
@@ -1326,6 +1345,9 @@ def main(hook_name):
     elif hook_name in ("nrpe-external-master-relation-joined",
                        "local-monitors-relation-joined"):
         update_nrpe_config()
+    elif hook_name in ("statistics-relation-joined",
+                       "statistics-relation-changed"):
+        statistics_interface()
     else:
         print "Unknown hook"
         sys.exit(1)
