@@ -785,7 +785,7 @@ def write_service_config(services_dict):
                 f.write(content)
 
         if not os.path.exists(default_haproxy_service_config_dir):
-            os.mkdir(default_haproxy_service_config_dir, 0600)
+            os.mkdir(default_haproxy_service_config_dir, 0o600)
         with open(os.path.join(default_haproxy_service_config_dir,
                                "%s.service" % service_name), 'w') as config:
             config.write(create_listen_stanza(
@@ -841,7 +841,7 @@ def remove_services(service_name=None):
         if os.path.exists(path):
             try:
                 os.remove(path)
-            except Exception, e:
+            except Exception as e:
                 log(str(e))
                 return False
         return True
@@ -850,7 +850,7 @@ def remove_services(service_name=None):
                                  default_haproxy_service_config_dir):
             try:
                 os.remove(service)
-            except Exception, e:
+            except Exception as e:
                 log(str(e))
                 pass
         return True
@@ -901,7 +901,7 @@ def service_haproxy(action=None, haproxy_config=default_haproxy_config):
 def install_hook():
     # Run both during initial install and during upgrade-charm.
     if not os.path.exists(default_haproxy_service_config_dir):
-        os.mkdir(default_haproxy_service_config_dir, 0600)
+        os.mkdir(default_haproxy_service_config_dir, 0o600)
 
     config_data = config_get()
     source = config_data.get('source')
@@ -913,7 +913,8 @@ def install_hook():
     apt_update(fatal=True)
     apt_install(['haproxy', 'python-jinja2'], fatal=True)
     # Install pyasn1 library and modules for inspecting SSL certificates
-    apt_install(['python-pyasn1', 'python-pyasn1-modules'], fatal=False)
+    apt_install(
+        ['python-pyasn1', 'python-pyasn1-modules', 'python-apt'], fatal=False)
     ensure_package_status(service_affecting_packages,
                           config_data['package_status'])
     enable_haproxy()
@@ -1349,7 +1350,7 @@ def main(hook_name):
                        "statistics-relation-changed"):
         statistics_interface()
     else:
-        print "Unknown hook"
+        print("Unknown hook")
         sys.exit(1)
 
 if __name__ == "__main__":
