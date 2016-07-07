@@ -13,7 +13,7 @@ AUTH=$(grep -r "stats auth" /etc/haproxy | head -1 | awk '{print $4}')
 
 HAPROXY_VERSION="$(dpkg-query -W --showformat='${Version}\n' haproxy)"
 if dpkg --compare-versions "$HAPROXY_VERSION" ge 1.5; then
-    CLASS_REGEX='(active|backup)(3|4)'
+    CLASS_REGEX='(active_up|backup_up)'
 else
     CLASS_REGEX='(active|backup)(2|3)'
 fi
