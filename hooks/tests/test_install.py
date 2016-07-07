@@ -48,7 +48,9 @@ class InstallTests(TestCase):
         self.assertEqual((['haproxy', 'python-jinja2'],), calls[0][0])
         self.assertEqual({'fatal': True}, calls[0][1])
         self.assertEqual(
-            (['python-pyasn1', 'python-pyasn1-modules'],), calls[1][0])
+            (['python-pyasn1', 'python-pyasn1-modules', 'python-apt',
+              'python-openssl'],),
+            calls[1][0])
         self.assertEqual({'fatal': False}, calls[1][1])
 
     def test_add_source(self):
