@@ -914,7 +914,8 @@ def install_hook():
     apt_install(['haproxy', 'python-jinja2'], fatal=True)
     # Install pyasn1 library and modules for inspecting SSL certificates
     apt_install(
-        ['python-pyasn1', 'python-pyasn1-modules', 'python-apt'], fatal=False)
+        ['python-pyasn1', 'python-pyasn1-modules', 'python-apt',
+         'python-openssl'], fatal=False)
     ensure_package_status(service_affecting_packages,
                           config_data['package_status'])
     enable_haproxy()
