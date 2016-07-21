@@ -8,6 +8,9 @@ description:
  has request blocking capabilities and provides interface to display server
  status.
 tags: ["cache-proxy"]
+series:
+  - xenial
+  - trusty
 requires:
   reverseproxy:
     interface: http
