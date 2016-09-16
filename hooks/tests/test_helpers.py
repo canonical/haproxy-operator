@@ -24,6 +24,42 @@ class HelpersTest(TestCase):
             'global_spread_checks': 234,
             'global_default_dh_param': 345,
             'global_default_bind_ciphers': "my:ciphers",
+            'global_default_bind_options': "no-tlsv10",
+            'global_debug': False,
+            'global_quiet': False,
+            'global_stats_socket': True,
+        }
+        has_ssl_support.return_value = True
+        result = hooks.create_haproxy_globals()
+
+        sock_path = "/var/run/haproxy/haproxy.sock"
+        expected = '\n'.join([
+            'global',
+            '    log foo-log',
+            '    log bar-log',
+            '    maxconn 123',
+            '    user foo-user',
+            '    group foo-group',
+            '    spread-checks 234',
+            '    tune.ssl.default-dh-param 345',
+            '    ssl-default-bind-ciphers my:ciphers',
+            '    ssl-default-bind-options no-tlsv10',
+            '    stats socket %s mode 0600' % sock_path,
+        ])
+        self.assertEqual(result, expected)
+
+    @patch('hooks.has_ssl_support')
+    @patch('hooks.config_get')
+    def test_creates_haproxy_globals_options_not_required(
+            self, config_get, has_ssl_support):
+        config_get.return_value = {
+            'global_log': 'foo-log, bar-log',
+            'global_maxconn': 123,
+            'global_user': 'foo-user',
+            'global_group': 'foo-group',
+            'global_spread_checks': 234,
+            'global_default_dh_param': 345,
+            'global_default_bind_ciphers': "my:ciphers",
             'global_debug': False,
             'global_quiet': False,
             'global_stats_socket': True,
