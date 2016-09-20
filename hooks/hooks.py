@@ -163,6 +163,9 @@ def create_haproxy_globals():
                                config_data['global_default_dh_param'])
         haproxy_globals.append("    ssl-default-bind-ciphers %s" %
                                config_data['global_default_bind_ciphers'])
+        if config_data.get("global_default_bind_options"):
+            haproxy_globals.append("    ssl-default-bind-options %s" %
+                                   config_data['global_default_bind_options'])
     if config_data['global_stats_socket'] is True:
         sock_path = "/var/run/haproxy/haproxy.sock"
         haproxy_globals.append("    stats socket %s mode 0600" % sock_path)

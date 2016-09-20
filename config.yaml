@@ -60,6 +60,12 @@ options:
         (without quotes). Please check the "bind" keyword for more information.
         This config key will be ignored if the installed haproxy package has no SSL
         support.
+  global_default_bind_options:
+    default: ""
+    type: string
+    description: |
+        Sets the default string describing the list of global SSL bind options.
+        Use this to force or disable certain protocols like TLS 1.0 or SSL 3.0.
   default_log:
     default: "global"
     type: string
