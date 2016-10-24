@@ -4,40 +4,33 @@
 #--------------------------------------------
 #
 # Copyright 2009,2012,2016 Canonical Ltd.
-# Author: Tom Haddon, Junien Fridrick
+# Author: Tom Haddon, Junien Fridrick, Martin Hilton
 
 set -e
 
-CRITICAL=0
-NOTACTIVE=''
-LOGFILE=/var/log/nagios/check_haproxy.log
-AUTH=$(grep "stats auth" /etc/haproxy/haproxy.cfg | head -1 | awk '{print $4}')
-SSL=$(grep 10000 /etc/haproxy/haproxy.cfg | grep -q ssl && echo "-S" || true)
-HAPROXY_SOCKET=/var/run/haproxy.user.sock
+export LOGFILE=/var/log/nagios/check_haproxy.log
+HAPROXY_SOCKET=$(grep "stats socket" /etc/haproxy/haproxy.cfg | head -1 | awk '{print $3}')
 
-# columns with service name and service status in the CSV output
-NAME_COL=2
-STATUS_COL=18
+if [ -z "$HAPROXY_SOCKET" ]; then
+    echo "CRITICAL: no stats socket"
+    exit 2
+fi
 
-for line in $(echo 'show stat'|socat $HAPROXY_SOCKET stdio|egrep -v '^#'|cut -d, -f$NAME_COL,$STATUS_COL); do
-    IFS=','
-    set $line
-    appserver=$1
-    state=$2
-    case $appserver in
-       # ignore the FRONTEND and BACKEND servers
-        FRONTEND|BACKEND) continue;;
-        *) if [ "$state" != "UP" ]; then
-               date >> $LOGFILE
-               echo "Server $appserver is in status $state" >> $LOGFILE
-               /usr/lib/nagios/plugins/check_http ${SSL} -a ${AUTH} -I 127.0.0.1 -p 10000 -v | grep $appserver >> $LOGFILE 2>&1
-               CRITICAL=1
-               NOTACTIVE="${NOTACTIVE} $appserver"
-          fi
-    esac
-done
+# In the following script $2 is the server name and $18 is the status.
+NOTACTIVE=$(echo 'show stat'|socat $HAPROXY_SOCKET stdio|awk -F, '
+	BEGIN { na_count=0 }
+	$1 ~ "^#" { next }
+	$2 ~ "(FRONT|BACK)END" { next }
+	$18 != "UP" {
+		printf("Server %s is in status %s\n", $2, $18) >> ENVIRON["LOGFILE"]
+		print $0 >> ENVIRON["LOGFILE"]
+		na[na_count] = $2
+		na_count++
+	}
+	END { ORS=" "; for (i=0; i < na_count; i++) { print na[i] }}
+')
 
-if [ $CRITICAL = 1 ]; then
+if [ -n "$NOTACTIVE" ]; then
     echo "CRITICAL:${NOTACTIVE}"
     exit 2
 fi
