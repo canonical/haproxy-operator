@@ -7,14 +7,17 @@
 # Author: Tom Haddon, Junien Fridrick, Martin Hilton
 
 set -e
+set -o pipefail
 
 export LOGFILE=/var/log/nagios/check_haproxy.log
 AUTH=$(grep -r "stats auth" /etc/haproxy | head -1 | awk '{print $4}')
 
-NOTACTIVE=$(curl -s -u ${AUTH} "http://localhost:10000/;csv"|awk -F, -v SVNAME=2 -v STATUS=18 '
+NOTACTIVE=$(curl -s -f -u ${AUTH} "http://localhost:10000/;csv"|awk -F, -v SVNAME=2 -v STATUS=18 '
 	$1 ~ "^#" { next }
 	$SVNAME ~ "(FRONT|BACK)END" { next }
 	$STATUS != "UP" {
+		"date"| getline date
+		print date >> ENVIRON["LOGFILE"]
 		printf("Server %s is in status %s\n", $SVNAME, $STATUS) >> ENVIRON["LOGFILE"]
 		print $0 >> ENVIRON["LOGFILE"]
 		na[na_count++] = $SVNAME
