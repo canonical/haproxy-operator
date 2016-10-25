@@ -9,23 +9,15 @@
 set -e
 
 export LOGFILE=/var/log/nagios/check_haproxy.log
-HAPROXY_SOCKET=$(grep "stats socket" /etc/haproxy/haproxy.cfg | head -1 | awk '{print $3}')
+AUTH=$(grep -r "stats auth" /etc/haproxy | head -1 | awk '{print $4}')
 
-if [ -z "$HAPROXY_SOCKET" ]; then
-    echo "CRITICAL: no stats socket"
-    exit 2
-fi
-
-# In the following script $2 is the server name and $18 is the status.
-NOTACTIVE=$(echo 'show stat'|socat $HAPROXY_SOCKET stdio|awk -F, '
-	BEGIN { na_count=0 }
+NOTACTIVE=$(curl -s -u ${AUTH} "http://localhost:10000/;csv"|awk -F, -v SVNAME=2 -v STATUS=18 '
 	$1 ~ "^#" { next }
-	$2 ~ "(FRONT|BACK)END" { next }
-	$18 != "UP" {
-		printf("Server %s is in status %s\n", $2, $18) >> ENVIRON["LOGFILE"]
+	$SVNAME ~ "(FRONT|BACK)END" { next }
+	$STATUS != "UP" {
+		printf("Server %s is in status %s\n", $SVNAME, $STATUS) >> ENVIRON["LOGFILE"]
 		print $0 >> ENVIRON["LOGFILE"]
-		na[na_count] = $2
-		na_count++
+		na[na_count++] = $SVNAME
 	}
 	END { ORS=" "; for (i=0; i < na_count; i++) { print na[i] }}
 ')

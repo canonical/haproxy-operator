@@ -1091,8 +1091,6 @@ def notify_peer(changed=False, relation_ids=None):
 
 
 def install_nrpe_scripts():
-    # socat is used by the nrpe scripts.
-    apt_install('socat')
     scripts_src = os.path.join(os.environ["CHARM_DIR"], "files",
                                "nrpe")
     scripts_dst = "/usr/lib/nagios/plugins"
