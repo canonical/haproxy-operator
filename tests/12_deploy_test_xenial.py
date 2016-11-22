@@ -12,7 +12,7 @@ import time
 d = amulet.Deployment(series='xenial')
 # Add the haproxy charm to the deployment.
 d.add('haproxy')
-d.add('apache2', 'cs:trusty/apache2', units=2)
+d.add('apache2', 'cs:trusty/apache2', units=2, series='trusty')
 
 # Get the directory this way to load the file when CWD is different.
 path = os.path.abspath(os.path.dirname(__file__))

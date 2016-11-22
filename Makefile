@@ -14,7 +14,7 @@ proof:
 	@charm proof
 
 .venv:
-	sudo apt-get install -y python-apt python-virtualenv python-jinja2 python-mock python-yaml python-testtools python-nose python-yaml python-flake8
+	sudo apt-get install -y flake8 python-apt python-virtualenv python-jinja2 python-mock python-yaml python-testtools python-nose python-yaml python-flake8
 	virtualenv .venv --system-site-packages
 	.venv/bin/pip install bundletester
 
@@ -24,7 +24,7 @@ test: .venv
 
 lint: .venv
 	@echo Checking for Python syntax...
-	@flake8 $(HOOKS_DIR) --ignore=E123 --exclude=$(HOOKS_DIR)/charmhelpers
+	@python -m flake8 $(HOOKS_DIR) --ignore=E123 --exclude=$(HOOKS_DIR)/charmhelpers
 
 sourcedeps: $(PWD)/config-manager.txt
 	@echo Updating source dependencies...
