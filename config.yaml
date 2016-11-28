@@ -153,6 +153,12 @@ options:
         with a cookie. Session are sticky by default. To turn off sticky sessions,
         remove the 'cookie SRVNAME insert' and 'cookie S{i}' stanzas from
         `service_options` and `server_options`.
+  nagios_servicegroups:
+    default: ""
+    type: string
+    description: |
+        A comma-separated list of nagios servicegroups.
+        If left empty, the nagios_context will be used as the servicegroup.
   ssl_cert:
     type: string
     description: |
