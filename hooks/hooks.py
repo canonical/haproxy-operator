@@ -1280,7 +1280,7 @@ def write_ssl_pem(path, content):
     # Set the umask so the child process will inherit it and we
     # can make certificate files readable only by the 'haproxy'
     # user (see below).
-    old_mask = os.umask(077)
+    old_mask = os.umask(0o077)
     with open(path, 'w') as f:
         f.write(content)
     os.umask(old_mask)
