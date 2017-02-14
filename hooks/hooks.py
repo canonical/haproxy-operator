@@ -611,6 +611,10 @@ def create_services():
         if "services" in relation_info:
             services_dict = parse_services_yaml(services_dict,
                                                 relation_info['services'])
+        # apache2 charm uses "all_services" key instead of "services".
+        if "all_services" in relation_info:
+            services_dict = parse_services_yaml(services_dict,
+                                                relation_info['all_services'])
 
     if len(services_dict) == 0:
         log("No services configured, exiting.")
