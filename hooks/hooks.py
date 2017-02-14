@@ -612,7 +612,7 @@ def create_services():
             services_dict = parse_services_yaml(services_dict,
                                                 relation_info['services'])
         # apache2 charm uses "all_services" key instead of "services".
-        if "all_services" in relation_info:
+        if "all_services" in relation_info and "services" not in relation_info:
             services_dict = parse_services_yaml(services_dict,
                                                 relation_info['all_services'])
 
