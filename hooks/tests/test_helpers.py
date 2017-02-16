@@ -1057,3 +1057,37 @@ class HelpersTest(TestCase):
     def test_doesnt_call_actions_if_config_is_none(self, mock_call):
         self.assertIsNone(hooks.service_haproxy('foo', None))
         self.assertFalse(mock_call.called)
+
+    def test_creates_haproxy_userlists(self):
+        user_lists = '''
+        - list1:
+            groups:
+                - G1 users tiger,scott
+                - G2 users xdb,scott
+            users:
+                - tiger password $6$k6y3o.eP$JlKBx9z...
+                - scott insecure-password elgato
+                - xdb insecure-password hello
+        - list2:
+            groups:
+                - group1
+            users:
+                - alice insecure-password foo groups group1
+                - bob insecure-password bar groups group1
+            '''
+        result = hooks.create_haproxy_userlists(user_lists)
+
+        expected = '\n'.join([
+            'userlist list1',
+            '    group G1 users tiger,scott',
+            '    group G2 users xdb,scott',
+            '    user tiger password $6$k6y3o.eP$JlKBx9z...',
+            '    user scott insecure-password elgato',
+            '    user xdb insecure-password hello',
+            'userlist list2',
+            '    group group1',
+            '    user alice insecure-password foo groups group1',
+            '    user bob insecure-password bar groups group1',
+        ])
+        self.assertEqual(result, expected)
+

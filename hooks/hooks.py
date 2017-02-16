@@ -192,6 +192,24 @@ def create_haproxy_defaults():
 
 
 # -----------------------------------------------------------------------------
+# create_haproxy_userlists:  Creates the userlist sections of the haproxy config
+# -----------------------------------------------------------------------------
+def create_haproxy_userlists(userlists=None):
+    if userlists is None:
+        userlists = config_get()["userlists"]
+    userlists = yaml.safe_load(userlists)
+    result = []
+    for l in userlists:
+        for userlist, v in l.iteritems():
+            result.append('userlist ' + userlist)
+            for group in v['groups']:
+                    result.append('    group ' + group)
+            for user in v['users']:
+                    result.append('    user ' + user)
+    return '\n'.join(result)
+
+
+# -----------------------------------------------------------------------------
 # load_haproxy_config:  Convenience function that loads (as a string) the
 #                       current haproxy configuration file.
 #                       Returns a string containing the haproxy config or
@@ -871,12 +889,14 @@ def remove_services(service_name=None):
 def construct_haproxy_config(haproxy_globals=None,
                              haproxy_defaults=None,
                              haproxy_monitoring=None,
-                             haproxy_services=None):
+                             haproxy_services=None,
+                             haproxy_userlists=None):
     if None in (haproxy_globals, haproxy_defaults):
         return
     with open(default_haproxy_config, 'w') as haproxy_config:
         config_string = ''
-        for config in (haproxy_globals, haproxy_defaults, haproxy_monitoring,
+        for config in (haproxy_globals, haproxy_defaults, haproxy_userlists,
+                       haproxy_monitoring,
                        haproxy_services):
             if config is not None:
                 config_string += config + '\n\n'
@@ -933,6 +953,7 @@ def config_changed():
     old_service_ports = get_service_ports()
     old_stanzas = get_listen_stanzas()
     haproxy_globals = create_haproxy_globals()
+    haproxy_userlists = create_haproxy_userlists()
     haproxy_defaults = create_haproxy_defaults()
     if config_data['enable_monitoring'] is True:
         haproxy_monitoring = create_monitoring_stanza()
@@ -951,7 +972,8 @@ def config_changed():
     construct_haproxy_config(haproxy_globals,
                              haproxy_defaults,
                              haproxy_monitoring,
-                             haproxy_services)
+                             haproxy_services,
+                             haproxy_userlists)
 
     write_metrics_cronjob(metrics_script_path,
                           metrics_cronjob_path)
