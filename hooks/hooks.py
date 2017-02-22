@@ -192,7 +192,8 @@ def create_haproxy_defaults():
 
 
 # -----------------------------------------------------------------------------
-# create_haproxy_userlists:  Creates the userlist sections of the haproxy config
+# create_haproxy_userlists:  Creates the userlist sections of the haproxy
+# config
 # -----------------------------------------------------------------------------
 def create_haproxy_userlists(userlists=None):
     if userlists is None:

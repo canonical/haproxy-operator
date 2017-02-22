@@ -154,7 +154,14 @@ options:
         remove the 'cookie SRVNAME insert' and 'cookie S{i}' stanzas from
         `service_options` and `server_options`.
   userlists:
-    default: |
+    default: ""
+    type: string
+    description: |
+        Userlists control access to services or stats by allowing
+        only authenticated users.
+        .
+        For example
+        .
         - list1:
             groups:
                 - G1 users tiger,scott
@@ -169,11 +176,8 @@ options:
             users:
                 - alice insecure-password foo groups group1
                 - bob insecure-password bar groups group1
-    type: string
-    description: |
-        Userlists control access to services or stats by allowing
-        only authenticated users. See
-        http://cbonte.github.io/haproxy-dconv/1.6/configuration.html#3.4
+        .
+        See http://cbonte.github.io/haproxy-dconv/1.6/configuration.html#3.4
   nagios_servicegroups:
     default: ""
     type: string

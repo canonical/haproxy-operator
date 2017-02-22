@@ -1090,4 +1090,3 @@ class HelpersTest(TestCase):
             '    user bob insecure-password bar groups group1',
         ])
         self.assertEqual(result, expected)
-
