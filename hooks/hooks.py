@@ -1361,6 +1361,7 @@ def main(hook_name):
         print("Unknown hook")
         sys.exit(1)
 
+
 if __name__ == "__main__":
     hook_name = os.path.basename(sys.argv[0])
     # Also support being invoked directly with hook as argument name.
