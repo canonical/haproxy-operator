@@ -1090,3 +1090,9 @@ class HelpersTest(TestCase):
             '    user bob insecure-password bar groups group1',
         ])
         self.assertEqual(result, expected)
+
+    def test_skips_haproxy_userlists_when_empty(self):
+        user_lists = ""
+        result = hooks.create_haproxy_userlists(user_lists)
+        expected = ''
+        self.assertEqual(result, expected)

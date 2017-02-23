@@ -199,6 +199,8 @@ def create_haproxy_userlists(userlists=None):
     if userlists is None:
         userlists = config_get()["userlists"]
     userlists = yaml.safe_load(userlists)
+    if not userlists:
+        return ''
     result = []
     for l in userlists:
         for userlist, v in l.iteritems():
