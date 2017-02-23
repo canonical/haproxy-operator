@@ -665,12 +665,12 @@ class ReverseProxyRelationTest(TestCase):
              "private-address": "1.2.3.4",
              "__unit__": "foo/0",
              "all_services": '''
-        - server_options: &id001 [check inter 2000 rise 2 fall 5 maxconn 500]
+          - server_options: &id001 [check inter 2000 rise 2 fall 5 maxconn 500]
             servers:
             - - my-service-2-8082
-            - 10.142.0.16
-            - '8082'
-            - *id001
+              - 10.142.0.16
+              - '8082'
+              - *id001
             service_host: 0.0.0.0
             service_name: my-service
             service_options: [mode http, balance url_param waitid]
