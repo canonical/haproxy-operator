@@ -615,6 +615,14 @@ def create_services():
         if "all_services" in relation_info and "services" not in relation_info:
             services_dict = parse_services_yaml(services_dict,
                                                 relation_info['all_services'])
+            # Replace the backend server(2hops away) with the private-address.
+            for service_name in services_dict.keys():
+                if service_name == 'service' or\
+                    not services_dict[service_name].has_key('servers'):
+                    continue
+                servers = services_dict[service_name]['servers']
+                for i in range(len(servers)):
+                    servers[i][1] = relation_info['private-address']
 
     if len(services_dict) == 0:
         log("No services configured, exiting.")
