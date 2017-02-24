@@ -618,7 +618,7 @@ def create_services():
             # Replace the backend server(2hops away) with the private-address.
             for service_name in services_dict.keys():
                 if service_name == 'service' or\
-                    not services_dict[service_name].has_key('servers'):
+                        'servers' not in services_dict[service_name]:
                     continue
                 servers = services_dict[service_name]['servers']
                 for i in range(len(servers)):
