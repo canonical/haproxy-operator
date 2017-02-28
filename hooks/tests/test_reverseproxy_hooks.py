@@ -683,7 +683,7 @@ class ReverseProxyRelationTest(TestCase):
             'my-service':
             {'server_options':
              ['check inter 2000 rise 2 fall 5 maxconn 500'],
-             'servers': [['my-service-2-8082', '1.2.3.4', '8082',
+             'servers': [['my-service-2-8082', '1.2.3.4', '83',
                           ['check inter 2000 rise 2 fall 5 maxconn 500']]],
              'service_host': '0.0.0.0',
              'service_name': 'my-service',

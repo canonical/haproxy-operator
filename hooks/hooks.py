@@ -623,6 +623,8 @@ def create_services():
                 servers = services_dict[service_name]['servers']
                 for i in range(len(servers)):
                     servers[i][1] = relation_info['private-address']
+                    servers[i][2] = str(
+                        services_dict[service_name]['service_port'])
 
     if len(services_dict) == 0:
         log("No services configured, exiting.")
