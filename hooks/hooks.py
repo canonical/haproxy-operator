@@ -795,7 +795,7 @@ def write_service_config(services_dict):
                 service_name,
                 service_config['service_host'],
                 service_config['service_port'],
-                service_config['service_options'],
+                service_config.get('service_options', []),
                 server_entries, errorfiles, crts, backends))
 
 
