@@ -247,9 +247,10 @@ def get_listen_stanzas(haproxy_config_file="/etc/haproxy/haproxy.cfg"):
     # Match bind stanzas like:
     #
     # bind 1.2.3.5:234
+    # bind 2001:db8::1:80
     # bind 1.2.3.4:123 ssl crt /foo/bar
     bind_stanzas = re.findall(
-        "\s+bind\s+([^:]+):(\d+).*\n\s+default_backend\s+([^\s]+)",
+        "\s+bind\s+([a-fA-F0-9\.:\*]+):(\d+).*\n\s+default_backend\s+([^\s]+)",
         haproxy_config, re.M)
     return (tuple(((service, addr, int(port))
                    for service, addr, port in listen_stanzas)) +
