@@ -137,7 +137,7 @@ options and then using the `crts` key in the services yaml, e.g.:
     - { ... optionally more services here ... }
     "
 
-where the DEFAULT keyword means use the certificate set with `ssl_cert`/`ssl_key` (or
+The DEFAULT keyword means use the certificate set with `ssl_cert`/`ssl_key` (or
 alternatively you can inline different base64-encode certificates).
 
 Note that in order to use SSL termination you need haproxy 1.5 or later, which
@@ -230,7 +230,7 @@ bandwidth to the backends.
 If the peering\_mode option is set to "active-active", then any haproxy unit
 will be independent from each other and will simply load-balance the traffic to
 the backends. In this case, the indirection layer described above is not
-created in this case.
+created.
 
 This mode allows increasing the bandwidth to the backends by adding additional
 units, at the cost of having less control over the number of connections that
