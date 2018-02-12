@@ -11,6 +11,7 @@ tags: ["cache-proxy"]
 series:
   - xenial
   - trusty
+  - bionic
 requires:
   reverseproxy:
     interface: http
