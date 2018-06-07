@@ -778,7 +778,7 @@ def write_service_config(services_dict):
         # Write to disk the content of the given SSL certificates
         crts = service_config.get('crts', [])
         for i, crt in enumerate(crts):
-            if crt == "DEFAULT":
+            if crt == "DEFAULT" or crt == "EXTERNAL":
                 continue
             content = base64.b64decode(crt)
             path = get_service_lib_path(service_name)
