@@ -32,3 +32,5 @@ provides:
 peers:
   peer:
     interface: haproxy-peer
+extra-bindings:
+  public:
