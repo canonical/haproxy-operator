@@ -1229,6 +1229,7 @@ def is_selfsigned_cert_stale(cert_file, key_file):
     try:
         from pyasn1.codec.der import decoder
         from pyasn1_modules import rfc2459
+        import ipaddress
     except ImportError:
         log('Cannot check subjAltName on <= 12.04, skipping.')
         return False
@@ -1241,7 +1242,12 @@ def is_selfsigned_cert_stale(cert_file, key_file):
             names = decoder.decode(
                 extension.get_data(), asn1Spec=rfc2459.SubjectAltName())[0]
             for name in names:
-                cert_addresses.add(str(name.getComponent()))
+                # The component string will contain the hex form of the
+                # address. Convert this to an ip_address for parsing and
+                # to turn it into a string for comparison
+                component_string = str(name.getComponent())
+                component_addr = ipaddress.ip_address(component_string)
+                cert_addresses.add(str(component_addr))
         except:
             pass
     if cert_addresses != unit_addresses:
