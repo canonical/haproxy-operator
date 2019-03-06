@@ -1254,8 +1254,6 @@ def is_selfsigned_cert_stale(cert_file, key_file):
                 # to turn it into a string for comparison
                 component_addr = octet_parser(name.getComponent())
                 cert_addresses.add(str(component_addr))
-        except ImportError:
-            log('Unable to import modules for parsing octetstring')
         except:
             pass
     if cert_addresses != unit_addresses:
@@ -1268,10 +1266,11 @@ def is_selfsigned_cert_stale(cert_file, key_file):
 
 def get_octet_parser():
     """
-    Convert the pyasn1 OctetString into an ip address string.
+    Returns a parsing function that can parse the pyasn OctetString
+    into an IP Address.
 
-    @param octet: the OctetString to parse
-    @raises: raises any errors attempting to parse the octet string
+    @raises: raises any errors attempting to import the libraries
+             for the octet parser.
     """
     try:
         import ipaddress
