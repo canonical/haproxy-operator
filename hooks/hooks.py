@@ -909,17 +909,20 @@ def install_hook():
 
     config_data = config_get()
     source = config_data.get('source')
+    release = lsb_release()['DISTRIB_CODENAME']
     if source == 'backports':
-        release = lsb_release()['DISTRIB_CODENAME']
         source = apt_backports_template % {'release': release}
         add_backports_preferences(release)
     add_source(source, config_data.get('key'))
     apt_update(fatal=True)
     apt_install(['haproxy', 'python-jinja2'], fatal=True)
     # Install pyasn1 library and modules for inspecting SSL certificates
-    apt_install(
-        ['python-pyasn1', 'python-pyasn1-modules', 'python-apt',
-         'python-openssl'], fatal=False)
+    pkgs = ['python-pyasn1', 'python-pyasn1-modules', 'python-apt',
+            'python-openssl']
+    # Add python-ipaddr for inspecting certificate subjAltName on trusty
+    if release == 'trusty':
+        pkgs.append('python-ipaddr')
+    apt_install(pkgs, fatal=False)
     ensure_package_status(service_affecting_packages,
                           config_data['package_status'])
     enable_haproxy()
@@ -1229,9 +1232,13 @@ def is_selfsigned_cert_stale(cert_file, key_file):
     try:
         from pyasn1.codec.der import decoder
         from pyasn1_modules import rfc2459
-        import ipaddress
     except ImportError:
         log('Cannot check subjAltName on <= 12.04, skipping.')
+        return False
+    try:
+        octet_parser = get_octet_parser()
+    except:
+        log('Cannot retrieve octet parser to check subjAltName, skipping.')
         return False
     cert_addresses = set()
     unit_addresses = set(
@@ -1245,9 +1252,10 @@ def is_selfsigned_cert_stale(cert_file, key_file):
                 # The component string will contain the hex form of the
                 # address. Convert this to an ip_address for parsing and
                 # to turn it into a string for comparison
-                component_string = str(name.getComponent())
-                component_addr = ipaddress.ip_address(component_string)
+                component_addr = octet_parser(name.getComponent())
                 cert_addresses.add(str(component_addr))
+        except ImportError:
+            log('Unable to import modules for parsing octetstring')
         except:
             pass
     if cert_addresses != unit_addresses:
@@ -1256,6 +1264,25 @@ def is_selfsigned_cert_stale(cert_file, key_file):
         return True
 
     return False
+
+
+def get_octet_parser():
+    """
+    Convert the pyasn1 OctetString into an ip address string.
+
+    @param octet: the OctetString to parse
+    @raises: raises any errors attempting to parse the octet string
+    """
+    try:
+        import ipaddress
+        def ipaddress_parser(octet):
+            return str(ipaddress.ip_address(str(octet)))
+        return ipaddress_parser
+    except ImportError:
+        import ipaddr
+        def trusty_ipaddress_parser(octet):
+            return str(ipaddr.IPAddress(ipaddr.Bytes(str(octet))))
+        return trusty_ipaddress_parser
 
 
 # XXX taken from the apache2 charm.
