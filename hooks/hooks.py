@@ -27,13 +27,16 @@ from charmhelpers.core.hookenv import (
     open_port,
     close_port,
     unit_get,
+    INFO,
+    DEBUG,
     )
 
 from charmhelpers.fetch import (
     apt_install,
     add_source,
     apt_update,
-    apt_cache
+    apt_cache,
+    filter_installed_packages,
 )
 
 from charmhelpers.contrib.charmsupport import nrpe
@@ -922,7 +925,7 @@ def install_hook():
     # Add python-ipaddr for inspecting certificate subjAltName on trusty
     if release == 'trusty':
         pkgs.append('python-ipaddr')
-    apt_install(pkgs, fatal=False)
+    apt_install(filter_installed_packages(pkgs), fatal=False)
     ensure_package_status(service_affecting_packages,
                           config_data['package_status'])
     enable_haproxy()
@@ -1237,8 +1240,10 @@ def is_selfsigned_cert_stale(cert_file, key_file):
         return False
     try:
         octet_parser = get_octet_parser()
-    except:
-        log('Cannot retrieve octet parser to check subjAltName, skipping.')
+    except Exception as e:
+        log('Failed to retrieve octet parser due to: {}'.format(e), DEBUG)
+        log('Unable to retrieve octet parser to check subjAltName, skipping.',
+            INFO)
         return False
     cert_addresses = set()
     unit_addresses = set(
