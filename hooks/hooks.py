@@ -27,13 +27,16 @@ from charmhelpers.core.hookenv import (
     open_port,
     close_port,
     unit_get,
+    INFO,
+    DEBUG,
     )
 
 from charmhelpers.fetch import (
     apt_install,
     add_source,
     apt_update,
-    apt_cache
+    apt_cache,
+    filter_installed_packages,
 )
 
 from charmhelpers.contrib.charmsupport import nrpe
@@ -909,17 +912,20 @@ def install_hook():
 
     config_data = config_get()
     source = config_data.get('source')
+    release = lsb_release()['DISTRIB_CODENAME']
     if source == 'backports':
-        release = lsb_release()['DISTRIB_CODENAME']
         source = apt_backports_template % {'release': release}
         add_backports_preferences(release)
     add_source(source, config_data.get('key'))
     apt_update(fatal=True)
     apt_install(['haproxy', 'python-jinja2'], fatal=True)
     # Install pyasn1 library and modules for inspecting SSL certificates
-    apt_install(
-        ['python-pyasn1', 'python-pyasn1-modules', 'python-apt',
-         'python-openssl'], fatal=False)
+    pkgs = ['python-pyasn1', 'python-pyasn1-modules', 'python-apt',
+            'python-openssl']
+    # Add python-ipaddr for inspecting certificate subjAltName on trusty
+    if release == 'trusty':
+        pkgs.append('python-ipaddr')
+    apt_install(filter_installed_packages(pkgs), fatal=False)
     ensure_package_status(service_affecting_packages,
                           config_data['package_status'])
     enable_haproxy()
@@ -1232,6 +1238,13 @@ def is_selfsigned_cert_stale(cert_file, key_file):
     except ImportError:
         log('Cannot check subjAltName on <= 12.04, skipping.')
         return False
+    try:
+        octet_parser = get_octet_parser()
+    except Exception as e:
+        log('Failed to retrieve octet parser due to: {}'.format(e), DEBUG)
+        log('Unable to retrieve octet parser to check subjAltName, skipping.',
+            INFO)
+        return False
     cert_addresses = set()
     unit_addresses = set(
         [unit_get('public-address'), unit_get('private-address')])
@@ -1241,7 +1254,11 @@ def is_selfsigned_cert_stale(cert_file, key_file):
             names = decoder.decode(
                 extension.get_data(), asn1Spec=rfc2459.SubjectAltName())[0]
             for name in names:
-                cert_addresses.add(str(name.getComponent()))
+                # The component string will contain the hex form of the
+                # address. Convert this to an ip_address for parsing and
+                # to turn it into a string for comparison
+                component_addr = octet_parser(name.getComponent())
+                cert_addresses.add(str(component_addr))
         except:
             pass
     if cert_addresses != unit_addresses:
@@ -1250,6 +1267,26 @@ def is_selfsigned_cert_stale(cert_file, key_file):
         return True
 
     return False
+
+
+def get_octet_parser():
+    """
+    Returns a parsing function that can parse the pyasn OctetString
+    into an IP Address.
+
+    @raises: raises any errors attempting to import the libraries
+             for the octet parser.
+    """
+    try:
+        import ipaddress
+        def ipaddress_parser(octet):
+            return str(ipaddress.ip_address(str(octet)))
+        return ipaddress_parser
+    except ImportError:
+        import ipaddr
+        def trusty_ipaddress_parser(octet):
+            return str(ipaddr.IPAddress(ipaddr.Bytes(str(octet))))
+        return trusty_ipaddress_parser
 
 
 # XXX taken from the apache2 charm.
