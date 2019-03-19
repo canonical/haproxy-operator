@@ -14,7 +14,7 @@ proof:
 	@charm proof
 
 .venv:
-	sudo apt-get install -y flake8 python-apt python-virtualenv python-jinja2 python-mock python-yaml python-testtools python-nose python-yaml python-flake8
+	sudo apt-get install -y flake8 python-apt python-virtualenv python-jinja2 python-mock python-yaml python-testtools python-nose python-yaml python-flake8 git
 	virtualenv .venv --system-site-packages
 	.venv/bin/pip install bundletester
 
