@@ -25,7 +25,7 @@ from charmhelpers.core.hookenv import (
     relations_for_id,
     relation_id,
     open_port,
-    open_ports,
+    opened_ports,
     close_port,
     unit_get,
     INFO,
