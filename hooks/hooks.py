@@ -25,6 +25,7 @@ from charmhelpers.core.hookenv import (
     relations_for_id,
     relation_id,
     open_port,
+    open_ports,
     close_port,
     unit_get,
     INFO,
@@ -937,7 +938,7 @@ def config_changed():
     ensure_package_status(service_affecting_packages,
                           config_data['package_status'])
 
-    old_service_ports = get_service_ports()
+    old_service_ports = opened_ports()
     old_stanzas = get_listen_stanzas()
     haproxy_globals = create_haproxy_globals()
     haproxy_defaults = create_haproxy_defaults()
