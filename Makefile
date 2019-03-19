@@ -29,7 +29,7 @@ lint: .venv
 sourcedeps:
 	@echo Updating source dependencies...
 	@mkdir -p $(PWD)/build/charm-helpers/tools/charm_helpers_sync
-	@curl -l https://github.com/juju/charm-helpers/raw/master/tools/charm_helpers_sync/charm_helpers_sync.py \
+	@curl -sL https://github.com/juju/charm-helpers/raw/master/tools/charm_helpers_sync/charm_helpers_sync.py \
 	    -o $(PWD)/build/charm-helpers/tools/charm_helpers_sync/charm_helpers_sync.py
 	@$(PYTHON) build/charm-helpers/tools/charm_helpers_sync/charm_helpers_sync.py \
 		-c charm-helpers.yaml \
