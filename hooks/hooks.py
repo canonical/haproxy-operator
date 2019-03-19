@@ -938,7 +938,11 @@ def config_changed():
     ensure_package_status(service_affecting_packages,
                           config_data['package_status'])
 
-    old_service_ports = opened_ports()
+    old_service_ports = []
+    for port_plus_proto in opened_ports():
+        port_only = ''.join(ch for ch in port_plus_proto if ch.isdigit())
+        old_service_ports.append(port_only)
+
     old_stanzas = get_listen_stanzas()
     haproxy_globals = create_haproxy_globals()
     haproxy_defaults = create_haproxy_defaults()
