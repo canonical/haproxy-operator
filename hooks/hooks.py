@@ -942,8 +942,10 @@ def config_changed():
     for port_plus_proto in opened_ports():
         # opened_ports returns e.g. ['22/tcp', '53/udp']
         # but we just want the port numbers, as ints
-        port_only, proto_only = port_plus_proto.split('/')
-        old_service_ports.append(int(port_only))
+        if port_plus_proto.endswith('/tcp') or port_plus_proto.endswith('/udp'):
+            port_only = port_plus_proto[:-4]
+        else:
+            raise ValueError('{} is not a valid port/proto value'.format(port_plus_proto))
 
     old_stanzas = get_listen_stanzas()
     haproxy_globals = create_haproxy_globals()
