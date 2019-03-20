@@ -25,6 +25,7 @@ from charmhelpers.core.hookenv import (
     relations_for_id,
     relation_id,
     open_port,
+    opened_ports,
     close_port,
     unit_get,
     INFO,
@@ -937,7 +938,15 @@ def config_changed():
     ensure_package_status(service_affecting_packages,
                           config_data['package_status'])
 
-    old_service_ports = get_service_ports()
+    old_service_ports = []
+    for port_plus_proto in opened_ports():
+        # opened_ports returns e.g. ['22/tcp', '53/udp']
+        # but we just want the port numbers, as ints
+        if port_plus_proto.endswith('/tcp') or port_plus_proto.endswith('/udp'):
+            port_only = port_plus_proto[:-4]
+        else:
+            raise ValueError('{} is not a valid port/proto value'.format(port_plus_proto))
+
     old_stanzas = get_listen_stanzas()
     haproxy_globals = create_haproxy_globals()
     haproxy_defaults = create_haproxy_defaults()
