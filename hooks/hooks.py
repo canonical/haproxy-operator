@@ -940,8 +940,10 @@ def config_changed():
 
     old_service_ports = []
     for port_plus_proto in opened_ports():
-        port_only = ''.join(ch for ch in port_plus_proto if ch.isdigit())
-        old_service_ports.append(port_only)
+        # opened_ports returns e.g. ['22/tcp', '53/udp']
+        # but we just want the port numbers, as ints
+        port_only, proto_only = port_plus_proto.split('/')
+        old_service_ports.append(int(port_only))
 
     old_stanzas = get_listen_stanzas()
     haproxy_globals = create_haproxy_globals()
