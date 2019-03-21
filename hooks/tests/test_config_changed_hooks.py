@@ -47,7 +47,8 @@ class ConfigChangedTest(TestCase):
         return mock
 
     @patch('hooks.opened_ports', return_value=['443/tcp', ])
-    def test_config_changed_notify_website_changed_stanzas(self, opened_ports):
+    @patch('hooks.close_port')
+    def test_config_changed_notify_website_changed_stanzas(self, opened_ports, close_port):
         self.service_haproxy.return_value = True
         self.get_listen_stanzas.side_effect = (
             (('foo.internal', '1.2.3.4', 123),),
@@ -60,7 +61,8 @@ class ConfigChangedTest(TestCase):
         self.notify_peer.assert_called_once_with()
 
     @patch('hooks.opened_ports', return_value=['443/tcp', ])
-    def test_config_changed_no_notify_website_not_changed(self, opened_ports):
+    @patch('hooks.close_port')
+    def test_config_changed_no_notify_website_not_changed(self, opened_ports, close_port):
         self.service_haproxy.return_value = True
         self.get_listen_stanzas.side_effect = (
             (('foo.internal', '1.2.3.4', 123),),
@@ -72,7 +74,8 @@ class ConfigChangedTest(TestCase):
         self.notify_peer.assert_not_called()
 
     @patch('hooks.opened_ports', return_value=['443/tcp', ])
-    def test_config_changed_no_notify_website_failed_check(self, opened_ports):
+    @patch('hooks.close_port')
+    def test_config_changed_no_notify_website_failed_check(self, opened_ports, close_port):
         self.service_haproxy.return_value = False
         self.get_listen_stanzas.side_effect = (
             (('foo.internal', '1.2.3.4', 123),),
@@ -88,7 +91,8 @@ class ConfigChangedTest(TestCase):
         self.sys_exit.assert_called_once_with(1)
 
     @patch('hooks.opened_ports', return_value=['443/tcp', ])
-    def test_config_changed_notify_reverseproxy(self, opened_ports):
+    @patch('hooks.close_port')
+    def test_config_changed_notify_reverseproxy(self, opened_ports, close_port):
         """
         If the ssl_cert config value changes, the reverseproxy relations get
         updated.
@@ -104,7 +108,8 @@ class ConfigChangedTest(TestCase):
         service_restart.assert_called_once_with('rsyslog')
 
     @patch('hooks.opened_ports', return_value=['443/tcp', ])
-    def test_config_changed_restart_rsyslog(self, opened_ports):
+    @patch('hooks.close_port')
+    def test_config_changed_restart_rsyslog(self, opened_ports, close_port):
         """
         If the gloabl_log or source config value changes, rsyslog is
         restarted
