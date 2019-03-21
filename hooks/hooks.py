@@ -218,7 +218,7 @@ def get_monitoring_password(haproxy_config_file="/etc/haproxy/haproxy.cfg"):
     haproxy_config = load_haproxy_config(haproxy_config_file)
     if haproxy_config is None:
         return None
-    m = re.search("stats auth\s+(\w+):(\w+)", haproxy_config)
+    m = re.search(r"stats auth\s+(\w+):(\w+)", haproxy_config)
     if m is not None:
         return m.group(2)
     else:
@@ -246,7 +246,7 @@ def get_listen_stanzas(haproxy_config_file="/etc/haproxy/haproxy.cfg"):
     if haproxy_config is None:
         return ()
     listen_stanzas = re.findall(
-        "listen\s+([^\s]+)\s+([^:]+):(.*)",
+        r"listen\s+([^\s]+)\s+([^:]+):(.*)",
         haproxy_config)
     # Match bind stanzas like:
     #
@@ -254,7 +254,7 @@ def get_listen_stanzas(haproxy_config_file="/etc/haproxy/haproxy.cfg"):
     # bind 2001:db8::1:80
     # bind 1.2.3.4:123 ssl crt /foo/bar
     bind_stanzas = re.findall(
-        "\s+bind\s+([a-fA-F0-9\.:\*]+):(\d+).*\n\s+default_backend\s+([^\s]+)",
+        r"\s+bind\s+([a-fA-F0-9\.:\*]+):(\d+).*\n\s+default_backend\s+([^\s]+)",
         haproxy_config, re.M)
     return (tuple(((service, addr, int(port))
                    for service, addr, port in listen_stanzas)) +
@@ -454,7 +454,7 @@ def create_monitoring_stanza(service_name="haproxy_monitoring"):
     monitoring_config.append("http-request deny unless allowed_cidr")
     monitoring_config.append("stats enable")
     monitoring_config.append("stats uri /")
-    monitoring_config.append("stats realm Haproxy\ Statistics")
+    monitoring_config.append("stats realm Haproxy\ Statistics")  # noqa: W605
     monitoring_config.append("stats auth %s:%s" %
                              (config_data['monitoring_username'],
                               monitoring_password))
@@ -1269,7 +1269,7 @@ def is_selfsigned_cert_stale(cert_file, key_file):
                 # to turn it into a string for comparison
                 component_addr = octet_parser(name.getComponent())
                 cert_addresses.add(str(component_addr))
-        except:
+        except Exception:
             pass
     if cert_addresses != unit_addresses:
         log('subjAltName: Cert (%s) != Unit (%s), assuming stale' % (
@@ -1289,11 +1289,13 @@ def get_octet_parser():
     """
     try:
         import ipaddress
+
         def ipaddress_parser(octet):
             return str(ipaddress.ip_address(str(octet)))
         return ipaddress_parser
     except ImportError:
         import ipaddr
+
         def trusty_ipaddress_parser(octet):
             return str(ipaddr.IPAddress(ipaddr.Bytes(str(octet))))
         return trusty_ipaddress_parser
@@ -1404,6 +1406,7 @@ def main(hook_name):
     else:
         print("Unknown hook")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     hook_name = os.path.basename(sys.argv[0])
