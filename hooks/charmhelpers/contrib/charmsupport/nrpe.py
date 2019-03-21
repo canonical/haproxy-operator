@@ -30,6 +30,7 @@ import yaml
 
 from charmhelpers.core.hookenv import (
     config,
+    hook_name,
     local_unit,
     log,
     relation_ids,
@@ -125,7 +126,7 @@ class CheckException(Exception):
 
 
 class Check(object):
-    shortname_re = '[A-Za-z0-9-_]+$'
+    shortname_re = '[A-Za-z0-9-_.@]+$'
     service_template = ("""
 #---------------------------------------------------
 # This file is Juju managed
@@ -193,6 +194,13 @@ define service {{
         nrpe_check_file = self._get_check_filename()
         with open(nrpe_check_file, 'w') as nrpe_check_config:
             nrpe_check_config.write("# check {}\n".format(self.shortname))
+            if nagios_servicegroups:
+                nrpe_check_config.write(
+                    "# The following header was added automatically by juju\n")
+                nrpe_check_config.write(
+                    "# Modifying it will affect nagios monitoring and alerting\n")
+                nrpe_check_config.write(
+                    "# servicegroups: {}\n".format(nagios_servicegroups))
             nrpe_check_config.write("command[{}]={}\n".format(
                 self.command, self.check_cmd))
 
@@ -278,7 +286,7 @@ class NRPE(object):
         try:
             nagios_uid = pwd.getpwnam('nagios').pw_uid
             nagios_gid = grp.getgrnam('nagios').gr_gid
-        except:
+        except Exception:
             log("Nagios user not set up, nrpe checks not updated")
             return
 
@@ -295,7 +303,12 @@ class NRPE(object):
                 "command": nrpecheck.command,
             }
 
-        service('restart', 'nagios-nrpe-server')
+        # update-status hooks are configured to firing every 5 minutes by
+        # default. When nagios-nrpe-server is restarted, the nagios server
+        # reports checks failing causing unnecessary alerts. Let's not restart
+        # on update-status hooks.
+        if not hook_name() == 'update-status':
+            service('restart', 'nagios-nrpe-server')
 
         monitor_ids = relation_ids("local-monitors") + \
             relation_ids("nrpe-external-master")
@@ -373,7 +386,7 @@ def add_init_service_checks(nrpe, services, unit_name, immediate_check=True):
             checkpath = '%s/service-check-%s.txt' % (nrpe.homedir, svc)
             croncmd = (
                 '/usr/local/lib/nagios/plugins/check_exit_status.pl '
-                '-s /etc/init.d/%s status' % svc
+                '-e -s /etc/init.d/%s status' % svc
             )
             cron_file = '*/5 * * * * root %s > %s\n' % (croncmd, checkpath)
             f = open(cronpath, 'w')
@@ -397,16 +410,26 @@ def add_init_service_checks(nrpe, services, unit_name, immediate_check=True):
                 os.chmod(checkpath, 0o644)
 
 
-def copy_nrpe_checks():
+def copy_nrpe_checks(nrpe_files_dir=None):
     """
     Copy the nrpe checks into place
 
     """
     NAGIOS_PLUGINS = '/usr/local/lib/nagios/plugins'
-    nrpe_files_dir = os.path.join(os.getenv('CHARM_DIR'), 'hooks',
-                                  'charmhelpers', 'contrib', 'openstack',
-                                  'files')
-
+    if nrpe_files_dir is None:
+        # determine if "charmhelpers" is in CHARMDIR or CHARMDIR/hooks
+        for segment in ['.', 'hooks']:
+            nrpe_files_dir = os.path.abspath(os.path.join(
+                os.getenv('CHARM_DIR'),
+                segment,
+                'charmhelpers',
+                'contrib',
+                'openstack',
+                'files'))
+            if os.path.isdir(nrpe_files_dir):
+                break
+        else:
+            raise RuntimeError("Couldn't find charmhelpers directory")
     if not os.path.exists(NAGIOS_PLUGINS):
         os.makedirs(NAGIOS_PLUGINS)
     for fname in glob.glob(os.path.join(nrpe_files_dir, "check_*")):
