@@ -454,7 +454,7 @@ def create_monitoring_stanza(service_name="haproxy_monitoring"):
     monitoring_config.append("http-request deny unless allowed_cidr")
     monitoring_config.append("stats enable")
     monitoring_config.append("stats uri /")
-    monitoring_config.append("stats realm Haproxy\ Statistics")  # noqa: W605
+    monitoring_config.append("stats realm Haproxy\\ Statistics")
     monitoring_config.append("stats auth %s:%s" %
                              (config_data['monitoring_username'],
                               monitoring_password))
@@ -1269,8 +1269,8 @@ def is_selfsigned_cert_stale(cert_file, key_file):
                 # to turn it into a string for comparison
                 component_addr = octet_parser(name.getComponent())
                 cert_addresses.add(str(component_addr))
-        except Exception:
-            pass
+        except Exception as e:
+            log('Failed to add the address: {}'.format(e), DEBUG)
     if cert_addresses != unit_addresses:
         log('subjAltName: Cert (%s) != Unit (%s), assuming stale' % (
             cert_addresses, unit_addresses))
