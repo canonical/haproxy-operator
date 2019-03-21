@@ -680,10 +680,7 @@ class HelpersTest(TestCase):
         safe_load.return_value = [
             {
                 'service_name': 'foo',
-                'service_options': {  # noqa: F601
-                    'foo-1': 123,
-                },
-                'service_options': ['foo1', 'foo2'],  # noqa: F601
+                'service_options': ['foo1', 'foo2'],
                 'server_options': ['baz1', 'baz2'],
             },
             {
@@ -724,10 +721,7 @@ class HelpersTest(TestCase):
         safe_load.return_value = [
             {
                 'service_name': 'foo',
-                'service_options': {  # noqa: F601
-                    'foo-1': 123,
-                },
-                'service_options': ['foo1', 'foo2'],  # noqa: F601
+                'service_options': ['foo1', 'foo2'],
                 'server_options': ['baz1', 'baz2'],
             },
             {
@@ -768,10 +762,7 @@ class HelpersTest(TestCase):
         safe_load.return_value = [
             {
                 'service_name': 'foo',
-                'service_options': {  # noqa: F601
-                    'foo-1': 123,
-                },
-                'service_options': ['foo1', 'foo2'],  # noqa: F601
+                'service_options': ['foo1', 'foo2'],
                 'server_options': 'baz1, baz2',
             },
             {
@@ -812,10 +803,7 @@ class HelpersTest(TestCase):
         safe_load.return_value = [
             {
                 'service_name': 'foo',
-                'service_options': {  # noqa: F601
-                    'foo-1': 123,
-                },
-                'service_options': ['foo1', 'foo2'],  # noqa: F601
+                'service_options': ['foo1', 'foo2'],
                 'server_options': 'baz1, baz2',
             },
             {
