@@ -1,4 +1,5 @@
 name: haproxy
+display-name: haproxy
 summary: "fast and reliable load balancing reverse proxy"
 maintainers: [Juan Negron <juan@ubuntu.com>, Tom Haddon <tom.haddon@canonical.com>]
 description:
