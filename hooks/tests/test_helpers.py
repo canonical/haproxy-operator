@@ -262,12 +262,16 @@ class HelpersTest(TestCase):
         frontend foo-2-234
             bind 1.2.3.5:234
             default_backend bar.internal
+        frontend foo-3-345
+            bind 2001:db8::1:345
+            default_backend baz.internal
         '''
 
         stanzas = hooks.get_listen_stanzas()
 
         self.assertEqual((('foo.internal', '1.2.3.4', 123),
-                          ('bar.internal', '1.2.3.5', 234)),
+                          ('bar.internal', '1.2.3.5', 234),
+                          ('baz.internal', '2001:db8::1', 345)),
                          stanzas)
 
     @patch('hooks.load_haproxy_config')
@@ -676,9 +680,6 @@ class HelpersTest(TestCase):
         safe_load.return_value = [
             {
                 'service_name': 'foo',
-                'service_options': {
-                    'foo-1': 123,
-                },
                 'service_options': ['foo1', 'foo2'],
                 'server_options': ['baz1', 'baz2'],
             },
@@ -720,9 +721,6 @@ class HelpersTest(TestCase):
         safe_load.return_value = [
             {
                 'service_name': 'foo',
-                'service_options': {
-                    'foo-1': 123,
-                },
                 'service_options': ['foo1', 'foo2'],
                 'server_options': ['baz1', 'baz2'],
             },
@@ -764,9 +762,6 @@ class HelpersTest(TestCase):
         safe_load.return_value = [
             {
                 'service_name': 'foo',
-                'service_options': {
-                    'foo-1': 123,
-                },
                 'service_options': ['foo1', 'foo2'],
                 'server_options': 'baz1, baz2',
             },
@@ -808,9 +803,6 @@ class HelpersTest(TestCase):
         safe_load.return_value = [
             {
                 'service_name': 'foo',
-                'service_options': {
-                    'foo-1': 123,
-                },
                 'service_options': ['foo1', 'foo2'],
                 'server_options': 'baz1, baz2',
             },

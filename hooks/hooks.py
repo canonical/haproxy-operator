@@ -25,15 +25,19 @@ from charmhelpers.core.hookenv import (
     relations_for_id,
     relation_id,
     open_port,
+    opened_ports,
     close_port,
     unit_get,
+    INFO,
+    DEBUG,
     )
 
 from charmhelpers.fetch import (
     apt_install,
     add_source,
     apt_update,
-    apt_cache
+    apt_cache,
+    filter_installed_packages,
 )
 
 from charmhelpers.contrib.charmsupport import nrpe
@@ -235,7 +239,7 @@ def get_monitoring_password(haproxy_config_file="/etc/haproxy/haproxy.cfg"):
     haproxy_config = load_haproxy_config(haproxy_config_file)
     if haproxy_config is None:
         return None
-    m = re.search("stats auth\s+(\w+):(\w+)", haproxy_config)
+    m = re.search(r"stats auth\s+(\w+):(\w+)", haproxy_config)
     if m is not None:
         return m.group(2)
     else:
@@ -263,15 +267,15 @@ def get_listen_stanzas(haproxy_config_file="/etc/haproxy/haproxy.cfg"):
     if haproxy_config is None:
         return ()
     listen_stanzas = re.findall(
-        "listen\s+([^\s]+)\s+([^:]+):(.*)",
+        r"listen\s+([^\s]+)\s+([^:]+):(.*)",
         haproxy_config)
     # Match bind stanzas like:
     #
     # bind 1.2.3.5:234
+    # bind 2001:db8::1:80
     # bind 1.2.3.4:123 ssl crt /foo/bar
-    bind_stanzas = re.findall(
-        "\s+bind\s+([^:]+):(\d+).*\n\s+default_backend\s+([^\s]+)",
-        haproxy_config, re.M)
+    bind_stanzas = re.findall(r"\s+bind\s+([a-fA-F0-9\.:\*]+):(\d+).*\n\s+default_backend\s+([^\s]+)",
+                              haproxy_config, re.M)
     return (tuple(((service, addr, int(port))
                    for service, addr, port in listen_stanzas)) +
             tuple(((service, addr, int(port))
@@ -470,7 +474,7 @@ def create_monitoring_stanza(service_name="haproxy_monitoring"):
     monitoring_config.append("http-request deny unless allowed_cidr")
     monitoring_config.append("stats enable")
     monitoring_config.append("stats uri /")
-    monitoring_config.append("stats realm Haproxy\ Statistics")
+    monitoring_config.append("stats realm Haproxy\\ Statistics")
     monitoring_config.append("stats auth %s:%s" %
                              (config_data['monitoring_username'],
                               monitoring_password))
@@ -630,8 +634,19 @@ def create_services():
     # Handle relations which specify their own services clauses
     for relation_info in relation_data:
         if "services" in relation_info:
+            services_dict = parse_services_yaml(services_dict, relation_info['services'])
+        # apache2 charm uses "all_services" key instead of "services".
+        if "all_services" in relation_info and "services" not in relation_info:
             services_dict = parse_services_yaml(services_dict,
-                                                relation_info['services'])
+                                                relation_info['all_services'])
+            # Replace the backend server(2hops away) with the private-address.
+            for service_name in services_dict.keys():
+                if service_name == 'service' or 'servers' not in services_dict[service_name]:
+                    continue
+                servers = services_dict[service_name]['servers']
+                for i in range(len(servers)):
+                    servers[i][1] = relation_info['private-address']
+                    servers[i][2] = str(services_dict[service_name]['service_port'])
 
     if len(services_dict) == 0:
         log("No services configured, exiting.")
@@ -652,8 +667,7 @@ def create_services():
         relation_ok = True
         for required in ("port", "private-address"):
             if required not in relation_info:
-                log("No %s in relation data for '%s', skipping." %
-                    (required, unit))
+                log("No %s in relation data for '%s', skipping." % (required, unit))
                 relation_ok = False
                 break
 
@@ -671,8 +685,7 @@ def create_services():
             if relation_info['service_name'] in services_dict:
                 service_names.add(relation_info['service_name'])
             else:
-                log("Service '%s' does not exist." %
-                    relation_info['service_name'])
+                log("Service '%s' does not exist." % relation_info['service_name'])
                 continue
 
         if 'sitenames' in relation_info:
@@ -799,7 +812,7 @@ def write_service_config(services_dict):
         # Write to disk the content of the given SSL certificates
         crts = service_config.get('crts', [])
         for i, crt in enumerate(crts):
-            if crt == "DEFAULT":
+            if crt == "DEFAULT" or crt == "EXTERNAL":
                 continue
             content = base64.b64decode(crt)
             path = get_service_lib_path(service_name)
@@ -816,7 +829,7 @@ def write_service_config(services_dict):
                 service_name,
                 service_config['service_host'],
                 service_config['service_port'],
-                service_config['service_options'],
+                service_config.get('service_options', []),
                 server_entries, errorfiles, crts, backends))
 
 
@@ -931,19 +944,21 @@ def install_hook():
 
     config_data = config_get()
     source = config_data.get('source')
+    release = lsb_release()['DISTRIB_CODENAME']
     if source == 'backports':
-        release = lsb_release()['DISTRIB_CODENAME']
         source = apt_backports_template % {'release': release}
         add_backports_preferences(release)
     add_source(source, config_data.get('key'))
     apt_update(fatal=True)
     apt_install(['haproxy', 'python-jinja2'], fatal=True)
     # Install pyasn1 library and modules for inspecting SSL certificates
-    apt_install(
-        ['python-pyasn1', 'python-pyasn1-modules', 'python-apt',
-         'python-openssl'], fatal=False)
-    ensure_package_status(service_affecting_packages,
-                          config_data['package_status'])
+    pkgs = ['python-pyasn1', 'python-pyasn1-modules', 'python-apt',
+            'python-openssl']
+    # Add python-ipaddr for inspecting certificate subjAltName on trusty
+    if release == 'trusty':
+        pkgs.append('python-ipaddr')
+    apt_install(filter_installed_packages(pkgs), fatal=False)
+    ensure_package_status(service_affecting_packages, config_data['package_status'])
     enable_haproxy()
 
 
@@ -953,7 +968,16 @@ def config_changed():
     ensure_package_status(service_affecting_packages,
                           config_data['package_status'])
 
-    old_service_ports = get_service_ports()
+    old_service_ports = []
+    for port_plus_proto in opened_ports():
+        # opened_ports returns e.g. ['22/tcp', '53/udp']
+        # but we just want the port numbers, as ints
+        if port_plus_proto.endswith('/tcp') or port_plus_proto.endswith('/udp'):
+            port_only = port_plus_proto[:-4]
+            old_service_ports.append(port_only)
+        else:
+            raise ValueError('{} is not a valid port/proto value'.format(port_plus_proto))
+
     old_stanzas = get_listen_stanzas()
     haproxy_globals = create_haproxy_globals()
     haproxy_userlists = create_haproxy_userlists()
@@ -1256,6 +1280,13 @@ def is_selfsigned_cert_stale(cert_file, key_file):
     except ImportError:
         log('Cannot check subjAltName on <= 12.04, skipping.')
         return False
+    try:
+        octet_parser = get_octet_parser()
+    except Exception as e:
+        log('Failed to retrieve octet parser due to: {}'.format(e), DEBUG)
+        log('Unable to retrieve octet parser to check subjAltName, skipping.',
+            INFO)
+        return False
     cert_addresses = set()
     unit_addresses = set(
         [unit_get('public-address'), unit_get('private-address')])
@@ -1265,15 +1296,41 @@ def is_selfsigned_cert_stale(cert_file, key_file):
             names = decoder.decode(
                 extension.get_data(), asn1Spec=rfc2459.SubjectAltName())[0]
             for name in names:
-                cert_addresses.add(str(name.getComponent()))
-        except:
-            pass
+                # The component string will contain the hex form of the
+                # address. Convert this to an ip_address for parsing and
+                # to turn it into a string for comparison
+                component_addr = octet_parser(name.getComponent())
+                cert_addresses.add(str(component_addr))
+        except Exception as e:
+            log('Failed to add the address: {}'.format(e), DEBUG)
     if cert_addresses != unit_addresses:
         log('subjAltName: Cert (%s) != Unit (%s), assuming stale' % (
             cert_addresses, unit_addresses))
         return True
 
     return False
+
+
+def get_octet_parser():
+    """
+    Returns a parsing function that can parse the pyasn OctetString
+    into an IP Address.
+
+    @raises: raises any errors attempting to import the libraries
+             for the octet parser.
+    """
+    try:
+        import ipaddress
+
+        def ipaddress_parser(octet):
+            return str(ipaddress.ip_address(str(octet)))
+        return ipaddress_parser
+    except ImportError:
+        import ipaddr
+
+        def trusty_ipaddress_parser(octet):
+            return str(ipaddr.IPAddress(ipaddr.Bytes(str(octet))))
+        return trusty_ipaddress_parser
 
 
 # XXX taken from the apache2 charm.
@@ -1381,6 +1438,7 @@ def main(hook_name):
     else:
         print("Unknown hook")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     hook_name = os.path.basename(sys.argv[0])

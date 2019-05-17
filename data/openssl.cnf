@@ -16,5 +16,5 @@ commonName              = $ENV::OPENSSL_CN
 subjectAltName          = @alt_names
 
 [alt_names]
-DNS.1   = $ENV::OPENSSL_PUBLIC
-DNS.2   = $ENV::OPENSSL_PRIVATE
+IP.1   = $ENV::OPENSSL_PUBLIC
+IP.2   = $ENV::OPENSSL_PRIVATE
