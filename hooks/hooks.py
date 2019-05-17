@@ -207,7 +207,7 @@ def create_haproxy_userlists(userlists=None):
         return ''
     result = []
     for l in userlists:
-        for userlist, v in l.iteritems():
+        for userlist, v in l.items():
             result.append('userlist ' + userlist)
             for group in v['groups']:
                     result.append('    group ' + group)
@@ -587,7 +587,7 @@ def ensure_service_host_port(services):
     config_data = config_get()
     seen = []
     missing = []
-    for service, options in sorted(services.iteritems()):
+    for service, options in sorted(services.items()):
         if "service_host" not in options:
             missing.append(options)
             continue
@@ -713,7 +713,7 @@ def create_services():
                                 'server_options', [])))
 
     has_servers = False
-    for service_name, service in services_dict.iteritems():
+    for service_name, service in services_dict.items():
         if service.get("servers", []):
             has_servers = True
 
@@ -759,7 +759,7 @@ def apply_peer_config(services_dict):
 
     unit_name = os.environ["JUJU_UNIT_NAME"].replace("/", "-")
     private_address = unit_get("private-address")
-    for service_name, peer_service in peer_services.iteritems():
+    for service_name, peer_service in peer_services.items():
         original_service = services_dict[service_name]
 
         # If the original service has timeout settings, copy them over to the
