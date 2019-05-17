@@ -1,6 +1,7 @@
 # Overview
 
-This charm deploys a reverse proxy in front of other servies. You can use this to load balance existing deployments.
+This charm deploys a reverse proxy in front of other services. You can use
+this to load balance existing deployments.
 
 # Usage
 
@@ -110,7 +111,7 @@ The website relation is the other side of haproxy.  It can communicate with
 charms written like apache2 that can act as a front-end for haproxy to take of
 things like ssl encryption.  When joining a service like apache2 on its
 reverseproxy relation, haproxy's website relation will set an `all_services`
-varaible that conforms to the spec layed out in the apache2 charm.
+variable that conforms to the spec laid out in the apache2 charm.
 
 These settings can then be used when crafting your vhost template to make sure
 traffic goes to the correct haproxy listener which will in turn forward the
@@ -136,7 +137,7 @@ options and then using the `crts` key in the services yaml, e.g.:
     - { ... optionally more services here ... }
     "
 
-where the DEFAULT keyword means use the certificate set with `ssl_cert`/`ssl_key` (or
+The DEFAULT keyword means use the certificate set with `ssl_cert`/`ssl_key` (or
 alternatively you can inline different base64-encode certificates).
 
 Note that in order to use SSL termination you need haproxy 1.5 or later, which
@@ -227,9 +228,9 @@ bandwidth to the backends.
 ### active-active mode
 
 If the peering\_mode option is set to "active-active", then any haproxy unit
-will be independant from each other and will simply load-balance the traffic to
+will be independent from each other and will simply load-balance the traffic to
 the backends. In this case, the indirection layer described above is not
-created in this case.
+created.
 
 This mode allows increasing the bandwidth to the backends by adding additional
 units, at the cost of having less control over the number of connections that

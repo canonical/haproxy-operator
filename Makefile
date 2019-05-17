@@ -14,7 +14,7 @@ proof:
 	@charm proof
 
 .venv:
-	sudo apt-get install -y flake8 python-apt python-virtualenv python-jinja2 python-mock python-yaml python-testtools python-nose python-yaml python-flake8
+	sudo apt-get install -y flake8 python-apt python-virtualenv python-jinja2 python-mock python-yaml python-testtools python-nose python-yaml python-flake8 git
 	virtualenv .venv --system-site-packages
 	.venv/bin/pip install bundletester
 
@@ -24,16 +24,15 @@ test: .venv
 
 lint: .venv
 	@echo Checking for Python syntax...
-	@python -m flake8 $(HOOKS_DIR) --ignore=E123 --exclude=$(HOOKS_DIR)/charmhelpers
+	@python -m flake8 $(HOOKS_DIR) --extend-ignore=E123 --exclude=$(HOOKS_DIR)/charmhelpers
 
-sourcedeps: $(PWD)/config-manager.txt
+sourcedeps:
 	@echo Updating source dependencies...
-	@$(PYTHON) cm.py -c $(PWD)/config-manager.txt \
-		-p $(SOURCEDEPS_DIR) \
-		-t $(PWD)
+	@mkdir -p $(PWD)/build/charm-helpers/tools/charm_helpers_sync
+	@curl -sL https://github.com/juju/charm-helpers/raw/master/tools/charm_helpers_sync/charm_helpers_sync.py \
+	    -o $(PWD)/build/charm-helpers/tools/charm_helpers_sync/charm_helpers_sync.py
 	@$(PYTHON) build/charm-helpers/tools/charm_helpers_sync/charm_helpers_sync.py \
 		-c charm-helpers.yaml \
-		-b build/charm-helpers \
 		-d hooks/charmhelpers
 	@echo Do not forget to commit the updated files if any.
 

@@ -1,4 +1,5 @@
 name: haproxy
+display-name: haproxy
 summary: "fast and reliable load balancing reverse proxy"
 maintainers: [Juan Negron <juan@ubuntu.com>, Tom Haddon <tom.haddon@canonical.com>]
 description:
@@ -11,6 +12,7 @@ tags: ["cache-proxy"]
 series:
   - xenial
   - trusty
+  - bionic
 requires:
   reverseproxy:
     interface: http
@@ -31,3 +33,5 @@ provides:
 peers:
   peer:
     interface: haproxy-peer
+extra-bindings:
+  public:

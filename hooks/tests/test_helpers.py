@@ -262,12 +262,16 @@ class HelpersTest(TestCase):
         frontend foo-2-234
             bind 1.2.3.5:234
             default_backend bar.internal
+        frontend foo-3-345
+            bind 2001:db8::1:345
+            default_backend baz.internal
         '''
 
         stanzas = hooks.get_listen_stanzas()
 
         self.assertEqual((('foo.internal', '1.2.3.4', 123),
-                          ('bar.internal', '1.2.3.5', 234)),
+                          ('bar.internal', '1.2.3.5', 234),
+                          ('baz.internal', '2001:db8::1', 345)),
                          stanzas)
 
     @patch('hooks.load_haproxy_config')

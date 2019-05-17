@@ -47,10 +47,11 @@ class InstallTests(TestCase):
         calls = self.apt_install.call_args_list
         self.assertEqual((['haproxy', 'python-jinja2'],), calls[0][0])
         self.assertEqual({'fatal': True}, calls[0][1])
-        self.assertEqual(
-            (['python-pyasn1', 'python-pyasn1-modules', 'python-apt',
-              'python-openssl'],),
-            calls[1][0])
+        for package in calls[1][0][0]:
+            self.assertIn(
+                package,
+                (['python-pyasn1', 'python-pyasn1-modules', 'python-apt',
+                 'python-openssl'],))
         self.assertEqual({'fatal': False}, calls[1][1])
 
     def test_add_source(self):
