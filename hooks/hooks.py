@@ -253,9 +253,8 @@ def get_listen_stanzas(haproxy_config_file="/etc/haproxy/haproxy.cfg"):
     # bind 1.2.3.5:234
     # bind 2001:db8::1:80
     # bind 1.2.3.4:123 ssl crt /foo/bar
-    bind_stanzas = re.findall(
-        r"\s+bind\s+([a-fA-F0-9\.:\*]+):(\d+).*\n\s+default_backend\s+([^\s]+)",
-        haproxy_config, re.M)
+    bind_stanzas = re.findall(r"\s+bind\s+([a-fA-F0-9\.:\*]+):(\d+).*\n\s+default_backend\s+([^\s]+)",
+                              haproxy_config, re.M)
     return (tuple(((service, addr, int(port))
                    for service, addr, port in listen_stanzas)) +
             tuple(((service, addr, int(port))
@@ -614,8 +613,19 @@ def create_services():
     # Handle relations which specify their own services clauses
     for relation_info in relation_data:
         if "services" in relation_info:
+            services_dict = parse_services_yaml(services_dict, relation_info['services'])
+        # apache2 charm uses "all_services" key instead of "services".
+        if "all_services" in relation_info and "services" not in relation_info:
             services_dict = parse_services_yaml(services_dict,
-                                                relation_info['services'])
+                                                relation_info['all_services'])
+            # Replace the backend server(2hops away) with the private-address.
+            for service_name in services_dict.keys():
+                if service_name == 'service' or 'servers' not in services_dict[service_name]:
+                    continue
+                servers = services_dict[service_name]['servers']
+                for i in range(len(servers)):
+                    servers[i][1] = relation_info['private-address']
+                    servers[i][2] = str(services_dict[service_name]['service_port'])
 
     if len(services_dict) == 0:
         log("No services configured, exiting.")
@@ -636,8 +646,7 @@ def create_services():
         relation_ok = True
         for required in ("port", "private-address"):
             if required not in relation_info:
-                log("No %s in relation data for '%s', skipping." %
-                    (required, unit))
+                log("No %s in relation data for '%s', skipping." % (required, unit))
                 relation_ok = False
                 break
 
@@ -655,8 +664,7 @@ def create_services():
             if relation_info['service_name'] in services_dict:
                 service_names.add(relation_info['service_name'])
             else:
-                log("Service '%s' does not exist." %
-                    relation_info['service_name'])
+                log("Service '%s' does not exist." % relation_info['service_name'])
                 continue
 
         if 'sitenames' in relation_info:
@@ -927,8 +935,7 @@ def install_hook():
     if release == 'trusty':
         pkgs.append('python-ipaddr')
     apt_install(filter_installed_packages(pkgs), fatal=False)
-    ensure_package_status(service_affecting_packages,
-                          config_data['package_status'])
+    ensure_package_status(service_affecting_packages, config_data['package_status'])
     enable_haproxy()
 
 

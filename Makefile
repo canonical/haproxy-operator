@@ -24,7 +24,7 @@ test: .venv
 
 lint: .venv
 	@echo Checking for Python syntax...
-	@python -m flake8 $(HOOKS_DIR) --extend-ignore=E123 --exclude=$(HOOKS_DIR)/charmhelpers
+	@python -m flake8 $(HOOKS_DIR) --ignore=E123 --max-line-length=120 --exclude=$(HOOKS_DIR)/charmhelpers
 
 sourcedeps:
 	@echo Updating source dependencies...
