@@ -253,9 +253,8 @@ def get_listen_stanzas(haproxy_config_file="/etc/haproxy/haproxy.cfg"):
     # bind 1.2.3.5:234
     # bind 2001:db8::1:80
     # bind 1.2.3.4:123 ssl crt /foo/bar
-    bind_stanzas = re.findall(
-        r"\s+bind\s+([a-fA-F0-9\.:\*]+):(\d+).*\n\s+default_backend\s+([^\s]+)",
-        haproxy_config, re.M)
+    r = r"\s+bind\s+([a-fA-F0-9\.:\*]+):(\d+).*\n\s+default_backend\s+([^\s]+)"
+    bind_stanzas = re.findall(r, haproxy_config, re.M)
     return (tuple(((service, addr, int(port))
                    for service, addr, port in listen_stanzas)) +
             tuple(((service, addr, int(port))
@@ -956,11 +955,13 @@ def config_changed():
     for port_plus_proto in opened_ports():
         # opened_ports returns e.g. ['22/tcp', '53/udp']
         # but we just want the port numbers, as ints
-        if port_plus_proto.endswith('/tcp') or port_plus_proto.endswith('/udp'):
+        if (port_plus_proto.endswith('/tcp') or
+           port_plus_proto.endswith('/udp')):
             port_only = port_plus_proto[:-4]
             old_service_ports.append(port_only)
         else:
-            raise ValueError('{} is not a valid port/proto value'.format(port_plus_proto))
+            raise ValueError('{} is not a valid port/proto value'.format(
+                port_plus_proto))
 
     old_stanzas = get_listen_stanzas()
     haproxy_globals = create_haproxy_globals()
