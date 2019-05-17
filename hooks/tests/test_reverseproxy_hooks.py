@@ -665,34 +665,33 @@ class ReverseProxyRelationTest(TestCase):
              "private-address": "1.2.3.4",
              "__unit__": "foo/0",
              "all_services": '''
-          - server_options: &id001 [check inter 2000 rise 2 fall 5 maxconn 500]
-            servers:
-            - - my-service-2-8082
-              - 10.142.0.16
-              - '8082'
-              - *id001
-            service_host: 0.0.0.0
-            service_name: my-service
-            service_options: [mode http, balance url_param waitid]
-            service_port: 83
+                 - server_options: &id001 [check inter 2000 rise 2 fall 5 maxconn 500]
+                   servers:
+                   - - my-service-2-8082
+                     - 10.142.0.16
+                     - '8082'
+                     - *id001
+                   service_host: 0.0.0.0
+                   service_name: my-service
+                   service_options: [mode http, balance url_param waitid]
+                   service_port: 83
              '''
              },
         ]
 
         expected = {
-            'my-service':
-            {'server_options':
-             ['check inter 2000 rise 2 fall 5 maxconn 500'],
-             'servers': [['my-service-2-8082', '1.2.3.4', '83',
-                          ['check inter 2000 rise 2 fall 5 maxconn 500']]],
-             'service_host': '0.0.0.0',
-             'service_name': 'my-service',
-             'service_options': ['mode http', 'balance url_param waitid'],
-             'service_port': 83},
-            'service': {'servers': [('foo-0-80', '1.2.3.4', 80, [])],
-                        'service_host': '0.0.0.0',
-                        'service_name': 'service',
-                        'service_port': 85}}
+            'my-service': {
+                'server_options': ['check inter 2000 rise 2 fall 5 maxconn 500'],
+                'servers': [['my-service-2-8082', '1.2.3.4', '83', ['check inter 2000 rise 2 fall 5 maxconn 500']]],
+                'service_host': '0.0.0.0',
+                'service_name': 'my-service',
+                'service_options': ['mode http', 'balance url_param waitid'],
+                'service_port': 83},
+            'service': {
+                'servers': [('foo-0-80', '1.2.3.4', 80, [])],
+                'service_host': '0.0.0.0',
+                'service_name': 'service',
+                'service_port': 85}}
 
         self.assertEqual(expected, hooks.create_services())
         self.write_service_config.assert_called_with(expected)

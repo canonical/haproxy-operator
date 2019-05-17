@@ -50,8 +50,7 @@ class InstallTests(TestCase):
         for package in calls[1][0][0]:
             self.assertIn(
                 package,
-                ['python-pyasn1', 'python-pyasn1-modules', 'python-apt',
-                 'python-openssl'])
+                ['python-pyasn1', 'python-pyasn1-modules', 'python-apt', 'python-openssl'])
         self.assertEqual({'fatal': False}, calls[1][1])
 
     def test_add_source(self):
