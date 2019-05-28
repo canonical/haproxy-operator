@@ -21,6 +21,8 @@ class ConfigChangedTest(TestCase):
             "create_haproxy_globals")
         self.create_haproxy_defaults = self.patch_hook(
             "create_haproxy_defaults")
+        self.create_haproxy_userlists = self.patch_hook(
+            "create_haproxy_userlists")
         self.remove_services = self.patch_hook("remove_services")
         self.create_services = self.patch_hook("create_services")
         self.load_services = self.patch_hook("load_services")

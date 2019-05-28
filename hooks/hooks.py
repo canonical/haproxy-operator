@@ -196,6 +196,27 @@ def create_haproxy_defaults():
 
 
 # -----------------------------------------------------------------------------
+# create_haproxy_userlists:  Creates the userlist sections of the haproxy
+# config
+# -----------------------------------------------------------------------------
+def create_haproxy_userlists(userlists=None):
+    if userlists is None:
+        userlists = config_get()["userlists"]
+    userlists = yaml.safe_load(userlists)
+    if not userlists:
+        return ''
+    result = []
+    for l in userlists:
+        for userlist, v in l.items():
+            result.append('userlist ' + userlist)
+            for group in v['groups']:
+                    result.append('    group ' + group)
+            for user in v['users']:
+                    result.append('    user ' + user)
+    return '\n'.join(result)
+
+
+# -----------------------------------------------------------------------------
 # load_haproxy_config:  Convenience function that loads (as a string) the
 #                       current haproxy configuration file.
 #                       Returns a string containing the haproxy config or
@@ -566,7 +587,7 @@ def ensure_service_host_port(services):
     config_data = config_get()
     seen = []
     missing = []
-    for service, options in sorted(services.iteritems()):
+    for service, options in sorted(services.items()):
         if "service_host" not in options:
             missing.append(options)
             continue
@@ -692,7 +713,7 @@ def create_services():
                                 'server_options', [])))
 
     has_servers = False
-    for service_name, service in services_dict.iteritems():
+    for service_name, service in services_dict.items():
         if service.get("servers", []):
             has_servers = True
 
@@ -738,7 +759,7 @@ def apply_peer_config(services_dict):
 
     unit_name = os.environ["JUJU_UNIT_NAME"].replace("/", "-")
     private_address = unit_get("private-address")
-    for service_name, peer_service in peer_services.iteritems():
+    for service_name, peer_service in peer_services.items():
         original_service = services_dict[service_name]
 
         # If the original service has timeout settings, copy them over to the
@@ -884,12 +905,14 @@ def remove_services(service_name=None):
 def construct_haproxy_config(haproxy_globals=None,
                              haproxy_defaults=None,
                              haproxy_monitoring=None,
-                             haproxy_services=None):
+                             haproxy_services=None,
+                             haproxy_userlists=None):
     if None in (haproxy_globals, haproxy_defaults):
         return
     with open(default_haproxy_config, 'w') as haproxy_config:
         config_string = ''
-        for config in (haproxy_globals, haproxy_defaults, haproxy_monitoring,
+        for config in (haproxy_globals, haproxy_defaults, haproxy_userlists,
+                       haproxy_monitoring,
                        haproxy_services):
             if config is not None:
                 config_string += config + '\n\n'
@@ -957,6 +980,7 @@ def config_changed():
 
     old_stanzas = get_listen_stanzas()
     haproxy_globals = create_haproxy_globals()
+    haproxy_userlists = create_haproxy_userlists()
     haproxy_defaults = create_haproxy_defaults()
     if config_data['enable_monitoring'] is True:
         haproxy_monitoring = create_monitoring_stanza()
@@ -975,7 +999,8 @@ def config_changed():
     construct_haproxy_config(haproxy_globals,
                              haproxy_defaults,
                              haproxy_monitoring,
-                             haproxy_services)
+                             haproxy_services,
+                             haproxy_userlists)
 
     write_metrics_cronjob(metrics_script_path,
                           metrics_cronjob_path)
