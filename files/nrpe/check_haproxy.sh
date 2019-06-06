@@ -13,6 +13,11 @@ export LOGFILE=/var/log/nagios/check_haproxy.log
 # Exclude files starting with a dot - LP#1828529
 AUTH=$(grep -r --exclude ".*" "stats auth" /etc/haproxy | head -1 | awk '{print $4}')
 
+if [ -z "$AUTH" ]; then
+    echo "CRITICAL: unable to find credentials to query the haproxy statistics page"
+    exit 2
+fi
+
 NOTACTIVE=$(curl -s -f -u ${AUTH} "http://localhost:10000/;csv"|awk -F, -v SVNAME=2 -v STATUS=18 '
 	$1 ~ "^#" { next }
 	$SVNAME ~ "(FRONT|BACK)END" { next }

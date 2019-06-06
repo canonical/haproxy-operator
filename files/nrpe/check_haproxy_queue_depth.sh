@@ -13,6 +13,11 @@ MAXQthrsh=100
 # Exclude files starting with a dot - LP#1828529
 AUTH=$(grep -r --exclude ".*" "stats auth" /etc/haproxy | head -1 | awk '{print $4}')
 
+if [ -z "$AUTH" ]; then
+    echo "CRITICAL: unable to find credentials to query the haproxy statistics page"
+    exit 2
+fi
+
 HAPROXYSTATS=$(/usr/lib/nagios/plugins/check_http -a ${AUTH} -I 127.0.0.1 -p 10000 -u '/;csv' -v)
 
 for BACKEND in $(echo $HAPROXYSTATS| xargs -n1 | grep BACKEND | awk -F , '{print $1}')
