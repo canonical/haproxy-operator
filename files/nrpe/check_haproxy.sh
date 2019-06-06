@@ -10,7 +10,8 @@ set -e
 set -o pipefail
 
 export LOGFILE=/var/log/nagios/check_haproxy.log
-AUTH=$(grep -r "stats auth" /etc/haproxy | head -1 | awk '{print $4}')
+# Exclude files starting with a dot - LP#1828529
+AUTH=$(grep -r --exclude ".*" "stats auth" /etc/haproxy | head -1 | awk '{print $4}')
 
 NOTACTIVE=$(curl -s -f -u ${AUTH} "http://localhost:10000/;csv"|awk -F, -v SVNAME=2 -v STATUS=18 '
 	$1 ~ "^#" { next }

@@ -10,7 +10,8 @@
 CURRQthrsh=0
 MAXQthrsh=100
 
-AUTH=$(grep -r "stats auth" /etc/haproxy | head -1 | awk '{print $4}')
+# Exclude files starting with a dot - LP#1828529
+AUTH=$(grep -r --exclude ".*" "stats auth" /etc/haproxy | head -1 | awk '{print $4}')
 
 HAPROXYSTATS=$(/usr/lib/nagios/plugins/check_http -a ${AUTH} -I 127.0.0.1 -p 10000 -u '/;csv' -v)
 
