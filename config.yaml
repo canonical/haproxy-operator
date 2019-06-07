@@ -97,7 +97,23 @@ options:
   logrotate_config:
     default: ""
     type: string
-    description: Override package logrotate configuration.
+    description: |
+        Override package logrotate configuration.
+        .
+        For example.
+        .
+        /var/log/haproxy.log {
+            weekly
+            rotate 52
+            missingok
+            notifempty
+            compress
+            delaycompress
+            postrotate
+                invoke-rc.d rsyslog rotate >/dev/null 2>&1 || true
+            endscript
+        }
+        .
   enable_monitoring:
     default: False
     type: boolean
