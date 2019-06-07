@@ -52,6 +52,7 @@ default_haproxy_service_config_dir = "/var/run/haproxy"
 default_haproxy_lib_dir = "/var/lib/haproxy"
 metrics_cronjob_path = "/etc/cron.d/haproxy_metrics"
 metrics_script_path = "/usr/local/bin/haproxy_to_statsd.sh"
+log_rotate_config_path = "/etc/logrotate.d/haproxy"
 service_affecting_packages = ['haproxy']
 apt_backports_template = (
     "deb http://archive.ubuntu.com/ubuntu %(release)s-backports "
@@ -961,6 +962,9 @@ def install_hook():
     ensure_package_status(service_affecting_packages, config_data['package_status'])
     enable_haproxy()
 
+    if config_data.get('logrotate_config'):
+        logrotate_configuration()
+
 
 def config_changed():
     config_data = config_get()
@@ -977,6 +981,9 @@ def config_changed():
             old_service_ports.append(port_only)
         else:
             raise ValueError('{} is not a valid port/proto value'.format(port_plus_proto))
+
+    if config_data.changed('logrotate_config'):
+        logrotate_configuration()
 
     old_stanzas = get_listen_stanzas()
     haproxy_globals = create_haproxy_globals()
@@ -1386,6 +1393,13 @@ def statistics_interface():
                          port=monitoring_port,
                          password=monitoring_password,
                          user=monitoring_username)
+
+
+def logrotate_configuration():
+    config = config_get()
+    logrotate_config = config['logrotate_config']
+    with open(log_rotate_config_path, 'w') as f:
+        f.write(logrotate_config)
 
 
 # #############################################################################

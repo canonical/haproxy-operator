@@ -94,6 +94,10 @@ options:
     default: "queue 20000, client 50000, connect 5000, server 50000"
     type: string
     description: Default timeouts 
+  logrotate_config:
+    default: ""
+    type: string
+    description: Override package logrotate configuration.
   enable_monitoring:
     default: False
     type: boolean
