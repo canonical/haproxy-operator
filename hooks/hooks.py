@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 
 import base64
+import errno
 import glob
 import os
+import pwd
 import re
-import socket
 import shutil
+import socket
 import subprocess
 import sys
 import yaml
-import pwd
 
 from itertools import izip, tee
 from operator import itemgetter
@@ -52,7 +53,6 @@ default_haproxy_service_config_dir = "/var/run/haproxy"
 default_haproxy_lib_dir = "/var/lib/haproxy"
 metrics_cronjob_path = "/etc/cron.d/haproxy_metrics"
 metrics_script_path = "/usr/local/bin/haproxy_to_statsd.sh"
-log_rotate_config_path = "/etc/logrotate.d/haproxy"
 service_affecting_packages = ['haproxy']
 apt_backports_template = (
     "deb http://archive.ubuntu.com/ubuntu %(release)s-backports "
@@ -101,6 +101,29 @@ frontend_only_options = [
     "use_backend",
     ]
 
+
+logrotate_config_path = "/etc/logrotate.d/haproxy"
+
+logrotate_config_header = '''\
+# This file is managed by the haproxy charm (config item logrotate_config).
+# Manual changes may be reverted at any time.  Use Juju to change it.
+'''
+
+# This is used to roll back zero-length configs deployed by a earlier buggy
+# version of the charm.  Extracted from haproxy 1.6.3-1ubuntu0.2.
+default_packaged_haproxy_logrotate_config = '''\
+/var/log/haproxy.log {
+    daily
+    rotate 52
+    missingok
+    notifempty
+    compress
+    delaycompress
+    postrotate
+        invoke-rc.d rsyslog rotate >/dev/null 2>&1 || true
+    endscript
+}
+'''
 
 class InvalidRelationDataError(Exception):
     """Invalid data has been provided in the relation."""
@@ -1393,11 +1416,31 @@ def statistics_interface():
 
 
 def configure_logrotate(logrotate_config):
-    # FIXME(pjdc): An earlier version of the charm always overwrote the config
-    # file, even if logrotate_config was empty.  Should try to fix that here?
+    # NOTE(pjdc): This function is a trapdoor -- setting logrotate_config and
+    # then changing it to an empty string leaves the last value in place, but
+    # if we ship a default config and always write *something*, we'd clobber
+    # manual configs.  Since this is a relatively new charm feature, we
+    # probably can't lay exclusive claim to the logrotate config file yet.
+    final_logrotate_config = None
+
     if logrotate_config:
-        with open(log_rotate_config_path, 'w') as f:
-            f.write(logrotate_config)
+        final_logrotate_config = logrotate_config_header + logrotate_config
+    else:
+        try:
+            # If the config zero-length then it was probably clobbered by a
+            # (fixed) bug (LP:1834980) in the previous version of the charm.
+            if os.path.getsize(logrotate_config_path) == 0:
+                    final_logrotate_config = default_packaged_haproxy_logrotate_config
+        except OSError as ose:
+            # If the file or directory is missing, just carry on.  Either
+            # someone deliberately deleted it, or logrotate isn't installed.
+            if ose.errno != errno.ENOENT:
+                raise
+
+    if final_logrotate_config:
+        with open(logrotate_config_path, 'w') as f:
+            f.write(final_logrotate_config)
+
 
 # #############################################################################
 # Main section

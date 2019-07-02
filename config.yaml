@@ -100,7 +100,9 @@ options:
     description: |
         Override package logrotate configuration.
         .
-        For example.
+        Warning: Setting this value back to the empty string will leave the previous config in place on disk.
+        .
+        Example value:
         .
         /var/log/haproxy.log {
             weekly
