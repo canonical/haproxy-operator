@@ -962,9 +962,6 @@ def install_hook():
     ensure_package_status(service_affecting_packages, config_data['package_status'])
     enable_haproxy()
 
-    if config_data.get('logrotate_config'):
-        logrotate_configuration()
-
 
 def config_changed():
     config_data = config_get()
@@ -983,7 +980,7 @@ def config_changed():
             raise ValueError('{} is not a valid port/proto value'.format(port_plus_proto))
 
     if config_data.changed('logrotate_config'):
-        logrotate_configuration()
+        configure_logrotate(config_data.get('logrotate_config'))
 
     old_stanzas = get_listen_stanzas()
     haproxy_globals = create_haproxy_globals()
@@ -1395,12 +1392,12 @@ def statistics_interface():
                          user=monitoring_username)
 
 
-def logrotate_configuration():
-    config = config_get()
-    logrotate_config = config['logrotate_config']
-    with open(log_rotate_config_path, 'w') as f:
-        f.write(logrotate_config)
-
+def configure_logrotate(logrotate_config):
+    # FIXME(pjdc): An earlier version of the charm always overwrote the config
+    # file, even if logrotate_config was empty.  Should try to fix that here?
+    if logrotate_config:
+        with open(log_rotate_config_path, 'w') as f:
+            f.write(logrotate_config)
 
 # #############################################################################
 # Main section
