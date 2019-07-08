@@ -1002,8 +1002,7 @@ def config_changed():
         else:
             raise ValueError('{} is not a valid port/proto value'.format(port_plus_proto))
 
-    if config_data.changed('logrotate_config'):
-        configure_logrotate(config_data.get('logrotate_config'))
+    configure_logrotate(config_data.get('logrotate_config'))
 
     old_stanzas = get_listen_stanzas()
     haproxy_globals = create_haproxy_globals()
