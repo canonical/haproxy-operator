@@ -1430,7 +1430,7 @@ def configure_logrotate(logrotate_config):
             # If the live config is zero-length, it was probably clobbered by a
             # (fixed) bug in the previous version of the charm (LP:1834980).
             if os.path.getsize(logrotate_config_path) == 0:
-                    final_logrotate_config = default_packaged_haproxy_logrotate_config
+                final_logrotate_config = default_packaged_haproxy_logrotate_config
         except OSError as ose:
             # If the file or directory is missing, just carry on.  Either
             # someone deliberately deleted it, or logrotate isn't installed.
