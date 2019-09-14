@@ -29,6 +29,7 @@ from charmhelpers.core.hookenv import (
     opened_ports,
     close_port,
     unit_get,
+    status_set,
     INFO,
     DEBUG,
     )
@@ -963,6 +964,8 @@ def service_haproxy(action=None, haproxy_config=default_haproxy_config):
 # #############################################################################
 def install_hook():
     # Run both during initial install and during upgrade-charm.
+    status_set('maintenance', 'Installing apt packages')
+
     if not os.path.exists(default_haproxy_service_config_dir):
         os.mkdir(default_haproxy_service_config_dir, 0o600)
 
@@ -987,6 +990,8 @@ def install_hook():
 
 
 def config_changed():
+    status_set('maintenance', 'Configuring HAProxy')
+
     config_data = config_get()
 
     ensure_package_status(service_affecting_packages,
@@ -1446,6 +1451,14 @@ def configure_logrotate(logrotate_config):
 # #############################################################################
 
 
+def assess_status():
+    '''Assess status of current unit'''
+    if(service_haproxy("status")):
+        status_set('active', 'Unit is ready')
+    else:
+        status_set('blocked', 'HAProxy is not running')
+
+
 def main(hook_name):
     if hook_name == "install":
         install_hook()
@@ -1491,6 +1504,8 @@ def main(hook_name):
     else:
         print("Unknown hook")
         sys.exit(1)
+
+    assess_status()
 
 
 if __name__ == "__main__":
