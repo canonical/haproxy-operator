@@ -13,6 +13,7 @@ series:
   - xenial
   - trusty
   - bionic
+  - focal
 requires:
   reverseproxy:
     interface: http
