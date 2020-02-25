@@ -23,6 +23,9 @@ UBUNTU_RELEASES = (
     'artful',
     'bionic',
     'cosmic',
+    'disco',
+    'eoan',
+    'focal'
 )
 
 
@@ -92,7 +95,7 @@ def cmp_pkgrevno(package, revno, pkgcache=None):
     the pkgcache argument is None. Be sure to add charmhelpers.fetch if
     you call this function, or pass an apt_pkg.Cache() instance.
     """
-    import apt_pkg
+    from charmhelpers.fetch import apt_pkg
     if not pkgcache:
         from charmhelpers.fetch import apt_cache
         pkgcache = apt_cache()
