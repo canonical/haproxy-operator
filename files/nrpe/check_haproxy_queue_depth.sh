@@ -25,8 +25,12 @@ do
     CURRQ=$(echo "$HAPROXYSTATS" | grep ^$BACKEND, | grep BACKEND | cut -d , -f 3)
     MAXQ=$(echo "$HAPROXYSTATS"  | grep ^$BACKEND, | grep BACKEND | cut -d , -f 4)
 
-    if [[ $CURRQ -gt $CURRQthrsh || $MAXQ -gt $MAXQthrsh ]] ; then
-        echo "CRITICAL: queue depth for $BACKEND - CURRENT:$CURRQ MAX:$MAXQ"
+    if [[ $CURRQ -gt $CURRQthrsh ]] ; then
+        echo "CRITICAL: queue depth for $BACKEND - CURRENT:$CURRQ"
+        exit 2
+    fi
+    if [[ $MAXQ -gt $MAXQthrsh ]] ; then
+        echo "CRITICAL: queue depth for $BACKEND - maximum $MAXQ is over the threshold($MAXQthrsh). Check the underlying issue and reload haproxy to cleart the alert."
         exit 2
     fi
 done
