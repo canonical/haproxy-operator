@@ -30,7 +30,7 @@ do
         exit 2
     fi
     if [[ $MAXQ -gt $MAXQthrsh ]] ; then
-        echo "CRITICAL: queue depth for $BACKEND - maximum $MAXQ is over the threshold($MAXQthrsh). Once you've determined and fixed the root cause, you'll need to reload haproxy to reset the max queue depth counter to 0, which will clear the alert."
+        echo "CRITICAL: max queue depth for $BACKEND - $MAXQ is over threshold ($MAXQthrsh). After fixing, reload haproxy to clear alert by resetting max queue depth counter to 0."
         exit 2
     fi
 done
