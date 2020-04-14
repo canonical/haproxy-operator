@@ -1,0 +1,12 @@
+[submodule "mod/operator"]
+	path = mod/operator
+	url = https://github.com/canonical/operator
+[submodule "mod/ops-interface-vrrp-parameters"]
+	path = mod/ops-interface-vrrp-parameters
+	url = https://github.com/dshcherb/ops-interface-vrrp-parameters
+[submodule "mod/jinja"]
+	path = mod/jinja
+	url = https://github.com/pallets/jinja
+[submodule "mod/interface-tcp-load-balancer"]
+	path = mod/interface-tcp-load-balancer
+	url = https://github.com/dshcherb/interface-tcp-load-balancer

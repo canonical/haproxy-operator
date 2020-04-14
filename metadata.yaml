@@ -1,0 +1,20 @@
+name: haproxy
+display-name: haproxy
+summary: "fast and reliable load balancing reverse proxy"
+maintainers: [Dmitrii Shcherbakov <dmitrii.shshcerbakov@canonical.com>]
+description: A Reliable, High Performance TCP/HTTP Load Balancer.
+tags: ["cache-proxy"]
+series:
+    - bionic
+    - focal
+provides:
+    tcp-load-balancer:
+        interface: tcp-load-balancer
+    website:
+        interface: http
+    vrrp-parameters:
+        interface: vrrp-parameters
+peers:
+    peer:
+        interface: haproxy-peer
+

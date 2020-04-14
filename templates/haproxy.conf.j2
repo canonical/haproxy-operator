@@ -1,0 +1,9 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+{%- for listen_section in listen_sections %}
+listen {{ listen_section.name }}
+    bind {{ listen_section.socket_specs_str }}
+    mode {{ listen_section.mode }}
+    balance {{ listen_section.balance }}
+{% for server in listen_section.servers %}
+    {{ server }}{% endfor %}
+{%- endfor %}

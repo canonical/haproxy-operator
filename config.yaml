@@ -1,0 +1,12 @@
+options:
+    maxconn:
+        type: int
+        description: The maximum per-process number of concurrent connections.
+        default: 4096
+    virtual-router-id:
+        type: int
+        description: A virtual router ID (integers from 1 to 255) to use in case related to keepalived for high-availability.
+        default: 42
+    virtual-ip:
+        type: string
+        description: A virtual IP to use when if related to keepalived for high-availability.
