@@ -59,7 +59,10 @@ apt_backports_template = (
     "deb http://archive.ubuntu.com/ubuntu %(release)s-backports "
     "main restricted universe multiverse")
 haproxy_preferences_path = "/etc/apt/preferences.d/haproxy"
-
+haproxy_montioring_check_scripts = [
+    'check_haproxy.sh',
+    'check_haproxy_queue_depth.sh',
+    ]
 
 dupe_options = [
     "mode tcp",
@@ -1174,9 +1177,14 @@ def install_nrpe_scripts():
     scripts_src = os.path.join(os.environ["CHARM_DIR"], "files",
                                "nrpe")
     scripts_dst = "/usr/lib/nagios/plugins"
+    config_data = config_get()
     if not os.path.exists(scripts_dst):
         os.makedirs(scripts_dst)
+
     for fname in glob.glob(os.path.join(scripts_src, "*.sh")):
+        if os.path.basename(fname) in haproxy_montioring_check_scripts and \
+                config_data['enable_monitoring'] is False:
+            continue
         shutil.copy2(fname,
                      os.path.join(scripts_dst, os.path.basename(fname)))
 
