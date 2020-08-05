@@ -59,10 +59,7 @@ apt_backports_template = (
     "deb http://archive.ubuntu.com/ubuntu %(release)s-backports "
     "main restricted universe multiverse")
 haproxy_preferences_path = "/etc/apt/preferences.d/haproxy"
-haproxy_montioring_check_scripts = [
-    'check_haproxy.sh',
-    'check_haproxy_queue_depth.sh',
-    ]
+nrpe_scripts_dest = "/usr/lib/nagios/plugins"
 
 dupe_options = [
     "mode tcp",
@@ -1176,26 +1173,45 @@ def notify_peer(changed=False, relation_ids=None):
 def install_nrpe_scripts():
     scripts_src = os.path.join(os.environ["CHARM_DIR"], "files",
                                "nrpe")
-    scripts_dst = "/usr/lib/nagios/plugins"
-    config_data = config_get()
-    if not os.path.exists(scripts_dst):
-        os.makedirs(scripts_dst)
-
+    if not os.path.exists(nrpe_scripts_dest):
+        os.makedirs(nrpe_scripts_dest)
     for fname in glob.glob(os.path.join(scripts_src, "*.sh")):
-        if os.path.basename(fname) in haproxy_montioring_check_scripts and \
-                config_data['enable_monitoring'] is False:
-            continue
         shutil.copy2(fname,
-                     os.path.join(scripts_dst, os.path.basename(fname)))
+                     os.path.join(nrpe_scripts_dest, os.path.basename(fname)))
 
 
-def update_nrpe_config():
-    install_nrpe_scripts()
+def remove_nrpe_scripts():
+    scripts_src = os.path.join(os.environ["CHARM_DIR"], "files",
+                               "nrpe")
+    for fname in glob.glob(os.path.join(scripts_src, "*.sh")):
+        try:
+            os.remove(os.path.join(nrpe_scripts_dest,
+                      os.path.basename(fname)))
+        except OSError:
+            pass
+
+
+def  update_nrpe_config():
+    config_data = config_get()
     nrpe_compat = nrpe.NRPE()
-    nrpe_compat.add_check('haproxy', 'Check HAProxy', 'check_haproxy.sh')
-    nrpe_compat.add_check('haproxy_queue', 'Check HAProxy queue depth',
-                          'check_haproxy_queue_depth.sh')
-    nrpe_compat.write()
+    if config_data['enable_monitoring'] is True:
+        install_nrpe_scripts()
+        nrpe_compat = nrpe.NRPE()
+        nrpe_compat.add_check('haproxy', 'Check HAProxy', 'check_haproxy.sh')
+        nrpe_compat.add_check('haproxy_queue', 'Check HAProxy queue depth',
+                              'check_haproxy_queue_depth.sh')
+        nrpe_compat.write()
+    else:
+        if os.path.isfile(nrpe_scripts_dest + '/check_haproxy.sh'):
+            nrpe_compat.remove_check(shortname='haproxy',
+                                     description='Check HAProxy',
+                                     check_cmd='check_haproxy.sh')
+        if os.path.isfile(nrpe_scripts_dest +
+                          '/check_haproxy_queue_depth.sh'):
+            nrpe_compat.remove_check(shortname='haproxy_queue',
+                                     description='Check HAProxy queue depth',
+                                     check_cmd='check_haproxy_queue_depth.sh')
+        remove_nrpe_scripts()
 
 
 def delete_metrics_cronjob(cron_path):
