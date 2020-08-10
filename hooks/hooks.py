@@ -1194,24 +1194,22 @@ def remove_nrpe_scripts():
 def  update_nrpe_config():
     config_data = config_get()
     nrpe_compat = nrpe.NRPE()
+    checks_args = [
+        ('haproxy', 'Check HAProxy', 'check_haproxy.sh'),
+        ('haproxy_queue', 'Check HAProxy queue depth', 'check_haproxy_queue_depth.sh'),
+    ]
     if config_data['enable_monitoring'] is True:
         install_nrpe_scripts()
-        nrpe_compat = nrpe.NRPE()
-        nrpe_compat.add_check('haproxy', 'Check HAProxy', 'check_haproxy.sh')
-        nrpe_compat.add_check('haproxy_queue', 'Check HAProxy queue depth',
-                              'check_haproxy_queue_depth.sh')
-        nrpe_compat.write()
+        for check_args in checks_args:
+            nrpe_compat.add_check(*check_args)
     else:
-        if os.path.isfile(nrpe_scripts_dest + '/check_haproxy.sh'):
-            nrpe_compat.remove_check(shortname='haproxy',
-                                     description='Check HAProxy',
-                                     check_cmd='check_haproxy.sh')
-        if os.path.isfile(nrpe_scripts_dest +
-                          '/check_haproxy_queue_depth.sh'):
-            nrpe_compat.remove_check(shortname='haproxy_queue',
-                                     description='Check HAProxy queue depth',
-                                     check_cmd='check_haproxy_queue_depth.sh')
+        for check_args in checks_args:
+            if os.path.isfile(nrpe_scripts_dest + '/' + check_args[2]):
+                nrpe_compat.remove_check(shortname=check_args[0],
+                                         description=check_args[1],
+                                         check_cmd=check_args[2])
         remove_nrpe_scripts()
+    nrpe_compat.write()
 
 
 def delete_metrics_cronjob(cron_path):
