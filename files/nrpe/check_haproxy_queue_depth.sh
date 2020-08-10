@@ -2,7 +2,7 @@
 #--------------------------------------------
 # This file is managed by Juju
 #--------------------------------------------
-#                                       
+#
 # Copyright 2009,2012 Canonical Ltd.
 # Author: Tom Haddon
 
@@ -11,7 +11,7 @@ CURRQthrsh=0
 MAXQthrsh=100
 
 # Exclude files starting with a dot - LP#1828529
-AUTH=$(grep -r --exclude ".*" "stats auth" /etc/haproxy | head -1 | awk '{print $4}')
+AUTH=$(grep -r --exclude ".*" "stats auth" /etc/haproxy | awk '{print $4; exit}')
 
 if [ -z "$AUTH" ]; then
     echo "CRITICAL: unable to find credentials to query the haproxy statistics page"
