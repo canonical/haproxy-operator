@@ -59,7 +59,7 @@ apt_backports_template = (
     "deb http://archive.ubuntu.com/ubuntu %(release)s-backports "
     "main restricted universe multiverse")
 haproxy_preferences_path = "/etc/apt/preferences.d/haproxy"
-
+nrpe_scripts_dest = "/usr/lib/nagios/plugins"
 
 dupe_options = [
     "mode tcp",
@@ -1173,20 +1173,42 @@ def notify_peer(changed=False, relation_ids=None):
 def install_nrpe_scripts():
     scripts_src = os.path.join(os.environ["CHARM_DIR"], "files",
                                "nrpe")
-    scripts_dst = "/usr/lib/nagios/plugins"
-    if not os.path.exists(scripts_dst):
-        os.makedirs(scripts_dst)
+    if not os.path.exists(nrpe_scripts_dest):
+        os.makedirs(nrpe_scripts_dest)
     for fname in glob.glob(os.path.join(scripts_src, "*.sh")):
         shutil.copy2(fname,
-                     os.path.join(scripts_dst, os.path.basename(fname)))
+                     os.path.join(nrpe_scripts_dest, os.path.basename(fname)))
 
 
-def update_nrpe_config():
-    install_nrpe_scripts()
+def remove_nrpe_scripts():
+    scripts_src = os.path.join(os.environ["CHARM_DIR"], "files",
+                               "nrpe")
+    for fname in glob.glob(os.path.join(scripts_src, "*.sh")):
+        try:
+            os.remove(os.path.join(nrpe_scripts_dest,
+                      os.path.basename(fname)))
+        except OSError:
+            pass
+
+
+def  update_nrpe_config():
+    config_data = config_get()
     nrpe_compat = nrpe.NRPE()
-    nrpe_compat.add_check('haproxy', 'Check HAProxy', 'check_haproxy.sh')
-    nrpe_compat.add_check('haproxy_queue', 'Check HAProxy queue depth',
-                          'check_haproxy_queue_depth.sh')
+    checks_args = [
+        ('haproxy', 'Check HAProxy', 'check_haproxy.sh'),
+        ('haproxy_queue', 'Check HAProxy queue depth', 'check_haproxy_queue_depth.sh'),
+    ]
+    if config_data['enable_monitoring'] is True:
+        install_nrpe_scripts()
+        for check_args in checks_args:
+            nrpe_compat.add_check(*check_args)
+    else:
+        for check_args in checks_args:
+            if os.path.isfile(nrpe_scripts_dest + '/' + check_args[2]):
+                nrpe_compat.remove_check(shortname=check_args[0],
+                                         description=check_args[1],
+                                         check_cmd=check_args[2])
+        remove_nrpe_scripts()
     nrpe_compat.write()
 
 
