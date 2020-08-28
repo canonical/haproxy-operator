@@ -45,7 +45,7 @@ options:
     description: |
         Sets the maximum size of the Diffie-Hellman parameters used for generating
         the ephemeral/temporary Diffie-Hellman key in case of DHE key exchange.
-        Default value if 2048, higher values will increase the CPU load, and values
+        Default value if 2048, higher values will increase the CPU load. Values
         greater than 1024 bits are not supported by Java 7 and earlier clients. This
         config key will be ignored if the installed haproxy package has no SSL support.
   global_default_bind_ciphers:
