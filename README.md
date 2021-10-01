@@ -7,7 +7,7 @@ this to load balance existing deployments.
 
     juju deploy haproxy
     juju deploy my-web-app
-    juju add-relation my-web-app:website haproxy:reverseproxy
+    juju relate my-web-app:website haproxy:reverseproxy
     juju add-unit my-web-app
     ...
 
@@ -145,6 +145,19 @@ is not available in stock trusty, but you can get it from trusty-backports setti
 the `source` configuration option to `backports` or to whatever PPA/archive you
 wish to use.
 
+## Monitoring
+
+Telegraf is recommended for monitoring HAProxy. To do so, deploy the
+following:
+
+    juju deploy haproxy
+    juju deploy telegraf
+    juju relate telegraf:juju-info haproxy # For standard telegraf host metrics
+    juju relate telegraf:haproxy haproxy   # For HAProxy-specific metrics
+
+You can then get metrics for your HAProxy instance(s) by visiting
+`http://${unit_up}:9103/metrics`.
+
 ## Development
 
 The following steps are needed for testing and development of the charm,
@@ -165,7 +178,7 @@ formatting issues and output a code coverage summary of the 'hooks.py' module.
 
 ## Known Limitations and Issues
 
-- Expand Single-Service section as I have not tested that mode fully.
+- Expand Single-Service section as this has not been fully tested.
 - Trigger website-relation-changed when the reverse-proxy relation changes
 
 
