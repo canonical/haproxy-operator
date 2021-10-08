@@ -9,8 +9,8 @@ apt_get_install() {
 juju-log 'Invoking charm-pre-install hooks'
 [ -d exec.d ] && ( for f in exec.d/*/charm-pre-install; do [ -x $f ] && /bin/sh -c "$f"; done )
 
-DISTRIB_CODENAME=$(grep DISTRIB_CODENAME /etc/lsb-release | cut -d= -f2)
-if [ "${DISTRIB_CODENAME}" = "focal" ]; then
+if awk -v bionic="18.04.5" -v distrib="$(lsb_release -rs)" 'BEGIN{distrib >= bionic}'
+then
     # Install missing python-yaml and python-apt packages
     apt-get install -y python2 python-yaml python-apt
 
