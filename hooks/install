@@ -11,7 +11,7 @@ apt-get -y update
 juju-log 'Invoking charm-pre-install hooks'
 [ -d exec.d ] && ( for f in exec.d/*/charm-pre-install; do [ -x $f ] && /bin/sh -c "$f"; done )
 
-if dpkg --compare-versions "$(lsb_release -rs)" lt 20.04; then
+if dpkg --compare-versions "$(lsb_release -rs)" ge 20.04; then
     # Install missing python-yaml and python-apt packages
     apt-get install -y python2 python-yaml python-apt
 
