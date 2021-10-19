@@ -2,25 +2,15 @@
 
 set -eu
 
-apt_get_install() {
-    DEBIAN_FRONTEND=noninteractive apt-get -y -qq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install $@
-}
-
 apt-get -y update
 
 juju-log 'Invoking charm-pre-install hooks'
 [ -d exec.d ] && ( for f in exec.d/*/charm-pre-install; do [ -x $f ] && /bin/sh -c "$f"; done )
 
-if dpkg --compare-versions "$(lsb_release -rs)" ge 20.04; then
-    # Install missing python-yaml and python-apt packages
-    apt-get install -y python2 python-yaml python-apt
+# Install missing python-yaml and python-apt packages
+# Note that these depend on python2 on focal and newer
+apt-get install -y python-yaml python-apt
 
-    juju-log 'Invoking python-based install hook'
-    python2 hooks/hooks.py install
-else
-    # Install missing python-yaml and python-apt packages
-    apt-get install -y python-yaml python-apt
-
-    juju-log 'Invoking python-based install hook'
-    python hooks/hooks.py install
-fi
+juju-log 'Invoking python-based install hook'
+# use python2 because python is 3 on focal or newer
+python2 hooks/hooks.py install
