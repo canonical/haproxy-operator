@@ -18,21 +18,52 @@ if [ -z "$AUTH" ]; then
     exit 2
 fi
 
-NOTACTIVE=$(curl -s -f -u ${AUTH} "http://localhost:10000/;csv"|awk -F, -v SVNAME=2 -v STATUS=18 '
-	$1 ~ "^#" { next }
-	$SVNAME ~ "(FRONT|BACK)END" { next }
-	$STATUS != "UP" {
-		"date"| getline date
-		print date >> ENVIRON["LOGFILE"]
-		printf("Server %s is in status %s\n", $SVNAME, $STATUS) >> ENVIRON["LOGFILE"]
-		print $0 >> ENVIRON["LOGFILE"]
-		na[na_count++] = $SVNAME
-	}
-	END { ORS=" "; for (i=0; i < na_count; i++) { print na[i] }}
+NOTACTIVE=$(curl -s -f -u ${AUTH} "http://localhost:10000/;csv"|awk -F, -v PXNAME=1 -v SVNAME=2 -v STATUS=18 '
+  $1 ~ "^#" { next }
+  $SVNAME ~ "(FRONT|BACK)END" && $STATUS == "DOWN" {
+    px[px_count++] = $PXNAME; next
+  }
+  $SVNAME ~ "(FRONT|BACK)END" && $STATUS != "DOWN" {
+    next
+  }
+  $STATUS != "UP" {
+    "date"| getline date
+    print date >> ENVIRON["LOGFILE"]
+    printf("Server %s is in status %s\n", $SVNAME, $STATUS) >> ENVIRON["LOGFILE"]
+    print $0 >> ENVIRON["LOGFILE"]
+    na[na_count++] = $SVNAME
+  }
+  END {
+    ORS="";
+    if (px_count > 0) {
+      print "Proxies DOWN: [";
+      for (i=0; i < px_count; i++) {
+        print px[i];
+        if (i < px_count - 1) {
+          print ", ";
+        }
+      };
+      print "]; "
+    }
+
+    print "Services DOWN: [";
+    for (i=0; i < na_count; i++) {
+      print na[i];
+      if (i < na_count - 1) {
+        print ", ";
+      }
+    };
+    print "];"
+  }
 ')
 
-if [ -n "$NOTACTIVE" ]; then
-    echo "CRITICAL:${NOTACTIVE}"
+if [[ $NOTACTIVE == *"Proxies DOWN"* ]]; then
+    echo "CRITICAL: ${NOTACTIVE}"
+    exit 2
+fi
+
+if  [[ $NOTACTIVE == *"Services DOWN"* ]]; then
+    echo "WARNING: ${NOTACTIVE}"
     exit 2
 fi
 
