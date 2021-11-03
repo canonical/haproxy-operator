@@ -64,7 +64,7 @@ fi
 
 if  [[ $NOTACTIVE == *"Services DOWN"* ]]; then
     echo "WARNING: ${NOTACTIVE}"
-    exit 2
+    exit 1
 fi
 
 echo "OK: All haproxy instances looking good"
