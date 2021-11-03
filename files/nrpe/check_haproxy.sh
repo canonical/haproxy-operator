@@ -46,14 +46,16 @@ NOTACTIVE=$(curl -s -f -u ${AUTH} "http://localhost:10000/;csv"|awk -F, -v PXNAM
       print "]; "
     }
 
-    print "Services DOWN: [";
-    for (i=0; i < na_count; i++) {
-      print na[i];
-      if (i < na_count - 1) {
-        print ", ";
-      }
-    };
-    print "];"
+		if (na_count > 0) {
+			print "Services DOWN: [";
+			for (i=0; i < na_count; i++) {
+				print na[i];
+				if (i < na_count - 1) {
+					print ", ";
+				}
+			};
+			print "];"
+		}
   }
 ')
 
