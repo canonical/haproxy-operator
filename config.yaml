@@ -136,7 +136,7 @@ options:
     description: |
         Report a service that is down always as critical.
         If False it will only report a warning if there is still at least
-        one working backend for that each proxy.
+        one working backend for each proxy.
   monitoring_username:
     default: "haproxy"
     type: string
