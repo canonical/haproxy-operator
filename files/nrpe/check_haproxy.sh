@@ -5,9 +5,25 @@
 #
 # Copyright 2009,2012,2016 Canonical Ltd.
 # Author: Tom Haddon, Junien Fridrick, Martin Hilton
+#
+# This script checks haproxy stats page and reports proxies or services that
+# are down.
+#
+# Usage: "check_haproxy.sh -c monitoring_allways_critical"
+#   monitoring_allways_critical: True (default) or False
+#     Report a backend that is down allways as critical. If false it will only
+#     report a warning if there are still working services for that proxy.
 
 set -e
 set -o pipefail
+
+monitoring_allways_critical=True
+while getopts c: flag
+do
+    case "${flag}" in
+        c) monitoring_allways_critical=${OPTARG};;
+    esac
+done
 
 export LOGFILE=/var/log/nagios/check_haproxy.log
 # Exclude files starting with a dot - LP#1828529
@@ -46,18 +62,19 @@ NOTACTIVE=$(curl -s -f -u ${AUTH} "http://localhost:10000/;csv"|awk -F, -v PXNAM
       print "]; "
     }
 
-		if (na_count > 0) {
-			print "Services DOWN: [";
-			for (i=0; i < na_count; i++) {
-				print na[i];
-				if (i < na_count - 1) {
-					print ", ";
-				}
-			};
-			print "];"
-		}
+    if (na_count > 0) {
+      print "Services DOWN: [";
+      for (i=0; i < na_count; i++) {
+        print na[i];
+        if (i < na_count - 1) {
+          print ", ";
+        }
+      };
+      print "];"
+    }
   }
 ')
+
 
 if [[ $NOTACTIVE == *"Proxies DOWN"* ]]; then
     echo "CRITICAL: ${NOTACTIVE}"
@@ -65,8 +82,12 @@ if [[ $NOTACTIVE == *"Proxies DOWN"* ]]; then
 fi
 
 if  [[ $NOTACTIVE == *"Services DOWN"* ]]; then
-    echo "WARNING: ${NOTACTIVE}"
-    exit 1
+    if [[ "$monitoring_allways_critical" == "False" ]]; then
+        echo "WARNING: ${NOTACTIVE}"
+        exit 1
+    fi
+    echo "CRITICAL: ${NOTACTIVE}"
+    exit 2
 fi
 
 echo "OK: All haproxy instances looking good"
