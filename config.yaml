@@ -130,13 +130,13 @@ options:
     description: |
         CIDR allowed ( multiple CIDRs separated by space ) access to the
         monitoring interface.
-  monitoring_allways_critical:
+  monitoring_always_critical:
     default: True
     type: boolean
     description: |
-        Report a backend that is down allways as critical.
-        If False it will only report a warning if there are still working
-        services for that proxy.
+        Report a service that is down always as critical.
+        If False it will only report a warning if there is still at least
+        one working backend for that each proxy.
   monitoring_username:
     default: "haproxy"
     type: string

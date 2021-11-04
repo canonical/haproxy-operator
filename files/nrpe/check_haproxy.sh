@@ -9,19 +9,19 @@
 # This script checks haproxy stats page and reports proxies or services that
 # are down.
 #
-# Usage: "check_haproxy.sh -c monitoring_allways_critical"
-#   monitoring_allways_critical: True (default) or False
-#     Report a backend that is down allways as critical. If false it will only
+# Usage: "check_haproxy.sh -c monitoring_always_critical"
+#   monitoring_always_critical: True (default) or False
+#     Report a backend that is down always as critical. If false it will only
 #     report a warning if there are still working services for that proxy.
 
 set -e
 set -o pipefail
 
-monitoring_allways_critical=True
+monitoring_always_critical=True
 while getopts c: flag
 do
     case "${flag}" in
-        c) monitoring_allways_critical=${OPTARG};;
+        c) monitoring_always_critical=${OPTARG};;
     esac
 done
 
@@ -82,7 +82,7 @@ if [[ $NOTACTIVE == *"Proxies DOWN"* ]]; then
 fi
 
 if  [[ $NOTACTIVE == *"Services DOWN"* ]]; then
-    if [[ "$monitoring_allways_critical" == "False" ]]; then
+    if [[ "$monitoring_always_critical" == "False" ]]; then
         echo "WARNING: ${NOTACTIVE}"
         exit 1
     fi
