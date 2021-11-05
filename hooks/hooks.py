@@ -1002,7 +1002,7 @@ def config_changed():
         # opened_ports returns e.g. ['22/tcp', '53/udp']
         # but we just want the port numbers, as ints
         if port_plus_proto.endswith('/tcp') or port_plus_proto.endswith('/udp'):
-            port_only = port_plus_proto[:-4]
+            port_only = int(port_plus_proto[:-4])
             old_service_ports.append(port_only)
         else:
             raise ValueError('{} is not a valid port/proto value'.format(port_plus_proto))
