@@ -31,8 +31,8 @@ options:
     description: |
         Sometimes it is desirable to avoid sending health checks to servers at
         exact intervals, for instance when many logical servers are located on
-        the same physical server. With the help of this parameter, it becomes 
-        possible to add some randomness in the check interval between 0 and 
+        the same physical server. With the help of this parameter, it becomes
+        possible to add some randomness in the check interval between 0 and
         +/- 50%. A value between 2 and 5 seems to show good results.
   global_stats_socket:
     default: False
@@ -84,16 +84,16 @@ options:
     description: |
         Set the number of retries to perform on a server after a connection
         failure. It is important to understand that this value applies to the
-        number of connection attempts, not full requests. When a connection 
-        has effectively been established to a server, there will be no more 
+        number of connection attempts, not full requests. When a connection
+        has effectively been established to a server, there will be no more
         retry.
-        In order to avoid immediate reconnections to a server which is 
+        In order to avoid immediate reconnections to a server which is
         restarting, a turn-around timer of 1 second is applied before a retry
         occurs.
   default_timeouts:
     default: "queue 20000, client 50000, connect 5000, server 50000"
     type: string
-    description: Default timeouts 
+    description: Default timeouts
   logrotate_config:
     default: ""
     type: string
@@ -130,6 +130,13 @@ options:
     description: |
         CIDR allowed ( multiple CIDRs separated by space ) access to the
         monitoring interface.
+  monitoring_always_critical:
+    default: True
+    type: boolean
+    description: |
+        Report a service that is down always as critical.
+        If False it will only report a warning if there is still at least
+        one working backend for each proxy.
   monitoring_username:
     default: "haproxy"
     type: string

@@ -1195,7 +1195,8 @@ def  update_nrpe_config():
     config_data = config_get()
     nrpe_compat = nrpe.NRPE()
     checks_args = [
-        ('haproxy', 'Check HAProxy', 'check_haproxy.sh'),
+        ('haproxy', 'Check HAProxy',
+         'check_haproxy.sh -c %s' % config_data['monitoring_always_critical']),
         ('haproxy_queue', 'Check HAProxy queue depth', 'check_haproxy_queue_depth.sh'),
     ]
     if config_data['enable_monitoring'] is True:
