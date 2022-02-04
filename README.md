@@ -131,7 +131,7 @@ options and then using the `crts` key in the services yaml, e.g.:
     relation-set "services=
     - { service_name: my_web_app,
         service_options: [mode http, balance leastconn],
-        crts: [DEFAULT]
+        crts: [DEFAULT],
         servers: [[my_web_app_1, $host, $port, option httpchk GET / HTTP/1.0],
                   [... optionally more servers here ...]]}
     - { ... optionally more services here ... }
