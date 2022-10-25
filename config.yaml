@@ -290,3 +290,15 @@ options:
         to configured backends. In "active-active" mode, each unit will proxy the
         traffic directly to the backends. The "active-passive" mode gives a better
         control of the maximum connection that will be opened to a backend server.
+  tls_warn_days:
+    type: int
+    default: 30
+    description: |
+      Number of days left for the TLS certificate to expire before warning in 
+      the nagios NRPE check.
+  tls_crit_days:
+    type: int
+    default: 14
+    description: |
+      Number of days left for the TLS certificate to expire before alerting
+      Critical in the NRPE check.
