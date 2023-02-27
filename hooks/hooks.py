@@ -1203,6 +1203,23 @@ def  update_nrpe_config():
         install_nrpe_scripts()
         for check_args in checks_args:
             nrpe_compat.add_check(*check_args)
+        ssl_cert = config_data.get("ssl_cert")
+        if ssl_cert:
+            cmd_params = ["/usr/lib/nagios/plugins/check_http"]
+            host, port = ('127.0.0.1', '443')
+            cmd_params.append(" -H {} -p {}".format(host, port))
+            cmd_params.append(" -u /")
+            cmd_params.append(
+                " -C {},{}".format(
+                    config_data.get("tls_warn_days") or 30,
+                    config_data.get("tls_crit_days") or 14,
+                )
+            )
+            nrpe_compat.add_check(
+                shortname="https_cert",
+                description="Certificate expiry check for local unit",
+                check_cmd=" ".join(cmd_params),
+            )
     else:
         for check_args in checks_args:
             if os.path.isfile(nrpe_scripts_dest + '/' + check_args[2]):
