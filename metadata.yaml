@@ -10,10 +10,9 @@ description:
  status.
 tags: ["cache-proxy"]
 series:
-  - xenial
-  - trusty
-  - bionic
   - focal
+  - bionic
+  - xenial
 requires:
   reverseproxy:
     interface: http

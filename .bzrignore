@@ -2,6 +2,7 @@ _trial_temp
 .coverage
 coverage.xml
 *.crt
+*.charm
 *.key
 lib/*
 *.pyc

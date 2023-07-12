@@ -1,0 +1,30 @@
+type: "charm"
+bases:
+  - build-on:
+      - name: "ubuntu"
+        channel: "20.04"
+    run-on:
+      - name: "ubuntu"
+        channel: "20.04"
+      - name: "ubuntu"
+        channel: "18.04"
+      - name: "ubuntu"
+        channel: "16.04"
+parts:
+  charm:
+    plugin: dump
+    source: .
+    # LP#1669854
+    stage:
+     - '*'
+    prime:
+      - files
+      - hooks
+      - templates
+      - tests
+      - charm-helpers.yaml
+      - config.yaml
+      - copyright
+      - icon.svg
+      - metadata.yaml
+      - README.md
