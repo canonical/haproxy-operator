@@ -12,6 +12,7 @@ description:
 tags: ["cache-proxy"]
 series:
   - focal
+  - jammy
   - bionic
   - xenial
 requires:
