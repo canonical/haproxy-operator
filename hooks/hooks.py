@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 import base64
 import errno
@@ -12,7 +12,7 @@ import subprocess
 import sys
 import yaml
 
-from itertools import izip, tee
+from itertools import tee
 from operator import itemgetter
 
 from charmhelpers.core.host import pwgen, lsb_release, service_restart
@@ -136,7 +136,7 @@ class InvalidRelationDataError(Exception):
 
 def comma_split(value):
     values = value.split(",")
-    return filter(None, (v.strip() for v in values))
+    return list(filter(None, (v.strip() for v in values)))
 
 
 def ensure_package_status(packages, status):
@@ -145,7 +145,7 @@ def ensure_package_status(packages, status):
                               for package in packages])
         dpkg = subprocess.Popen(['dpkg', '--set-selections'],
                                 stdin=subprocess.PIPE)
-        dpkg.communicate(input=selections)
+        dpkg.communicate(bytes(selections, 'utf-8'))
 
 
 def render_template(template_name, vars):
@@ -398,12 +398,12 @@ def create_listen_stanza(service_name=None, service_ip=None,
                 fe_options.append(o)
                 be_options.append(o)
         # Filter provided service options into frontend-only and backend-only.
-        results = izip(
+        results = list(zip(
             (fe_options, be_options),
             (True, False),
             tee((o, any(map(o.strip().startswith,
                             frontend_only_options)))
-                for o in service_options))
+                for o in service_options)))
         for out, cond, result in results:
             out.extend(option for option, match in result
                        if match is cond and option not in out)
@@ -470,7 +470,7 @@ def _append_backend(service_config, name, options, errorfiles, server_entries):
             server_line = "    server %s %s:%s" % \
                 (server_name, server_ip, server_port)
             if server_options is not None:
-                if isinstance(server_options, basestring):
+                if isinstance(server_options, str):
                     server_line += " " + server_options
                 else:
                     server_line += " " + " ".join(server_options)
@@ -540,7 +540,7 @@ def parse_services_yaml(services, yaml_data):
             services[None] = {"service_name": service_name}
 
         if "service_options" in service:
-            if isinstance(service["service_options"], basestring):
+            if isinstance(service["service_options"], str):
                 service["service_options"] = comma_split(
                     service["service_options"])
 
@@ -549,7 +549,7 @@ def parse_services_yaml(services, yaml_data):
                 service["service_options"].append("option forwardfor")
 
         if (("server_options" in service and
-             isinstance(service["server_options"], basestring))):
+             isinstance(service["server_options"], str))):
             service["server_options"] = comma_split(service["server_options"])
 
         services[service_name] = merge_service(
@@ -981,9 +981,6 @@ def install_hook():
     # Install pyasn1 library and modules for inspecting SSL certificates
     pkgs = ['python-pyasn1', 'python-pyasn1-modules', 'python-apt',
             'python-openssl']
-    # Add python-ipaddr for inspecting certificate subjAltName on trusty
-    if release == 'trusty':
-        pkgs.append('python-ipaddr')
     apt_install(filter_installed_packages(pkgs), fatal=False)
     ensure_package_status(service_affecting_packages, config_data['package_status'])
     enable_haproxy()
@@ -1155,7 +1152,7 @@ def notify_relation(relation, changed=False, relation_ids=None):
         all_services = ""
         services_dict = create_services()
         if services_dict is not None:
-            all_services = yaml.safe_dump(sorted(services_dict.itervalues()))
+            all_services = yaml.safe_dump(sorted(services_dict.values()))
 
         relation_set(relation_id=rid, port=str(my_port),
                      hostname=my_host,
@@ -1344,7 +1341,7 @@ def is_selfsigned_cert_stale(cert_file, key_file):
     if unit_get('public-address') != cn:
         return True
 
-    # Subject Alternate Name -- only trusty+ support this
+    # Subject Alternate Name
     try:
         from pyasn1.codec.der import decoder
         from pyasn1_modules import rfc2459
@@ -1390,18 +1387,11 @@ def get_octet_parser():
     @raises: raises any errors attempting to import the libraries
              for the octet parser.
     """
-    try:
-        import ipaddress
+    import ipaddress
 
-        def ipaddress_parser(octet):
-            return str(ipaddress.ip_address(str(octet)))
-        return ipaddress_parser
-    except ImportError:
-        import ipaddr
-
-        def trusty_ipaddress_parser(octet):
-            return str(ipaddr.IPAddress(ipaddr.Bytes(str(octet))))
-        return trusty_ipaddress_parser
+    def ipaddress_parser(octet):
+        return str(ipaddress.ip_address(str(octet)))
+    return ipaddress_parser
 
 
 # XXX taken from the apache2 charm.
@@ -1417,7 +1407,7 @@ def gen_selfsigned_cert(cert_file, key_file):
     os.environ['OPENSSL_PRIVATE'] = unit_get("private-address")
     # Set the umask so the child process will inherit it and
     # the generated files will be readable only by root..
-    old_mask = os.umask(077)
+    old_mask = os.umask(0o077)
     subprocess.call(
         ['openssl', 'req', '-new', '-x509', '-nodes', '-config',
          os.path.join(os.environ['CHARM_DIR'], 'data', 'openssl.cnf'),

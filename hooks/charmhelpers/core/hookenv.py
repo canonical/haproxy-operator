@@ -1,4 +1,4 @@
-# Copyright 2014-2015 Canonical Limited.
+# Copyright 2013-2021 Canonical Limited.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,16 +13,15 @@
 # limitations under the License.
 
 "Interactions with the Juju environment"
-# Copyright 2013 Canonical Ltd.
 #
 # Authors:
 #  Charm Helpers Developers <juju@lists.ubuntu.com>
 
-from __future__ import print_function
 import copy
 from distutils.version import LooseVersion
+from enum import Enum
 from functools import wraps
-from collections import namedtuple
+from collections import namedtuple, UserDict
 import glob
 import os
 import json
@@ -35,12 +34,6 @@ import tempfile
 from subprocess import CalledProcessError
 
 from charmhelpers import deprecate
-
-import six
-if not six.PY3:
-    from UserDict import UserDict
-else:
-    from collections import UserDict
 
 
 CRITICAL = "CRITICAL"
@@ -56,6 +49,14 @@ SH_MAX_ARG = 131071
 RANGE_WARNING = ('Passing NO_PROXY string that includes a cidr. '
                  'This may not be compatible with software you are '
                  'running in your shell.')
+
+
+class WORKLOAD_STATES(Enum):
+    ACTIVE = 'active'
+    BLOCKED = 'blocked'
+    MAINTENANCE = 'maintenance'
+    WAITING = 'waiting'
+
 
 cache = {}
 
@@ -104,7 +105,7 @@ def log(message, level=None):
     command = ['juju-log']
     if level:
         command += ['-l', level]
-    if not isinstance(message, six.string_types):
+    if not isinstance(message, str):
         message = repr(message)
     command += [message[:SH_MAX_ARG]]
     # Missing juju-log should not cause failures in unit tests
@@ -124,7 +125,7 @@ def log(message, level=None):
 def function_log(message):
     """Write a function progress message"""
     command = ['function-log']
-    if not isinstance(message, six.string_types):
+    if not isinstance(message, str):
         message = repr(message)
     command += [message[:SH_MAX_ARG]]
     # Missing function-log should not cause failures in unit tests
@@ -215,6 +216,17 @@ def relation_id(relation_name=None, service_or_unit=None):
                 return relid
     else:
         raise ValueError('Must specify neither or both of relation_name and service_or_unit')
+
+
+def departing_unit():
+    """The departing unit for the current relation hook.
+
+    Available since juju 2.8.
+
+    :returns: the departing unit, or None if the information isn't available.
+    :rtype: Optional[str]
+    """
+    return os.environ.get('JUJU_DEPARTING_UNIT', None)
 
 
 def local_unit():
@@ -363,8 +375,10 @@ class Config(dict):
             try:
                 self._prev_dict = json.load(f)
             except ValueError as e:
-                log('Unable to parse previous config data - {}'.format(str(e)),
-                    level=ERROR)
+                log('Found but was unable to parse previous config data, '
+                    'ignoring which will report all values as changed - {}'
+                    .format(str(e)), level=ERROR)
+                return
         for k, v in copy.deepcopy(self._prev_dict).items():
             if k not in self:
                 self[k] = v
@@ -425,12 +439,6 @@ def config(scope=None):
     global _cache_config
     config_cmd_line = ['config-get', '--all', '--format=json']
     try:
-        # JSON Decode Exception for Python3.5+
-        exc_json = json.decoder.JSONDecodeError
-    except AttributeError:
-        # JSON Decode Exception for Python2.7 through Python3.4
-        exc_json = ValueError
-    try:
         if _cache_config is None:
             config_data = json.loads(
                 subprocess.check_output(config_cmd_line).decode('UTF-8'))
@@ -438,7 +446,7 @@ def config(scope=None):
         if scope is not None:
             return _cache_config.get(scope)
         return _cache_config
-    except (exc_json, UnicodeDecodeError) as e:
+    except (json.decoder.JSONDecodeError, UnicodeDecodeError) as e:
         log('Unable to parse output from config-get: config_cmd_line="{}" '
             'message="{}"'
             .format(config_cmd_line, str(e)), level=ERROR)
@@ -446,15 +454,20 @@ def config(scope=None):
 
 
 @cached
-def relation_get(attribute=None, unit=None, rid=None):
+def relation_get(attribute=None, unit=None, rid=None, app=None):
     """Get relation information"""
     _args = ['relation-get', '--format=json']
+    if app is not None:
+        if unit is not None:
+            raise ValueError("Cannot use both 'unit' and 'app'")
+        _args.append('--app')
     if rid:
         _args.append('-r')
         _args.append(rid)
     _args.append(attribute or '-')
-    if unit:
-        _args.append(unit)
+    # unit or application name
+    if unit or app:
+        _args.append(unit or app)
     try:
         return json.loads(subprocess.check_output(_args).decode('UTF-8'))
     except ValueError:
@@ -465,12 +478,28 @@ def relation_get(attribute=None, unit=None, rid=None):
         raise
 
 
-def relation_set(relation_id=None, relation_settings=None, **kwargs):
+@cached
+def _relation_set_accepts_file():
+    """Return True if the juju relation-set command accepts a file.
+
+    Cache the result as it won't change during the execution of a hook, and
+    thus we can make relation_set() more efficient by only checking for the
+    first relation_set() call.
+
+    :returns: True if relation_set accepts a file.
+    :rtype: bool
+    :raises: subprocess.CalledProcessError if the check fails.
+    """
+    return "--file" in subprocess.check_output(
+        ["relation-set", "--help"], universal_newlines=True)
+
+
+def relation_set(relation_id=None, relation_settings=None, app=False, **kwargs):
     """Set relation information for the current unit"""
     relation_settings = relation_settings if relation_settings else {}
     relation_cmd_line = ['relation-set']
-    accepts_file = "--file" in subprocess.check_output(
-        relation_cmd_line + ["--help"], universal_newlines=True)
+    if app:
+        relation_cmd_line.append('--app')
     if relation_id is not None:
         relation_cmd_line.extend(('-r', relation_id))
     settings = relation_settings.copy()
@@ -480,7 +509,7 @@ def relation_set(relation_id=None, relation_settings=None, **kwargs):
         # sites pass in things like dicts or numbers.
         if value is not None:
             settings[key] = "{}".format(value)
-    if accepts_file:
+    if _relation_set_accepts_file():
         # --file was introduced in Juju 1.23.2. Use it by default if
         # available, since otherwise we'll break if the relation data is
         # too big. Ideally we should tell relation-set to read the data from
@@ -581,7 +610,7 @@ def expected_related_units(reltype=None):
                 relation_type()))
 
     :param reltype: Relation type to list data for, default is to list data for
-                    the realtion type we are currently executing a hook for.
+                    the relation type we are currently executing a hook for.
     :type reltype: str
     :returns: iterator
     :rtype: types.GeneratorType
@@ -598,7 +627,7 @@ def expected_related_units(reltype=None):
 
 @cached
 def relation_for_unit(unit=None, rid=None):
-    """Get the json represenation of a unit's relation"""
+    """Get the json representation of a unit's relation"""
     unit = unit or remote_unit()
     relation = relation_get(unit=unit, rid=rid)
     for key in relation:
@@ -975,14 +1004,8 @@ def cmd_exists(cmd):
 
 
 @cached
-@deprecate("moved to function_get()", log=log)
 def action_get(key=None):
-    """
-    .. deprecated:: 0.20.7
-       Alias for :func:`function_get`.
-
-    Gets the value of an action parameter, or all key/value param pairs.
-    """
+    """Gets the value of an action parameter, or all key/value param pairs."""
     cmd = ['action-get']
     if key is not None:
         cmd.append(key)
@@ -992,8 +1015,12 @@ def action_get(key=None):
 
 
 @cached
+@deprecate("moved to action_get()", log=log)
 def function_get(key=None):
-    """Gets the value of an action parameter, or all key/value param pairs"""
+    """
+    .. deprecated::
+    Gets the value of an action parameter, or all key/value param pairs.
+    """
     cmd = ['function-get']
     # Fallback for older charms.
     if not cmd_exists('function-get'):
@@ -1006,22 +1033,20 @@ def function_get(key=None):
     return function_data
 
 
-@deprecate("moved to function_set()", log=log)
 def action_set(values):
-    """
-    .. deprecated:: 0.20.7
-       Alias for :func:`function_set`.
-
-    Sets the values to be returned after the action finishes.
-    """
+    """Sets the values to be returned after the action finishes."""
     cmd = ['action-set']
     for k, v in list(values.items()):
         cmd.append('{}={}'.format(k, v))
     subprocess.check_call(cmd)
 
 
+@deprecate("moved to action_set()", log=log)
 def function_set(values):
-    """Sets the values to be returned after the function finishes"""
+    """
+    .. deprecated::
+    Sets the values to be returned after the function finishes.
+    """
     cmd = ['function-set']
     # Fallback for older charms.
     if not cmd_exists('function-get'):
@@ -1032,12 +1057,8 @@ def function_set(values):
     subprocess.check_call(cmd)
 
 
-@deprecate("moved to function_fail()", log=log)
 def action_fail(message):
     """
-    .. deprecated:: 0.20.7
-       Alias for :func:`function_fail`.
-
     Sets the action status to failed and sets the error message.
 
     The results set by action_set are preserved.
@@ -1045,10 +1066,14 @@ def action_fail(message):
     subprocess.check_call(['action-fail', message])
 
 
+@deprecate("moved to action_fail()", log=log)
 def function_fail(message):
-    """Sets the function status to failed and sets the error message.
+    """
+    .. deprecated::
+    Sets the function status to failed and sets the error message.
 
-    The results set by function_set are preserved."""
+    The results set by function_set are preserved.
+    """
     cmd = ['function-fail']
     # Fallback for older charms.
     if not cmd_exists('function-fail'):
@@ -1088,22 +1113,33 @@ def function_tag():
     return os.environ.get('JUJU_FUNCTION_TAG') or action_tag()
 
 
-def status_set(workload_state, message):
+def status_set(workload_state, message, application=False):
     """Set the workload state with a message
 
     Use status-set to set the workload state with a message which is visible
     to the user via juju status. If the status-set command is not found then
-    assume this is juju < 1.23 and juju-log the message unstead.
+    assume this is juju < 1.23 and juju-log the message instead.
 
-    workload_state -- valid juju workload state.
-    message        -- status update message
+    workload_state   -- valid juju workload state. str or WORKLOAD_STATES
+    message          -- status update message
+    application      -- Whether this is an application state set
     """
-    valid_states = ['maintenance', 'blocked', 'waiting', 'active']
-    if workload_state not in valid_states:
-        raise ValueError(
-            '{!r} is not a valid workload state'.format(workload_state)
-        )
-    cmd = ['status-set', workload_state, message]
+    bad_state_msg = '{!r} is not a valid workload state'
+
+    if isinstance(workload_state, str):
+        try:
+            # Convert string to enum.
+            workload_state = WORKLOAD_STATES[workload_state.upper()]
+        except KeyError:
+            raise ValueError(bad_state_msg.format(workload_state))
+
+    if workload_state not in WORKLOAD_STATES:
+        raise ValueError(bad_state_msg.format(workload_state))
+
+    cmd = ['status-set']
+    if application:
+        cmd.append('--application')
+    cmd.extend([workload_state.value, message])
     try:
         ret = subprocess.call(cmd)
         if ret == 0:
@@ -1111,7 +1147,7 @@ def status_set(workload_state, message):
     except OSError as e:
         if e.errno != errno.ENOENT:
             raise
-    log_message = 'status-set failed: {} {}'.format(workload_state,
+    log_message = 'status-set failed: {} {}'.format(workload_state.value,
                                                     message)
     log(log_message, level='INFO')
 
@@ -1526,13 +1562,13 @@ def env_proxy_settings(selected_settings=None):
     """Get proxy settings from process environment variables.
 
     Get charm proxy settings from environment variables that correspond to
-    juju-http-proxy, juju-https-proxy and juju-no-proxy (available as of 2.4.2,
-    see lp:1782236) in a format suitable for passing to an application that
-    reacts to proxy settings passed as environment variables. Some applications
-    support lowercase or uppercase notation (e.g. curl), some support only
-    lowercase (e.g. wget), there are also subjectively rare cases of only
-    uppercase notation support. no_proxy CIDR and wildcard support also varies
-    between runtimes and applications as there is no enforced standard.
+    juju-http-proxy, juju-https-proxy juju-no-proxy (available as of 2.4.2, see
+    lp:1782236) and juju-ftp-proxy in a format suitable for passing to an
+    application that reacts to proxy settings passed as environment variables.
+    Some applications support lowercase or uppercase notation (e.g. curl), some
+    support only lowercase (e.g. wget), there are also subjectively rare cases
+    of only uppercase notation support. no_proxy CIDR and wildcard support also
+    varies between runtimes and applications as there is no enforced standard.
 
     Some applications may connect to multiple destinations and expose config
     options that would affect only proxy settings for a specific destination
@@ -1574,11 +1610,11 @@ def env_proxy_settings(selected_settings=None):
 def _contains_range(addresses):
     """Check for cidr or wildcard domain in a string.
 
-    Given a string comprising a comma seperated list of ip addresses
+    Given a string comprising a comma separated list of ip addresses
     and domain names, determine whether the string contains IP ranges
     or wildcard domains.
 
-    :param addresses: comma seperated list of domains and ip addresses.
+    :param addresses: comma separated list of domains and ip addresses.
     :type addresses: str
     """
     return (
@@ -1589,3 +1625,12 @@ def _contains_range(addresses):
         addresses.startswith(".") or
         ",." in addresses or
         " ." in addresses)
+
+
+def is_subordinate():
+    """Check whether charm is subordinate in unit metadata.
+
+    :returns: True if unit is subordniate, False otherwise.
+    :rtype: bool
+    """
+    return metadata().get('subordinate') is True

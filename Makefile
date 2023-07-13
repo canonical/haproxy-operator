@@ -4,7 +4,7 @@ HOOKS_DIR := $(PWD)/hooks
 TEST_PREFIX := PYTHONPATH=$(HOOKS_DIR)
 TEST_DIR := $(PWD)/hooks/tests
 CHARM_DIR := $(PWD)
-PYTHON := /usr/bin/env python
+PYTHON := /usr/bin/env python3
 
 
 build: test lint proof
