@@ -977,10 +977,10 @@ def install_hook():
         add_backports_preferences(release)
     add_source(source, config_data.get('key'))
     apt_update(fatal=True)
-    apt_install(['haproxy', 'python-jinja2'], fatal=True)
+    apt_install(['haproxy', 'python3-jinja2'], fatal=True)
     # Install pyasn1 library and modules for inspecting SSL certificates
-    pkgs = ['python-pyasn1', 'python-pyasn1-modules', 'python-apt',
-            'python-openssl']
+    pkgs = ['python3-pyasn1', 'python3-pyasn1-modules', 'python3-apt',
+            'python3-openssl']
     apt_install(filter_installed_packages(pkgs), fatal=False)
     ensure_package_status(service_affecting_packages, config_data['package_status'])
     enable_haproxy()
