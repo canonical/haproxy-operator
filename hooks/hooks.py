@@ -1425,7 +1425,7 @@ def write_ssl_pem(path, content):
     # user (see below).
     old_mask = os.umask(0o077)
     with open(path, 'w') as f:
-        f.write(content)
+        f.write(content.decode('utf-8'))
     os.umask(old_mask)
     uid = pwd.getpwnam('haproxy').pw_uid
     os.chown(path, uid, -1)
