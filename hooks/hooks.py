@@ -954,9 +954,9 @@ def service_haproxy(action=None, haproxy_config=default_haproxy_config):
         return None
     elif action == "check":
         command = ['/usr/sbin/haproxy', '-f', haproxy_config, '-c']
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
-        return process.returncode, stdout.decode()
+        return process.returncode, stderr.decode()
     else:
         command = ['service', 'haproxy', action]
     return_value = subprocess.call(command)
@@ -1052,7 +1052,7 @@ def config_changed():
         if "unable to stat SSL certificate from file" in stderr:
             log("Setting status to blocked, waiting for cert to be generated")
             status_set('blocked', 'Waiting for cert to be generated')
-            return
+            sys.exit()
         else:
             sys.exit(1)
     if config_data.changed("global_log") or config_data.changed("source"):
@@ -1493,11 +1493,12 @@ def configure_logrotate(logrotate_config):
 
 def assess_status():
     '''Assess status of current unit'''
-    status, output = service_haproxy("check")
+    status, error = service_haproxy("check")
     if status != 0:
-        # We should use the same logic to check the specific error as
-        # in the config_changed function here.
-        status_set('blocked', 'HAProxy is not running (config failed)')
+        if "unable to stat SSL certificate from file" in error:
+            status_set('blocked', 'Waiting for cert to be generated')
+        else:
+            status_set('blocked', 'HAProxy is not running (config failed)')
     else:
         status, message = status_get()
         if status == "blocked":
