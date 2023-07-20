@@ -1493,22 +1493,18 @@ def configure_logrotate(logrotate_config):
 
 def assess_status():
     '''Assess status of current unit'''
-    status, error = service_haproxy("check")
-    if status != 0:
+    check_status, error = service_haproxy("check")
+    if check_status != 0:
         if "unable to stat SSL certificate from file" in error:
             status_set('blocked', 'Waiting for cert to be generated')
-        else:
-            status_set('blocked', 'HAProxy is not running (config failed)')
+        return
+    charm_status, message = status_get()
+    if charm_status == "blocked" and check_status == 0:
+        service_haproxy("restart")
+    if(service_haproxy("status")):
+        status_set('active', 'Unit is ready')
     else:
-        status, message = status_get()
-        if status == "blocked":
-            service_haproxy("restart")
-            status_set('active', 'Unit is ready')
-        else:
-            if(service_haproxy("status")):
-                status_set('active', 'Unit is ready')
-            else:
-                status_set('blocked', 'HAProxy is not running')
+        status_set('blocked', 'HAProxy is not running')
 
 
 def main(hook_name):
