@@ -29,6 +29,7 @@ from charmhelpers.core.hookenv import (
     opened_ports,
     close_port,
     unit_get,
+    status_get,
     status_set,
     INFO,
     DEBUG,
@@ -953,6 +954,9 @@ def service_haproxy(action=None, haproxy_config=default_haproxy_config):
         return None
     elif action == "check":
         command = ['/usr/sbin/haproxy', '-f', haproxy_config, '-c']
+        process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+        return process.returncode, stderr.decode()
     else:
         command = ['service', 'haproxy', action]
     return_value = subprocess.call(command)
@@ -1033,7 +1037,8 @@ def config_changed():
     write_metrics_cronjob(metrics_script_path,
                           metrics_cronjob_path)
 
-    if service_haproxy("check"):
+    return_code, stderr = service_haproxy("check")
+    if return_code == 0:
         update_service_ports(old_service_ports, get_service_ports())
         service_haproxy("reload")
         if not (get_listen_stanzas() == old_stanzas):
@@ -1043,8 +1048,13 @@ def config_changed():
         # XXX Ideally the config should be restored to a working state if the
         # check fails, otherwise an inadvertent reload will cause the service
         # to be broken.
-        log("HAProxy configuration check failed, exiting.")
-        sys.exit(1)
+        log("The HAProxy service check failed with the following message: %s" % stderr)
+        if "unable to stat SSL certificate from file" in stderr:
+            log("Setting status to blocked, waiting for cert to be generated")
+            status_set('blocked', 'Waiting for cert to be generated')
+            sys.exit()
+        else:
+            sys.exit(1)
     if config_data.changed("global_log") or config_data.changed("source"):
         # restart rsyslog to pickup haproxy rsyslog config
         # This could be removed once the following bug is fixed in the haproxy
@@ -1483,6 +1493,14 @@ def configure_logrotate(logrotate_config):
 
 def assess_status():
     '''Assess status of current unit'''
+    check_status, error = service_haproxy("check")
+    if check_status != 0:
+        if "unable to stat SSL certificate from file" in error:
+            status_set('blocked', 'Waiting for cert to be generated')
+        return
+    charm_status, message = status_get()
+    if charm_status == "blocked" and check_status == 0:
+        service_haproxy("restart")
     if(service_haproxy("status")):
         status_set('active', 'Unit is ready')
     else:
@@ -1492,6 +1510,8 @@ def assess_status():
 def main(hook_name):
     if hook_name == "install":
         install_hook()
+    elif hook_name == "update-status":
+        pass
     elif hook_name == "upgrade-charm":
         install_hook()
         config_changed()
