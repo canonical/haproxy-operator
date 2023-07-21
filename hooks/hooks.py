@@ -963,6 +963,22 @@ def service_haproxy(action=None, haproxy_config=default_haproxy_config):
     return return_value == 0
 
 
+# -----------------------------------------------------------------------------
+# get_old_service_ports:  Convenience function to get old service ports.
+# -----------------------------------------------------------------------------
+def get_old_service_ports():
+    old_service_ports = []
+    for port_plus_proto in opened_ports():
+        # opened_ports returns e.g. ['22/tcp', '53/udp']
+        # but we just want the port numbers, as ints
+        if port_plus_proto.endswith('/tcp') or port_plus_proto.endswith('/udp'):
+            port_only = int(port_plus_proto[:-4])
+            old_service_ports.append(port_only)
+        else:
+            raise ValueError('{} is not a valid port/proto value'.format(port_plus_proto))
+    return old_service_ports
+
+
 # #############################################################################
 # Hook functions
 # #############################################################################
@@ -998,16 +1014,6 @@ def config_changed():
     ensure_package_status(service_affecting_packages,
                           config_data['package_status'])
 
-    old_service_ports = []
-    for port_plus_proto in opened_ports():
-        # opened_ports returns e.g. ['22/tcp', '53/udp']
-        # but we just want the port numbers, as ints
-        if port_plus_proto.endswith('/tcp') or port_plus_proto.endswith('/udp'):
-            port_only = int(port_plus_proto[:-4])
-            old_service_ports.append(port_only)
-        else:
-            raise ValueError('{} is not a valid port/proto value'.format(port_plus_proto))
-
     configure_logrotate(config_data.get('logrotate_config'))
 
     old_stanzas = get_listen_stanzas()
@@ -1039,7 +1045,7 @@ def config_changed():
 
     return_code, stderr = service_haproxy("check")
     if return_code == 0:
-        update_service_ports(old_service_ports, get_service_ports())
+        update_service_ports(get_old_service_ports(), get_service_ports())
         service_haproxy("reload")
         if not (get_listen_stanzas() == old_stanzas):
             notify_website()
@@ -1500,6 +1506,7 @@ def assess_status():
         return
     charm_status, message = status_get()
     if charm_status == "blocked" and check_status == 0:
+        update_service_ports(get_old_service_ports(), get_service_ports())
         service_haproxy("restart")
     if(service_haproxy("status")):
         status_set('active', 'Unit is ready')
