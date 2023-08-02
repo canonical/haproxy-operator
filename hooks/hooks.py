@@ -1168,7 +1168,7 @@ def notify_relation(relation, changed=False, relation_ids=None):
         all_services = ""
         services_dict = create_services()
         if services_dict is not None:
-            all_services = yaml.safe_dump(sorted(services_dict.values()))
+            all_services = yaml.safe_dump(list(services_dict.values()))
 
         relation_set(relation_id=rid, port=str(my_port),
                      hostname=my_host,
