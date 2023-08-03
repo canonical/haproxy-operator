@@ -1099,7 +1099,7 @@ def _notify_reverseproxy(relation_ids=None):
     config_data = config_get()
     ssl_cert = config_data.get("ssl_cert")
     if ssl_cert == "SELFSIGNED":
-        ssl_cert = base64.b64encode(get_selfsigned_cert()[0])
+        ssl_cert = base64.b64encode(get_selfsigned_cert()[0].encode('utf-8'))
     relation_settings = {
         "public-address": unit_get("public-address"),
         "ssl_cert": ssl_cert,
