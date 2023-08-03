@@ -20,6 +20,7 @@ parts:
     stage:
      - '*'
     prime:
+      - data
       - files
       - hooks
       - templates

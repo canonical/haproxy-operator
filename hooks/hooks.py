@@ -845,7 +845,7 @@ def write_service_config(services_dict):
             full_path = os.path.join(path, "%d.pem" % i)
             write_ssl_pem(full_path, content)
             with open(full_path, 'w') as f:
-                f.write(content)
+                f.write(content.decode('utf-8'))
 
         if not os.path.exists(default_haproxy_service_config_dir):
             os.mkdir(default_haproxy_service_config_dir, 0o600)
@@ -1099,7 +1099,7 @@ def _notify_reverseproxy(relation_ids=None):
     config_data = config_get()
     ssl_cert = config_data.get("ssl_cert")
     if ssl_cert == "SELFSIGNED":
-        ssl_cert = base64.b64encode(get_selfsigned_cert()[0])
+        ssl_cert = base64.b64encode(get_selfsigned_cert()[0].encode('utf-8'))
     relation_settings = {
         "public-address": unit_get("public-address"),
         "ssl_cert": ssl_cert,
