@@ -347,7 +347,7 @@ def update_ssl_cert(config_data):
         return
     if ssl_cert == "SELFSIGNED":
         log("Using self-signed certificate")
-        content = "".join(get_selfsigned_cert())
+        content = "".join(get_selfsigned_cert()).encode('utf-8')
     else:
         ssl_key = config_data.get("ssl_key")
         if not ssl_key:
