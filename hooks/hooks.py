@@ -1454,15 +1454,13 @@ def statistics_interface():
     monitoring_password = get_monitoring_password()
     monitoring_username = config['monitoring_username']
     for relid in get_relation_ids('statistics'):
-        if not enable_monitoring:
-            relation_set(relation_id=relid,
-                         enabled=enable_monitoring)
-        else:
-            relation_set(relation_id=relid,
-                         enabled=enable_monitoring,
-                         port=monitoring_port,
-                         password=monitoring_password,
-                         user=monitoring_username)
+        relation_settings = {'enabled': enable_monitoring}
+        if enable_monitoring:
+            relation_settings['listener-address'] = '127.0.0.1'
+            relation_settings['port'] = monitoring_port
+            relation_settings['password'] = monitoring_password
+            relation_settings['user'] = monitoring_username
+        relation_set(relation_id=relid, relation_settings=relation_settings)
 
 
 def configure_logrotate(logrotate_config):
