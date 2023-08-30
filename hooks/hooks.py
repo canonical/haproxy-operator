@@ -832,7 +832,7 @@ def write_service_config(services_dict):
             path = get_service_lib_path(service_name)
             full_path = os.path.join(
                 path, "%s.http" % errorfile["http_status"])
-            with open(full_path, 'w') as f:
+            with open(full_path, 'wb') as f:
                 f.write(base64.b64decode(errorfile["content"]))
 
         # Write to disk the content of the given SSL certificates
