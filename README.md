@@ -156,7 +156,7 @@ Create a services.yaml file for the microsample service:
 ```
 - service_name: microsample
   service_host: "0.0.0.0"
-  service_port: 8080
+  service_port: 443
   service_options:
     - mode http
     - balance leastconn
@@ -191,6 +191,8 @@ frontend haproxy-0-8080
 ```
 
 Once you have valid certs in the directory, they will be used.
+
+You can validate with `curl -k https://haproxy/` which should now reply with "Online".
 
 ## Monitoring
 
