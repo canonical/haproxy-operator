@@ -416,14 +416,18 @@ def create_listen_stanza(service_name=None, service_ip=None,
         # Enable SSL termination for this frontend, using the given
         # certificates.
         bind_stanza += " ssl"
-        for i, crt in enumerate(service_crts):
-            if crt == "DEFAULT":
-                path = os.path.join(default_haproxy_lib_dir, "default.pem")
-            else:
-                path = os.path.join(default_haproxy_lib_dir,
-                                    "service_%s" % service_name, "%d.pem" % i)
-            # SSLv3 is always off, since it's vulnerable to POODLE attacks
-            bind_stanza += " crt %s no-sslv3" % path
+        if len(service_crts) == 1 and os.path.isdir(service_crts[0]):
+            log("Service configured to use '%s' for certificates in haproxy.cfg." % service_crts[0])
+            path = service_crts[0]
+        else:
+            for i, crt in enumerate(service_crts):
+                if crt == "DEFAULT":
+                    path = os.path.join(default_haproxy_lib_dir, "default.pem")
+                else:
+                    path = os.path.join(default_haproxy_lib_dir,
+                                        "service_%s" % service_name, "%d.pem" % i)
+                # SSLv3 is always off, since it's vulnerable to POODLE attacks
+        bind_stanza += " crt %s no-sslv3" % path
     service_config.append(bind_stanza)
     service_config.append("    default_backend %s" % (service_name,))
     service_config.extend("    %s" % service_option.strip()
@@ -836,17 +840,22 @@ def write_service_config(services_dict):
                 f.write(base64.b64decode(errorfile["content"]))
 
         # Write to disk the content of the given SSL certificates
+        # or use a single path element to search for them.
         crts = service_config.get('crts', [])
-        for i, crt in enumerate(crts):
-            if crt == "DEFAULT" or crt == "EXTERNAL":
-                continue
-            content = base64.b64decode(crt)
-            path = get_service_lib_path(service_name)
-            full_path = os.path.join(path, "%d.pem" % i)
-            write_ssl_pem(full_path, content)
-            with open(full_path, 'w') as f:
-                f.write(content.decode('utf-8'))
-
+        if len(crts) == 1 and os.path.isdir(crts[0]):
+            log("Service configured to use path to look for certificates in haproxy.cfg.")
+        else:
+            for i, crt in enumerate(crts):
+                if crt == "DEFAULT" or crt == "EXTERNAL":
+                    continue
+                content = base64.b64decode(crt)
+                path = get_service_lib_path(service_name)
+                full_path = os.path.join(path, "%d.pem" % i)
+                write_ssl_pem(full_path, content)
+                with open(full_path, 'w') as f:
+                    f.write(content.decode('utf-8'))
+        
+            
         if not os.path.exists(default_haproxy_service_config_dir):
             os.mkdir(default_haproxy_service_config_dir, 0o600)
         with open(os.path.join(default_haproxy_service_config_dir,
