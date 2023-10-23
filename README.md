@@ -184,8 +184,8 @@ Configure haproxy with the services.yaml content.
 This produces a stanza in haproxy.cfg as:
 
 ```
-frontend haproxy-0-8080
-    bind 0.0.0.0:8080 ssl crt /var/lib/haproxy/certs no-sslv3
+frontend haproxy-0-443
+    bind 0.0.0.0:443 ssl crt /var/lib/haproxy/certs no-sslv3
     default_backend microsample
     mode http
 ```
