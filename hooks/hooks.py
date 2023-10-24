@@ -419,6 +419,7 @@ def create_listen_stanza(service_name=None, service_ip=None,
         if len(service_crts) == 1 and os.path.isdir(service_crts[0]):
             log("Service configured to use '%s' for certificates in haproxy.cfg." % service_crts[0])
             path = service_crts[0]
+            bind_stanza += " crt %s no-sslv3" % path
         else:
             for i, crt in enumerate(service_crts):
                 if crt == "DEFAULT":
@@ -427,7 +428,7 @@ def create_listen_stanza(service_name=None, service_ip=None,
                     path = os.path.join(default_haproxy_lib_dir,
                                         "service_%s" % service_name, "%d.pem" % i)
                 # SSLv3 is always off, since it's vulnerable to POODLE attacks
-        bind_stanza += " crt %s no-sslv3" % path
+                bind_stanza += " crt %s no-sslv3" % path
     service_config.append(bind_stanza)
     service_config.append("    default_backend %s" % (service_name,))
     service_config.extend("    %s" % service_option.strip()
