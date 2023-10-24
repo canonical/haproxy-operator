@@ -145,6 +145,55 @@ is not available in stock trusty, but you can get it from trusty-backports setti
 the `source` configuration option to `backports` or to whatever PPA/archive you
 wish to use.
 
+## SSL Termination with directory for certs
+
+You can configure services to use a filesystem path in the *crts*. This is a good fit when you might have certbot or acme.sh to maintain certificates outside of haproxy itself.
+
+This is an example of this:
+
+Create a services.yaml file for the microsample service:
+
+```
+- service_name: microsample
+  service_host: "0.0.0.0"
+  service_port: 443
+  service_options:
+    - mode http
+    - balance leastconn
+  crts: [/var/lib/haproxy/certs]
+```
+
+```
+juju deploy microsample
+juju deploy haproxy
+juju relate haproxy microsample
+```
+
+Create the directory and self signed certificate in haproxy/0
+```
+juju exec --unit haproxy/0 -- sudo mkdir -p /var/lib/haproxy/certs
+openssl genpkey -algorithm RSA -out example.key
+openssl req -x509 -new -key example.key -out example.crt
+cat example.key example.crt > /var/lib/haproxy/certs/example.pem
+```
+
+Configure haproxy with the services.yaml content.
+
+`juju config haproxy services="$(cat services.yaml)"`
+
+This produces a stanza in haproxy.cfg as:
+
+```
+frontend haproxy-0-443
+    bind 0.0.0.0:443 ssl crt /var/lib/haproxy/certs no-sslv3
+    default_backend microsample
+    mode http
+```
+
+Once you have valid certs in the directory, they will be used.
+
+You can validate with `curl -k https://haproxy/` which should now reply with "Online".
+
 ## Monitoring
 
 Telegraf is recommended for monitoring HAProxy. To do so, deploy the
