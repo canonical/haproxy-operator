@@ -21,6 +21,12 @@ options:
     default: False
     type: boolean
     description: Debug or not
+  global_hard_stop_after:
+    default: ""
+    type: string
+    description: |
+      Tune HAProxy's hard-stop-after to prevent lingering HAProxy processes
+      (LP:1874386).
   global_quiet:
     default: False
     type: boolean

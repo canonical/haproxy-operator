@@ -186,6 +186,9 @@ def create_haproxy_globals():
         haproxy_globals.append("    debug")
     if config_data['global_quiet'] is True:
         haproxy_globals.append("    quiet")
+    if config_data['global_hard_stop_after']:
+        haproxy_globals.append("    hard-stop-after %s" %
+                               config_data['global_hard_stop_after'])
     haproxy_globals.append("    spread-checks %d" %
                            config_data['global_spread_checks'])
     if has_ssl_support():
