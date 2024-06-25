@@ -303,9 +303,9 @@ def get_listen_stanzas(haproxy_config_file="/etc/haproxy/haproxy.cfg"):
     bind_stanzas = re.findall(r"\s+bind\s+([a-fA-F0-9\.:\*]+):(\d+).*\n\s+default_backend\s+([^\s]+)",
                               haproxy_config, re.M)
     return (tuple(((service, addr, int(port))
-                   for service, addr, port in listen_stanzas)) +
+                   for service, addr, port in sorted(listen_stanzas))) +
             tuple(((service, addr, int(port))
-                   for addr, port, service in bind_stanzas)))
+                   for addr, port, service in sorted(bind_stanzas))))
 
 
 # -----------------------------------------------------------------------------
