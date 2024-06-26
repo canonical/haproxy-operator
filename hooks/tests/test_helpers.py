@@ -2,7 +2,10 @@ import base64
 import os
 
 from contextlib import contextmanager
-from StringIO import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 from testtools import TestCase
 from mock import patch, call, MagicMock
@@ -238,7 +241,7 @@ class HelpersTest(TestCase):
 
         ports = hooks.get_service_ports()
 
-        self.assertEqual(ports, (123, 234))
+        self.assertEqual(ports, (234, 123))
 
     @patch('hooks.load_haproxy_config')
     def test_get_listen_stanzas(self, load_haproxy_config):
@@ -249,8 +252,8 @@ class HelpersTest(TestCase):
 
         stanzas = hooks.get_listen_stanzas()
 
-        self.assertEqual((('foo.internal', '1.2.3.4', 123),
-                          ('bar.internal', '1.2.3.5', 234)),
+        self.assertEqual((('bar.internal', '1.2.3.5', 234),
+                          ('foo.internal', '1.2.3.4', 123)),
                          stanzas)
 
     @patch('hooks.load_haproxy_config')
