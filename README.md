@@ -1,26 +1,14 @@
-<!--
-Avoid using this README file for information that is maintained or published elsewhere, e.g.:
+# Overview
 
-* metadata.yaml > published on Charmhub
-* documentation > published on (or linked to from) Charmhub
-* detailed contribution guide > documentation or CONTRIBUTING.md
+This charm deploys a reverse proxy in front of other services. You can use this to load balance existing deployments.
 
-Use links instead.
--->
+# Usage
 
-# is-charms-template
+```
+juju deploy haproxy
+```
 
-Charmhub package name: operator-template
-More information: https://charmhub.io/is-charms-template
+# HAProxy Project Information
 
-Describe your charm in one or two sentences.
-
-## Other resources
-
-<!-- If your charm is documented somewhere else other than Charmhub, provide a link separately. -->
-
-- [Read more](https://example.com)
-
-- [Contributing](CONTRIBUTING.md) <!-- or link to other contribution documentation -->
-
-- See the [Juju SDK documentation](https://juju.is/docs/sdk) for more information about developing and improving charms.
+- [HAProxy Homepage](http://haproxy.1wt.eu/)
+- [HAProxy mailing list](http://haproxy.1wt.eu/#tact)
