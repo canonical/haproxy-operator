@@ -11,6 +11,8 @@ from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Template
 
+from state.config import CharmConfig
+
 APT_PACKAGE_VERSION = "2.8.5-1ubuntu3"
 APT_PACKAGE_NAME = "haproxy"
 HAPROXY_CONFIG_DIR = Path("/etc/haproxy")
@@ -96,5 +98,5 @@ class HAProxyService:
         """Render the haproxy configuration file."""
         with open("templates/haproxy.cfg.j2", "r", encoding="utf-8") as file:
             template = Template(file.read())
-        rendered = template.render()
+        rendered = template.render(config_global_max_connection=config.global_max_connection)
         self._render_file(HAPROXY_CONFIG, rendered, 0o644)
