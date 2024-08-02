@@ -13,6 +13,7 @@ import typing
 import ops
 
 from haproxy import HAProxyService
+from state.config import CharmConfig
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,8 @@ class HAProxyCharm(ops.CharmBase):
 
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
-        self.haproxy_service.reconcile()
+        config = CharmConfig.from_charm(self)
+        self.haproxy_service.reconcile(config)
         self.unit.status = ops.ActiveStatus()
 
 
