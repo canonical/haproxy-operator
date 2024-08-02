@@ -21,4 +21,5 @@ header:
     - 'pyproject.toml'
     - 'zap_rules.tsv'
     - 'lib/**'
+    - '.woke.yaml'
   comment: on-failure
