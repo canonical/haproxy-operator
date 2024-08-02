@@ -12,7 +12,7 @@ import typing
 
 import ops
 
-from haproxy import HAProxyService
+import haproxy
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +27,9 @@ class HAProxyCharm(ops.CharmBase):
             args: Arguments to initialize the charm base.
         """
         super().__init__(*args)
-        self.haproxy_service = HAProxyService()
+        self.haproxy_service = haproxy.HAProxyService()
         self.framework.observe(self.on.install, self._on_install)
+        self.framework.observe(self.on.config_changed, self._on_config_changed)
 
     def _on_install(self, _: typing.Any) -> None:
         """Install the haproxy package.
@@ -41,6 +42,10 @@ class HAProxyCharm(ops.CharmBase):
             logger.error("HAProxy service is not running.")
             raise RuntimeError("Service not running.")
         self.unit.status = ops.ActiveStatus()
+
+    def _on_config_changed(self, _: typing.Any) -> None:
+        """Handle the config-changed event."""
+        self.haproxy_service.render_haproxy_config()
 
 
 if __name__ == "__main__":  # pragma: nocover
