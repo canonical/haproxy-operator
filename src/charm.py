@@ -14,6 +14,7 @@ import ops
 
 from haproxy import HAProxyService
 from state.config import CharmConfig
+from state.validation import validate_config_and_integration
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,7 @@ class HAProxyCharm(ops.CharmBase):
         """Install the haproxy package."""
         self.haproxy_service.install()
 
+    @validate_config_and_integration
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
         config = CharmConfig.from_charm(self)
