@@ -43,8 +43,8 @@ links:
 config:
   options:
     global-maxconn:
-    default: 4096
-    type: int
-    description: |
-        Sets the maximum per-process number of concurrent connections to
-        <number>. Must be greater than 0.
+      default: 4096
+      type: int
+      description: |
+          Sets the maximum per-process number of concurrent connections to
+          <number>. Must be greater than 0.
