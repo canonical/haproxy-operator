@@ -22,4 +22,5 @@ header:
     - 'zap_rules.tsv'
     - 'lib/**'
     - '.woke.yaml'
+    - 'templates/**'
   comment: on-failure
