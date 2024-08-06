@@ -45,11 +45,12 @@ class HAProxyCharm(ops.CharmBase):
             raise RuntimeError("Service not running.")
         self.unit.status = ops.ActiveStatus()
 
-    @validate_config_and_integration
+    @validate_config_and_integration(defer=False)
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
         config = CharmConfig.from_charm(self)
         self.haproxy_service.render_haproxy_config(config)
+        self.unit.status = ops.ActiveStatus()
 
 
 if __name__ == "__main__":  # pragma: nocover
