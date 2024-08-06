@@ -66,7 +66,11 @@ class HAProxyService:
         self._render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
 
     def render_haproxy_config(self, config: CharmConfig) -> None:
-        """Render the haproxy configuration file."""
+        """Render the haproxy configuration file.
+
+        Args:
+            config: The charm configuration.
+        """
         with open("templates/haproxy.cfg.j2", "r", encoding="utf-8") as file:
             template = Template(file.read())
         rendered = template.render(config_global_max_connection=config.global_max_connection)
