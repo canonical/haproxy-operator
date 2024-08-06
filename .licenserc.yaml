@@ -20,4 +20,7 @@ header:
     - 'trivy.yaml'
     - 'pyproject.toml'
     - 'zap_rules.tsv'
+    - 'lib/**'
+    - '.woke.yaml'
+    - 'templates/**'
   comment: on-failure
