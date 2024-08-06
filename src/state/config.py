@@ -41,7 +41,7 @@ class CharmConfig:
         Returns:
             CharmConfig: Instance of the charm config state component.
         """
-        global_max_connection = typing.cast(str, charm.config.get("global-maxconn"))
+        global_max_connection = typing.cast(int, charm.config.get("global-maxconn"))
 
         try:
             return cls(
