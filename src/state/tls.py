@@ -3,32 +3,37 @@
 
 """gateway-api-integrator resource definition."""
 
-import dataclasses
+import logging
+import re
+import typing
+from dataclasses import dataclass
 
 import ops
 from charms.tls_certificates_interface.v3.tls_certificates import TLSCertificatesRequiresV3
 
 from tls_relation import get_hostname_from_cert
 
-
 TLS_CERTIFICATES_INTEGRATION = "certificates"
+HOSTNAME_REGEX = r"[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
+
+logger = logging.getLogger()
 
 
-class TlsIntegrationMissingError(Exception):
-    """Exception raised when certificates relation is missing."""
+class TLSNotReadyError(Exception):
+    """Exception raised when the charm is not ready to handle TLS."""
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclass(frozen=True)
 class TLSInformation:
     """A component of charm state containing information about TLS.
 
     Attributes:
-        secret_resource_name_prefix: Prefix of the secret resource name.
+        external_hostname: Configured external hostname.
         tls_certs: A dict of hostname: certificate obtained from the relation.
         tls_keys: A dict of hostname: private_key stored in juju secrets.
     """
 
-    secret_resource_name_prefix: str
+    external_hostname: str
     tls_certs: dict[str, str]
     tls_keys: dict[str, dict[str, str]]
 
@@ -44,12 +49,19 @@ class TLSInformation:
 
         Returns:
             TLSInformation: Information about configured TLS certs.
+
+        Raises:
+            TLSNotReadyError: if the charm is not ready to handle TLS.
         """
-        cls.validate(charm)
+        cls.validate_certificates_integration(charm)
+
+        external_hostname = typing.cast(str, charm.config.get("external-hostname"))
+        if not re.match(HOSTNAME_REGEX, external_hostname):
+            logger.error("Configured hostname does not match regex: %s", HOSTNAME_REGEX)
+            raise TLSNotReadyError("invalid hostname configuration.")
 
         tls_certs = {}
         tls_keys = {}
-        secret_resource_name_prefix = f"{charm.app.name}-secret"
 
         for cert in certificates.get_provider_certificates():
             hostname = get_hostname_from_cert(cert.certificate)
@@ -61,24 +73,24 @@ class TLSInformation:
             }
 
         return cls(
-            secret_resource_name_prefix=secret_resource_name_prefix,
+            external_hostname=external_hostname,
             tls_certs=tls_certs,
             tls_keys=tls_keys,
         )
 
     @classmethod
-    def validate(cls, charm: ops.CharmBase) -> None:
+    def validate_certificates_integration(cls, charm: ops.CharmBase) -> None:
         """Validate the precondition to initialize this state component.
 
         Args:
             charm: The gateway-api-integrator charm.
 
         Raises:
-            TlsIntegrationMissingError: When integration is not ready.
+            TLSNotReadyError: if the charm is not ready to handle TLS.
         """
         tls_requirer_integration = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION)
         if (
             tls_requirer_integration is None
             or tls_requirer_integration.data.get(charm.app) is None
         ):
-            raise TlsIntegrationMissingError("Certificates integration not ready.")
+            raise TLSNotReadyError("Certificates integration not ready.")
