@@ -9,8 +9,6 @@ import string
 import typing
 
 from charms.tls_certificates_interface.v3.tls_certificates import (
-    CertificateExpiringEvent,
-    CertificateInvalidatedEvent,
     ProviderCertificate,
     TLSCertificatesRequiresV3,
     generate_csr,
@@ -147,17 +145,18 @@ class TLSRelationService:
         password = secret.get_content()["password"]
         return KeyPair(private_key, password)
 
-    def _get_cert(self, certificate: str) -> typing.Optional[ProviderCertificate]:
+    def get_provider_cert_with_hostname(
+        self, hostname: str
+    ) -> typing.Optional[ProviderCertificate]:
         """Get a cert from the provider's integration data that matches 'certificate'.
 
         Args:
-            certificate: the certificate to match with provider certificates
+            hostname: the hostname to match with provider certificates
 
         Returns:
             typing.Optional[ProviderCertificate]: ProviderCertificate if exists, else None.
         """
-        provider_certificates = self.certificates.get_provider_certificates()
-        matching_certs = [
-            cert for cert in provider_certificates if cert.certificate == certificate
-        ]
-        return matching_certs[0] if matching_certs else None
+        for cert in self.certificates.get_provider_certificates():
+            if get_hostname_from_cert(cert.certificate) == hostname:
+                return cert
+        return None
