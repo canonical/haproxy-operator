@@ -32,11 +32,7 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(self.on.config_changed, self._on_config_changed)
 
     def _on_install(self, _: typing.Any) -> None:
-        """Install the haproxy package.
-
-        Raises:
-            RuntimeError: When the haproxy service is not running after install.
-        """
+        """Install the haproxy package."""
         self.haproxy_service.install()
         self.unit.status = ops.ActiveStatus()
 
