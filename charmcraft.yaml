@@ -42,9 +42,21 @@ links:
 
 config:
   options:
+    external-hostname:
+      default: ""
+      description: Hostname of haproxy.
+      type: string
     global-maxconn:
       default: 4096
       type: int
       description: |
           Sets the maximum per-process number of concurrent connections to
           <number>. Must be greater than 0.
+
+actions:
+  get-certificate:
+    description: Returns the TLS Certificate. Intended for testing and debugging purposes.
+    params:
+      hostname:
+        type: string
+        description: Hostname to extract certs from.
