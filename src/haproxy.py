@@ -20,19 +20,19 @@ class HaproxyServiceStartError(Exception):
 
 
 class HAProxyService:
-    """HAProxy service class.
-
-    Attrs:
-       is_active: Indicate if the haproxy service is active and running.
-    """
+    """HAProxy service class."""
 
     def install(self) -> None:
-        """Install the haproxy apt package."""
+        """Install the haproxy apt package.
+
+        Raises:
+            RuntimeError: If the service is not running after installation.
+        """
         apt.update()
         apt.add_package(package_names=APT_PACKAGE_NAME, version=APT_PACKAGE_VERSION)
         self.enable_haproxy_service()
 
-        if not self.haproxy_service.is_active():
+        if not self.is_active():
             raise RuntimeError("HAProxy service is not running.")
 
     def enable_haproxy_service(self) -> None:
@@ -50,5 +50,9 @@ class HAProxyService:
             raise HaproxyServiceStartError("Error starting the haproxy service") from exc
 
     def is_active(self) -> bool:
-        """Indicate if the haproxy service is active."""
+        """Indicate if the haproxy service is active.
+
+        Returns:
+            True if the haproxy is running.
+        """
         return systemd.service_running(APT_PACKAGE_NAME)
