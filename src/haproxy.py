@@ -32,6 +32,9 @@ class HAProxyService:
         apt.add_package(package_names=APT_PACKAGE_NAME, version=APT_PACKAGE_VERSION)
         self.enable_haproxy_service()
 
+        if not self.haproxy_service.is_active():
+            raise RuntimeError("HAProxy service is not running.")
+
     def enable_haproxy_service(self) -> None:
         """Enable and start the haporxy service if it is not running.
 
@@ -46,7 +49,6 @@ class HAProxyService:
             logger.exception("Error starting the haproxy service")
             raise HaproxyServiceStartError("Error starting the haproxy service") from exc
 
-    @property
     def is_active(self) -> bool:
         """Indicate if the haproxy service is active."""
         return systemd.service_running(APT_PACKAGE_NAME)
