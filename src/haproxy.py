@@ -53,6 +53,9 @@ class HAProxyService:
         self.enable_haproxy_service
         self._render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
 
+        if not self.haproxy_service.is_active():
+            raise RuntimeError("HAProxy service is not running.")
+
     def enable_haproxy_service(self) -> None:
         """Enable and start the haporxy service if it is not running.
 

@@ -38,9 +38,6 @@ class HAProxyCharm(ops.CharmBase):
             RuntimeError: When the haproxy service is not running after install.
         """
         self.haproxy_service.install()
-        if not self.haproxy_service.is_active:
-            logger.error("HAProxy service is not running.")
-            raise RuntimeError("Service not running.")
         self.unit.status = ops.ActiveStatus()
 
     def _on_config_changed(self, _: typing.Any) -> None:
