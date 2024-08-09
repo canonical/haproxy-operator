@@ -1,13 +1,41 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
-# This file configures Charmcraft.
-# See https://juju.is/docs/sdk/charmcraft-config for guidance.
-
 type: charm
-bases:
-  - build-on:
-    - name: ubuntu
-      channel: "22.04"
-    run-on:
-    - name: ubuntu
-      channel: "22.04"
+base: ubuntu@24.04
+build-base: ubuntu@24.04
+
+platforms:
+  amd64:
+
+parts:
+  charm:
+    build-packages:
+      - build-essential
+      - python3-dev
+      - pkg-config
+      - libffi-dev
+      - libssl-dev
+      - rustc
+      - cargo
+
+name: haproxy
+title: HAProxy charm.
+description: |
+  A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
+  deploying and managing [haproxy](https://www.haproxy.org/) on machines.
+  
+  HAProxy is a TCP/HTTP reverse proxy which is particularly suited for high
+  availability environments. It features connection persistence through HTTP
+  cookies, load balancing, header addition, modification, deletion both ways. It
+  has request blocking capabilities and provides interface to display server
+  status.
+
+  This charm simplifies initial deployment and "day N" operations of haproxy on 
+  VMs and bare metal.
+summary: Fast and reliable load balancing reverse proxy.
+links:
+  documentation: https://discourse.charmhub.io/
+  issues: https://github.com/canonical/haproxy-operator/issues
+  source: https://github.com/canonical/haproxy-operator
+  contact:
+    - https://launchpad.net/~canonical-is-devops
