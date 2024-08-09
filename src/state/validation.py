@@ -10,6 +10,7 @@ import typing
 import ops
 
 from state.config import InvalidCharmConfigError
+from state.tls import TLSNotReadyError
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,9 @@ def validate_config_and_integration(
                     event.defer()
                 logger.exception("Error setting up charm state.")
                 instance.unit.status = ops.BlockedStatus(str(exc))
+                return None
+            except TLSNotReadyError:
+                logger.exception("The charm is not ready to handle TLS, skipping.")
                 return None
 
         return wrapper
