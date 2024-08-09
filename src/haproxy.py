@@ -7,6 +7,8 @@ import os
 import pwd
 from pathlib import Path
 
+import logging
+
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Template
@@ -38,6 +40,10 @@ logger = logging.getLogger()
 
 class HaproxyServiceStartError(Exception):
     """Error when starting the haproxy service."""
+
+
+class HaproxyServiceRestartError(Exception):
+    """Error when restarting the haproxy service."""
 
 
 class HAProxyService:
@@ -79,6 +85,38 @@ class HAProxyService:
         """
         return systemd.service_running(APT_PACKAGE_NAME)
 
+    def install(self) -> None:
+        """Install the haproxy apt package."""
+        apt.update()
+        apt.add_package(package_names=APT_PACKAGE_NAME, version=APT_PACKAGE_VERSION)
+        self.enable_haproxy_service()
+
+    def enable_haproxy_service(self) -> None:
+        """Enable and start the haporxy service if it is not running.
+
+        Raises:
+            HaproxyServiceStartError: If the haproxy service cannot be enabled and started.
+        """
+        try:
+            systemd.service_enable(HAPROXY_SERVICE)
+            if not systemd.service_running(HAPROXY_SERVICE):
+                systemd.service_start(HAPROXY_SERVICE)
+        except systemd.SystemdError as exc:
+            logger.exception("Error starting the haproxy service")
+            raise HaproxyServiceStartError("Error starting the haproxy service") from exc
+
+    @property
+    def is_active(self) -> bool:
+        """Indicate if the haproxy service is active."""
+        return systemd.service_running(APT_PACKAGE_NAME)
+
+    def install(self) -> None:
+        """Install the haproxy apt package."""
+        apt.update()
+        apt.add_package(package_names=APT_PACKAGE_NAME, version=APT_PACKAGE_VERSION)
+        self.enable_haproxy_service
+        self._render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
+
     def _render_file(self, path: Path, content: str, mode: int) -> None:
         """Write a content rendered from a template to a file.
 
@@ -94,9 +132,22 @@ class HAProxyService:
         # Set the correct ownership for the file.
         os.chown(path, uid=u.pw_uid, gid=u.pw_gid)
 
-    def render_haproxy_config(self) -> None:
+    def render_haproxy_config(self, config: CharmConfig) -> None:
         """Render the haproxy configuration file."""
         with open("templates/haproxy.cfg.j2", "r", encoding="utf-8") as file:
             template = Template(file.read())
         rendered = template.render(config_global_max_connection=config.global_max_connection)
         self._render_file(HAPROXY_CONFIG, rendered, 0o644)
+        self.restart_haproxy_service()
+
+    def restart_haproxy_service(self) -> None:
+        """Restart the haproxy service.
+
+        Raises:
+            HaproxyServiceRestartError: If the haproxy service cannot be restarted.
+        """
+        try:
+            systemd.service_restart(HAPROXY_SERVICE)
+        except systemd.SystemdError as exc:
+            logger.exception("Error restarting the haproxy service")
+            raise HaproxyServiceRestartError("Error restarting the haproxy service") from exc
