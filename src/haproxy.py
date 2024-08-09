@@ -6,6 +6,8 @@ import os
 import pwd
 from pathlib import Path
 
+import logging
+
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Template
@@ -28,6 +30,13 @@ HAPROXY_DH_PARAM = (
     "-----END DH PARAMETERS-----"
 )
 HAPROXY_DHCONFIG = Path(HAPROXY_CONFIG_DIR / "ffdhe2048.txt")
+HAPROXY_SERVICE = "haproxy"
+
+logger = logging.getLogger()
+
+
+class HaproxyServiceStartError(Exception):
+    """Error when starting the haproxy service."""
 
 
 class HAProxyService:
@@ -36,6 +45,38 @@ class HAProxyService:
     Attrs:
        is_active: Indicate if the haproxy service is active and running.
     """
+
+    def install(self) -> None:
+        """Install the haproxy apt package."""
+        apt.update()
+        apt.add_package(package_names=APT_PACKAGE_NAME, version=APT_PACKAGE_VERSION)
+        self.enable_haproxy_service()
+
+    def enable_haproxy_service(self) -> None:
+        """Enable and start the haporxy service if it is not running.
+
+        Raises:
+            HaproxyServiceStartError: If the haproxy service cannot be enabled and started.
+        """
+        try:
+            systemd.service_enable(HAPROXY_SERVICE)
+            if not systemd.service_running(HAPROXY_SERVICE):
+                systemd.service_start(HAPROXY_SERVICE)
+        except systemd.SystemdError as exc:
+            logger.exception("Error starting the haproxy service")
+            raise HaproxyServiceStartError("Error starting the haproxy service") from exc
+
+    @property
+    def is_active(self) -> bool:
+        """Indicate if the haproxy service is active."""
+        return systemd.service_running(APT_PACKAGE_NAME)
+
+    def install(self) -> None:
+        """Install the haproxy apt package."""
+        apt.update()
+        apt.add_package(package_names=APT_PACKAGE_NAME, version=APT_PACKAGE_VERSION)
+        self.enable_haproxy_service
+        self._render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
 
     def _render_file(self, path: Path, content: str, mode: int) -> None:
         """Write a content rendered from a template to a file.
@@ -51,17 +92,6 @@ class HAProxyService:
         u = pwd.getpwnam(HAPROXY_USER)
         # Set the correct ownership for the file.
         os.chown(path, uid=u.pw_uid, gid=u.pw_gid)
-
-    @property
-    def is_active(self) -> bool:
-        """Indicate if the haproxy service is active."""
-        return systemd.service_running(APT_PACKAGE_NAME)
-
-    def install(self) -> None:
-        """Install the haproxy apt package."""
-        apt.update()
-        apt.add_package(package_names=APT_PACKAGE_NAME, version=APT_PACKAGE_VERSION)
-        self._render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
 
     def render_haproxy_config(self) -> None:
         """Render the haproxy configuration file."""
