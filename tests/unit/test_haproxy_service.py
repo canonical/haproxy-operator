@@ -9,6 +9,7 @@ import pytest
 from haproxy import HAProxyService
 
 
+@pytest.mark.usefixtures("systemd_mock")
 def test_deploy(monkeypatch: pytest.MonkeyPatch):
     """
     arrange: Given a HAProxyService class with mocked apt library methods.

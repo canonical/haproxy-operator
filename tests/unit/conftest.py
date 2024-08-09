@@ -2,6 +2,8 @@
 # See LICENSE file for licensing details.
 
 """Fixtures for haproxy-operator unit tests."""
+from unittest.mock import MagicMock
+
 import pytest
 from ops.testing import Harness
 
@@ -14,3 +16,11 @@ def harness_fixture():
     harness = Harness(HAProxyCharm)
     yield harness
     harness.cleanup()
+
+
+@pytest.fixture(scope="function", name="systemd_mock")
+def systemd_mock_fixture(monkeypatch: pytest.MonkeyPatch):
+    """Mock systemd lib methods."""
+    monkeypatch.setattr("charms.operator_libs_linux.v1.systemd.service_enable", MagicMock())
+    monkeypatch.setattr("charms.operator_libs_linux.v1.systemd.service_running", MagicMock())
+    monkeypatch.setattr("charms.operator_libs_linux.v1.systemd.service_start", MagicMock())
