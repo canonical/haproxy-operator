@@ -8,6 +8,8 @@ import os
 import pwd
 from pathlib import Path
 
+import logging
+
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Template
@@ -74,10 +76,6 @@ class HAProxyService:
         """
         self._render_haproxy_config(config)
         self._restart_haproxy_service()
-
-    def restart_haproxy_service(self) -> None:
-        """Restart the haporxy service."""
-        systemd.service_restart(HAPROXY_SERVICE)
 
     def is_active(self) -> bool:
         """Indicate if the haproxy service is active.
