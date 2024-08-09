@@ -8,6 +8,8 @@ import os
 import pwd
 from pathlib import Path
 
+import logging
+
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Template
@@ -44,6 +46,10 @@ class HaproxyServiceStartError(Exception):
     """Error when starting the haproxy service."""
 
 
+class HaproxyServiceRestartError(Exception):
+    """Error when restarting the haproxy service."""
+
+
 class HAProxyService:
     """HAProxy service class."""
 
@@ -66,10 +72,6 @@ class HAProxyService:
         """Render the haproxy config and restart the haproxy service."""
         self._render_haproxy_config(config)
         self._restart_haproxy_service()
-
-    def _restart_haproxy_service(self) -> None:
-        """Restart the haporxy service."""
-        systemd.service_restart(HAPROXY_SERVICE)
 
     def is_active(self) -> bool:
         """Indicate if the haproxy service is active.
@@ -102,3 +104,8 @@ class HAProxyService:
             config_global_max_connection=config.global_max_connection, keep_trailing_newline=True
         )
         self._render_file(HAPROXY_CONFIG, rendered, 0o644)
+        self._restart_haproxy_service()
+
+    def _restart_haproxy_service(self) -> None:
+        """Restart the haporxy service."""
+        systemd.service_restart(HAPROXY_SERVICE)
