@@ -83,6 +83,18 @@ class HAProxyService:
         """
         return systemd.service_running(APT_PACKAGE_NAME)
 
+    def render_haproxy_config(self, config: CharmConfig) -> None:
+        """Render the haproxy configuration file.
+
+        Args:
+            config: charm config
+        """
+        with open("templates/haproxy.cfg.j2", "r", encoding="utf-8") as file:
+            template = Template(file.read())
+        rendered = template.render(config_global_max_connection=config.global_max_connection)
+        self._render_file(HAPROXY_CONFIG, rendered, 0o644)
+        self.restart_haproxy_service()
+
     def _render_file(self, path: Path, content: str, mode: int) -> None:
         """Write a content rendered from a template to a file.
 
@@ -97,18 +109,6 @@ class HAProxyService:
         u = pwd.getpwnam(HAPROXY_USER)
         # Set the correct ownership for the file.
         os.chown(path, uid=u.pw_uid, gid=u.pw_gid)
-
-    def render_haproxy_config(self, config: CharmConfig) -> None:
-        """Render the haproxy configuration file.
-
-        Args:
-            config: charm config
-        """
-        with open("templates/haproxy.cfg.j2", "r", encoding="utf-8") as file:
-            template = Template(file.read())
-        rendered = template.render(config_global_max_connection=config.global_max_connection)
-        self._render_file(HAPROXY_CONFIG, rendered, 0o644)
-        self.restart_haproxy_service()
 
     def restart_haproxy_service(self) -> None:
         """Restart the haproxy service.
