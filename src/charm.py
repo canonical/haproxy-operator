@@ -46,6 +46,8 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
 
+        self.framework.observe(self.on.get_certificate_action, self._on_get_certificate_action)
+
     def _on_install(self, _: typing.Any) -> None:
         """Install the haproxy package."""
         self.haproxy_service.install()
