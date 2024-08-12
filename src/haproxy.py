@@ -49,7 +49,7 @@ class HAProxyService:
         """
         apt.update()
         apt.add_package(package_names=APT_PACKAGE_NAME, version=APT_PACKAGE_VERSION)
-        self.enable_haproxy_service
+        self.enable_haproxy_service()
         self._render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
 
         if not self.is_active():
