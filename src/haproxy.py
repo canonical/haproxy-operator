@@ -50,7 +50,8 @@ class HAProxyService:
         """Install the haproxy apt package."""
         apt.update()
         apt.add_package(package_names=APT_PACKAGE_NAME, version=APT_PACKAGE_VERSION)
-        self.enable_haproxy_service()
+        self.enable_haproxy_service
+        self._render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
 
     def enable_haproxy_service(self) -> None:
         """Enable and start the haporxy service if it is not running.
@@ -66,17 +67,9 @@ class HAProxyService:
             logger.exception("Error starting the haproxy service")
             raise HaproxyServiceStartError("Error starting the haproxy service") from exc
 
-    @property
     def is_active(self) -> bool:
         """Indicate if the haproxy service is active."""
         return systemd.service_running(APT_PACKAGE_NAME)
-
-    def install(self) -> None:
-        """Install the haproxy apt package."""
-        apt.update()
-        apt.add_package(package_names=APT_PACKAGE_NAME, version=APT_PACKAGE_VERSION)
-        self.enable_haproxy_service
-        self._render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
 
     def _render_file(self, path: Path, content: str, mode: int) -> None:
         """Write a content rendered from a template to a file.
