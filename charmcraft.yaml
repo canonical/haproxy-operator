@@ -43,6 +43,13 @@ links:
   contact:
     - https://launchpad.net/~canonical-is-devops
 
+assumes:
+  - juju >= 3.3
+requires:
+  certificates:
+    interface: tls-certificates
+    limit: 1
+
 config:
   options:
     external-hostname:
@@ -63,3 +70,5 @@ actions:
       hostname:
         type: string
         description: Hostname to extract certs from.
+    required:
+      - hostname
