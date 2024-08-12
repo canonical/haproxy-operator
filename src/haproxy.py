@@ -90,7 +90,9 @@ class HAProxyService:
             config: charm config
         """
         with open("templates/haproxy.cfg.j2", "r", encoding="utf-8") as file:
-            template = Template(file.read())
+            # keep_trailing_newline=True is necessary otherwise the generated haproxy.cfg
+            # will be invalid
+            template = Template(file.read(), keep_trailing_newline=True)
         rendered = template.render(config_global_max_connection=config.global_max_connection)
         self._render_file(HAPROXY_CONFIG, rendered, 0o644)
         self.restart_haproxy_service()
