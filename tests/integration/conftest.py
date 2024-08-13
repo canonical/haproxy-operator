@@ -54,12 +54,11 @@ async def application_fixture(
 
 @pytest_asyncio.fixture(scope="module", name="certificate_provider_application")
 async def certificate_provider_application_fixture(
-    certificate_provider_application_name: str,
     model: Model,
 ) -> Application:
     """Deploy self-signed-certificates."""
-    application = await model.deploy(certificate_provider_application_name, channel="edge")
-    await model.wait_for_idle(apps=[certificate_provider_application_name], status="active")
+    application = await model.deploy("self-signed-certificates", channel="edge")
+    await model.wait_for_idle(apps=[application.name], status="active")
     return application
 
 
