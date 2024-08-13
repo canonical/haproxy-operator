@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Fixtures for haproxy-operator unit tests."""
-from unittest.mock import MagicMock, PropertyMock
+from unittest.mock import MagicMock
 
 import pytest
 from ops.model import Secret
@@ -105,7 +105,7 @@ def juju_secret_mock_fixture(
 def harness_with_mock_certificates_integration_fixture(
     harness: Harness,
     certificates_relation_data: dict[str, str],
-) -> tuple[str, str]:
+) -> Harness:
     """Mock certificates integration."""
     harness.set_leader()
     harness.update_config({"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})

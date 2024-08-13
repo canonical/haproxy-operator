@@ -6,7 +6,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from ops.model import SecretNotFoundError, Secret
+from ops.model import Secret, SecretNotFoundError
 from ops.testing import Harness
 
 from state.tls import TLSInformation, TLSNotReadyError
@@ -31,7 +31,7 @@ def test_generate_private_key(
 ):
     """
     arrange: Given a haproxy charm with mock juju secret and certificates integration.
-    act: run generate private_key method.
+    act: Run generate private_key method.
     assert: set_content is called.
     """
     harness = harness_with_mock_certificates_integration
@@ -46,8 +46,8 @@ def test_generate_private_key(
 def test_generate_private_key_assertion_error(harness: Harness):
     """
     arrange: Given a haproxy charm with missing certificates integration.
-    act: run generate private_key method.
-    assert: AssertionError is raised
+    act: Run generate private_key method.
+    assert: AssertionError is raised.
     """
     harness.begin()
     tls_relation = TLSRelationService(harness.model, harness.charm.certificates)
@@ -60,8 +60,8 @@ def test_generate_private_key_secret_not_found(
 ):
     """
     arrange: Given a haproxy charm with missing certificates integration.
-    act: run generate private_key method.
-    assert: AssertionError is raised
+    act: Run generate private_key method.
+    assert: The mocked create_secret method is called once.
     """
     monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(side_effect=SecretNotFoundError))
     created_secret_mock = MagicMock(spec=Secret)
@@ -69,10 +69,58 @@ def test_generate_private_key_secret_not_found(
 
     harness.begin()
     tls_relation = TLSRelationService(harness.model, harness.charm.certificates)
-    # monkeypatch.setattr(
-    #     "tls_relation.application.add_secret",
-    #     MagicMock(return_value=created_secret_mock),
-    # )
-    tls_relation.application = MagicMock(return_value=created_secret_mock)
+    tls_relation.application.add_secret = MagicMock(return_value=created_secret_mock)
     tls_relation.generate_private_key(TEST_EXTERNAL_HOSTNAME_CONFIG)
     created_secret_mock.grant.assert_called_once()
+
+
+@pytest.mark.usefixtures("juju_secret_mock")
+def test_request_certificate(
+    harness_with_mock_certificates_integration: Harness, monkeypatch: pytest.MonkeyPatch
+):
+    """
+    arrange: Given a haproxy charm with mocked certificates integration and juju secret.
+    act: Run request_certificate method.
+    assert: request_certificate_creation mocked lib method is called once.
+    """
+    request_certificate_creation_mock = MagicMock()
+    monkeypatch.setattr(
+        (
+            "charms.tls_certificates_interface.v3.tls_certificates"
+            ".TLSCertificatesRequiresV3.request_certificate_creation"
+        ),
+        request_certificate_creation_mock,
+    )
+    harness = harness_with_mock_certificates_integration
+    harness.begin()
+    tls_relation = TLSRelationService(harness.model, harness.charm.certificates)
+
+    tls_relation.request_certificate(TEST_EXTERNAL_HOSTNAME_CONFIG)
+
+    request_certificate_creation_mock.assert_called_once()
+
+
+def test_get_provider_cert_with_hostname(harness: Harness, mock_certificate: str):
+    """
+    arrange: Given a haproxy charm with mocked certificate.
+    act: Run get_provider_cert_with_hostname with the correct hostname.
+    assert: The correct provider certificate is returned.
+    """
+    harness.begin()
+    tls_relation = TLSRelationService(harness.model, harness.charm.certificates)
+    assert (
+        tls_relation.get_provider_cert_with_hostname(TEST_EXTERNAL_HOSTNAME_CONFIG).certificate
+        == mock_certificate
+    )
+
+
+@pytest.mark.usefixtures("mock_certificate")
+def test_get_provider_cert_with_invalid_hostname(harness: Harness):
+    """
+    arrange: Given a haproxy charm with mocked certificate.
+    act: Run get_provider_cert_with_hostname with an invalid hostname.
+    assert: None is returned.
+    """
+    harness.begin()
+    tls_relation = TLSRelationService(harness.model, harness.charm.certificates)
+    assert tls_relation.get_provider_cert_with_hostname("") is None
