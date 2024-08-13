@@ -114,10 +114,11 @@ def test_get_provider_cert_with_hostname(harness: Harness, mock_certificate: str
     """
     harness.begin()
     tls_relation = TLSRelationService(harness.model, harness.charm.certificates)
-    assert (
-        tls_relation.get_provider_cert_with_hostname(TEST_EXTERNAL_HOSTNAME_CONFIG).certificate
-        == mock_certificate
+    provider_certificate = tls_relation.get_provider_cert_with_hostname(
+        TEST_EXTERNAL_HOSTNAME_CONFIG
     )
+    assert provider_certificate
+    assert provider_certificate.certificate == mock_certificate
 
 
 @pytest.mark.usefixtures("mock_certificate")
