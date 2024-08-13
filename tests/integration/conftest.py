@@ -15,7 +15,7 @@ from pytest_operator.plugin import OpsTest
 
 logger = logging.getLogger(__name__)
 
-TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"
+TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 GATEWAY_CLASS_CONFIG = "cilium"
 
 
@@ -50,3 +50,30 @@ async def application_fixture(
         raise_on_error=True,
     )
     yield application
+
+
+@pytest_asyncio.fixture(scope="module", name="certificate_provider_application")
+async def certificate_provider_application_fixture(
+    certificate_provider_application_name: str,
+    model: Model,
+) -> Application:
+    """Deploy self-signed-certificates."""
+    application = await model.deploy(certificate_provider_application_name, channel="edge")
+    await model.wait_for_idle(apps=[certificate_provider_application_name], status="active")
+    return application
+
+
+@pytest_asyncio.fixture(scope="module", name="configured_application_with_tls")
+async def configured_application_with_tls_fixture(
+    application: Application,
+    certificate_provider_application: Application,
+):
+    """The haproxy charm configured and integrated with tls provider."""
+    await application.set_config({"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
+    await application.model.add_relation(application.name, certificate_provider_application.name)
+    await application.model.wait_for_idle(
+        apps=[certificate_provider_application.name, application.name],
+        idle_period=30,
+        status="active",
+    )
+    return application
