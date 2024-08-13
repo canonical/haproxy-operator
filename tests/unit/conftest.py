@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Fixtures for haproxy-operator unit tests."""
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 from ops.model import Secret
