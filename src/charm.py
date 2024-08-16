@@ -18,6 +18,7 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
 from ops.charm import ActionEvent
 
 import haproxy
+from http_interface import HTTPDataProvidedEvent, HTTPProvider
 from state.config import CharmConfig
 from state.tls import TLSInformation
 from state.validation import validate_config_and_integration
@@ -26,6 +27,7 @@ from tls_relation import TLSRelationService
 logger = logging.getLogger(__name__)
 
 TLS_CERT_RELATION = "certificates"
+REVERSE_PROXY_INTEGRATION = "reverseproxy"
 
 
 class HAProxyCharm(ops.CharmBase):
@@ -43,10 +45,14 @@ class HAProxyCharm(ops.CharmBase):
         self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT_RELATION)
         self._tls = TLSRelationService(self.model, self.certificates)
 
+        self.http_provider = HTTPProvider(self, REVERSE_PROXY_INTEGRATION)
+
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
-
         self.framework.observe(self.on.get_certificate_action, self._on_get_certificate_action)
+        self.framework.observe(
+            self.http_provider.on.data_provided, self._on_reverse_proxy_data_provided
+        )
 
     def _on_install(self, _: typing.Any) -> None:
         """Install the haproxy package."""
@@ -84,6 +90,14 @@ class HAProxyCharm(ops.CharmBase):
             return
 
         event.fail(f"Missing or incomplete certificate data for {hostname}")
+
+    def _on_reverse_proxy_data_provided(self, event: HTTPDataProvidedEvent) -> None:
+        """Handle data_provided event for reverseproxy integration.
+
+        Args:
+            event: data-provided event.
+        """
+        logger.info("reverseproxy integration data provided: %r", event)
 
     @validate_config_and_integration(defer=False)
     def _reconcile(self) -> None:
