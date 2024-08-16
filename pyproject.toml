@@ -10,7 +10,7 @@ branch = true
 # Formatting tools configuration
 [tool.black]
 line-length = 99
-target-version = ["py38"]
+target-version = ["py312"]
 
 [tool.coverage.report]
 show_missing = true
