@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from haproxy import HAProxyService, HAPROXY_DHCONFIG, HAPROXY_DH_PARAM
+from haproxy import HAPROXY_DH_PARAM, HAPROXY_DHCONFIG, HAProxyService
 
 
 @pytest.mark.usefixtures("systemd_mock")
