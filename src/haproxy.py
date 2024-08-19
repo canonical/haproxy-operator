@@ -92,6 +92,6 @@ class HAProxyService:
     def _render_haproxy_config(self) -> None:
         """Render the haproxy configuration file."""
         with open("templates/haproxy.cfg.j2", "r", encoding="utf-8") as file:
-            template = Template(file.read())
+            template = Template(file.read(), keep_trailing_newline=True)
         rendered = template.render()
         self._render_file(HAPROXY_CONFIG, rendered, 0o644)
