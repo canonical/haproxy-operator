@@ -1,3 +1,5 @@
+This is the repository for the new haproxy charm supporting haproxy v2.8 and published in the [2.8/edge](https://charmhub.io/haproxy?channel=2.8/edge) channel. For the legacy charm in the [latest/edge](https://charmhub.io/haproxy?channel=latest/edge) channel please refer to the [legacy/main](https://github.com/canonical/haproxy-operator/tree/legacy/main) branch.
+
 # Overview
 
 A Juju charm that deploys and manages haproxy on machine. HAProxy is a TCP/HTTP reverse proxy which is particularly suited for high availability environments. It features connection persistence through HTTP cookies, load balancing, header addition, modification, deletion both ways. It has request blocking capabilities and provides interface to display server status.
