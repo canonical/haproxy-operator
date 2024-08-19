@@ -92,10 +92,6 @@ class HAProxyService:
         self._render_haproxy_config(config, services, ingress_requirers_information)
         self._reload_haproxy_service()
 
-    def restart_haproxy_service(self) -> None:
-        """Restart the haporxy service."""
-        systemd.service_restart(HAPROXY_SERVICE)
-
     def is_active(self) -> bool:
         """Indicate if the haproxy service is active.
 
