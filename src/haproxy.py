@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """The haproxy service module."""
+
 import logging
 import os
 import pwd
@@ -49,8 +50,9 @@ class HAProxyService:
         """
         apt.update()
         apt.add_package(package_names=APT_PACKAGE_NAME, version=APT_PACKAGE_VERSION)
-        self.enable_haproxy_service()
+
         self._render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
+        self.restart_haproxy_service()
 
         if not self.is_active():
             raise RuntimeError("HAProxy service is not running.")
@@ -68,6 +70,10 @@ class HAProxyService:
         except systemd.SystemdError as exc:
             logger.exception("Error starting the haproxy service")
             raise HaproxyServiceStartError("Error starting the haproxy service") from exc
+
+    def restart_haproxy_service(self) -> None:
+        """Restart the haporxy service."""
+        systemd.service_restart(HAPROXY_SERVICE)
 
     def is_active(self) -> bool:
         """Indicate if the haproxy service is active.

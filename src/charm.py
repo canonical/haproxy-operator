@@ -12,7 +12,7 @@ import typing
 
 import ops
 
-import haproxy
+from haproxy import HAProxyService
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ class HAProxyCharm(ops.CharmBase):
             args: Arguments to initialize the charm base.
         """
         super().__init__(*args)
-        self.haproxy_service = haproxy.HAProxyService()
+        self.haproxy_service = HAProxyService()
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
 
