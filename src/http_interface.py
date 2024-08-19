@@ -95,7 +95,7 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
         for unit in relation.units:
             databag = _load_relation_data(relation.data[unit])
             self.on.data_provided.emit(
-                relation, databag.get("hostname"), typing.cast(int, databag.get("port"))
+                databag.get("hostname"), typing.cast(int, databag.get("port"))
             )
 
 
