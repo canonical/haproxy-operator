@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from haproxy import HAProxyService
+from haproxy import HAPROXY_DH_PARAM, HAPROXY_DHCONFIG, HAProxyService
 
 
 @pytest.mark.usefixtures("systemd_mock")
@@ -28,6 +28,4 @@ def test_deploy(monkeypatch: pytest.MonkeyPatch):
 
     apt_update_mock.assert_called_once()
     apt_add_package_mock.assert_called_once()
-    render_file_mock.assert_called_once_with(
-        haproxy.HAPROXY_DHCONFIG, haproxy.HAPROXY_DH_PARAM, 0o644
-    )
+    render_file_mock.assert_called_once_with(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
