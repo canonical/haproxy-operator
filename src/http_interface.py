@@ -7,41 +7,110 @@ import json
 import typing
 
 from ops import RelationChangedEvent
-from ops.charm import CharmBase, CharmEvents
-from ops.framework import EventBase, EventSource, Handle, Object
-from ops.model import ModelError, RelationDataContent
+from ops.charm import CharmBase, CharmEvents, RelationEvent
+from ops.framework import EventSource, Object
+from ops.model import ModelError, RelationDataContent, MutableMapping
+
+from pydantic import BaseModel, Field, field_validator, ValidationError
+import logging
+
+logger = logging.getLogger()
 
 
-class HTTPDataProvidedEvent(EventBase):
+class DataValidationError(Exception):
+    """Raised when data validation fails when parsing relation data."""
+
+
+class HTTPRequirerUnitData(BaseModel):
+    hostname: str = Field(description="Hostname at which the unit is reachable.")
+    port: int = Field(description="Port on which the unit is listening.")
+
+    @field_validator("hostname", pre=True)
+    @classmethod
+    def validate_host(cls, hostname):  # noqa: N805  # pydantic wants 'cls' as first arg
+        """Validate host."""
+        assert isinstance(hostname, str), type(hostname)
+        return hostname
+
+    @field_validator("port", pre=True)
+    @classmethod
+    def validate_port(cls, port):  # noqa: N805  # pydantic wants 'cls' as first arg
+        """Validate port."""
+        assert isinstance(port, int), type(port)
+        assert 0 < port < 65535, "port out of TCP range"
+        return port
+
+    @classmethod
+    def from_relation_databag(cls, databag: MutableMapping):
+        try:
+            data = {
+                k: json.loads(v)
+                for k, v in databag.items()
+                # Don't attempt to parse model-external values
+                if k in {f.alias for f in cls.model_fields.values()}
+            }
+        except json.JSONDecodeError as exc:
+            msg = f"invalid databag contents: expecting json. {databag}"
+            logger.error(msg)
+            raise DataValidationError(msg) from exc
+        try:
+            return cls.model_validate_json(json.dumps(data))  # type: ignore
+        except ValidationError as exc:
+            msg = f"failed to validate databag: {databag}"
+            logger.debug(msg, exc_info=True)
+            raise DataValidationError(msg) from exc
+
+
+class HTTPRequirerData(BaseModel):
+    unit_data = list[HTTPRequirerUnitData]
+
+
+class _IPAEvent(RelationEvent):
+    __args__: tuple[str, ...] = ()
+    __optional_kwargs__: dict[str, any] = {}
+
+    @classmethod
+    def __attrs__(cls):
+        return cls.__args__ + tuple(cls.__optional_kwargs__.keys())
+
+    def __init__(self, handle, relation, *args, **kwargs):
+        super().__init__(handle, relation)
+
+        if not len(self.__args__) == len(args):
+            raise TypeError("expected {} args, got {}".format(len(self.__args__), len(args)))
+
+        for attr, obj in zip(self.__args__, args):
+            setattr(self, attr, obj)
+        for attr, default in self.__optional_kwargs__.items():
+            obj = kwargs.get(attr, default)
+            setattr(self, attr, obj)
+
+    def snapshot(self):
+        dct = super().snapshot()
+        for attr in self.__attrs__():
+            obj = getattr(self, attr)
+            try:
+                dct[attr] = obj
+            except ValueError as e:
+                raise ValueError(
+                    "cannot automagically serialize {}: "
+                    "override this method and do it "
+                    "manually.".format(obj)
+                ) from e
+
+        return dct
+
+    def restore(self, snapshot) -> None:
+        super().restore(snapshot)
+        for attr, obj in snapshot.items():
+            setattr(self, attr, obj)
+
+
+class HTTPDataProvidedEvent(_IPAEvent):
     """Event representing that http data has been provided."""
 
-    def __init__(self, handle: Handle, hostname: str, port: int):
-        """Initialize the data-provided event.
-
-        Args:
-            handle: Used by parent class
-            hostname: Requirer-provided hostname.
-            port: Requirer-provided port.
-        """
-        super().__init__(handle)
-        self.hostname = hostname
-        self.port = port
-
-    def snapshot(self) -> dict:
-        """Return snapshot.
-
-        Returns: The snapshot to return.
-        """
-        return {"hostname": self.hostname, "port": self.port}
-
-    def restore(self, snapshot: dict) -> None:
-        """Restore snapshot.
-
-        Args:
-            snapshot: The snapshot to restore
-        """
-        self.hostname = typing.cast(str, snapshot.get("hostname"))
-        self.port = typing.cast(int, snapshot.get("port"))
+    __args__ = "hosts"
+    hosts: typing.Sequence["HTTPRequirerData"] = ()
 
 
 class HTTPProviderEvents(CharmEvents):
@@ -92,11 +161,12 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
             event: relation-changed event
         """
         relation = event.relation
+
+        units_data: list["HTTPRequirerUnitData"] = []
         for unit in relation.units:
             databag = _load_relation_data(relation.data[unit])
-            self.on.data_provided.emit(
-                databag.get("hostname"), typing.cast(int, databag.get("port"))
-            )
+
+        self.on.data_provided.emit()
 
 
 def _load_relation_data(relation_data_content: RelationDataContent) -> dict:
