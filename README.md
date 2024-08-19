@@ -1,4 +1,4 @@
-This is the repository for the new haproxy charm supporting haproxy v2.8 and published in the [2.8/edge](https://charmhub.io/haproxy?channel=2.8/edge) channel. For the legacy charm in the [latest/edge](https://charmhub.io/haproxy?channel=2.8/edge) channel please refer to the [legacy/main](https://github.com/canonical/haproxy-operator/tree/legacy/main) branch.
+This is the repository for the new haproxy charm supporting haproxy v2.8 and published in the [2.8/edge](https://charmhub.io/haproxy?channel=2.8/edge) channel. For the legacy charm in the [latest/edge](https://charmhub.io/haproxy?channel=latest/edge) channel please refer to the [legacy/main](https://github.com/canonical/haproxy-operator/tree/legacy/main) branch.
 
 # Overview
 
