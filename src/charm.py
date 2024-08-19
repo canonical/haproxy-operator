@@ -34,11 +34,11 @@ class HAProxyCharm(ops.CharmBase):
     def _on_install(self, _: typing.Any) -> None:
         """Install the haproxy package."""
         self.haproxy_service.install()
-        self.unit.status = ops.ActiveStatus()
 
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
-        self.haproxy_service.render_haproxy_config()
+        self.haproxy_service.reconcile()
+        self.unit.status = ops.ActiveStatus()
 
 
 if __name__ == "__main__":  # pragma: nocover

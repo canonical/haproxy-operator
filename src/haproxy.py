@@ -52,26 +52,17 @@ class HAProxyService:
         apt.add_package(package_names=APT_PACKAGE_NAME, version=APT_PACKAGE_VERSION)
 
         self._render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
-        self.restart_haproxy_service()
+        self._restart_haproxy_service()
 
         if not self.is_active():
             raise RuntimeError("HAProxy service is not running.")
 
-    def enable_haproxy_service(self) -> None:
-        """Enable and start the haporxy service if it is not running.
+    def reconcile(self) -> None:
+        """Render the haproxy config and restart the haproxy service."""
+        self._render_haproxy_config()
+        self._restart_haproxy_service()
 
-        Raises:
-            HaproxyServiceStartError: If the haproxy service cannot be enabled and started.
-        """
-        try:
-            systemd.service_enable(HAPROXY_SERVICE)
-            if not systemd.service_running(HAPROXY_SERVICE):
-                systemd.service_start(HAPROXY_SERVICE)
-        except systemd.SystemdError as exc:
-            logger.exception("Error starting the haproxy service")
-            raise HaproxyServiceStartError("Error starting the haproxy service") from exc
-
-    def restart_haproxy_service(self) -> None:
+    def _restart_haproxy_service(self) -> None:
         """Restart the haporxy service."""
         systemd.service_restart(HAPROXY_SERVICE)
 
@@ -98,7 +89,7 @@ class HAProxyService:
         # Set the correct ownership for the file.
         os.chown(path, uid=u.pw_uid, gid=u.pw_gid)
 
-    def render_haproxy_config(self) -> None:
+    def _render_haproxy_config(self) -> None:
         """Render the haproxy configuration file."""
         with open("templates/haproxy.cfg.j2", "r", encoding="utf-8") as file:
             template = Template(file.read())
