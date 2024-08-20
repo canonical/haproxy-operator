@@ -98,9 +98,7 @@ class HAProxyCharm(ops.CharmBase):
             event: data-provided event.
         """
         for unit in event.hosts:
-            logger.info(
-                "reverseproxy integration data provided for unit: %s %s", unit.hostname, unit.port
-            )
+            logger.info("reverseproxy integration data provided for unit: %r", unit)
 
     @validate_config_and_integration(defer=False)
     def _reconcile(self) -> None:
