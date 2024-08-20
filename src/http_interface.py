@@ -4,15 +4,16 @@
 """The haproxy http interface module."""
 
 import json
+import logging
 import typing
 
 from ops import RelationChangedEvent
 from ops.charm import CharmBase, CharmEvents, RelationEvent
 from ops.framework import EventSource, Object
-from ops.model import ModelError, RelationDataContent, MutableMapping
+from ops.model import ModelError, Relation, RelationDataContent
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
-from pydantic import BaseModel, Field, field_validator, ValidationError
-import logging
+from state.validation import validate_config_and_integration
 
 logger = logging.getLogger()
 
@@ -22,42 +23,38 @@ class DataValidationError(Exception):
 
 
 class HTTPRequirerUnitData(BaseModel):
-    hostname: str = Field(description="Hostname at which the unit is reachable.")
-    port: int = Field(description="Port on which the unit is listening.")
+    """_summary_
 
-    @field_validator("hostname", pre=True)
+    Attrs:
+        hostname: _description_
+        port: _description_
+    """
+
+    hostname: str = Field(alias="hostname", description="Hostname at which the unit is reachable.")
+    port: int = Field(alias="port", description="Port on which the unit is listening.")
+
+    @field_validator("hostname")
     @classmethod
-    def validate_host(cls, hostname):  # noqa: N805  # pydantic wants 'cls' as first arg
+    def validate_host(cls, hostname):
         """Validate host."""
         assert isinstance(hostname, str), type(hostname)
         return hostname
 
-    @field_validator("port", pre=True)
+    @field_validator("port")
     @classmethod
-    def validate_port(cls, port):  # noqa: N805  # pydantic wants 'cls' as first arg
+    def validate_port(cls, port):
         """Validate port."""
         assert isinstance(port, int), type(port)
         assert 0 < port < 65535, "port out of TCP range"
         return port
 
     @classmethod
-    def from_relation_databag(cls, databag: MutableMapping):
+    def from_dict(cls, data: dict):
         try:
-            data = {
-                k: json.loads(v)
-                for k, v in databag.items()
-                # Don't attempt to parse model-external values
-                if k in {f.alias for f in cls.model_fields.values()}
-            }
-        except json.JSONDecodeError as exc:
-            msg = f"invalid databag contents: expecting json. {databag}"
-            logger.error(msg)
-            raise DataValidationError(msg) from exc
-        try:
-            return cls.model_validate_json(json.dumps(data))  # type: ignore
+            return cls.model_validate_json(json.dumps(data))
         except ValidationError as exc:
-            msg = f"failed to validate databag: {databag}"
-            logger.debug(msg, exc_info=True)
+            msg = f"failed to validate databag: {data}"
+            logger.error(msg, exc_info=True)
             raise DataValidationError(msg) from exc
 
 
@@ -105,7 +102,7 @@ class _IPAEvent(RelationEvent):
 class HTTPDataProvidedEvent(_IPAEvent):
     """Event representing that http data has been provided."""
 
-    __args__ = "hosts"
+    __args__ = ("hosts",)
     hosts: typing.Sequence["HTTPRequirerUnitData"] = ()
 
 
@@ -148,21 +145,45 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
         on: Custom events that are used to notify the charm using the provider.
     """
 
-    on = HTTPProviderEvents()  # type: ignore
+    on = HTTPProviderEvents()
 
+    def __init__(
+        self,
+        charm: CharmBase,
+        relation_name: str,
+    ):
+        """Initialize the interface provider class.
+
+        Args:
+            charm: The charm implementing the requirer or provider.
+            integration_name: Name of the integration using the interface.
+        """
+        super().__init__(charm, relation_name)
+
+    @validate_config_and_integration(defer=False)
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle relation-changed event.
 
         Args:
             event: relation-changed event
         """
-        relation = event.relation
+        integration = event.relation
+        self.on.data_provided.emit(
+            integration,
+            [unit.model_dump() for unit in self.get_integration_unit_data(integration)],
+        )
 
-        units_data: list["HTTPRequirerUnitData"] = []
-        for unit in relation.units:
-            units_data.append(HTTPRequirerUnitData.from_relation_databag(relation.data[unit]))
+    def get_integration_unit_data(self, integration: Relation):
+        """_summary_
 
-        self.on.data_provided.emit(relation, [unit.model_dump() for unit in units_data])
+        Args:
+            integration (Relation): _description_
+        """
+
+        return [
+            HTTPRequirerUnitData.from_dict(_load_relation_data(integration.data[unit]))
+            for unit in integration.units
+        ]
 
 
 def _load_relation_data(relation_data_content: RelationDataContent) -> dict:

@@ -165,9 +165,7 @@ class HAProxyCharm(ops.CharmBase):
             event: data-provided event.
         """
         for unit in event.hosts:
-            logger.info(
-                "reverseproxy integration data provided for unit: %s %s", unit.hostname, unit.port
-            )
+            logger.info("reverseproxy integration data provided for unit: %r", unit)
 
     def _reconcile(self) -> None:
         """Render the haproxy config and restart the service."""
