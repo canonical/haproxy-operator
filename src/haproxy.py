@@ -13,6 +13,7 @@ from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Template
 
 from state.config import CharmConfig
+from http_interface import HTTPProvider
 
 APT_PACKAGE_VERSION = "2.8.5-1ubuntu3"
 APT_PACKAGE_NAME = "haproxy"
@@ -66,13 +67,13 @@ class HAProxyService:
         if not self.is_active():
             raise RuntimeError("HAProxy service is not running.")
 
-    def reconcile(self, config: CharmConfig) -> None:
+    def reconcile(self, config: CharmConfig, http_provider: HTTPProvider) -> None:
         """Render the haproxy config and restart the haproxy service.
 
         Args:
             config: charm config
         """
-        self._render_haproxy_config(config)
+        self._render_haproxy_config(config, http_provider)
         self._restart_haproxy_service()
 
     def is_active(self) -> bool:
@@ -98,17 +99,15 @@ class HAProxyService:
         # Set the correct ownership for the file.
         os.chown(path, uid=u.pw_uid, gid=u.pw_gid)
 
-    def _render_haproxy_config(self, config: CharmConfig) -> None:
+    def _render_haproxy_config(self, config: CharmConfig, http_provider: HTTPProvider) -> None:
         """Render the haproxy configuration file.
 
         Args:
             config: charm config
         """
         with open("templates/haproxy.cfg.j2", "r", encoding="utf-8") as file:
-            template = Template(file.read())
-        rendered = template.render(
-            config_global_max_connection=config.global_max_connection, keep_trailing_newline=True
-        )
+            template = Template(file.read(), keep_trailing_newline=True)
+        rendered = template.render(config_global_max_connection=config.global_max_connection)
         self._render_file(HAPROXY_CONFIG, rendered, 0o644)
         self._restart_haproxy_service()
 
