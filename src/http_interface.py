@@ -159,6 +159,7 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
             integration_name: Name of the integration using the interface.
         """
         super().__init__(charm, relation_name)
+        self.integration = self.model.get_relation(self.integration_name)
 
     @validate_config_and_integration(defer=False)
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:

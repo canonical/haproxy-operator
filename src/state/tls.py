@@ -1,7 +1,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""gateway-api-integrator resource definition."""
+"""haproxy-operator charm tls information."""
 
 import logging
 import re

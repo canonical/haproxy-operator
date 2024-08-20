@@ -12,6 +12,7 @@ from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Template
 
 from state.config import CharmConfig
+from http_interface import HTTPProvider
 
 APT_PACKAGE_VERSION = "2.8.5-1ubuntu3"
 APT_PACKAGE_NAME = "haproxy"
@@ -89,7 +90,7 @@ class HAProxyService:
         # Set the correct ownership for the file.
         os.chown(path, uid=u.pw_uid, gid=u.pw_gid)
 
-    def render_haproxy_config(self, config: CharmConfig) -> None:
+    def render_haproxy_config(self, config: CharmConfig, http_provider: HTTPProvider) -> None:
         """Render the haproxy configuration file.
 
         Args:
@@ -99,5 +100,15 @@ class HAProxyService:
             # keep_trailing_newline=True is necessary otherwise the generated haproxy.cfg
             # will be invalid
             template = Template(file.read(), keep_trailing_newline=True)
-        rendered = template.render(config_global_max_connection=config.global_max_connection)
+
+        http_unit_data = []
+        if integration := http_provider.integration:
+            http_unit_data = [
+                unit.model_dump() for unit in http_provider.get_integration_unit_data(integration)
+            ]
+
+        rendered = template.render(
+            config_global_max_connection=config.global_max_connection,
+            http_unit_data=http_unit_data,
+        )
         self._render_file(HAPROXY_CONFIG, rendered, 0o644)

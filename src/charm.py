@@ -99,12 +99,13 @@ class HAProxyCharm(ops.CharmBase):
         """
         for unit in event.hosts:
             logger.info("reverseproxy integration data provided for unit: %r", unit)
+        self._reconcile()
 
     @validate_config_and_integration(defer=False)
     def _reconcile(self) -> None:
         """Render the haproxy config and restart the service."""
         config = CharmConfig.from_charm(self)
-        self.haproxy_service.render_haproxy_config(config)
+        self.haproxy_service.render_haproxy_config(config, self.http_provider)
 
     @validate_config_and_integration(defer=False)
     def _reconcile_certificates(self) -> None:
