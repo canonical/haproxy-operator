@@ -11,6 +11,7 @@ import ops
 
 from state.config import InvalidCharmConfigError
 from state.tls import TLSNotReadyError
+from http_interface import DataValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +67,12 @@ def validate_config_and_integration(
                 return None
             except TLSNotReadyError:
                 logger.exception("The charm is not ready to handle TLS, skipping.")
+                return None
+            except DataValidationError:
+                logger.exception("Requirer unit data not ready, skipping.")
+                instance.unit.status = ops.WaitingStatus(
+                    "Waiting for complete integration unit data."
+                )
                 return None
 
         return wrapper
