@@ -61,10 +61,6 @@ class HTTPRequirerUnitData(BaseModel):
             raise DataValidationError(msg) from exc
 
 
-class HTTPRequirerData(BaseModel):
-    unit_data = list[HTTPRequirerUnitData]
-
-
 class _IPAEvent(RelationEvent):
     __args__: tuple[str, ...] = ()
     __optional_kwargs__: dict[str, any] = {}
@@ -110,7 +106,7 @@ class HTTPDataProvidedEvent(_IPAEvent):
     """Event representing that http data has been provided."""
 
     __args__ = "hosts"
-    hosts: typing.Sequence["HTTPRequirerData"] = ()
+    hosts: typing.Sequence["HTTPRequirerUnitData"] = ()
 
 
 class HTTPProviderEvents(CharmEvents):
@@ -164,9 +160,9 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
 
         units_data: list["HTTPRequirerUnitData"] = []
         for unit in relation.units:
-            databag = _load_relation_data(relation.data[unit])
+            units_data.append(HTTPRequirerUnitData.from_relation_databag(relation.data[unit]))
 
-        self.on.data_provided.emit()
+        self.on.data_provided.emit(relation, [unit.model_dump() for unit in units_data])
 
 
 def _load_relation_data(relation_data_content: RelationDataContent) -> dict:
