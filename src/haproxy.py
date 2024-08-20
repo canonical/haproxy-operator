@@ -15,6 +15,7 @@ from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Template
 
 from state.config import CharmConfig
+from http_interface import HTTPProvider
 
 APT_PACKAGE_VERSION = "2.8.5-1ubuntu3"
 APT_PACKAGE_NAME = "haproxy"
@@ -64,13 +65,13 @@ class HAProxyService:
         if not self.is_active():
             raise RuntimeError("HAProxy service is not running.")
 
-    def reconcile(self, config: CharmConfig) -> None:
-        """Render the haproxy config and reload the haproxy service.
+    def reconcile(self, config: CharmConfig, http_provider: HTTPProvider) -> None:
+        """Render the haproxy config and restart the haproxy service.
 
         Args:
             config: charm config
         """
-        self._render_haproxy_config(config)
+        self._render_haproxy_config(config, http_provider)
         self._reload_haproxy_service()
 
     def is_active(self) -> bool:
@@ -81,7 +82,7 @@ class HAProxyService:
         """
         return systemd.service_running(APT_PACKAGE_NAME)
 
-    def _render_haproxy_config(self, config: CharmConfig) -> None:
+    def _render_haproxy_config(self, config: CharmConfig, http_provider: HTTPProvider) -> None:
         """Render the haproxy configuration file.
 
         Args:
