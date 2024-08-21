@@ -32,7 +32,7 @@ defaults
     timeout connect 5000
     timeout server 50000
 
-{% if not http_unit_data %}
+{% if not reverseproxy_backend_active %}
 frontend default
     bind :80
     default_backend default 
@@ -40,12 +40,16 @@ frontend default
 backend default
     http-request return status 200 content-type "text/plain" string "Default page for the haproxy-operator charm"
 {% else %}
-frontend default
-    bind: 80
-    default_backend backend
+frontend haproxy
+    bind :80
+    {% for application in http_integration_unit_data.keys() %}
+    use_backend {{ application.name }}
+    {% endfor %}
 
-backend backend
-{% for unit in http_unit_data %}
-    server s {{ unit.hostname }}:{{ unit.port }} 
+{% for application, units_data in http_integration_unit_data.items() %}
+backend {{ application.name }}
+{% for unit, unit_data in units_data.items() %}
+    server {{ unit }} {{ unit_data.hostname }}:{{ unit_data.port }}
+{% endfor %}
 {% endfor %}
 {% endif %}
