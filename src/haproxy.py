@@ -106,8 +106,29 @@ class HAProxyService:
             config: charm config
         """
         with open("templates/haproxy.cfg.j2", "r", encoding="utf-8") as file:
-            template = Template(file.read(), keep_trailing_newline=True)
-        rendered = template.render(config_global_max_connection=config.global_max_connection)
+            template = Template(
+                file.read(), keep_trailing_newline=True, trim_blocks=True, lstrip_blocks=True
+            )
+
+        http_integration_unit_data = {
+            integration.app: {
+                f"{unit.name.replace('/','-')}-{unit_data.port}": unit_data
+                for unit, unit_data in http_provider.get_integration_unit_data(integration).items()
+            }
+            for integration in http_provider.integrations
+        }
+        reverseproxy_backend_active = any(
+            integration_data for integration_data in http_integration_unit_data.values()
+        )
+
+        logger.info("unit data dict: %r", http_integration_unit_data)
+        logger.info("Any active backend we need to render: %r", reverseproxy_backend_active)
+
+        rendered = template.render(
+            config_global_max_connection=config.global_max_connection,
+            http_integration_unit_data=http_integration_unit_data,
+            reverseproxy_backend_active=reverseproxy_backend_active,
+        )
         self._render_file(HAPROXY_CONFIG, rendered, 0o644)
         self._restart_haproxy_service()
 
