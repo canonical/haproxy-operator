@@ -5,15 +5,12 @@
 
 import json
 import logging
-import typing
 
-from ops import RelationChangedEvent
+from ops import RelationBrokenEvent, RelationChangedEvent
 from ops.charm import CharmBase, CharmEvents, RelationEvent
 from ops.framework import EventSource, Object
 from ops.model import ModelError, Relation, RelationDataContent
 from pydantic import BaseModel, Field, ValidationError, field_validator
-
-from state.validation import validate_config_and_integration
 
 logger = logging.getLogger()
 
@@ -23,11 +20,11 @@ class DataValidationError(Exception):
 
 
 class HTTPRequirerUnitData(BaseModel):
-    """_summary_
+    """HTTP interface requirer unit data.
 
     Attrs:
-        hostname: _description_
-        port: _description_
+        hostname: Hostname at which the unit is reachable.
+        port: Port on which the unit is listening.
     """
 
     hostname: str = Field(alias="hostname", description="Hostname at which the unit is reachable.")
@@ -58,52 +55,12 @@ class HTTPRequirerUnitData(BaseModel):
             raise DataValidationError(msg) from exc
 
 
-class _IPAEvent(RelationEvent):
-    __args__: tuple[str, ...] = ()
-    __optional_kwargs__: dict[str, any] = {}
-
-    @classmethod
-    def __attrs__(cls):
-        return cls.__args__ + tuple(cls.__optional_kwargs__.keys())
-
-    def __init__(self, handle, relation, *args, **kwargs):
-        super().__init__(handle, relation)
-
-        if not len(self.__args__) == len(args):
-            raise TypeError("expected {} args, got {}".format(len(self.__args__), len(args)))
-
-        for attr, obj in zip(self.__args__, args):
-            setattr(self, attr, obj)
-        for attr, default in self.__optional_kwargs__.items():
-            obj = kwargs.get(attr, default)
-            setattr(self, attr, obj)
-
-    def snapshot(self):
-        dct = super().snapshot()
-        for attr in self.__attrs__():
-            obj = getattr(self, attr)
-            try:
-                dct[attr] = obj
-            except ValueError as e:
-                raise ValueError(
-                    "cannot automagically serialize {}: "
-                    "override this method and do it "
-                    "manually.".format(obj)
-                ) from e
-
-        return dct
-
-    def restore(self, snapshot) -> None:
-        super().restore(snapshot)
-        for attr, obj in snapshot.items():
-            setattr(self, attr, obj)
-
-
-class HTTPDataProvidedEvent(_IPAEvent):
+class HTTPDataProvidedEvent(RelationEvent):
     """Event representing that http data has been provided."""
 
-    __args__ = ("hosts",)
-    hosts: typing.Sequence["HTTPRequirerUnitData"] = ()
+
+class HTTPDataRemovedEvent(RelationEvent):
+    """Event representing that http data has been removed."""
 
 
 class HTTPProviderEvents(CharmEvents):
@@ -111,9 +68,11 @@ class HTTPProviderEvents(CharmEvents):
 
     Attrs:
         data_provided: Custom event when integration data is provided.
+        data_provided: Custom event when integration data is removed.
     """
 
     data_provided = EventSource(HTTPDataProvidedEvent)
+    data_removed = EventSource(HTTPDataRemovedEvent)
 
 
 class _IntegrationInterfaceBaseClass(Object):
@@ -128,14 +87,26 @@ class _IntegrationInterfaceBaseClass(Object):
         """
         super().__init__(charm, integration_name)
 
+        observe = self.framework.observe
         self.charm: CharmBase = charm
         self.integration_name = integration_name
-        self.framework.observe(
-            charm.on[integration_name].relation_changed, self._on_relation_changed
-        )
+
+        observe(charm.on[integration_name].relation_created, self._on_relation_changed)
+        observe(charm.on[integration_name].relation_joined, self._on_relation_changed)
+        observe(charm.on[integration_name].relation_changed, self._on_relation_changed)
+        observe(charm.on[integration_name].relation_departed, self._on_relation_changed)
+        observe(charm.on[integration_name].relation_broken, self._on_relation_broken)
 
     def _on_relation_changed(self, _: RelationChangedEvent) -> None:
         """Abstract method to handle relation-changed event."""
+
+    def _on_relation_broken(self, _: RelationBrokenEvent) -> None:
+        """Abstract method to handle relation-changed event."""
+
+    @property
+    def integrations(self):
+        """The list of Relation instances associated with the charm."""
+        return list(self.charm.model.relations[self.integration_name])
 
 
 class HTTPProvider(_IntegrationInterfaceBaseClass):
@@ -150,7 +121,7 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
     def __init__(
         self,
         charm: CharmBase,
-        relation_name: str,
+        integration_name: str,
     ):
         """Initialize the interface provider class.
 
@@ -158,33 +129,61 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
             charm: The charm implementing the requirer or provider.
             integration_name: Name of the integration using the interface.
         """
-        super().__init__(charm, relation_name)
-        self.integration = self.model.get_relation(self.integration_name)
+        super().__init__(charm, integration_name)
 
-    @validate_config_and_integration(defer=False)
+    def is_integration_ready(self, integration: Relation) -> bool:
+        """Check if integration is ready.
+
+        Args:
+            integration: Relation instance.
+
+        Returns:
+            False: If data validation failed on integration unit data.
+        """
+        try:
+            self.get_integration_unit_data(integration)
+        except DataValidationError:
+            logger.exception("Data validation failed for unit data.")
+            return False
+        return True
+
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle relation-changed event.
 
         Args:
-            event: relation-changed event
+            event: relation-changed event.
         """
-        integration = event.relation
+        if not self.is_integration_ready(event.relation):
+            return
+
         self.on.data_provided.emit(
-            integration,
-            [unit.model_dump() for unit in self.get_integration_unit_data(integration)],
+            event.relation,
+            event.app,
+            event.unit,
+        )
+
+    def _on_relation_broken(self, event):
+        """Handle relation-broken event.
+
+        Args:
+            event: relation-broken event.
+        """
+        self.on.data_removed.emit(
+            event.relation,
+            event.app,
+            event.unit,
         )
 
     def get_integration_unit_data(self, integration: Relation):
-        """_summary_
+        """Parse and validate the integration units databag.
 
         Args:
-            integration (Relation): _description_
+            integration: Relation instance.
         """
-
-        return [
-            HTTPRequirerUnitData.from_dict(_load_relation_data(integration.data[unit]))
+        return {
+            unit: HTTPRequirerUnitData.from_dict(_load_relation_data(integration.data[unit]))
             for unit in integration.units
-        ]
+        }
 
 
 def _load_relation_data(relation_data_content: RelationDataContent) -> dict:
@@ -193,7 +192,7 @@ def _load_relation_data(relation_data_content: RelationDataContent) -> dict:
     Json loads all data.
 
     Args:
-        relation_data_content: Relation data from the databag
+        relation_data_content: Relation data from the databag.
 
     Returns:
         dict: Relation data in dict format.

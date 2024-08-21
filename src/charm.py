@@ -18,7 +18,7 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
 from ops.charm import ActionEvent
 
 import haproxy
-from http_interface import HTTPDataProvidedEvent, HTTPProvider
+from http_interface import HTTPDataProvidedEvent, HTTPProvider, HTTPDataRemovedEvent
 from state.config import CharmConfig
 from state.tls import TLSInformation
 from state.validation import validate_config_and_integration
@@ -53,12 +53,16 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(
             self.http_provider.on.data_provided, self._on_reverse_proxy_data_provided
         )
+        self.framework.observe(
+            self.http_provider.on.data_provided, self._on_reverse_proxy_data_removed
+        )
 
     def _on_install(self, _: typing.Any) -> None:
         """Install the haproxy package."""
         self.haproxy_service.install()
         self.unit.status = ops.ActiveStatus()
 
+    @validate_config_and_integration(defer=False)
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
         self._reconcile_certificates()
@@ -91,23 +95,22 @@ class HAProxyCharm(ops.CharmBase):
 
         event.fail(f"Missing or incomplete certificate data for {hostname}")
 
-    def _on_reverse_proxy_data_provided(self, event: HTTPDataProvidedEvent) -> None:
-        """Handle data_provided event for reverseproxy integration.
-
-        Args:
-            event: data-provided event.
-        """
-        for unit in event.hosts:
-            logger.info("reverseproxy integration data provided for unit: %r", unit)
+    @validate_config_and_integration(defer=False)
+    def _on_reverse_proxy_data_provided(self, _: HTTPDataProvidedEvent) -> None:
+        """Handle data_provided event for reverseproxy integration."""
         self._reconcile()
 
     @validate_config_and_integration(defer=False)
+    def _on_reverse_proxy_data_removed(self, _: HTTPDataRemovedEvent) -> None:
+        """Handle data_removed event for reverseproxy integration."""
+        self._reconcile()
+
     def _reconcile(self) -> None:
         """Render the haproxy config and restart the service."""
         config = CharmConfig.from_charm(self)
         self.haproxy_service.render_haproxy_config(config, self.http_provider)
+        self.haproxy_service.restart_haproxy_service()
 
-    @validate_config_and_integration(defer=False)
     def _reconcile_certificates(self) -> None:
         """Request new certificates if needed to match the configured hostname."""
         tls_information = TLSInformation.from_charm(self, self.certificates)
