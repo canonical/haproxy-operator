@@ -56,8 +56,6 @@ class HAProxyCharm(ops.CharmBase):
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
         self.http_provider = HTTPProvider(self, REVERSE_PROXY_RELATION)
 
-        self.http_provider = HTTPProvider(self, REVERSE_PROXY_INTEGRATION)
-
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.get_certificate_action, self._on_get_certificate_action)
