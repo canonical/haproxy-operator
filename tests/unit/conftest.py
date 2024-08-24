@@ -25,9 +25,10 @@ def harness_fixture():
 @pytest.fixture(scope="function", name="systemd_mock")
 def systemd_mock_fixture(monkeypatch: pytest.MonkeyPatch):
     """Mock systemd lib methods."""
-    monkeypatch.setattr("charms.operator_libs_linux.v1.systemd.service_enable", MagicMock())
-    monkeypatch.setattr("charms.operator_libs_linux.v1.systemd.service_running", MagicMock())
-    monkeypatch.setattr("charms.operator_libs_linux.v1.systemd.service_start", MagicMock())
+    monkeypatch.setattr("charms.operator_libs_linux.v1.systemd.service_restart", MagicMock())
+    monkeypatch.setattr(
+        "charms.operator_libs_linux.v1.systemd.service_running", MagicMock(return_value=True)
+    )
 
 
 @pytest.fixture(scope="function", name="certificates_relation_data")

@@ -5,11 +5,12 @@
 
 import json
 import logging
+import typing
 
 from ops import RelationBrokenEvent, RelationChangedEvent
 from ops.charm import CharmBase, CharmEvents, RelationEvent
 from ops.framework import EventSource, Object
-from ops.model import ModelError, Relation, RelationDataContent
+from ops.model import ModelError, Relation, RelationDataContent, Unit
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
 logger = logging.getLogger()
@@ -32,21 +33,46 @@ class HTTPRequirerUnitData(BaseModel):
 
     @field_validator("hostname")
     @classmethod
-    def validate_host(cls, hostname):
-        """Validate host."""
+    def validate_host(cls, hostname: typing.Any) -> str:
+        """Validate hostname.
+
+        Args:
+            hostname: The hostname to validate.
+
+        Returns:
+            str: The validated hostname
+        """
         assert isinstance(hostname, str), type(hostname)
         return hostname
 
     @field_validator("port")
     @classmethod
-    def validate_port(cls, port):
-        """Validate port."""
+    def validate_port(cls, port: typing.Any) -> int:
+        """Validate port.
+
+        Args:
+            port: The port to validate.
+
+        Returns:
+            int: The validated port
+        """
         assert isinstance(port, int), type(port)
         assert 0 < port < 65535, "port out of TCP range"
         return port
 
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, data: dict) -> "HTTPRequirerUnitData":
+        """Parse integration databag into data class.
+
+        Args:
+            data: Integration databag.
+
+        Raises:
+            DataValidationError: When data validation failed.
+
+        Returns:
+            HTTPRequirerUnitData: Instance of the parsed requirer unit data class.
+        """
         try:
             return cls.model_validate_json(json.dumps(data))
         except ValidationError as exc:
@@ -68,7 +94,7 @@ class HTTPProviderEvents(CharmEvents):
 
     Attrs:
         data_provided: Custom event when integration data is provided.
-        data_provided: Custom event when integration data is removed.
+        data_removed: Custom event when integration data is removed.
     """
 
     data_provided = EventSource(HTTPDataProvidedEvent)
@@ -76,7 +102,11 @@ class HTTPProviderEvents(CharmEvents):
 
 
 class _IntegrationInterfaceBaseClass(Object):
-    """Base class for integration interface classes."""
+    """Base class for integration interface classes.
+
+    Attrs:
+        integrations: The list of Relation instances associated with the charm.
+    """
 
     def __init__(self, charm: CharmBase, integration_name: str):
         """Initialize the interface base class.
@@ -104,7 +134,7 @@ class _IntegrationInterfaceBaseClass(Object):
         """Abstract method to handle relation-changed event."""
 
     @property
-    def integrations(self):
+    def integrations(self) -> list[Relation]:
         """The list of Relation instances associated with the charm."""
         return list(self.charm.model.relations[self.integration_name])
 
@@ -116,20 +146,7 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
         on: Custom events that are used to notify the charm using the provider.
     """
 
-    on = HTTPProviderEvents()
-
-    def __init__(
-        self,
-        charm: CharmBase,
-        integration_name: str,
-    ):
-        """Initialize the interface provider class.
-
-        Args:
-            charm: The charm implementing the requirer or provider.
-            integration_name: Name of the integration using the interface.
-        """
-        super().__init__(charm, integration_name)
+    on = HTTPProviderEvents()  # type: ignore
 
     def is_integration_ready(self, integration: Relation) -> bool:
         """Check if integration is ready.
@@ -162,7 +179,7 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
             event.unit,
         )
 
-    def _on_relation_broken(self, event):
+    def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle relation-broken event.
 
         Args:
@@ -174,11 +191,14 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
             event.unit,
         )
 
-    def get_integration_unit_data(self, integration: Relation):
+    def get_integration_unit_data(self, integration: Relation) -> dict[Unit, HTTPRequirerUnitData]:
         """Parse and validate the integration units databag.
 
         Args:
             integration: Relation instance.
+
+        Returns:
+            dict: Parsed relation data for each unit.
         """
         return {
             unit: HTTPRequirerUnitData.from_dict(_load_relation_data(integration.data[unit]))

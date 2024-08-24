@@ -18,7 +18,7 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
 from ops.charm import ActionEvent
 
 import haproxy
-from http_interface import HTTPDataProvidedEvent, HTTPProvider, HTTPDataRemovedEvent
+from http_interface import HTTPDataProvidedEvent, HTTPDataRemovedEvent, HTTPProvider
 from state.config import CharmConfig
 from state.tls import TLSInformation
 from state.validation import validate_config_and_integration
