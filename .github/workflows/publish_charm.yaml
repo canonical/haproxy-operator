@@ -5,10 +5,14 @@ on:
   push:
     branches:
       - main
+      # workflow runs on main and 2.8/main are mutually exclusive.
+      # This will be replaced by 2.8/main once we finished moving the 
+      # legacy haproxy code to this repo.
+      # - 2.8/main 
 
 jobs:
   publish-to-edge:
     uses: canonical/operator-workflows/.github/workflows/publish_charm.yaml@main
     secrets: inherit
     with:
-      channel: latest/edge
+      channel: 2.8/edge
