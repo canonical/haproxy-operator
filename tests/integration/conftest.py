@@ -76,3 +76,11 @@ async def configured_application_with_tls_fixture(
         status="active",
     )
     return application
+
+
+@pytest_asyncio.fixture(scope="module", name="http_requirer")
+async def http_requirer_fixture(model: Model) -> Application:
+    """Deploy pollen."""
+    application = await model.deploy("pollen", channel="edge")
+    await model.wait_for_idle(apps=[application.name], status="active")
+    return application
