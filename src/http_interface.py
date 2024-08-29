@@ -13,6 +13,7 @@ from ops.charm import CharmBase, CharmEvents, RelationEvent
 from ops.framework import EventSource, Object
 from ops.model import ModelError, Relation, RelationDataContent, Unit, Application
 from pydantic import BaseModel, ValidationError, model_validator, IPvAnyAddress
+from dataclasses import dataclass
 
 logger = logging.getLogger()
 SERVICES_CONFIGURATION_KEY = "services"
@@ -121,6 +122,7 @@ class HTTPRequirerUnitData(BaseModel):
             raise DataValidationError(msg) from exc
 
 
+@dataclass(frozen=True)
 class HTTPRequierApplicationData:
     """HTTP interface requirer unit data.
 
@@ -177,7 +179,11 @@ class HTTPRequierApplicationData:
             logger.error("hostname/port configuration is missing on some units: %r", units_data)
             raise DataValidationError("hostname/port configuration is missing on some units.")
 
-        return cls(single_service_configuration=units_data, relation_driven_configuration=None)
+        return cls(
+            single_service_configuration=units_data,
+            relation_driven_configuration=None,
+            default_service=None,
+        )
 
 
 class HTTPDataProvidedEvent(RelationEvent):
