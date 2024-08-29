@@ -13,7 +13,7 @@ import logging
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Template
-
+from enum import StrEnum
 from http_interface import HTTPProvider
 from state.config import CharmConfig
 
@@ -39,6 +39,20 @@ HAPROXY_DH_PARAM = (
 )
 HAPROXY_DHCONFIG = Path(HAPROXY_CONFIG_DIR / "ffdhe2048.txt")
 HAPROXY_SERVICE = "haproxy"
+
+
+class HTTPProxyMode(StrEnum):
+    """StrEnum of possible http_route types.
+
+    Attrs:
+        HTTP: http.
+        HTTPS: https.
+    """
+
+    SINGLE_SERVICE_PROXY_MODE = "single-service"
+    RELATION_DRIVEN_PROXY_MODE = "relation-driven"
+    NO_PROXY = "no-proxy"
+
 
 logger = logging.getLogger()
 
