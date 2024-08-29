@@ -10,7 +10,7 @@ from pathlib import Path
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Template
-from enum import StrEnum
+
 from http_interface import HTTPProvider
 from state.config import CharmConfig
 
@@ -33,20 +33,6 @@ HAPROXY_DH_PARAM = (
 )
 HAPROXY_DHCONFIG = Path(HAPROXY_CONFIG_DIR / "ffdhe2048.txt")
 HAPROXY_SERVICE = "haproxy"
-
-
-class HTTPProxyMode(StrEnum):
-    """StrEnum of possible http_route types.
-
-    Attrs:
-        HTTP: http.
-        HTTPS: https.
-    """
-
-    SINGLE_SERVICE_PROXY_MODE = "single-service"
-    RELATION_DRIVEN_PROXY_MODE = "relation-driven"
-    NO_PROXY = "no-proxy"
-
 
 logger = logging.getLogger()
 
@@ -116,29 +102,23 @@ class HAProxyService:
                 file.read(), keep_trailing_newline=True, trim_blocks=True, lstrip_blocks=True
             )
 
-        requirers_application_data = {
-            integration.app: http_provider.get_requirer_application_data(integration)
+        http_integration_unit_data = {
+            integration.app: {
+                f"{unit.name.replace('/', '-')}-{unit_data.port}": unit_data
+                for unit, unit_data in http_provider.get_integration_unit_data(integration).items()
+            }
             for integration in http_provider.integrations
         }
+        reverseproxy_backend_active = any(
+            integration_data for integration_data in http_integration_unit_data.values()
+        )
 
-        if not http_provider.integrations:
-            proxy_mode = HTTPProxyMode.NO_PROXY
-        else:
-            proxy_mode = (
-                HTTPProxyMode.RELATION_DRIVEN_PROXY_MODE
-                if any(
-                    data.relation_driven_configuration is not None
-                    for data in requirers_application_data.values()
-                )
-                else HTTPProxyMode.SINGLE_SERVICE_PROXY_MODE
-            )
-
-        logger.info("requirers data dict: %r", requirers_application_data)
-        logger.info("Proxy mode: %r", proxy_mode)
+        logger.info("unit data dict: %r", http_integration_unit_data)
+        logger.info("Any active backend we need to render: %r", reverseproxy_backend_active)
 
         rendered = template.render(
             config_global_max_connection=config.global_max_connection,
-            requirers_application_data=requirers_application_data,
-            proxy_mode=proxy_mode,
+            http_integration_unit_data=http_integration_unit_data,
+            reverseproxy_backend_active=reverseproxy_backend_active,
         )
         self._render_file(HAPROXY_CONFIG, rendered, 0o644)
