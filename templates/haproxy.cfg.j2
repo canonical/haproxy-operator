@@ -32,14 +32,14 @@ defaults
     timeout connect 5000
     timeout server 50000
 
-{% if proxy-mode == 'no-proxy' %}
+{% if proxy_mode == 'no-proxy' %}
 frontend default
     bind :80
     default_backend default 
 
 backend default
     http-request return status 200 content-type "text/plain" string "Default page for the haproxy-operator charm"
-{% elif proxy-mode == 'single-service' %}
+{% elif proxy_mode == 'single-service' %}
 frontend haproxy
     bind :80
     {% for application in requirers_application_data.keys() %}
@@ -48,16 +48,17 @@ frontend haproxy
 
 {% for application, application_data in requirers_application_data.items() %}
 backend {{ application.name }}
-{% for unit, unit_data in units_data.items() %}
+{% for unit, unit_data in application_data.single_service_configuration.items() %}
     server {{ unit }} {{ unit_data.hostname }}:{{ unit_data.port }}
 {% endfor %}
 {% endfor %}
-{% elif proxy-mode == 'relation-driven' %}
+{% elif proxy_mode == 'relation-driven' %}
 frontend haproxy
     bind :80 
 
 {% for application, application_data in requirers_application_data.items() %}
 {% for service_key, service in application_data.relation_driven_configuration %}
 backend {{ service_key }}
+{% endfor %}
 {% endfor %}
 {% endif %}
