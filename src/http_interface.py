@@ -121,7 +121,14 @@ class HTTPRequirerUnitData(BaseModel):
             raise DataValidationError(msg) from exc
 
 
-class HTTPRequierApplicationData(BaseModel):
+class HTTPRequierApplicationData:
+    """HTTP interface requirer unit data.
+
+    Attrs:
+        hostname: Hostname at which the unit is reachable.
+        port: Port on which the unit is listening.
+    """
+
     single_service_configuration: typing.Optional[dict[Unit, HTTPRequirerUnitData]]
     relation_driven_configuration: typing.Optional[dict[str, list[HTTPServiceDefinition]]]
     default_service: typing.Optional[str]
@@ -171,11 +178,6 @@ class HTTPRequierApplicationData(BaseModel):
             raise DataValidationError("hostname/port configuration is missing on some units.")
 
         return cls(single_service_configuration=units_data, relation_driven_configuration=None)
-
-    @model_validator(mode="after")
-    def validate_default_service(self) -> Self:
-        assert self.relation_driven_configuration is not None and self.default_service is None
-        return Self
 
 
 class HTTPDataProvidedEvent(RelationEvent):
