@@ -257,7 +257,7 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
             False: If data validation failed on integration unit data.
         """
         try:
-            self.get_integration_unit_data(integration)
+            self.get_requirer_application_data(integration)
         except DataValidationError:
             logger.exception("Data validation failed for unit data.")
             return False
