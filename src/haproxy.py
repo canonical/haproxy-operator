@@ -104,8 +104,36 @@ class HAProxyService:
             http_provider: The http interface provider.
         """
         with open("templates/haproxy.cfg.j2", "r", encoding="utf-8") as file:
-            template = Template(file.read(), keep_trailing_newline=True)
-        rendered = template.render(config_global_max_connection=config.global_max_connection)
+            template = Template(
+                file.read(), keep_trailing_newline=True, trim_blocks=True, lstrip_blocks=True
+            )
+
+        # requirers_application_data = {
+        #     integration.app: http_provider.get_requirer_application_data(integration)
+        #     for integration in http_provider.relations
+        # }
+
+        proxy_mode = HTTPProxyMode.NO_PROXY
+        # else:
+        #     proxy_mode = (
+        #         HTTPProxyMode.RELATION_DRIVEN_PROXY_MODE
+        #         if any(
+        #             data.relation_driven_configuration is not None
+        #             for data in requirers_application_data.values()
+        #         )
+        #         else HTTPProxyMode.SINGLE_SERVICE_PROXY_MODE
+        #     )
+        services = http_provider.get_services_definition()
+        logger.info("services: %r", services)
+        if services:
+            proxy_mode = HTTPProxyMode.RELATION_DRIVEN_PROXY_MODE
+
+        logger.info("Proxy mode: %r", proxy_mode)
+        rendered = template.render(
+            config_global_max_connection=config.global_max_connection,
+            services=services,
+            proxy_mode=proxy_mode,
+        )
         render_file(HAPROXY_CONFIG, rendered, 0o644)
 
     def _reload_haproxy_service(self) -> None:

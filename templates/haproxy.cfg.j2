@@ -39,26 +39,27 @@ frontend default
 
 backend default
     http-request return status 200 content-type "text/plain" string "Default page for the haproxy-operator charm"
-{% elif proxy_mode == 'single-service' %}
-frontend haproxy
-    bind :80
-    {% for application in requirers_application_data.keys() %}
-    use_backend {{ application.name }}
+{% else %}
+
+{% for service_name, service_config in services.items() %}
+frontend haproxy-{{ service_config.service_port }}
+    bind {{ service_config.service_ip }}:{{service_config.service_port}}
+    default_backend {{ service_name }}
+    {% for option in service_config.service_options %}
+    {{ option }}
     {% endfor %}
 
-{% for application, application_data in requirers_application_data.items() %}
-backend {{ application.name }}
-{% for unit, unit_data in application_data.single_service_configuration.items() %}
-    server {{ unit }} {{ unit_data.hostname }}:{{ unit_data.port }}
-{% endfor %}
-{% endfor %}
-{% elif proxy_mode == 'relation-driven' %}
-frontend haproxy
-    bind :80 
+backend {{ service_name }}
+{% for server_name, server_ip, server_port, server_options in service_config.servers +%}
+    server {{ server_name }} {{ server_ip }}:{{ server_port }} {%for option in server_options%}{{option}} {%endfor%}
+{% endfor %}    
 
-{% for application, application_data in requirers_application_data.items() %}
-{% for service_key, service in application_data.relation_driven_configuration %}
-backend {{ service_key }}
+{% for backend in service_config.backends %}
+backend {{ backend.backend_name }}
+{% for server_name, server_ip, server_port, server_options in backend.servers +%}
+    server {{ server_name }} {{ server_ip }}:{{ server_port }} {%for option in server_options%}{{option}} {%endfor%}
+{% endfor %}
 {% endfor %}
 {% endfor %}
 {% endif %}
+
