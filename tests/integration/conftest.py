@@ -19,6 +19,7 @@ TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 GATEWAY_CLASS_CONFIG = "cilium"
 
 
+
 @pytest_asyncio.fixture(scope="module", name="model")
 async def model_fixture(ops_test: OpsTest) -> Model:
     """The current test model."""
