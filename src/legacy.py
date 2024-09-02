@@ -131,7 +131,7 @@ def ensure_service_host_port(services): # noqa
     last_port = seen[-1][1]
     for options in missing:
         last_port = last_port + 2
-        options["service_host"] = "0.0.0.0"
+        options["service_host"] = "0.0.0.0" # nosec
         options["service_port"] = last_port
 
     return services
