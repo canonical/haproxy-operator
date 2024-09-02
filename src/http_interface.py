@@ -5,67 +5,16 @@
 
 import json
 import logging
-import typing
-import yaml
-from typing_extensions import Self
-from ops import RelationBrokenEvent, RelationChangedEvent, RelationData
+
+from ops import RelationBrokenEvent, RelationChangedEvent
 from ops.charm import CharmBase, CharmEvents, RelationEvent
 from ops.framework import EventSource, Object
 from ops.model import ModelError, Relation, RelationDataContent
-from pydantic import BaseModel, ValidationError, model_validator
-from operator import itemgetter
+
 import legacy
 
 logger = logging.getLogger()
 SERVICES_CONFIGURATION_KEY = "services"
-
-
-class DataValidationError(Exception):
-    """Raised when data validation fails when parsing relation data."""
-
-
-class HTTPRequirerUnitData(BaseModel):
-    """HTTP interface requirer unit data.
-
-    Attrs:
-        hostname: Hostname at which the unit is reachable.
-        port: Port on which the unit is listening.
-    """
-
-    hostname: typing.Optional[str] = None
-    port: typing.Optional[int] = None
-
-    @model_validator(mode="after")
-    def validate_unit_data(self) -> Self:
-        """_summary_
-
-        Returns:
-            Self: _description_
-        """
-        assert isinstance(self.hostname, str), type(self.hostname)
-        assert isinstance(self.port, int), type(self.port)
-        assert 0 < self.port < 65535, "port out of TCP range"
-        return self
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "HTTPRequirerUnitData":
-        """Parse integration databag into data class.
-
-        Args:
-            data: Integration databag.
-
-        Raises:
-            DataValidationError: When data validation failed.
-
-        Returns:
-            HTTPRequirerUnitData: Instance of the parsed requirer unit data class.
-        """
-        try:
-            return cls.model_validate_json(json.dumps(data))
-        except ValidationError as exc:
-            msg = f"failed to validate databag: {data}"
-            logger.error(msg, exc_info=True)
-            raise DataValidationError(msg) from exc
 
 
 class HTTPDataProvidedEvent(RelationEvent):
@@ -141,7 +90,6 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
         Args:
             event: relation-changed event.
         """
-
         self.on.data_provided.emit(
             event.relation,
             event.app,
@@ -160,17 +108,18 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
             event.unit,
         )
 
-    def get_services_definition(self):
-        # Augment services_dict with service definitions from relation data.
+    def get_services_definition(self) -> dict:
+        """Augment services_dict with service definitions from relation data.
+
+        Returns:
+            A dictionary containing the definition of all services.
+        """
         relation_data = [
             (unit, _load_relation_data(relation.data[unit]))
             for relation in self.relations
             for unit in relation.units
         ]
         return legacy.get_services_from_relation_data(relation_data)
-
-    def get_unit_hostname_port(self, relation: RelationData):
-        return
 
 
 def _load_relation_data(relation_data_content: RelationDataContent) -> dict:
