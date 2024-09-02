@@ -32,7 +32,7 @@ defaults
     timeout connect 5000
     timeout server 50000
 
-{% if proxy_mode == 'no-proxy' %}
+{% if not services %}
 frontend default
     bind :80
     default_backend default 

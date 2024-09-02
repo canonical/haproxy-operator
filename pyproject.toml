@@ -32,6 +32,7 @@ docstring-convention = "google"
 [tool.isort]
 line_length = 99
 profile = "black"
+skip = ["src/legacy.py"]
 
 [tool.mypy]
 check_untyped_defs = true
