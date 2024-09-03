@@ -72,6 +72,7 @@ class HAProxyService:
 
         Args:
             config: charm config
+            http_provider: The http interface provider.
         """
         self._render_haproxy_config(config, http_provider)
         self._reload_haproxy_service()
