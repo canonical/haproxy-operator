@@ -8,9 +8,7 @@ from juju.application import Application
 
 
 @pytest.mark.abort_on_fail
-async def test_reverseproxy_relation_relation_driven_proxying(
-    application: Application, any_charm_requirer: Application
-):
+async def test_reverseproxy_relation(application: Application, any_charm_requirer: Application):
     """Deploy the charm with valid config and tls integration.
 
     Assert on valid output of get-certificate.
@@ -27,19 +25,6 @@ async def test_reverseproxy_relation_relation_driven_proxying(
         apps=[application.name, any_charm_requirer.name],
         idle_period=30,
         status="active",
-    )
-
-
-@pytest.mark.abort_on_fail
-async def test_reverseproxy_relation_single_service_proxying(
-    application: Application, any_charm_requirer: Application
-):
-    """Deploy the charm with valid config and tls integration.
-
-    Assert on valid output of get-certificate.
-    """
-    await application.model.add_relation(
-        f"{application.name}:reverseproxy", any_charm_requirer.name
     )
     action = await any_charm_requirer.units[0].run_action(
         "rpc",

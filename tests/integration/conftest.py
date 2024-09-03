@@ -143,8 +143,10 @@ async def any_charm_src_fixture() -> dict[str, str]:
     }
 
 
-@pytest_asyncio.fixture(scope="module", name="any_charm_requirer")
-async def any_charm_requirer_fixture(model: Model, any_charm_src: dict[str, str]) -> Application:
+@pytest_asyncio.fixture(scope="function", name="any_charm_requirer")
+async def any_charm_requirer_fixture(
+    model: Model, any_charm_src: dict[str, str]
+) -> typing.AsyncGenerator[Application, None]:
     """Deploy any-charm and configure it to serve as a requirer for the http interface."""
     application = await model.deploy(
         "any-charm",
@@ -153,4 +155,4 @@ async def any_charm_requirer_fixture(model: Model, any_charm_src: dict[str, str]
         config={"src-overwrite": json.dumps(any_charm_src)},
     )
     await model.wait_for_idle(apps=[application.name], status="active")
-    return application
+    yield application
