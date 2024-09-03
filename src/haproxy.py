@@ -67,7 +67,11 @@ class HAProxyService:
             raise RuntimeError("HAProxy service is not running.")
 
     def reconcile(self, config: CharmConfig) -> None:
-        """Render the haproxy config and restart the haproxy service."""
+        """Render the haproxy config and restart the haproxy service.
+
+        Args:
+            config: charm config
+        """
         self._render_haproxy_config(config)
         self._restart_haproxy_service()
 
@@ -99,7 +103,11 @@ class HAProxyService:
         os.chown(path, uid=u.pw_uid, gid=u.pw_gid)
 
     def _render_haproxy_config(self, config: CharmConfig) -> None:
-        """Render the haproxy configuration file."""
+        """Render the haproxy configuration file.
+
+        Args:
+            config: charm config
+        """
         with open("templates/haproxy.cfg.j2", "r", encoding="utf-8") as file:
             template = Template(file.read())
         rendered = template.render(
