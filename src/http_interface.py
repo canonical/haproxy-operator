@@ -6,7 +6,7 @@
 import json
 import logging
 
-from ops import RelationBrokenEvent, RelationChangedEvent
+from ops import RelationBrokenEvent, RelationChangedEvent, RelationJoinedEvent
 from ops.charm import CharmBase, CharmEvents, RelationEvent
 from ops.framework import EventSource, Object
 from ops.model import ModelError, Relation, RelationDataContent
@@ -58,10 +58,13 @@ class _IntegrationInterfaceBaseClass(Object):
         self.relation_name = relation_name
 
         observe(charm.on[relation_name].relation_created, self._on_relation_changed)
-        observe(charm.on[relation_name].relation_joined, self._on_relation_changed)
+        observe(charm.on[relation_name].relation_joined, self._on_relation_joined)
         observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
         observe(charm.on[relation_name].relation_departed, self._on_relation_changed)
         observe(charm.on[relation_name].relation_broken, self._on_relation_broken)
+
+    def _on_relation_joined(self, _: RelationJoinedEvent) -> None:
+        """Abstract method to handle relation-joined event."""
 
     def _on_relation_changed(self, _: RelationChangedEvent) -> None:
         """Abstract method to handle relation-changed event."""
@@ -83,6 +86,18 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
     """
 
     on = HTTPProviderEvents()  # type: ignore
+
+    def _on_relation_joined(self, event: RelationJoinedEvent) -> None:
+        """Handle relation-changed event.
+
+        Args:
+            event: relation-changed event.
+        """
+        event.relation.data[self.charm.unit].update(
+            {
+                "public-address": self.charm.bind_address,  # type: ignore
+            }
+        )
 
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle relation-changed event.
