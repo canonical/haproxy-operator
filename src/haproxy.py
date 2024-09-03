@@ -15,6 +15,7 @@ from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Template
 
 from http_interface import HTTPProvider
+from legacy import generate_service_config
 from state.config import CharmConfig
 
 APT_PACKAGE_VERSION = "2.8.5-1ubuntu3"
@@ -95,11 +96,10 @@ class HAProxyService:
                 file.read(), keep_trailing_newline=True, trim_blocks=True, lstrip_blocks=True
             )
 
-        services = http_provider.get_services_definition()
-        logger.info("services: %r", services)
+        services_dict = http_provider.get_services_definition()
         rendered = template.render(
             config_global_max_connection=config.global_max_connection,
-            services=services,
+            services=generate_service_config(config.haproxy_frontend_prefix, services_dict),
         )
         render_file(HAPROXY_CONFIG, rendered, 0o644)
 
