@@ -18,7 +18,10 @@ HAPROXY_CONFIG_DIR = Path("/etc/haproxy")
 HAPROXY_CONFIG = Path(HAPROXY_CONFIG_DIR / "haproxy.cfg")
 HAPROXY_USER = "haproxy"
 # Configuration used to parameterize Diffie-Hellman key exchange.
-# Source: https://ssl-config.mozilla.org/ffdhe2048.txt.
+# The base64 content of the file is hard-coded here to avoid having to fetch
+# the file from https://ssl-config.mozilla.org/ffdhe2048.txt as suggested by Mozilla.
+# As the size is 2048, it's safe to use the standard FFDHE parameters.
+# They are more compatible, and there aren't concerns about their security.
 HAPROXY_DH_PARAM = (
     "-----BEGIN DH PARAMETERS-----\n"
     "MIIBCAKCAQEA//////////+t+FRYortKmq/cViAnPTzx2LnFg84tNpWp4TZBFGQz\n"
