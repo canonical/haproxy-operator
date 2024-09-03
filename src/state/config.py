@@ -24,9 +24,11 @@ class CharmConfig:
 
     Attributes:
         global_max_connection: The configured gateway class.
+        haproxy_frontend_prefix: The prefix for haproxy frontend stanzas
     """
 
     global_max_connection: int = Field(gt=0)
+    haproxy_frontend_prefix: str = Field()
 
     @classmethod
     def from_charm(cls, charm: ops.CharmBase) -> "CharmConfig":
@@ -46,6 +48,7 @@ class CharmConfig:
         try:
             return cls(
                 global_max_connection=global_max_connection,
+                haproxy_frontend_prefix=charm.unit.name.replace("/", "-"),
             )
         except ValidationError as exc:
             error_field_str = ",".join(f"{field}" for field in get_invalid_config_fields(exc))

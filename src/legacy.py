@@ -14,6 +14,49 @@ import yaml
 from operator import itemgetter
 import os
 import logging
+from itertools import tee
+
+default_haproxy_lib_dir = "/var/lib/haproxy"
+dupe_options = [
+    "mode tcp",
+    "option tcplog",
+    "mode http",
+    "option httplog",
+]
+
+frontend_only_options = [
+    "acl",
+    "backlog",
+    "bind",
+    "capture cookie",
+    "capture request header",
+    "capture response header",
+    "clitimeout",
+    "default_backend",
+    "http-request",
+    "maxconn",
+    "monitor fail",
+    "monitor-net",
+    "monitor-uri",
+    "option accept-invalid-http-request",
+    "option clitcpka",
+    "option contstats",
+    "option dontlog-normal",
+    "option dontlognull",
+    "option http-use-proxy-header",
+    "option log-separate-errors",
+    "option logasap",
+    "option socket-stats",
+    "option tcp-smart-accept",
+    "rate-limit sessions",
+    "redirect",
+    "tcp-request content accept",
+    "tcp-request content reject",
+    "tcp-request inspect-delay",
+    "timeout client",
+    "timeout clitimeout",
+    "use_backend",
+]
 
 logger = logging.getLogger()
 default_haproxy_service_config_dir = "/var/run/haproxy"
@@ -150,7 +193,12 @@ def _add_items_if_missing(target, additions):
 
 
 def get_services_from_relation_data(relation_data): # noqa
-    services_dict = parse_services_yaml({}, DEFAULT_SERVICE_DEFINITION)
+    services_dict = {}
+    # Added because we won't support configuring yaml services via config options
+    # If "services" key not present across all unit, disable default service
+    if all("services" not in relation_info for _, relation_info in relation_data):
+        services_dict = parse_services_yaml({}, DEFAULT_SERVICE_DEFINITION)
+    
     # Handle relations which specify their own services clauses
     for unit, relation_info in relation_data:
         if "services" in relation_info:
@@ -243,3 +291,151 @@ def get_services_from_relation_data(relation_data): # noqa
     del services_dict[None]
     services_dict = ensure_service_host_port(services_dict)
     return services_dict
+
+
+def _append_backend(service_config, name, options, errorfiles, server_entries): # noqa
+    """Append a new backend stanza to the given service_config.
+
+    A backend stanza consists in a 'backend <name>' line followed by option
+    lines, errorfile lines and server line.
+    """
+    service_config.append("")
+    service_config.append("backend %s" % (name,))
+    service_config.extend("    %s" % option.strip() for option in options)
+    for status, path in errorfiles:
+        service_config.append("    errorfile %s %s" % (status, path))
+    if isinstance(server_entries, (list, tuple)):
+        for i, (server_name, server_ip, server_port,
+                server_options) in enumerate(server_entries):
+            server_line = "    server %s %s:%s" % \
+                (server_name, server_ip, server_port)
+            if server_options is not None:
+                if isinstance(server_options, str):
+                    server_line += " " + server_options
+                else:
+                    server_line += " " + " ".join(server_options)
+            server_line = server_line.format(i=i)
+            service_config.append(server_line)
+        
+
+def create_listen_stanza(haproxy_frontend_prefix: str, service_name=None, service_ip=None,
+                         service_port=None, service_options=None,
+                         server_entries=None, service_errorfiles=None,
+                         service_crts=None, service_backends=None): # noqa
+    if service_name is None or service_ip is None or service_port is None:
+        return None
+    fe_options = []
+    be_options = []
+    if service_options is not None:
+        # For options that should be duplicated in both frontend and backend,
+        # copy them to both.
+        for o in dupe_options:
+            if any(map(o.strip().startswith, service_options)):
+                fe_options.append(o)
+                be_options.append(o)
+        # Filter provided service options into frontend-only and backend-only.
+        results = list(zip(
+            (fe_options, be_options),
+            (True, False),
+            tee((o, any(map(o.strip().startswith,
+                            frontend_only_options)))
+                for o in service_options)))
+        for out, cond, result in results:
+            out.extend(option for option, match in result
+                       if match is cond and option not in out)
+    service_config = []
+    service_config.append("frontend %s-%s" % (haproxy_frontend_prefix, service_port))
+    bind_stanza = "    bind %s:%s" % (service_ip, service_port)
+    if service_crts:
+        # Enable SSL termination for this frontend, using the given
+        # certificates.
+        bind_stanza += " ssl"
+        if len(service_crts) == 1 and os.path.isdir(service_crts[0]):
+            logger.info("Service configured to use '%s' for certificates in haproxy.cfg." % service_crts[0])
+            path = service_crts[0]
+            bind_stanza += " crt %s no-sslv3" % path
+        else:
+            for i, crt in enumerate(service_crts):
+                if crt == "DEFAULT":
+                    path = os.path.join(default_haproxy_lib_dir, "default.pem")
+                else:
+                    path = os.path.join(default_haproxy_lib_dir,
+                                        "service_%s" % service_name, "%d.pem" % i)
+                # SSLv3 is always off, since it's vulnerable to POODLE attacks
+                bind_stanza += " crt %s no-sslv3" % path
+    service_config.append(bind_stanza)
+    service_config.append("    default_backend %s" % (service_name,))
+    service_config.extend("    %s" % service_option.strip()
+                          for service_option in fe_options)
+
+    # For now errorfiles are common for all backends, in the future we
+    # might offer support for per-backend error files.
+    backend_errorfiles = []  # List of (status, path) tuples
+    if service_errorfiles is not None:
+        for errorfile in service_errorfiles:
+            path = os.path.join(default_haproxy_lib_dir,
+                                "service_%s" % service_name,
+                                "%s.http" % errorfile["http_status"])
+            backend_errorfiles.append((errorfile["http_status"], path))
+
+    # Default backend
+    _append_backend(
+        service_config, service_name, be_options, backend_errorfiles,
+        server_entries)
+
+    # Extra backends
+    if service_backends is not None:
+        for service_backend in service_backends:
+            _append_backend(
+                service_config, service_backend["backend_name"],
+                be_options, backend_errorfiles, service_backend["servers"])
+
+    return '\n'.join(service_config)
+
+
+def generate_service_config(haproxy_frontend_prefix: str, services_dict): # noqa
+    generated_config = []
+    # Construct the new haproxy.cfg file
+    for service_key, service_config in services_dict.items():
+        service_name = service_config["service_name"]
+        server_entries = service_config.get('servers')
+        backends = service_config.get('backends', [])
+
+        errorfiles = service_config.get('errorfiles', [])
+        # TODO: write errorfiles to fs in haproxy.py
+        # for errorfile in errorfiles:
+        #     path = get_service_lib_path(service_name)
+        #     full_path = os.path.join(
+        #         path, "%s.http" % errorfile["http_status"])
+        #     with open(full_path, 'wb') as f:
+        #         f.write(base64.b64decode(errorfile["content"]))
+
+        # Write to disk the content of the given SSL certificates
+        # or use a single path element to search for them.
+        
+        crts = service_config.get('crts', [])
+        # TODO: write passed crts to fs in haproxy.py
+        # if len(crts) == 1 and os.path.isdir(crts[0]):
+        #     logger.info("Service configured to use path to look for certificates in haproxy.cfg.")
+        # else:
+        #     for i, crt in enumerate(crts):
+        #         if crt == "DEFAULT" or crt == "EXTERNAL":
+        #             continue
+        #         content = base64.b64decode(crt)
+        #         path = get_service_lib_path(service_name)
+        #         full_path = os.path.join(path, "%d.pem" % i)
+        #         write_ssl_pem(full_path, content)
+        #         with open(full_path, 'w') as f:
+        #             f.write(content.decode('utf-8'))
+        
+        logger.info("service options: %r", service_config.get('service_options', []))
+        generated_config.append(create_listen_stanza(
+                haproxy_frontend_prefix,
+                service_name,
+                service_config['service_host'],
+                service_config['service_port'],
+                service_config.get('service_options', []),
+                server_entries, errorfiles, crts, backends
+            )
+        )
+    return generated_config
