@@ -37,7 +37,7 @@ class HAProxyCharm(ops.CharmBase):
         """Install the haproxy package."""
         self.haproxy_service.install()
 
-    @validate_config_and_integration
+    @validate_config_and_integration(defer=False)
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
         config = CharmConfig.from_charm(self)
