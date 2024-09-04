@@ -15,6 +15,7 @@ from jinja2 import Template
 from http_interface import HTTPProvider
 from legacy import generate_service_config
 from state.config import CharmConfig
+from state.ingress import IngressRequirersInformation
 
 APT_PACKAGE_VERSION = "2.8.5-1ubuntu3"
 APT_PACKAGE_NAME = "haproxy"
@@ -65,14 +66,14 @@ class HAProxyService:
         if not self.is_active():
             raise RuntimeError("HAProxy service is not running.")
 
-    def reconcile(self, config: CharmConfig, http_provider: HTTPProvider) -> None:
+    def reconcile(self, config: CharmConfig, http_provider: HTTPProvider, ingress_requirers_information: IngressRequirersInformation) -> None:
         """Render the haproxy config and restart the haproxy service.
 
         Args:
             config: charm config
             http_provider: The http interface provider.
         """
-        self._render_haproxy_config(config, http_provider)
+        self._render_haproxy_config(config, http_provider, ingress_requirers_information)
         self._restart_haproxy_service()
 
     def is_active(self) -> bool:
@@ -98,7 +99,7 @@ class HAProxyService:
         # Set the correct ownership for the file.
         os.chown(path, uid=u.pw_uid, gid=u.pw_gid)
 
-    def _render_haproxy_config(self, config: CharmConfig, http_provider: HTTPProvider) -> None:
+    def _render_haproxy_config(self, config: CharmConfig, http_provider: HTTPProvider, ingress_requirers_information: IngressRequirersInformation) -> None:
         """Render the haproxy configuration file.
 
         Args:
