@@ -118,4 +118,5 @@ class HAProxyService:
 
     def _restart_haproxy_service(self) -> None:
         """Restart the haporxy service."""
+        systemd._systemctl("reset-failed", HAPROXY_SERVICE)  # pylint: disable=protected-access
         systemd.service_restart(HAPROXY_SERVICE)
