@@ -18,17 +18,24 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateInvalidatedEvent,
     TLSCertificatesRequiresV3,
 )
+from charms.traefik_k8s.v2.ingress import (
+    IngressPerAppDataProvidedEvent,
+    IngressPerAppDataRemovedEvent,
+    IngressPerAppProvider,
+)
 from ops.charm import ActionEvent, RelationJoinedEvent
 
 from haproxy import HAProxyService
 from http_interface import HTTPBackendAvailableEvent, HTTPBackendRemovedEvent, HTTPProvider
 from state.config import CharmConfig
+from state.ingress import IngressRequirersInformation
 from state.tls import TLSInformation
 from state.validation import validate_config_and_tls
 from tls_relation import TLSRelationService, get_hostname_from_cert
 
 logger = logging.getLogger(__name__)
 
+INGRESS_RELATION = "ingress"
 TLS_CERT_RELATION = "certificates"
 REVERSE_PROXY_INTEGRATION = "reverseproxy"
 
@@ -46,7 +53,7 @@ class HAProxyCharm(ops.CharmBase):
         self.haproxy_service = HAProxyService()
         self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT_RELATION)
         self._tls = TLSRelationService(self.model, self.certificates)
-
+        self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
         self.http_provider = HTTPProvider(self, REVERSE_PROXY_INTEGRATION)
 
         self.framework.observe(self.on.install, self._on_install)
@@ -74,6 +81,8 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(
             self.http_provider.on.http_backend_removed, self._on_http_backend_removed
         )
+        self.framework.observe(self._ingress_provider.on.data_provided, self._on_data_provided)
+        self.framework.observe(self._ingress_provider.on.data_removed, self._on_data_removed)
 
     def _on_install(self, _: typing.Any) -> None:
         """Install the haproxy package."""
@@ -172,7 +181,12 @@ class HAProxyCharm(ops.CharmBase):
     def _reconcile(self) -> None:
         """Render the haproxy config and restart the service."""
         config = CharmConfig.from_charm(self)
-        self.haproxy_service.reconcile(config, self.http_provider.get_services())
+        ingress_requirers_information = IngressRequirersInformation.from_provider(
+            self._ingress_provider
+        )
+        self.haproxy_service.reconcile(
+            config, self.http_provider.services, ingress_requirers_information
+        )
         self.unit.status = ops.ActiveStatus()
 
     def _reconcile_certificates(self) -> None:
@@ -193,6 +207,16 @@ class HAProxyCharm(ops.CharmBase):
             logger.info("Certificate not in provider's relation data, creating csr.")
             self._tls.generate_private_key(tls_information.external_hostname)
             self._tls.request_certificate(tls_information.external_hostname)
+
+    @validate_config_and_integration(defer=False)
+    def _on_data_provided(self, _: IngressPerAppDataProvidedEvent) -> None:
+        """Handle the data-provided event."""
+        self._reconcile()
+
+    @validate_config_and_integration(defer=False)
+    def _on_data_removed(self, _: IngressPerAppDataRemovedEvent) -> None:
+        """Handle the data-removed event."""
+        self._reconcile()
 
 
 if __name__ == "__main__":  # pragma: nocover
