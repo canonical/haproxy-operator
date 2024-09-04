@@ -52,6 +52,10 @@ requires:
   reverseproxy:
     interface: http
 
+provides:
+  ingress:
+      interface: ingress
+
 config:
   options:
     external-hostname:
