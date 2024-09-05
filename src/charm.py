@@ -76,7 +76,7 @@ class HAProxyCharm(ops.CharmBase):
             self._on_all_certificate_invalidated,
         )
         self.framework.observe(
-            self.http_provider.on.http_backend_available, self._on_http_backend_removed
+            self.http_provider.on.http_backend_available, self._on_http_backend_available
         )
         self.framework.observe(
             self.http_provider.on.http_backend_removed, self._on_http_backend_removed
@@ -212,7 +212,7 @@ class HAProxyCharm(ops.CharmBase):
             self._tls.generate_private_key(tls_information.external_hostname)
             self._tls.request_certificate(tls_information.external_hostname)
 
-    @validate_config_and_tls(defer=True, block_on_tls_not_ready=True)
+    @validate_config_and_tls(defer=False, block_on_tls_not_ready=True)
     def _on_ingress_data_provided(self, event: IngressPerAppDataProvidedEvent) -> None:
         """Handle the data-provided event.
 
@@ -226,7 +226,7 @@ class HAProxyCharm(ops.CharmBase):
             event.relation, f"http://{self.http_provider.bind_address}/{path_prefix}/"
         )
 
-    @validate_config_and_tls(defer=True, block_on_tls_not_ready=True)
+    @validate_config_and_tls(defer=False, block_on_tls_not_ready=False)
     def _on_ingress_data_removed(self, _: IngressPerAppDataRemovedEvent) -> None:
         """Handle the data-removed event."""
         self._reconcile()
