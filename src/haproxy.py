@@ -14,7 +14,6 @@ from jinja2 import Template
 
 from state.config import CharmConfig
 
-
 APT_PACKAGE_VERSION = "2.8.5-1ubuntu3"
 APT_PACKAGE_NAME = "haproxy"
 HAPROXY_CONFIG_DIR = Path("/etc/haproxy")
