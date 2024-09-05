@@ -12,10 +12,6 @@ from .exception import CharmStateValidationBaseError
 INGRESS_RELATION = "ingress"
 
 
-class IngressIntegrationMissingError(CharmStateValidationBaseError):
-    """Exception raised when ingress integration is not established."""
-
-
 class IngressIntegrationDataValidationError(CharmStateValidationBaseError):
     """Exception raised when ingress integration is not established."""
 
@@ -25,10 +21,12 @@ class HAProxyServer:
     """A component of charm state that represent an ingress requirer unit.
 
     Attrs:
+        server_name: The name of the unit with invalid characters replaced.
         hostname_or_ip: The host or ip address of the requirer unit.
         port: The port that the requirer application wishes to be exposed.
     """
 
+    server_name: str
     hostname_or_ip: str
     port: int
 
@@ -63,16 +61,13 @@ class IngressRequirersInformation:
         """Get TLS information from a charm instance.
 
         Args:
-            charm (ops.CharmBase): The gateway-api-integrator charm.
-            ingress_provider (IngressPerAppProvider): The ingress provider library.
-
+            ingress_provider: The ingress provider library.
 
         Raises:
-            IngressIntegrationMissingError: When integration is not ready.
             IngressIntegrationDataValidationError: When data validation failed.
 
         Returns:
-            HTTPRouteResourceInformation: Information about configured TLS certs.
+            IngressRequirersInformation: Information about ingress requirers.
         """
         backends = []
         for integration in ingress_provider.relations:
@@ -80,10 +75,16 @@ class IngressRequirersInformation:
                 integration_data = ingress_provider.get_data(integration)
                 backend_name = f"{integration_data.app.model}-{integration_data.app.name}"
                 servers = []
-                for unit_data in integration_data.units:
+                for i, unit_data in enumerate(integration_data.units):
                     hostname_or_ip = unit_data.ip if unit_data.ip else unit_data.host
                     port = integration_data.app.port
-                    servers.append(HAProxyServer(hostname_or_ip=hostname_or_ip, port=port))
+                    servers.append(
+                        HAProxyServer(
+                            hostname_or_ip=hostname_or_ip,
+                            port=port,
+                            server_name=f"{backend_name}-{i}",
+                        )
+                    )
                 backends.append(HAProxyBackend(backend_name=backend_name, servers=servers))
             except DataValidationError as exc:
                 raise IngressIntegrationDataValidationError(

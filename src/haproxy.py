@@ -91,7 +91,12 @@ class HAProxyService:
         """
         return systemd.service_running(APT_PACKAGE_NAME)
 
-    def _render_haproxy_config(self, config: CharmConfig, services: list) -> None:
+    def _render_haproxy_config(
+        self,
+        config: CharmConfig,
+        services: list,
+        ingress_requirers_information: IngressRequirersInformation,
+    ) -> None:
         """Render the haproxy configuration file.
 
         Args:
@@ -105,7 +110,7 @@ class HAProxyService:
 
         rendered = template.render(
             config_global_max_connection=config.global_max_connection,
-            services=services,
+            ingress_requirers_information=ingress_requirers_information,
         )
         render_file(HAPROXY_CONFIG, rendered, 0o644)
 
