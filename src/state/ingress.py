@@ -11,6 +11,7 @@ from .exception import CharmStateValidationBaseError
 
 INGRESS_RELATION = "ingress"
 
+
 class IngressIntegrationMissingError(CharmStateValidationBaseError):
     """Exception raised when ingress integration is not established."""
 
@@ -27,8 +28,10 @@ class HAProxyServer:
         hostname_or_ip: The host or ip address of the requirer unit.
         port: The port that the requirer application wishes to be exposed.
     """
+
     hostname_or_ip: str
     port: int
+
 
 @dataclasses.dataclass(frozen=True)
 class HAProxyBackend:
@@ -38,8 +41,10 @@ class HAProxyBackend:
         backend_name: The name of the backend (computed).
         servers: The list of server each corresponding to a requirer unit.
     """
+
     backend_name: str
     servers: list[HAProxyServer]
+
 
 @dataclasses.dataclass(frozen=True)
 class IngressRequirersInformation:
