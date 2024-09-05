@@ -75,8 +75,12 @@ class HAProxyService:
 
         Args:
             config: charm config
-            services_dict: The http interface provider.
+            services_dict: The parsed services dict for reverseproxy.
+            ingress_requirers_information: Information about ingress requirers.
         """
+        assert (
+            not services_dict or not ingress_requirers_information.backends
+        ), "reverseproxy and ingress cannot be both established."
         self._render_haproxy_config(config, services_dict, ingress_requirers_information)
         self._restart_haproxy_service()
 
@@ -112,8 +116,9 @@ class HAProxyService:
         """Render the haproxy configuration file.
 
         Args:
-            config: The charm config.
-            http_provider: The http interface provider.
+            config: charm config
+            services_dict: The parsed services dict for reverseproxy.
+            ingress_requirers_information: Information about ingress requirers.
         """
         with open("templates/haproxy.cfg.j2", "r", encoding="utf-8") as file:
             template = Template(
@@ -123,6 +128,7 @@ class HAProxyService:
         rendered = template.render(
             config_global_max_connection=config.global_max_connection,
             services=generate_service_config(config.haproxy_frontend_prefix, services_dict),
+            ingress_requirers_information=ingress_requirers_information,
         )
         self._render_file(HAPROXY_CONFIG, rendered, 0o644)
         self._restart_haproxy_service()

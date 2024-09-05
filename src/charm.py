@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 INGRESS_RELATION = "ingress"
 TLS_CERT_RELATION = "certificates"
-REVERSE_PROXY_INTEGRATION = "reverseproxy"
+REVERSE_PROXY_RELATION = "reverseproxy"
 
 
 class HAProxyCharm(ops.CharmBase):
@@ -55,7 +55,7 @@ class HAProxyCharm(ops.CharmBase):
         self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT_RELATION)
         self._tls = TLSRelationService(self.model, self.certificates)
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
-        self.http_provider = HTTPProvider(self, REVERSE_PROXY_INTEGRATION)
+        self.http_provider = HTTPProvider(self, REVERSE_PROXY_RELATION)
 
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
