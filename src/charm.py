@@ -234,7 +234,7 @@ class HAProxyCharm(ops.CharmBase):
             self._tls.generate_private_key(tls_information.external_hostname)
             self._tls.request_certificate(tls_information.external_hostname)
 
-    @validate_config_and_tls(defer=True, block_on_tls_not_ready=True)
+    @validate_config_and_tls(defer=False, block_on_tls_not_ready=True)
     def _on_ingress_data_provided(self, event: IngressPerAppDataProvidedEvent) -> None:
         """Handle the data-provided event.
 
