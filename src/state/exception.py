@@ -5,7 +5,3 @@
 
 class CharmStateValidationBaseError(Exception):
     """Exception raised when charm state data validation failed."""
-
-
-class ResourceManagementBaseError(Exception):
-    """Exception raised when managing k8s resources."""
