@@ -15,20 +15,21 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
     TLSCertificatesRequiresV3,
 )
-from ops.charm import ActionEvent
-
-from haproxy import HAProxyService
-from http_interface import HTTPDataProvidedEvent, HTTPDataRemovedEvent, HTTPProvider
-from state.config import CharmConfig
-from state.tls import TLSInformation
-from state.validation import validate_config_and_integration
-from state.ingress import IngressRequirersInformation
-from tls_relation import TLSRelationService
 from charms.traefik_k8s.v2.ingress import (
     IngressPerAppDataProvidedEvent,
     IngressPerAppDataRemovedEvent,
     IngressPerAppProvider,
 )
+from ops.charm import ActionEvent
+
+from haproxy import HAProxyService
+from http_interface import HTTPDataProvidedEvent, HTTPDataRemovedEvent, HTTPProvider
+from state.config import CharmConfig
+from state.ingress import IngressRequirersInformation
+from state.tls import TLSInformation
+from state.validation import validate_config_and_integration
+from tls_relation import TLSRelationService
+
 logger = logging.getLogger(__name__)
 
 INGRESS_RELATION = "ingress"
@@ -129,10 +130,11 @@ class HAProxyCharm(ops.CharmBase):
     def _reconcile(self) -> None:
         """Render the haproxy config and restart the service."""
         config = CharmConfig.from_charm(self)
+        services_dict = self.http_provider.get_services_definition()
         ingress_requirers_information = IngressRequirersInformation.from_provider(
             self._ingress_provider
         )
-        self.haproxy_service.reconcile(config, self.http_provider, ingress_requirers_information)
+        self.haproxy_service.reconcile(config, services_dict, ingress_requirers_information)
         self.unit.status = ops.ActiveStatus()
 
     def _reconcile_certificates(self) -> None:
@@ -142,7 +144,6 @@ class HAProxyCharm(ops.CharmBase):
             self._tls.generate_private_key(tls_information.external_hostname)
             self._tls.request_certificate(tls_information.external_hostname)
 
-    
     @validate_config_and_integration(defer=False)
     def _on_data_provided(self, _: IngressPerAppDataProvidedEvent) -> None:
         """Handle the data-provided event."""
@@ -152,6 +153,7 @@ class HAProxyCharm(ops.CharmBase):
     def _on_data_removed(self, _: IngressPerAppDataRemovedEvent) -> None:
         """Handle the data-removed event."""
         self._reconcile()
+
 
 if __name__ == "__main__":  # pragma: nocover
     ops.main.main(HAProxyCharm)

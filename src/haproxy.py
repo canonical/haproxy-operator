@@ -12,7 +12,6 @@ from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Template
 
-from http_interface import HTTPProvider
 from legacy import generate_service_config
 from state.config import CharmConfig
 from state.ingress import IngressRequirersInformation
@@ -66,14 +65,19 @@ class HAProxyService:
         if not self.is_active():
             raise RuntimeError("HAProxy service is not running.")
 
-    def reconcile(self, config: CharmConfig, http_provider: HTTPProvider, ingress_requirers_information: IngressRequirersInformation) -> None:
+    def reconcile(
+        self,
+        config: CharmConfig,
+        services_dict: dict,
+        ingress_requirers_information: IngressRequirersInformation,
+    ) -> None:
         """Render the haproxy config and restart the haproxy service.
 
         Args:
             config: charm config
-            http_provider: The http interface provider.
+            services_dict: The http interface provider.
         """
-        self._render_haproxy_config(config, http_provider, ingress_requirers_information)
+        self._render_haproxy_config(config, services_dict, ingress_requirers_information)
         self._restart_haproxy_service()
 
     def is_active(self) -> bool:
@@ -99,7 +103,12 @@ class HAProxyService:
         # Set the correct ownership for the file.
         os.chown(path, uid=u.pw_uid, gid=u.pw_gid)
 
-    def _render_haproxy_config(self, config: CharmConfig, http_provider: HTTPProvider, ingress_requirers_information: IngressRequirersInformation) -> None:
+    def _render_haproxy_config(
+        self,
+        config: CharmConfig,
+        services_dict: dict,
+        ingress_requirers_information: IngressRequirersInformation,
+    ) -> None:
         """Render the haproxy configuration file.
 
         Args:
@@ -111,7 +120,6 @@ class HAProxyService:
                 file.read(), keep_trailing_newline=True, trim_blocks=True, lstrip_blocks=True
             )
 
-        services_dict = http_provider.get_services_definition()
         rendered = template.render(
             config_global_max_connection=config.global_max_connection,
             services=generate_service_config(config.haproxy_frontend_prefix, services_dict),
