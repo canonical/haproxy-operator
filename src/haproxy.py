@@ -14,6 +14,7 @@ from jinja2 import Template
 
 from state.config import CharmConfig
 
+
 APT_PACKAGE_VERSION = "2.8.5-1ubuntu3"
 APT_PACKAGE_NAME = "haproxy"
 HAPROXY_CONFIG_DIR = Path("/etc/haproxy")
@@ -74,10 +75,6 @@ class HAProxyService:
         """
         self._render_haproxy_config(config)
         self._restart_haproxy_service()
-
-    def restart_haproxy_service(self) -> None:
-        """Restart the haporxy service."""
-        systemd.service_restart(HAPROXY_SERVICE)
 
     def is_active(self) -> bool:
         """Indicate if the haproxy service is active.
