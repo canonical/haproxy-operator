@@ -190,25 +190,24 @@ async def any_charm_src_ingress_requirer_fixture(model: Model, any_charm_ingress
     import ops
     from any_charm_base import AnyCharmBase
     from ingress import IngressPerAppRequirer
+    import apt
+    
     class AnyCharm(AnyCharmBase):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
-            self.ingress = IngressPerAppRequirer(self, port=8080)
+            self.ingress = IngressPerAppRequirer(self, port=80)
             self.unit.status = ops.BlockedStatus("Waiting for ingress relation")
             self.framework.observe(
                 self.on.ingress_relation_changed, self._on_ingress_relation_changed
             )
 
         def start_server(self):
-            www_dir = pathlib.Path("/tmp/www")
-            www_dir.mkdir(exist_ok=True)
+            apt.update()
+            apt.add_package(package_names="apache2")
+            www_dir = pathlib.Path("/var/www/html")
             file_path = www_dir / "{ingress_path_prefix}" / "ok"
             file_path.parent.mkdir(exist_ok=True)
             file_path.write_text(str(self.ingress.url))
-            proc_http = subprocess.Popen(
-                ["python3", "-m", "http.server", "-d", www_dir, "8080"],
-                start_new_session=True,
-            )
 
         def _on_ingress_relation_changed(self, event):
             self.unit.status = ops.ActiveStatus()
@@ -217,6 +216,9 @@ async def any_charm_src_ingress_requirer_fixture(model: Model, any_charm_ingress
 
     return {
         "ingress.py": pathlib.Path("lib/charms/traefik_k8s/v2/ingress.py").read_text(
+            encoding="utf-8"
+        ),
+        "apt.py": pathlib.Path("lib/charms/operator_libs_linux/v0/apt.py").read_text(
             encoding="utf-8"
         ),
         "any_charm.py": any_charm_py,
@@ -232,7 +234,7 @@ async def any_charm_ingress_requirer_fixture(
         "any-charm",
         application_name=any_charm_ingress_requirer_name,
         channel="beta",
-        config={"src-overwrite": json.dumps(any_charm_src_ingress_requirer)},
+        config={"src-overwrite": json.dumps(any_charm_src_ingress_requirer), "python-packages": "pydantic<2.0"},
     )
     await model.wait_for_idle(apps=[application.name], status="active")
     yield application

@@ -81,8 +81,12 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(
             self.http_provider.on.http_backend_removed, self._on_http_backend_removed
         )
-        self.framework.observe(self._ingress_provider.on.data_provided, self._on_data_provided)
-        self.framework.observe(self._ingress_provider.on.data_removed, self._on_data_removed)
+        self.framework.observe(
+            self._ingress_provider.on.data_provided, self._on_ingress_data_provided
+        )
+        self.framework.observe(
+            self._ingress_provider.on.data_removed, self._on_ingress_data_removed
+        )
 
     def _on_install(self, _: typing.Any) -> None:
         """Install the haproxy package."""
@@ -173,12 +177,6 @@ class HAProxyCharm(ops.CharmBase):
     def _on_http_backend_available(self, event: HTTPBackendAvailableEvent) -> None:
         """Handle http_backend_available event for reverseproxy integration."""
         self._reconcile()
-        integration_data = self._ingress_provider.get_data(event.relation)
-        path_prefix = f"{integration_data.app.model}-{integration_data.app.name}"
-        logger.info("Publishing ingress URL: %s", f"http://{self.bind_address}/{path_prefix}/")
-        self._ingress_provider.publish_url(
-            event.relation, f"http://{self.bind_address}/{path_prefix}/"
-        )
 
     def _on_http_backend_removed(self, _: HTTPBackendRemovedEvent) -> None:
         """Handle data_removed event for reverseproxy integration."""
@@ -214,13 +212,22 @@ class HAProxyCharm(ops.CharmBase):
             self._tls.generate_private_key(tls_information.external_hostname)
             self._tls.request_certificate(tls_information.external_hostname)
 
-    @validate_config_and_tls(defer=False)
-    def _on_data_provided(self, _: IngressPerAppDataProvidedEvent) -> None:
-        """Handle the data-provided event."""
-        self._reconcile()
+    @validate_config_and_tls(defer=True, block_on_tls_not_ready=True)
+    def _on_ingress_data_provided(self, event: IngressPerAppDataProvidedEvent) -> None:
+        """Handle the data-provided event.
 
-    @validate_config_and_tls(defer=False)
-    def _on_data_removed(self, _: IngressPerAppDataRemovedEvent) -> None:
+        Args:
+            event: Juju event.
+        """
+        self._reconcile()
+        integration_data = self._ingress_provider.get_data(event.relation)
+        path_prefix = f"{integration_data.app.model}-{integration_data.app.name}"
+        self._ingress_provider.publish_url(
+            event.relation, f"http://{self.bind_address}/{path_prefix}/"
+        )
+
+    @validate_config_and_tls(defer=True, block_on_tls_not_ready=True)
+    def _on_ingress_data_removed(self, _: IngressPerAppDataRemovedEvent) -> None:
         """Handle the data-removed event."""
         self._reconcile()
 
