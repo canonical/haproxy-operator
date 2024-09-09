@@ -119,7 +119,11 @@ class HAProxyCharm(ops.CharmBase):
 
     @validate_config_and_integration(defer=False)
     def _on_reverse_proxy_data_provided(self, event: HTTPDataProvidedEvent) -> None:
-        """Handle data_provided event for reverseproxy integration."""
+        """Handle data_provided event for reverseproxy integration.
+
+        Args:
+            event: Juju event.
+        """
         self._reconcile()
         integration_data = self._ingress_provider.get_data(event.relation)
         path_prefix = f"{integration_data.app.model}-{integration_data.app.name}"
