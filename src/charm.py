@@ -66,8 +66,8 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(
             self.http_provider.on.data_provided, self._on_reverse_proxy_data_removed
         )
-        self.framework.observe(self._ingress_provider.on.data_provided, self._on_data_provided)
-        self.framework.observe(self._ingress_provider.on.data_removed, self._on_data_removed)
+        self.framework.observe(self._ingress_provider.on.data_provided, self._on_ingress_data_provided)
+        self.framework.observe(self._ingress_provider.on.data_removed, self._on_ingress_data_removed)
 
     @property
     def bind_address(self) -> typing.Union[str, None]:
@@ -84,18 +84,15 @@ class HAProxyCharm(ops.CharmBase):
         """Install the haproxy package."""
         self.haproxy_service.install()
 
-    @validate_config_and_integration(defer=False)
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
         self._reconcile_certificates()
         self._reconcile()
 
-    @validate_config_and_integration(defer=False)
     def _on_certificate_available(self, _: CertificateAvailableEvent) -> None:
         """Handle the TLS Certificate available event."""
         self._reconcile()
 
-    @validate_config_and_integration(defer=False)
     def _on_get_certificate_action(self, event: ActionEvent) -> None:
         """Triggered when users run the `get-certificate` Juju action.
 
@@ -117,26 +114,15 @@ class HAProxyCharm(ops.CharmBase):
 
         event.fail(f"Missing or incomplete certificate data for {hostname}")
 
-    @validate_config_and_integration(defer=False)
-    def _on_reverse_proxy_data_provided(self, event: HTTPDataProvidedEvent) -> None:
-        """Handle data_provided event for reverseproxy integration.
-
-        Args:
-            event: Juju event.
-        """
+    def _on_reverse_proxy_data_provided(self, _: HTTPDataProvidedEvent) -> None:
+        """Handle data_provided event for reverseproxy integration."""
         self._reconcile()
-        integration_data = self._ingress_provider.get_data(event.relation)
-        path_prefix = f"{integration_data.app.model}-{integration_data.app.name}"
-        logger.info("Publishing ingress URL: %s", f"http://{self.bind_address}/{path_prefix}/")
-        self._ingress_provider.publish_url(
-            event.relation, f"http://{self.bind_address}/{path_prefix}/"
-        )
 
-    @validate_config_and_integration(defer=False)
     def _on_reverse_proxy_data_removed(self, _: HTTPDataRemovedEvent) -> None:
         """Handle data_removed event for reverseproxy integration."""
         self._reconcile()
 
+    @validate_config_and_integration(defer=False)
     def _reconcile(self) -> None:
         """Render the haproxy config and restart the service."""
         config = CharmConfig.from_charm(self)
@@ -145,8 +131,10 @@ class HAProxyCharm(ops.CharmBase):
             self._ingress_provider
         )
         self.haproxy_service.reconcile(config, services_dict, ingress_requirers_information)
+        logger.info("Setting active status")
         self.unit.status = ops.ActiveStatus()
 
+    @validate_config_and_integration(defer=False)
     def _reconcile_certificates(self) -> None:
         """Request new certificates if needed to match the configured hostname."""
         tls_information = TLSInformation.from_charm(self, self.certificates)
@@ -154,13 +142,20 @@ class HAProxyCharm(ops.CharmBase):
             self._tls.generate_private_key(tls_information.external_hostname)
             self._tls.request_certificate(tls_information.external_hostname)
 
-    @validate_config_and_integration(defer=False)
-    def _on_data_provided(self, _: IngressPerAppDataProvidedEvent) -> None:
-        """Handle the data-provided event."""
+    def _on_ingress_data_provided(self, event: IngressPerAppDataProvidedEvent) -> None:
+        """Handle the data-provided event.
+        
+        Args:
+            event: Juju event.
+        """
         self._reconcile()
+        integration_data = self._ingress_provider.get_data(event.relation)
+        path_prefix = f"{integration_data.app.model}-{integration_data.app.name}"
+        self._ingress_provider.publish_url(
+            event.relation, f"http://{self.bind_address}/{path_prefix}/"
+        )
 
-    @validate_config_and_integration(defer=False)
-    def _on_data_removed(self, _: IngressPerAppDataRemovedEvent) -> None:
+    def _on_ingress_data_removed(self, _: IngressPerAppDataRemovedEvent) -> None:
         """Handle the data-removed event."""
         self._reconcile()
 
