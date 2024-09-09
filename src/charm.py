@@ -118,9 +118,15 @@ class HAProxyCharm(ops.CharmBase):
         event.fail(f"Missing or incomplete certificate data for {hostname}")
 
     @validate_config_and_integration(defer=False)
-    def _on_reverse_proxy_data_provided(self, _: HTTPDataProvidedEvent) -> None:
+    def _on_reverse_proxy_data_provided(self, event: HTTPDataProvidedEvent) -> None:
         """Handle data_provided event for reverseproxy integration."""
         self._reconcile()
+        integration_data = self._ingress_provider.get_data(event.relation)
+        path_prefix = f"{integration_data.app.model}-{integration_data.app.name}"
+        logger.info("Publishing ingress URL: %s", f"http://{self.bind_address}/{path_prefix}/")
+        self._ingress_provider.publish_url(
+            event.relation, f"http://{self.bind_address}/{path_prefix}/"
+        )
 
     @validate_config_and_integration(defer=False)
     def _on_reverse_proxy_data_removed(self, _: HTTPDataRemovedEvent) -> None:
