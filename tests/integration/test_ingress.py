@@ -33,6 +33,6 @@ async def test_ingress_integration(application: Application, any_charm_ingress_r
     unit_status: UnitStatus = next(
         iter(status.applications[application.name].units.values())
     )
-    assert unit_status.address, "Invalid unit address"    
-    response = requests.get(f"http://unit_status.address/{any_charm_ingress_requirer.model.name}-{any_charm_ingress_requirer.name}", timeout=5)
+    assert unit_status.public_address, "Invalid unit address"    
+    response = requests.get(f"http://{unit_status.public_address}/{any_charm_ingress_requirer.model.name}-{any_charm_ingress_requirer.name}/ok", timeout=5)
     assert response.status_code == 200
