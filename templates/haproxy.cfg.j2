@@ -47,7 +47,6 @@ frontend ingress
     # generate path ACLs for ingress
 {% for backend in ingress_requirers_information.backends %}
     acl path_{{ backend.backend_name }} path -i -m beg /{{ backend.backend_name }}
-    http-request set-path "%[path,regsub(^/{{ backend.backend_name }}(/|$),/)]" if path_{{ backend.backend_name }}
     use_backend {{ backend.backend_name }} if path_{{ backend.backend_name }} 
 {% endfor %}
 

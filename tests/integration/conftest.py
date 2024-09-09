@@ -8,6 +8,7 @@ import logging
 import os.path
 import textwrap
 import typing
+import pathlib
 
 import pytest
 import pytest_asyncio
@@ -140,6 +141,74 @@ async def any_charm_src_fixture() -> dict[str, str]:
         """
         ),
     }
+
+@pytest_asyncio.fixture(scope="module", name="any_charm_ingress_requirer_name")
+async def any_charm_ingress_requirer_name_fixture() -> str:
+    """Name of the ingress requirer charm."""
+    return "any-charm-ingress-requirer"
+
+@pytest_asyncio.fixture(scope="module", name="any_charm_src_ingress_requirer")
+async def any_charm_src_ingress_requirer_fixture(model: Model, any_charm_ingress_requirer_name: str) -> dict[str, str]:
+    """
+    assert: None
+    action: Build and deploy nginx-ingress-integrator charm, also deploy and relate an any-charm
+        application with ingress relation for test purposes.
+    assert: HTTP request should be forwarded to the application.
+    """
+    ingress_path_prefix = f"{model.name}-{any_charm_ingress_requirer_name}"
+    any_charm_py = textwrap.dedent(
+        f"""\
+    import pathlib
+    import subprocess
+    import ops
+    from any_charm_base import AnyCharmBase
+    from ingress import IngressPerAppRequirer
+    class AnyCharm(AnyCharmBase):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.ingress = IngressPerAppRequirer(self, port=8080)
+            self.unit.status = ops.BlockedStatus("Waiting for ingress relation")
+            self.framework.observe(
+                self.on.ingress_relation_changed, self._on_ingress_relation_changed
+            )
+
+        def start_server(self):
+            www_dir = pathlib.Path("/tmp/www")
+            www_dir.mkdir(exist_ok=True)
+            file_path = www_dir / "{ingress_path_prefix}" / "ok"
+            file_path.parent.mkdir(exist_ok=True)
+            file_path.write_text(str(self.ingress.url))
+            proc_http = subprocess.Popen(
+                ["python3", "-m", "http.server", "-d", www_dir, "8080"],
+                start_new_session=True,
+            )
+
+        def _on_ingress_relation_changed(self, event):
+            self.unit.status = ops.ActiveStatus()
+    """
+    )
+
+    return {
+        "ingress.py": pathlib.Path("lib/charms/traefik_k8s/v2/ingress.py").read_text(
+            encoding="utf-8"
+        ),
+        "any_charm.py": any_charm_py,
+    }
+
+
+@pytest_asyncio.fixture(scope="function", name="any_charm_ingress_requirer")
+async def any_charm_ingress_requirer_fixture(
+    model: Model, any_charm_src_ingress_requirer: dict[str, str], any_charm_ingress_requirer_name: str
+) -> typing.AsyncGenerator[Application, None]:
+    """Deploy any-charm and configure it to serve as a requirer for the http interface."""
+    application = await model.deploy(
+        "any-charm",
+        application_name=any_charm_ingress_requirer_name,
+        channel="beta",
+        config={"src-overwrite": json.dumps(any_charm_src_ingress_requirer)},
+    )
+    await model.wait_for_idle(apps=[application.name], status="active")
+    yield application
 
 
 @pytest_asyncio.fixture(scope="function", name="any_charm_requirer")
