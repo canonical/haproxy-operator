@@ -50,6 +50,10 @@ class HaproxyInvalidRelationError(Exception):
     """Exception raised when both the reverseproxy and ingress relation are established."""
 
 
+class HaproxyServiceRestartError(Exception):
+    """Error when restarting the haproxy service."""
+
+
 class HAProxyService:
     """HAProxy service class."""
 
