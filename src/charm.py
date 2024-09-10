@@ -11,6 +11,7 @@ import logging
 import typing
 
 import ops
+from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.tls_certificates_interface.v3.tls_certificates import (
     AllCertificatesInvalidatedEvent,
     CertificateAvailableEvent,
@@ -55,6 +56,14 @@ class HAProxyCharm(ops.CharmBase):
         self._tls = TLSRelationService(self.model, self.certificates)
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
         self.http_provider = HTTPProvider(self, REVERSE_PROXY_RELATION)
+
+        self._grafana_agent = COSAgentProvider(
+            self,
+            metrics_endpoints=[
+                {"path": "/metrics", "port": 9123},
+            ],
+            dashboard_dirs=["./src/grafana_dashboards"],
+        )
 
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
