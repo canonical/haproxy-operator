@@ -78,9 +78,11 @@ class HAProxyService:
             services_dict: The parsed services dict for reverseproxy.
             ingress_requirers_information: Information about ingress requirers.
         """
-        assert (
-            not services_dict or not ingress_requirers_information.backends
-        ), "reverseproxy and ingress cannot be both established."
+        # At this point, the charm should already verify that
+        # only one relation is established
+        if services_dict and ingress_requirers_information.backends:
+            raise AssertionError
+
         self._render_haproxy_config(config, services_dict, ingress_requirers_information)
         self._restart_haproxy_service()
 
