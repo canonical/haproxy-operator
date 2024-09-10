@@ -54,7 +54,10 @@ requires:
 
 provides:
   ingress:
-      interface: ingress
+    interface: ingress
+  cos-agent:
+    interface: cos_agent
+
 
 config:
   options:
