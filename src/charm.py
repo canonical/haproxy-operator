@@ -176,12 +176,10 @@ class HAProxyCharm(ops.CharmBase):
 
         event.fail(f"Missing or incomplete certificate data for {hostname}")
 
-    @validate_config_and_integration(defer=False)
     def _on_reverse_proxy_data_provided(self, _: HTTPDataProvidedEvent) -> None:
         """Handle data_provided event for reverseproxy integration."""
         self._reconcile()
 
-    @validate_config_and_integration(defer=False)
     def _on_reverse_proxy_data_removed(self, _: HTTPDataRemovedEvent) -> None:
         """Handle data_removed event for reverseproxy integration."""
         self._reconcile()
