@@ -7,18 +7,26 @@ import logging
 import secrets
 import string
 import typing
+from pathlib import Path
 
 from charms.tls_certificates_interface.v3.tls_certificates import (
     ProviderCertificate,
     TLSCertificatesRequiresV3,
     generate_csr,
     generate_private_key,
+    CertificateExpiringEvent,
+    CertificateInvalidatedEvent,
 )
 from cryptography import x509
+from cryptography.hazmat.primitives import serialization
 from cryptography.x509.oid import NameOID
 from ops.model import Model, Relation, SecretNotFoundError
 
+from haproxy import render_file
+
 TLS_CERT = "certificates"
+HAPROXY_CERTS_DIR = Path("/var/lib/haproxy/certs")
+
 logger = logging.getLogger()
 
 
@@ -160,3 +168,95 @@ class TLSRelationService:
             if get_hostname_from_cert(cert.certificate) == hostname:
                 return cert
         return None
+
+    def certificate_expiring(
+        self,
+        event: CertificateExpiringEvent,
+    ) -> None:
+        """Handle the TLS Certificate expiring event.
+
+        Args:
+            event: The event that fires this method.
+        """
+        if expiring_cert := self._get_cert(event.certificate):
+            hostname = get_hostname_from_cert(expiring_cert.certificate)
+            old_csr = expiring_cert.csr
+            private_key, password = self._get_private_key(hostname)
+            new_csr = generate_csr(
+                private_key=private_key.encode(),
+                private_key_password=password.encode(),
+                subject=hostname,
+                sans_dns=[hostname],
+            )
+            self.certificates.request_certificate_renewal(
+                old_certificate_signing_request=old_csr.encode(),
+                new_certificate_signing_request=new_csr,
+            )
+
+    def certificate_invalidated(
+        self,
+        event: CertificateInvalidatedEvent,
+    ) -> None:
+        """Handle TLS Certificate revocation.
+
+        Args:
+            event: The event that fires this method.
+        """
+        if invalidated_cert := self._get_cert(event.certificate):
+            hostname = get_hostname_from_cert(invalidated_cert.certificate)
+            self.remove_certificate_from_unit(hostname)
+            secret = self.model.get_secret(label=f"private-key-{hostname}")
+            secret.remove_all_revisions()
+            self.certificates.request_certificate_revocation(
+                certificate_signing_request=invalidated_cert.csr.encode()
+            )
+
+    def write_certificate_to_unit(self, hostname: str) -> None:
+        """Write the certificate having "hostname" to haproxy cert directory.
+
+        Args:
+            hostname: the hostname of the provider certificate.
+        """
+        if not HAPROXY_CERTS_DIR.exists(follow_symlinks=False):
+            HAPROXY_CERTS_DIR.mkdir(exist_ok=True)
+
+        provider_certificate = self.get_provider_cert_with_hostname(hostname)
+        if not provider_certificate:
+            logger.error("Provider certificate not found.")
+            return
+        key_pair = self._get_private_key(hostname)
+        decrypted_private_key = _get_decrypted_key(key_pair.private_key, key_pair.password)
+        pem_file_content = f"{provider_certificate}\n{decrypted_private_key}"
+        pem_file_path = Path(HAPROXY_CERTS_DIR / hostname)
+        render_file(pem_file_path, pem_file_content, 0o644)
+
+    def remove_certificate_from_unit(self, hostname: str) -> None:
+        """Remove the certificate having "hostname" from haproxy cert directory.
+
+        Args:
+            hostname: the hostname of the provider certificate.
+        """
+        pem_file_path = Path(HAPROXY_CERTS_DIR / hostname)
+        pem_file_path.unlink(missing_ok=True)
+
+
+def _get_decrypted_key(private_key: str, password: str) -> str:
+    """Decrypted the provided private key using the provided password.
+
+    Args:
+        private_key: The encrypted private key.
+        password: The password to decrypt the private key.
+
+    Returns:
+        The decrypted private key.
+    """
+    decrypted_key = serialization.load_pem_private_key(
+        private_key.encode(), password=password.encode()
+    )
+
+    # There are multiple representation PKCS8 is the default supported by nginx controller
+    return decrypted_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode()

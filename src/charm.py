@@ -14,6 +14,8 @@ import ops
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
     TLSCertificatesRequiresV3,
+    CertificateExpiringEvent,
+    CertificateInvalidatedEvent,
 )
 from charms.traefik_k8s.v2.ingress import (
     IngressPerAppDataProvidedEvent,
@@ -28,7 +30,7 @@ from state.config import CharmConfig
 from state.ingress import IngressRequirersInformation
 from state.tls import TLSInformation
 from state.validation import validate_config_and_integration
-from tls_relation import TLSRelationService
+from tls_relation import TLSRelationService, get_hostname_from_cert
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +61,15 @@ class HAProxyCharm(ops.CharmBase):
 
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(
+            self.certificates.on.certificate_available, self._on_certificate_available
+        )
+        self.framework.observe(
+            self.certificates.on.certificate_expiring, self._on_certificate_expiring
+        )
+        self.framework.observe(
+            self.certificates.on.certificate_invalidated, self._on_certificate_invalidated
+        )
         self.framework.observe(self.on.get_certificate_action, self._on_get_certificate_action)
         self.framework.observe(
             self.http_provider.on.data_provided, self._on_reverse_proxy_data_provided
@@ -93,9 +104,37 @@ class HAProxyCharm(ops.CharmBase):
         self._reconcile_certificates()
         self._reconcile()
 
-    def _on_certificate_available(self, _: CertificateAvailableEvent) -> None:
-        """Handle the TLS Certificate available event."""
+    def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
+        """Handle the TLS Certificate available event.
+
+        Args:
+            event: Juju event
+        """
+        hostname = get_hostname_from_cert(event.certificate)
+        self._tls.write_certificate_to_unit(hostname)
         self._reconcile()
+
+    def _on_certificate_expiring(self, event: CertificateExpiringEvent) -> None:
+        """Handle the TLS Certificate expiring event.
+
+        Args:
+            event: The event that fires this method.
+        """
+        TLSInformation.validate_certificates_integration(self)
+        self._tls.certificate_expiring(event)
+
+    def _on_certificate_invalidated(self, event: CertificateInvalidatedEvent) -> None:
+        """Handle the TLS Certificate invalidation event.
+
+        Args:
+            event: The event that fires this method.
+        """
+        TLSInformation.validate_certificates_integration(self)
+        if event.reason == "revoked":
+            self._tls.certificate_invalidated(event)
+        if event.reason == "expired":
+            self._tls.certificate_expiring(event)
+        self.unit.status = ops.MaintenanceStatus("Waiting for new certificate")
 
     def _on_get_certificate_action(self, event: ActionEvent) -> None:
         """Triggered when users run the `get-certificate` Juju action.

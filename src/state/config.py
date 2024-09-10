@@ -6,16 +6,33 @@
 import itertools
 import logging
 import typing
-
+from enum import StrEnum
+import re
 import ops
 from pydantic import Field, ValidationError
 from pydantic.dataclasses import dataclass
 
 from .exception import CharmStateValidationBaseError
+from tls import TLS_CERTIFICATES_INTEGRATION
 
 logger = logging.getLogger()
 INGRESS_RELATION = "ingress"
 REVERSE_PROXY_RELATION = "reverseproxy"
+EXTERNAL_HOSTNAME_MATCH = r"[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
+
+
+class ProxyMode(StrEnum):
+    """StrEnum of haproxy charm proxy modes.
+
+    Attrs:
+        INGRESS: ingress.
+        LEGACY: legacy.
+        NOPROXY: noproxy.
+    """
+
+    INGRESS = "ingress"
+    LEGACY = "legacy"
+    NOPROXY = "noproxy"
 
 
 class InvalidCharmConfigError(CharmStateValidationBaseError):
@@ -32,11 +49,15 @@ class CharmConfig:
 
     Attributes:
         global_max_connection: The configured gateway class.
-        haproxy_frontend_prefix: The prefix for haproxy frontend stanzas
+        haproxy_frontend_prefix: The prefix for haproxy frontend stanzas.
+        external_hostname: The configured hostname for haproxy (required under ingress mode).
+        proxy_mode: The charm's proxy mode (ingress or legacy)
     """
 
     global_max_connection: int = Field(gt=0)
-    haproxy_frontend_prefix: str = Field()
+    haproxy_frontend_prefix: str
+    external_hostname: str
+    proxy_mode: str
 
     @classmethod
     def from_charm(cls, charm: ops.CharmBase) -> "CharmConfig":
@@ -53,18 +74,33 @@ class CharmConfig:
             CharmConfig: Instance of the charm config state component.
         """
         global_max_connection = typing.cast(int, charm.config.get("global-maxconn"))
-        if (
-            charm.model.relations[INGRESS_RELATION]
-            and charm.model.relations[REVERSE_PROXY_RELATION]
-        ):
+        external_hostname = typing.cast(str, charm.config.get("external-hostname"))
+
+        reverseproxy_relations = charm.model.relations[REVERSE_PROXY_RELATION]
+        ingress_relations = charm.model.relations[INGRESS_RELATION]
+        if reverseproxy_relations and ingress_relations:
             raise RelationConflictError(
                 "The ingress and reverseproxy relation are mutually exclusive."
             )
+
+        proxy_mode = ProxyMode.NOPROXY
+        if reverseproxy_relations:
+            proxy_mode = ProxyMode.LEGACY
+        if ingress_relations:
+            proxy_mode = ProxyMode.INGRESS
+            if not charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION) or not re.match(
+                EXTERNAL_HOSTNAME_MATCH, external_hostname
+            ):
+                raise InvalidCharmConfigError(
+                    "external-hostname and certificates relation must be set to use ingress."
+                )
 
         try:
             return cls(
                 global_max_connection=global_max_connection,
                 haproxy_frontend_prefix=charm.unit.name.replace("/", "-"),
+                external_hostname=external_hostname,
+                proxy_mode=proxy_mode,
             )
         except ValidationError as exc:
             error_field_str = ",".join(f"{field}" for field in get_invalid_config_fields(exc))

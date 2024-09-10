@@ -59,7 +59,7 @@ class HAProxyService:
         apt.update()
         apt.add_package(package_names=APT_PACKAGE_NAME, version=APT_PACKAGE_VERSION)
 
-        self._render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
+        render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
         self._restart_haproxy_service()
 
         if not self.is_active():
@@ -94,21 +94,6 @@ class HAProxyService:
         """
         return systemd.service_running(APT_PACKAGE_NAME)
 
-    def _render_file(self, path: Path, content: str, mode: int) -> None:
-        """Write a content rendered from a template to a file.
-
-        Args:
-            path: Path object to the file.
-            content: the data to be written to the file.
-            mode: access permission mask applied to the
-              file using chmod (e.g. 0o640).
-        """
-        path.write_text(content, encoding="utf-8")
-        os.chmod(path, mode)
-        u = pwd.getpwnam(HAPROXY_USER)
-        # Set the correct ownership for the file.
-        os.chown(path, uid=u.pw_uid, gid=u.pw_gid)
-
     def _render_haproxy_config(
         self,
         config: CharmConfig,
@@ -132,10 +117,26 @@ class HAProxyService:
             services=generate_service_config(config.haproxy_frontend_prefix, services_dict),
             ingress_requirers_information=ingress_requirers_information,
         )
-        self._render_file(HAPROXY_CONFIG, rendered, 0o644)
+        render_file(HAPROXY_CONFIG, rendered, 0o644)
         self._restart_haproxy_service()
 
     def _restart_haproxy_service(self) -> None:
         """Restart the haporxy service."""
         systemd._systemctl("reset-failed", HAPROXY_SERVICE)  # pylint: disable=protected-access
         systemd.service_restart(HAPROXY_SERVICE)
+
+
+def render_file(path: Path, content: str, mode: int) -> None:
+    """Write a content rendered from a template to a file.
+
+    Args:
+        path: Path object to the file.
+        content: the data to be written to the file.
+        mode: access permission mask applied to the
+            file using chmod (e.g. 0o640).
+    """
+    path.write_text(content, encoding="utf-8")
+    os.chmod(path, mode)
+    u = pwd.getpwnam(HAPROXY_USER)
+    # Set the correct ownership for the file.
+    os.chown(path, uid=u.pw_uid, gid=u.pw_gid)
