@@ -18,16 +18,10 @@ from pydantic.dataclasses import dataclass
 from .exception import CharmStateValidationBaseError
 
 logger = logging.getLogger()
-INGRESS_RELATION = "ingress"
-REVERSE_PROXY_RELATION = "reverseproxy"
 
 
 class InvalidCharmConfigError(CharmStateValidationBaseError):
     """Exception raised when a charm configuration is found to be invalid."""
-
-
-class RelationConflictError(CharmStateValidationBaseError):
-    """Exception raised when the charm established relations that can't work together."""
 
 
 @dataclass(frozen=True)
@@ -92,13 +86,6 @@ class CharmConfig:
             CharmConfig: Instance of the charm config state component.
         """
         global_max_connection = typing.cast(int, charm.config.get("global-maxconn"))
-        if (
-            charm.model.relations[INGRESS_RELATION]
-            and charm.model.relations[REVERSE_PROXY_RELATION]
-        ):
-            raise RelationConflictError(
-                "The ingress and reverseproxy relation are mutually exclusive."
-            )
 
         try:
             return cls(
