@@ -6,9 +6,9 @@
 import json
 import logging
 import os.path
+import pathlib
 import textwrap
 import typing
-import pathlib
 
 import pytest
 import pytest_asyncio
@@ -142,13 +142,17 @@ async def any_charm_src_fixture() -> dict[str, str]:
         ),
     }
 
+
 @pytest_asyncio.fixture(scope="module", name="any_charm_ingress_requirer_name")
 async def any_charm_ingress_requirer_name_fixture() -> str:
     """Name of the ingress requirer charm."""
     return "any-charm-ingress-requirer"
 
+
 @pytest_asyncio.fixture(scope="module", name="any_charm_src_ingress_requirer")
-async def any_charm_src_ingress_requirer_fixture(model: Model, any_charm_ingress_requirer_name: str) -> dict[str, str]:
+async def any_charm_src_ingress_requirer_fixture(
+    model: Model, any_charm_ingress_requirer_name: str
+) -> dict[str, str]:
     """
     assert: None
     action: Build and deploy nginx-ingress-integrator charm, also deploy and relate an any-charm
@@ -164,7 +168,7 @@ async def any_charm_src_ingress_requirer_fixture(model: Model, any_charm_ingress
     from any_charm_base import AnyCharmBase
     from ingress import IngressPerAppRequirer
     import apt
-    
+
     class AnyCharm(AnyCharmBase):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
@@ -200,14 +204,19 @@ async def any_charm_src_ingress_requirer_fixture(model: Model, any_charm_ingress
 
 @pytest_asyncio.fixture(scope="function", name="any_charm_ingress_requirer")
 async def any_charm_ingress_requirer_fixture(
-    model: Model, any_charm_src_ingress_requirer: dict[str, str], any_charm_ingress_requirer_name: str
+    model: Model,
+    any_charm_src_ingress_requirer: dict[str, str],
+    any_charm_ingress_requirer_name: str,
 ) -> typing.AsyncGenerator[Application, None]:
     """Deploy any-charm and configure it to serve as a requirer for the http interface."""
     application = await model.deploy(
         "any-charm",
         application_name=any_charm_ingress_requirer_name,
         channel="beta",
-        config={"src-overwrite": json.dumps(any_charm_src_ingress_requirer), "python-packages": "pydantic<2.0"},
+        config={
+            "src-overwrite": json.dumps(any_charm_src_ingress_requirer),
+            "python-packages": "pydantic<2.0",
+        },
     )
     await model.wait_for_idle(apps=[application.name], status="active")
     yield application

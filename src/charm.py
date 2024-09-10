@@ -66,8 +66,12 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(
             self.http_provider.on.data_provided, self._on_reverse_proxy_data_removed
         )
-        self.framework.observe(self._ingress_provider.on.data_provided, self._on_ingress_data_provided)
-        self.framework.observe(self._ingress_provider.on.data_removed, self._on_ingress_data_removed)
+        self.framework.observe(
+            self._ingress_provider.on.data_provided, self._on_ingress_data_provided
+        )
+        self.framework.observe(
+            self._ingress_provider.on.data_removed, self._on_ingress_data_removed
+        )
 
     @property
     def bind_address(self) -> typing.Union[str, None]:
@@ -144,7 +148,7 @@ class HAProxyCharm(ops.CharmBase):
 
     def _on_ingress_data_provided(self, event: IngressPerAppDataProvidedEvent) -> None:
         """Handle the data-provided event.
-        
+
         Args:
             event: Juju event.
         """

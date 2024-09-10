@@ -66,6 +66,7 @@ def validate_config_and_integration(
                 return None
             except TLSNotReadyError:
                 logger.exception("The charm is not ready to handle TLS, skipping.")
+                return None
 
         return wrapper
 
