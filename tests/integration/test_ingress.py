@@ -15,10 +15,15 @@ from juju.client._definitions import FullStatus, UnitStatus
 async def test_ingress_integration(
     application: Application, any_charm_ingress_requirer: Application
 ):
-    """Deploy the charm with valid config and tls integration.
+    """Deploy the charm with anycharm ingress requirer that installs apache2.
 
-    Assert on valid output of get-certificate.
+    Assert that the requirer endpoint is available.
     """
+    action = await any_charm_ingress_requirer.units[0].run_action(
+        "rpc",
+        method="start_server",
+    )
+    await action.wait()
     await application.model.add_relation(
         f"{application.name}:ingress", any_charm_ingress_requirer.name
     )
@@ -27,11 +32,6 @@ async def test_ingress_integration(
         idle_period=30,
         status="active",
     )
-    action = await any_charm_ingress_requirer.units[0].run_action(
-        "rpc",
-        method="start_server",
-    )
-    await action.wait()
     status: FullStatus = await application.model.get_status([application.name])
     unit_status: UnitStatus = next(iter(status.applications[application.name].units.values()))
     assert unit_status.public_address, "Invalid unit address"
@@ -49,3 +49,4 @@ async def test_ingress_integration(
     response = requests.get(f"{url}/{path}", timeout=5)
 
     assert response.status_code == 200
+    assert "ok!" in response.text

@@ -200,10 +200,6 @@ async def any_charm_src_ingress_requirer_fixture(
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.ingress = IngressPerAppRequirer(self, port=80)
-            self.unit.status = ops.BlockedStatus("Waiting for ingress relation")
-            self.framework.observe(
-                self.on.ingress_relation_changed, self._on_ingress_relation_changed
-            )
 
         def start_server(self):
             apt.update()
@@ -212,9 +208,7 @@ async def any_charm_src_ingress_requirer_fixture(
             file_path = www_dir / "{ingress_path_prefix}" / "ok"
             file_path.parent.mkdir(exist_ok=True)
             file_path.write_text("ok!")
-
-        def _on_ingress_relation_changed(self, event):
-            self.unit.status = ops.ActiveStatus()
+            self.unit.status = ops.ActiveStatus("Server ready")
     """
     )
 
