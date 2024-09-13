@@ -211,7 +211,7 @@ async def any_charm_src_ingress_requirer_fixture(
             www_dir = pathlib.Path("/var/www/html")
             file_path = www_dir / "{ingress_path_prefix}" / "ok"
             file_path.parent.mkdir(exist_ok=True)
-            file_path.write_text(str(self.ingress.url))
+            file_path.write_text("ok!")
 
         def _on_ingress_relation_changed(self, event):
             self.unit.status = ops.ActiveStatus()
