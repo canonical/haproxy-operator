@@ -77,8 +77,9 @@ class HAProxyService:
         """Render the haproxy config and restart the haproxy service.
 
         Args:
-            config: Charm config.
-            services: Services definition.
+            config: charm config
+            services_dict: The parsed services dict for reverseproxy.
+            ingress_requirers_information: Information about ingress requirers.
         """
         self._render_haproxy_config(config, services, ingress_requirers_information)
         self._reload_haproxy_service()
