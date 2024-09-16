@@ -36,7 +36,7 @@ class CharmConfig:
             charm: The gateway-api-integrator charm.
 
         Raises:
-            InvalidCharmConfigError: When the chamr's config is invalid.
+            InvalidCharmConfigError: When the charm's config is invalid.
 
         Returns:
             CharmConfig: Instance of the charm config state component.
