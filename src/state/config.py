@@ -6,7 +6,10 @@
 import itertools
 import logging
 import typing
-from subprocess import STDOUT, check_output
+
+# bandit flags import subprocess as a low security issue
+# We disable it here as it's simply a heads-up for potential issues
+from subprocess import STDOUT, check_output  # nosec B404
 
 import ops
 from pydantic import Field, ValidationError, field_validator
@@ -44,8 +47,9 @@ class CharmConfig:
         Returns:
             int: The validated global_max_connection config.
         """
-        output = check_output(
-            ["sysctl", "fs.nr_open"], stderr=STDOUT, universal_newlines=True
+        # No user input so we're disabling bandit rule here as it's considered safe
+        output = check_output(  # nosec: B603
+            ["/usr/sbin/sysctl", "fs.nr_open"], stderr=STDOUT, universal_newlines=True
         ).splitlines()
         _, _, fs_nr_open = output[0].partition("=")
         if global_max_connection < 0 or global_max_connection > int(fs_nr_open.strip()):
