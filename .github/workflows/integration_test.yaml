@@ -12,3 +12,4 @@ jobs:
       juju-channel: 3.3/stable
       self-hosted-runner: true
       charmcraft-channel: latest/edge
+      modules: '["test_config.py", "test_charm.py"]'

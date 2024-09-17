@@ -1,0 +1,20 @@
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+"""Integration test for haproxy charm."""
+from juju.application import Application
+from pytest_operator.plugin import OpsTest
+
+
+async def test_config(application: Application, ops_test: OpsTest):
+    """Deploy the charm."""
+    await application.set_config({"global-maxconn": 1024})
+    await application.model.wait_for_idle(
+        apps=[application.name],
+        idle_period=10,
+        status="active",
+    )
+    _, stdout, _ = await ops_test.juju(
+        "ssh", application.units[0].name, "cat", "/etc/haproxy/haproxy.cfg"
+    )
+    assert "maxconn 1024" in stdout
