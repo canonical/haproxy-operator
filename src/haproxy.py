@@ -61,7 +61,7 @@ class HAProxyService:
         apt.add_package(package_names=APT_PACKAGE_NAME, version=APT_PACKAGE_VERSION)
 
         self._render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
-        self._restart_haproxy_service()
+        self._reload_haproxy_service()
 
         if not self.is_active():
             raise RuntimeError("HAProxy service is not running.")
@@ -73,7 +73,7 @@ class HAProxyService:
             config: charm config
         """
         self._render_haproxy_config(config)
-        self._restart_haproxy_service()
+        self._reload_haproxy_service()
 
     def is_active(self) -> bool:
         """Indicate if the haproxy service is active.
@@ -108,9 +108,7 @@ class HAProxyService:
             template = Template(file.read(), keep_trailing_newline=True)
         rendered = template.render(config_global_max_connection=config.global_max_connection)
         self._render_file(HAPROXY_CONFIG, rendered, 0o644)
-        self._restart_haproxy_service()
 
-    def _restart_haproxy_service(self) -> None:
+    def _reload_haproxy_service(self) -> None:
         """Restart the haporxy service."""
-        systemd._systemctl("reset-failed", HAPROXY_SERVICE)  # pylint: disable=protected-access
-        systemd.service_restart(HAPROXY_SERVICE)
+        systemd.service_reload(HAPROXY_SERVICE)

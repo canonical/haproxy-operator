@@ -8,7 +8,8 @@ import logging
 import typing
 
 import ops
-from pydantic import Field, ValidationError
+from charms.operator_libs_linux.v0 import sysctl
+from pydantic import Field, ValidationError, field_validator
 from pydantic.dataclasses import dataclass
 
 logger = logging.getLogger()
@@ -23,10 +24,31 @@ class CharmConfig:
     """A component of charm state that contains the charm's configuration.
 
     Attributes:
-        global_max_connection: The configured gateway class.
+        global_max_connection: The maximum per-process number of concurrent connections.
+        Must be between 0 and "fs.nr-open" sysctl config.
     """
 
-    global_max_connection: int = Field(gt=0)
+    global_max_connection: int = Field(alias="global_max_connection")
+
+    @field_validator("global_max_connection")
+    @classmethod
+    def validate_global_max_conn(cls, global_max_connection: int) -> int:
+        """Validate global_max_connection config.
+
+        Args:
+            global_max_connection: The config to validate.
+
+        Raises:
+            ValueError: When the configured value is not between 0 and "fs.nr-open.
+
+        Returns:
+            int: The validated global_max_connection config.
+        """
+        config = sysctl.Config(cls.__name__)
+        max_open_files = config.get("fs.nr-open")
+        if global_max_connection > max_open_files or global_max_connection < 0:
+            raise ValueError
+        return global_max_connection
 
     @classmethod
     def from_charm(cls, charm: ops.CharmBase) -> "CharmConfig":
