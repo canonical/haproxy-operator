@@ -51,18 +51,15 @@ class HAProxyCharm(ops.CharmBase):
         """Install the haproxy package."""
         self.haproxy_service.install()
 
-    @validate_config_and_integration(defer=False)
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
         self._reconcile_certificates()
         self._reconcile()
 
-    @validate_config_and_integration(defer=False)
     def _on_certificate_available(self, _: CertificateAvailableEvent) -> None:
         """Handle the TLS Certificate available event."""
         self._reconcile()
 
-    @validate_config_and_integration(defer=False)
     def _on_get_certificate_action(self, event: ActionEvent) -> None:
         """Triggered when users run the `get-certificate` Juju action.
 
@@ -84,12 +81,14 @@ class HAProxyCharm(ops.CharmBase):
 
         event.fail(f"Missing or incomplete certificate data for {hostname}")
 
+    @validate_config_and_integration(defer=False)
     def _reconcile(self) -> None:
         """Render the haproxy config and restart the service."""
         config = CharmConfig.from_charm(self)
         self.haproxy_service.reconcile(config)
         self.unit.status = ops.ActiveStatus()
 
+    @validate_config_and_integration(defer=False)
     def _reconcile_certificates(self) -> None:
         """Request new certificates if needed to match the configured hostname."""
         tls_information = TLSInformation.from_charm(self, self.certificates)
