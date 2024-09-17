@@ -8,7 +8,7 @@ from pytest_operator.plugin import OpsTest
 
 async def test_config(application: Application, ops_test: OpsTest):
     """Deploy the charm."""
-    await application.set_config({"global-maxconn": 1024})
+    await application.set_config({"global-maxconn": "1024"})
     await application.model.wait_for_idle(
         apps=[application.name],
         idle_period=10,
