@@ -6,9 +6,9 @@
 import itertools
 import logging
 import typing
+from subprocess import STDOUT, check_output
 
 import ops
-from charms.operator_libs_linux.v0 import sysctl
 from pydantic import Field, ValidationError, field_validator
 from pydantic.dataclasses import dataclass
 
@@ -25,7 +25,7 @@ class CharmConfig:
 
     Attributes:
         global_max_connection: The maximum per-process number of concurrent connections.
-        Must be between 0 and "fs.nr-open" sysctl config.
+        Must be between 0 and "fs.nr_open" sysctl config.
     """
 
     global_max_connection: int = Field(alias="global_max_connection")
@@ -39,14 +39,16 @@ class CharmConfig:
             global_max_connection: The config to validate.
 
         Raises:
-            ValueError: When the configured value is not between 0 and "fs.nr-open.
+            ValueError: When the configured value is not between 0 and "fs.nr_open.
 
         Returns:
             int: The validated global_max_connection config.
         """
-        config = sysctl.Config(cls.__name__)
-        max_open_files = config.get("fs.nr-open")
-        if global_max_connection > max_open_files or global_max_connection < 0:
+        output = check_output(
+            ["sysctl", "fs.nr_open"], stderr=STDOUT, universal_newlines=True
+        ).splitlines()
+        _, _, fs_nr_open = output[0].partition("=")
+        if global_max_connection < 0 or global_max_connection > int(fs_nr_open.strip()):
             raise ValueError
         return global_max_connection
 
