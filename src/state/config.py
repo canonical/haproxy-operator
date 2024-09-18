@@ -9,7 +9,7 @@ import typing
 
 # bandit flags import subprocess as a low security issue
 # We disable it here as it's simply a heads-up for potential issues
-from subprocess import STDOUT, check_output  # nosec B404
+from subprocess import STDOUT, CalledProcessError, check_output  # nosec B404
 
 import ops
 from pydantic import Field, ValidationError, field_validator
@@ -47,12 +47,24 @@ class CharmConfig:
         Returns:
             int: The validated global_max_connection config.
         """
-        # No user input so we're disabling bandit rule here as it's considered safe
-        output = check_output(  # nosec: B603
-            ["/usr/sbin/sysctl", "fs.nr_open"], stderr=STDOUT, universal_newlines=True
-        ).splitlines()
+        if global_max_connection < 0:
+            raise ValueError
+
+        try:
+            # No user input so we're disabling bandit rule here as it's considered safe
+            output = check_output(  # nosec: B603
+                ["/usr/sbin/sysctl", "fs.file-max"], stderr=STDOUT, universal_newlines=True
+            ).splitlines()
+        except CalledProcessError:
+            logger.exception("Cannot get system's max file descriptor value, skipping check.")
+            return global_max_connection
+
         _, _, fs_nr_open = output[0].partition("=")
-        if global_max_connection < 0 or global_max_connection > int(fs_nr_open.strip()):
+        if not fs_nr_open:
+            logger.warning("Error parsing sysctl output, skipping check.")
+            return global_max_connection
+
+        if fs_nr_open and global_max_connection > int(fs_nr_open.strip()):
             raise ValueError
         return global_max_connection
 
