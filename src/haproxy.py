@@ -6,14 +6,14 @@
 import logging
 import os
 import pwd
+from enum import StrEnum
 from pathlib import Path
 
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import systemd
-from jinja2 import Template
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from state.config import CharmConfig
-from state.ingress import IngressRequirersInformation
 
 APT_PACKAGE_VERSION = "2.8.5-1ubuntu3"
 APT_PACKAGE_NAME = "haproxy"
@@ -38,7 +38,6 @@ HAPROXY_DH_PARAM = (
 HAPROXY_DHCONFIG = Path(HAPROXY_CONFIG_DIR / "ffdhe2048.txt")
 HAPROXY_SERVICE = "haproxy"
 
-
 logger = logging.getLogger()
 
 
@@ -46,8 +45,26 @@ class HaproxyServiceReloadError(Exception):
     """Error when reloading the haproxy service."""
 
 
-class HaproxyInvalidRelationError(Exception):
-    """Exception raised when both the reverseproxy and ingress relation are established."""
+class ProxyMode(StrEnum):
+    """StrEnum of possible http_route types.
+    Attrs:
+        INGRESS: when ingress is related.
+        LEGACY: when reverseproxy is related.
+        NOPROXY: when haproxy should return a default page.
+        INVALID: when the charm state is invalid.
+    """
+
+    INGRESS = "ingress"
+    LEGACY = "legacy"
+    NOPROXY = "noproxy"
+    INVALID = "invalid"
+
+
+HAPROXY_J2_TEMPLATE_MAPPING: dict[ProxyMode, str] = {
+    ProxyMode.INGRESS: "haproxy_ingress.cfg.j2",
+    ProxyMode.LEGACY: "haproxy_legacy.cfg.j2",
+    ProxyMode.NOPROXY: "haproxy.cfg.j2",
+}
 
 
 class HAProxyService:
@@ -68,28 +85,15 @@ class HAProxyService:
         if not self.is_active():
             raise RuntimeError("HAProxy service is not running.")
 
-    def reconcile(
-        self,
-        config: CharmConfig,
-        services: list,
-        ingress_requirers_information: IngressRequirersInformation,
-    ) -> None:
+    def reconcile(self, proxy_mode: ProxyMode, config: CharmConfig, **kwargs) -> None:
         """Render the haproxy config and restart the haproxy service.
 
         Args:
             config: charm config
             services: The parsed services dict for reverseproxy.
             ingress_requirers_information: Information about ingress requirers.
-
-        Raises:
-            HaproxyInvalidRelationError: when both reversporxy and ingress is present.
         """
-        # At this point, the charm should already verify that
-        # only one relation is established
-        if services and ingress_requirers_information.backends:
-            raise HaproxyInvalidRelationError("reverseproxy and ingress are mutually exclusive.")
-
-        self._render_haproxy_config(config, services, ingress_requirers_information)
+        self._render_haproxy_config(proxy_mode, config, **kwargs)
         self._reload_haproxy_service()
 
     def is_active(self) -> bool:
@@ -100,12 +104,7 @@ class HAProxyService:
         """
         return systemd.service_running(APT_PACKAGE_NAME)
 
-    def _render_haproxy_config(
-        self,
-        config: CharmConfig,
-        services: list,
-        ingress_requirers_information: IngressRequirersInformation,
-    ) -> None:
+    def _render_haproxy_config(self, proxy_mode: ProxyMode, config: CharmConfig, **kwargs) -> None:
         """Render the haproxy configuration file.
 
         Args:
@@ -113,15 +112,16 @@ class HAProxyService:
             services: Services definition.
             ingress_requirers_information: Information about ingress requirers.
         """
-        with open("templates/haproxy.cfg.j2", "r", encoding="utf-8") as file:
-            template = Template(
-                file.read(), keep_trailing_newline=True, trim_blocks=True, lstrip_blocks=True
-            )
-
+        env = Environment(
+            loader=FileSystemLoader("templates"),
+            autoescape=select_autoescape(),
+            keep_trailing_newline=True,
+            trim_blocks=True,
+            lstrip_blocks=True,
+        )
+        template = env.get_template(HAPROXY_J2_TEMPLATE_MAPPING[proxy_mode])
         rendered = template.render(
-            config_global_max_connection=config.global_max_connection,
-            services=services,
-            ingress_requirers_information=ingress_requirers_information,
+            config_global_max_connection=config.global_max_connection, **kwargs
         )
         render_file(HAPROXY_CONFIG, rendered, 0o644)
 
