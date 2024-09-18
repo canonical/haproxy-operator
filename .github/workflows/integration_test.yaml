@@ -12,4 +12,4 @@ jobs:
       juju-channel: 3.3/stable
       self-hosted-runner: true
       charmcraft-channel: latest/edge
-      modules: '["test_action.py", "test_config.py", "test_charm.py", "test_http_interface.py"]'
+      modules: '["test_action.py", "test_config.py", "test_charm.py", "test_http_interface.py", "test_cos.py"]'
