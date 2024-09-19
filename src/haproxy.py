@@ -44,10 +44,6 @@ class HaproxyServiceRestartError(Exception):
     """Error when restarting the haproxy service."""
 
 
-class HaproxyServiceRestartError(Exception):
-    """Error when restarting the haproxy service."""
-
-
 class HAProxyService:
     """HAProxy service class."""
 
