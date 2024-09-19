@@ -9,6 +9,13 @@ async def test_config(application: Application):
     """Deploy the charm, set global-maxconn config and
     verify that the correct value is rendered.
     """
+    await application.set_config({"global-maxconn": "-1"})
+    await application.model.wait_for_idle(
+        apps=[application.name],
+        idle_period=10,
+        status="blocked",
+    )
+
     await application.set_config({"global-maxconn": "1024"})
     await application.model.wait_for_idle(
         apps=[application.name],
@@ -23,3 +30,14 @@ async def test_config(application: Application):
     stdout = action.results.get("stdout")
     assert code == 0
     assert "maxconn 1024" in stdout
+
+    action = await application.units[0].run("/usr/sbin/sysctl fs.file-max", timeout=60)
+    await action.wait()
+    stdout = action.results.get("stdout")
+    _, _, fs_file_max = stdout.partition("=")
+    await application.set_config({"global-maxconn": f"{int(fs_file_max)+1}"})
+    await application.model.wait_for_idle(
+        apps=[application.name],
+        idle_period=10,
+        status="blocked",
+    )
