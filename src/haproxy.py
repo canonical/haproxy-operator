@@ -40,8 +40,8 @@ HAPROXY_SERVICE = "haproxy"
 logger = logging.getLogger()
 
 
-class HaproxyServiceStartError(Exception):
-    """Error when starting the haproxy service."""
+class HaproxyServiceRestartError(Exception):
+    """Error when restarting the haproxy service."""
 
 
 class HaproxyServiceRestartError(Exception):

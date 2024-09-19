@@ -36,6 +36,7 @@ class HAProxyCharm(ops.CharmBase):
     def _on_install(self, _: typing.Any) -> None:
         """Install the haproxy package."""
         self.haproxy_service.install()
+        self.unit.status = ops.ActiveStatus()
 
     @validate_config_and_integration(defer=False)
     def _on_config_changed(self, _: typing.Any) -> None:
