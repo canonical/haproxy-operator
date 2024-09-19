@@ -13,8 +13,6 @@ from charms.tls_certificates_interface.v3.tls_certificates import TLSCertificate
 
 from tls_relation import get_hostname_from_cert
 
-from .exception import CharmStateValidationBaseError
-
 TLS_CERTIFICATES_INTEGRATION = "certificates"
 HOSTNAME_REGEX = r"[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
 HAPROXY_CRT_DIR = "/var/lib/haproxy/certs/"
@@ -22,7 +20,7 @@ HAPROXY_CRT_DIR = "/var/lib/haproxy/certs/"
 logger = logging.getLogger()
 
 
-class TLSNotReadyError(CharmStateValidationBaseError):
+class TLSNotReadyError(Exception):
     """Exception raised when the charm is not ready to handle TLS."""
 
 

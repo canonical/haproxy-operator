@@ -80,7 +80,6 @@ class CharmConfig:
 
         Raises:
             InvalidCharmConfigError: When the charm's config is invalid.
-            RelationConflictError: When both ingress and reverseproxy relation is established.
 
         Returns:
             CharmConfig: Instance of the charm config state component.

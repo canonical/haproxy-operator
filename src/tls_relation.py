@@ -277,7 +277,6 @@ class TLSRelationService:
             hostname: the hostname of the provider certificate.
         """
         pem_file_path = Path(HAPROXY_CERTS_DIR / f"{hostname}.pem")
-        logger.info("Removing certificate pem file: %r", pem_file_path)
         pem_file_path.unlink(missing_ok=True)
 
     def _get_cert(self, certificate: str) -> typing.Optional[ProviderCertificate]:

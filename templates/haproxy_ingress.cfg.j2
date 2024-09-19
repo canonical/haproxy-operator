@@ -11,7 +11,8 @@ frontend ingress
     # generate path ACLs for ingress
 {% for backend in ingress_requirers_information.backends %}
     acl path_{{ backend.backend_name }} path -i -m beg /{{ backend.backend_name }}
-    use_backend {{ backend.backend_name }} if path_{{ backend.backend_name }} 
+    acl host_{{ config_external_hostname }} hdr(host) -i {{ config_external_hostname }}
+    use_backend {{ backend.backend_name }} if path_{{ backend.backend_name }} host_{{ config_external_hostname }}
 {% endfor %}
 
 {% for backend in ingress_requirers_information.backends %}

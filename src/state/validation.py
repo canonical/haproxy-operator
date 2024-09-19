@@ -10,6 +10,7 @@ import typing
 import ops
 
 from state.exception import CharmStateValidationBaseError
+from state.tls import TLSNotReadyError
 
 logger = logging.getLogger(__name__)
 

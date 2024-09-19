@@ -30,9 +30,9 @@ from haproxy import HAProxyService, ProxyMode
 from http_interface import HTTPBackendAvailableEvent, HTTPBackendRemovedEvent, HTTPProvider
 from state.config import CharmConfig
 from state.ingress import IngressRequirersInformation
-from state.tls import TLSInformation
+from state.tls import TLSInformation, TLSNotReadyError
 from state.validation import validate_config_and_tls
-from tls_relation import TLSRelationService, get_hostname_from_cert
+from tls_relation import HAPROXY_CERTS_DIR, TLSRelationService, get_hostname_from_cert
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +68,9 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.get_certificate_action, self._on_get_certificate_action)
+        self.framework.observe(
+            self.on.certificates_relation_joined, self._on_certificates_relation_joined
+        )
         self.framework.observe(
             self.on.certificates_relation_joined, self._on_certificates_relation_joined
         )
@@ -162,6 +165,14 @@ class HAProxyCharm(ops.CharmBase):
         self._tls.all_certificate_invalidated()
         self._reconcile()
 
+    def _on_all_certificate_invalidated(self, _: AllCertificatesInvalidatedEvent) -> None:
+        """Handle the TLS Certificate invalidation event.
+
+        Args:
+            event: The event that fires this method.
+        """
+        self._reconcile()
+
     def _on_get_certificate_action(self, event: ActionEvent) -> None:
         """Triggered when users run the `get-certificate` Juju action.
 
@@ -169,7 +180,6 @@ class HAProxyCharm(ops.CharmBase):
             event: Juju event
         """
         TLSInformation.validate(self)
-
         hostname = event.params["hostname"]
         if provider_cert := self._tls.get_provider_cert_with_hostname(hostname):
             event.set_results(
@@ -206,7 +216,10 @@ class HAProxyCharm(ops.CharmBase):
             ingress_requirers_information = IngressRequirersInformation.from_provider(
                 self._ingress_provider
             )
+            tls_information = TLSInformation.from_charm(self, self.certificates)
             kwargs["ingress_requirers_information"] = ingress_requirers_information
+            kwargs["haproxy_crt_dir"] = HAPROXY_CERTS_DIR
+            kwargs["config_external_hostname"] = tls_information.external_hostname
         if proxy_mode == ProxyMode.LEGACY:
             kwargs["services"] = self.http_provider.services
 
@@ -215,9 +228,6 @@ class HAProxyCharm(ops.CharmBase):
 
     def _reconcile_certificates(self) -> None:
         """Request new certificates if needed to match the configured hostname."""
-        if not TLSInformation.validate(self):
-            return None
-
         tls_information = TLSInformation.from_charm(self, self.certificates)
         current_certificate = None
         for certificate in self.certificates.get_provider_certificates():
@@ -255,6 +265,12 @@ class HAProxyCharm(ops.CharmBase):
         self._reconcile()
 
     def _validate_state(self) -> tuple[bool, ProxyMode]:
+        """Validate if all the necessary preconditions are fulfilled.
+
+        Returns:
+            tuple[bool, ProxyMode]: Whether the preconditions are fulfilled
+            and the resulting proxy mode.
+        """
         is_ingress_related = bool(self._ingress_provider.relations)
         is_legacy_related = bool(self.http_provider.relations)
 
@@ -264,9 +280,11 @@ class HAProxyCharm(ops.CharmBase):
             return (False, ProxyMode.INVALID)
 
         if is_ingress_related:
-            if not TLSInformation.validate(self):
+            try:
+                TLSInformation.validate(self)
+            except TLSNotReadyError as exc:
                 logger.exception("Invalid hostname configuration and/or relation data.")
-                self.unit.status = ops.BlockedStatus("TLS is not ready.")
+                self.unit.status = ops.BlockedStatus(str(exc))
                 return (False, ProxyMode.INVALID)
 
             return (True, ProxyMode.INGRESS)

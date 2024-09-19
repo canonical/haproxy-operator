@@ -6,6 +6,7 @@
 import logging
 import os
 import pwd
+import typing
 from enum import StrEnum
 from pathlib import Path
 
@@ -85,13 +86,13 @@ class HAProxyService:
         if not self.is_active():
             raise RuntimeError("HAProxy service is not running.")
 
-    def reconcile(self, proxy_mode: ProxyMode, config: CharmConfig, **kwargs) -> None:
+    def reconcile(self, proxy_mode: ProxyMode, config: CharmConfig, **kwargs: typing.Any) -> None:
         """Render the haproxy config and restart the haproxy service.
 
         Args:
-            config: charm config
-            services: The parsed services dict for reverseproxy.
-            ingress_requirers_information: Information about ingress requirers.
+            proxy_mode: proxy mode to decide which template to render.
+            config: The charm's configuration.
+            kwargs: Additional args specific to the child templates.
         """
         self._render_haproxy_config(proxy_mode, config, **kwargs)
         self._reload_haproxy_service()
@@ -104,13 +105,15 @@ class HAProxyService:
         """
         return systemd.service_running(APT_PACKAGE_NAME)
 
-    def _render_haproxy_config(self, proxy_mode: ProxyMode, config: CharmConfig, **kwargs) -> None:
+    def _render_haproxy_config(
+        self, proxy_mode: ProxyMode, config: CharmConfig, **kwargs: typing.Any
+    ) -> None:
         """Render the haproxy configuration file.
 
         Args:
-            config: Charm config.
-            services: Services definition.
-            ingress_requirers_information: Information about ingress requirers.
+            proxy_mode: proxy mode to decide which template to render.
+            config: The charm's configuration.
+            kwargs: Additional args specific to the child templates.
         """
         env = Environment(
             loader=FileSystemLoader("templates"),
