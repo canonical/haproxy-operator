@@ -40,8 +40,8 @@ HAPROXY_SERVICE = "haproxy"
 logger = logging.getLogger()
 
 
-class HaproxyServiceRestartError(Exception):
-    """Error when restarting the haproxy service."""
+class HaproxyServiceReloadError(Exception):
+    """Error when reloading the haproxy service."""
 
 
 class HaproxyServiceRestartError(Exception):
@@ -67,7 +67,7 @@ class HAProxyService:
             raise RuntimeError("HAProxy service is not running.")
 
     def reconcile(self, config: CharmConfig) -> None:
-        """Render the haproxy config and restart the haproxy service.
+        """Render the haproxy config and reload the haproxy service.
 
         Args:
             config: charm config
@@ -110,5 +110,9 @@ class HAProxyService:
         self._render_file(HAPROXY_CONFIG, rendered, 0o644)
 
     def _reload_haproxy_service(self) -> None:
-        """Restart the haporxy service."""
-        systemd.service_reload(HAPROXY_SERVICE)
+        """Reload the haporxy service."""
+        try:
+            systemd.service_reload(HAPROXY_SERVICE)
+        except systemd.SystemdError as exc:
+            logger.exception("Failed reloading the haproxy service.")
+            raise HaproxyServiceReloadError("Failed reloading the haproxy service.") from exc
