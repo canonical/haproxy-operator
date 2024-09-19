@@ -166,11 +166,7 @@ class HAProxyCharm(ops.CharmBase):
         self._reconcile()
 
     def _on_all_certificate_invalidated(self, _: AllCertificatesInvalidatedEvent) -> None:
-        """Handle the TLS Certificate invalidation event.
-
-        Args:
-            event: The event that fires this method.
-        """
+        """Handle the TLS Certificate invalidation event."""
         self._reconcile()
 
     def _on_get_certificate_action(self, event: ActionEvent) -> None:
