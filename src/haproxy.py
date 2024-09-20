@@ -106,7 +106,11 @@ class HAProxyService:
         self._render_file(HAPROXY_CONFIG, rendered, 0o644)
 
     def _reload_haproxy_service(self) -> None:
-        """Reload the haporxy service."""
+        """Reload the haporxy service.
+
+        Raises:
+            HaproxyServiceReloadError: when the haproxy service fails to reload.
+        """
         try:
             systemd.service_reload(HAPROXY_SERVICE)
         except systemd.SystemdError as exc:
