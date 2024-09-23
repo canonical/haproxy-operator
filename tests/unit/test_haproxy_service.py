@@ -21,7 +21,7 @@ def test_deploy(monkeypatch: pytest.MonkeyPatch):
     apt_add_package_mock = MagicMock()
     monkeypatch.setattr("charms.operator_libs_linux.v0.apt.add_package", apt_add_package_mock)
     render_file_mock = MagicMock()
-    monkeypatch.setattr("haproxy.HAProxyService._render_file", render_file_mock)
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
 
     haproxy_service = HAProxyService()
     haproxy_service.install()

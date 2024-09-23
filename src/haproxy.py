@@ -60,7 +60,7 @@ class HAProxyService:
         apt.update()
         apt.add_package(package_names=APT_PACKAGE_NAME, version=APT_PACKAGE_VERSION)
 
-        self._render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
+        render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
         self._reload_haproxy_service()
 
         if not self.is_active():
@@ -107,7 +107,7 @@ class HAProxyService:
         with open("templates/haproxy.cfg.j2", "r", encoding="utf-8") as file:
             template = Template(file.read(), keep_trailing_newline=True)
         rendered = template.render(config_global_max_connection=config.global_max_connection)
-        self._render_file(HAPROXY_CONFIG, rendered, 0o644)
+        render_file(HAPROXY_CONFIG, rendered, 0o644)
 
     def _reload_haproxy_service(self) -> None:
         """Reload the haporxy service.
@@ -120,3 +120,19 @@ class HAProxyService:
         except systemd.SystemdError as exc:
             logger.exception("Failed reloading the haproxy service.")
             raise HaproxyServiceReloadError("Failed reloading the haproxy service.") from exc
+
+
+def render_file(path: Path, content: str, mode: int) -> None:
+    """Write a content rendered from a template to a file.
+
+    Args:
+        path: Path object to the file.
+        content: the data to be written to the file.
+        mode: access permission mask applied to the
+            file using chmod (e.g. 0o640).
+    """
+    path.write_text(content, encoding="utf-8")
+    os.chmod(path, mode)
+    u = pwd.getpwnam(HAPROXY_USER)
+    # Set the correct ownership for the file.
+    os.chown(path, uid=u.pw_uid, gid=u.pw_gid)

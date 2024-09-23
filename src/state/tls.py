@@ -1,7 +1,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""gateway-api-integrator resource definition."""
+"""haproxy-operator charm tls information."""
 
 import logging
 import re
@@ -49,17 +49,10 @@ class TLSInformation:
 
         Returns:
             TLSInformation: Information about configured TLS certs.
-
-        Raises:
-            TLSNotReadyError: if the charm is not ready to handle TLS.
         """
-        cls.validate_certificates_integration(charm)
+        cls.validate(charm)
 
         external_hostname = typing.cast(str, charm.config.get("external-hostname"))
-        if not re.match(HOSTNAME_REGEX, external_hostname):
-            logger.error("Configured hostname does not match regex: %s", HOSTNAME_REGEX)
-            raise TLSNotReadyError("invalid hostname configuration.")
-
         tls_certs = {}
         tls_keys = {}
 
@@ -79,7 +72,7 @@ class TLSInformation:
         )
 
     @classmethod
-    def validate_certificates_integration(cls, charm: ops.CharmBase) -> None:
+    def validate(cls, charm: ops.CharmBase) -> None:
         """Validate the precondition to initialize this state component.
 
         Args:
@@ -89,8 +82,15 @@ class TLSInformation:
             TLSNotReadyError: if the charm is not ready to handle TLS.
         """
         tls_requirer_integration = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION)
+        external_hostname = typing.cast(str, charm.config.get("external-hostname"))
+
+        if not re.match(HOSTNAME_REGEX, external_hostname):
+            logger.error("Configured hostname does not match regex: %s", HOSTNAME_REGEX)
+            raise TLSNotReadyError("Invalid hostname configuration.")
+
         if (
             tls_requirer_integration is None
             or tls_requirer_integration.data.get(charm.app) is None
         ):
-            raise TLSNotReadyError("Certificates integration not ready.")
+            logger.error("Relation or relation data not ready.")
+            raise TLSNotReadyError("Relation or relation data not ready.")
