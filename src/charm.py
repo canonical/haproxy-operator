@@ -69,7 +69,6 @@ class HAProxyCharm(ops.CharmBase):
     def _on_install(self, _: typing.Any) -> None:
         """Install the haproxy package."""
         self.haproxy_service.install()
-        self.unit.status = ops.ActiveStatus()
 
     @validate_config_and_tls(defer=False, block_on_tls_not_ready=False)
     def _on_config_changed(self, _: typing.Any) -> None:
@@ -82,12 +81,14 @@ class HAProxyCharm(ops.CharmBase):
         """Handle certificates relation joined event."""
         self._reconcile_certificates()
 
+    @validate_config_and_tls(defer=True, block_on_tls_not_ready=True)
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Handle the TLS Certificate available event.
 
         Args:
             event: Juju event
         """
+        TLSInformation.validate(self)
         self._tls.write_certificate_to_unit(event.certificate)
         self._reconcile()
 
@@ -101,6 +102,7 @@ class HAProxyCharm(ops.CharmBase):
         TLSInformation.validate(self)
         self._tls.certificate_expiring(event.certificate)
 
+    @validate_config_and_tls(defer=True, block_on_tls_not_ready=True)
     def _on_certificate_invalidated(self, event: CertificateInvalidatedEvent) -> None:
         """Handle the TLS Certificate invalidation event.
 
@@ -114,6 +116,7 @@ class HAProxyCharm(ops.CharmBase):
             self._tls.certificate_expiring(event.certificate)
         self.unit.status = ops.MaintenanceStatus("Waiting for new certificate")
 
+    @validate_config_and_tls(defer=False, block_on_tls_not_ready=False)
     def _on_all_certificate_invalidated(self, _: AllCertificatesInvalidatedEvent) -> None:
         """Handle the TLS Certificate invalidation event."""
         self._reconcile()
@@ -148,7 +151,7 @@ class HAProxyCharm(ops.CharmBase):
     def _reconcile_certificates(self) -> None:
         """Request new certificates if needed to match the configured hostname."""
         tls_information = TLSInformation.from_charm(self, self.certificates)
-        certificate_with_hostname_present = False
+        current_certificate = None
         for certificate in self.certificates.get_provider_certificates():
             logger.info(
                 "Checking certificate with hostname: %s",
@@ -158,10 +161,12 @@ class HAProxyCharm(ops.CharmBase):
                 get_hostname_from_cert(certificate.certificate)
                 != tls_information.external_hostname
             ):
-                self._tls.certificate_invalidated(provider_certificate=certificate)
+                self.certificates.request_certificate_revocation(
+                    certificate_signing_request=certificate.csr.encode()
+                )
             else:
-                certificate_with_hostname_present = True
-        if not certificate_with_hostname_present:
+                current_certificate = certificate
+        if not current_certificate:
             logger.info("Certificate not in provider's relation data, creating csr.")
             self._tls.generate_private_key(tls_information.external_hostname)
             self._tls.request_certificate(tls_information.external_hostname)

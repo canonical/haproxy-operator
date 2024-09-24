@@ -82,7 +82,7 @@ class TLSInformation:
             TLSNotReadyError: if the charm is not ready to handle TLS.
         """
         tls_requirer_integration = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION)
-        external_hostname = typing.cast(str, charm.config.get("external-hostname"))
+        external_hostname = typing.cast(str, charm.config.get("external-hostname", ""))
 
         if not re.match(HOSTNAME_REGEX, external_hostname):
             logger.error("Configured hostname does not match regex: %s", HOSTNAME_REGEX)
@@ -93,4 +93,4 @@ class TLSInformation:
             or tls_requirer_integration.data.get(charm.app) is None
         ):
             logger.error("Relation or relation data not ready.")
-            raise TLSNotReadyError("Relation or relation data not ready.")
+            raise TLSNotReadyError("Certificates relation or relation data not ready.")

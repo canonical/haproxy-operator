@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 # Since the relations invoked in the methods are taken from the charm,
 # mypy guesses the relations might be None about all of them.
-"""Gateway API TLS relation business logic."""
+"""Haproxy TLS relation business logic."""
 import logging
 import secrets
 import string
@@ -17,7 +17,7 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
 )
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
-from cryptography.x509.oid import NameOID
+from cryptography.x509.oid import NameOID, ExtensionOID
 from ops.model import Model, Relation, SecretNotFoundError
 
 from haproxy import render_file
@@ -30,6 +30,10 @@ logger = logging.getLogger()
 
 class InvalidCertificateError(Exception):
     """Exception raised when certificates is invalid."""
+
+
+class GetPrivateKeyError(Exception):
+    """Exception raised when the private key secret doesn't exist."""
 
 
 class KeyPair(typing.NamedTuple):
@@ -59,12 +63,17 @@ def get_hostname_from_cert(certificate: str) -> str:
     decoded_cert = x509.load_pem_x509_certificate(certificate.encode())
 
     common_name_attribute = decoded_cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
-    if not common_name_attribute:
+    subject_alternative_name = decoded_cert.subject.get_attributes_for_oid(
+        ExtensionOID.SUBJECT_ALTERNATIVE_NAME
+    )
+    common_name_and_sans = common_name_attribute + subject_alternative_name
+
+    if not common_name_and_sans:
         raise InvalidCertificateError(
             f"Cannot parse hostname from x509 certificate: {certificate}"
         )
 
-    return str(common_name_attribute[0].value)
+    return str(common_name_and_sans[0].value)
 
 
 class TLSRelationService:
@@ -146,9 +155,13 @@ class TLSRelationService:
         Returns:
             The encrypted private key.
         """
-        secret = self.model.get_secret(label=f"private-key-{hostname}")
-        private_key = secret.get_content()["key"]
-        password = secret.get_content()["password"]
+        try:
+            secret = self.model.get_secret(label=f"private-key-{hostname}")
+            private_key = secret.get_content()["key"]
+            password = secret.get_content()["password"]
+        except SecretNotFoundError as exc:
+            logger.exception(f"Private key for hostname: {hostname} not found")
+            raise GetPrivateKeyError(f"Private key for hostname: {hostname} not found") from exc
         return KeyPair(private_key, password)
 
     def get_provider_cert_with_hostname(
@@ -169,6 +182,7 @@ class TLSRelationService:
 
     def certificate_expiring(self, certificate: str) -> None:
         """Handle the TLS Certificate expiring event.
+        Generate a new CSR and request for a new certificate.
 
         Args:
             certificate: The invalidated certificate.
@@ -208,10 +222,9 @@ class TLSRelationService:
             return
 
         invalidated_provider_certificate = provider_certificate
-        if not provider_certificate:
+        if provider_certificate is None:
             # certificate should always be set here
-            if certificate is None:
-                raise AssertionError("certificate is not expected to be None.")
+            assert certificate  # nosec
 
             matched_provider_certificate = self._get_cert(certificate)
             if not matched_provider_certificate:
@@ -219,9 +232,9 @@ class TLSRelationService:
                 return
             invalidated_provider_certificate = matched_provider_certificate
 
+        # For mypy only
         # invalidated_provider_certificate should always be set here
-        if invalidated_provider_certificate is None:
-            raise AssertionError("invalidated_provider_certificate is not expected to be None.")
+        assert invalidated_provider_certificate
         try:
             hostname = get_hostname_from_cert(invalidated_provider_certificate.certificate)
             self.remove_certificate_from_unit(hostname)
@@ -229,10 +242,6 @@ class TLSRelationService:
             secret.remove_all_revisions()
         except SecretNotFoundError:
             logger.exception("Secret not found, skipping deletion")
-
-        self.certificates.request_certificate_revocation(
-            certificate_signing_request=invalidated_provider_certificate.csr.encode()
-        )
 
     def write_certificate_to_unit(self, certificate: str) -> None:
         """Write the certificate having "hostname" to haproxy cert directory.
@@ -290,7 +299,6 @@ def _get_decrypted_key(private_key: str, password: str) -> str:
         private_key.encode(), password=password.encode()
     )
 
-    # There are multiple representation PKCS8 is the default supported by nginx controller
     return decrypted_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
