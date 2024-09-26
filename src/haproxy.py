@@ -105,7 +105,7 @@ class HAProxyService:
         render_file(HAPROXY_CONFIG, rendered, 0o644)
 
     def _reload_haproxy_service(self) -> None:
-        """Reload the haporxy service.
+        """Reload the haproxy service.
 
         Raises:
             HaproxyServiceReloadError: when the haproxy service fails to reload.
