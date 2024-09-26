@@ -120,14 +120,10 @@ class TLSRelationService:
 
         Args:
             hostname: Certificate's hostname.
-
-        Raises:
-            AssertionError: If this method is called before the certificates integration is ready.
         """
         # At this point, TLSInformation state component should already be initialized
         tls_integration = self.model.get_relation(self.integration_name)
-        if not tls_integration:
-            raise AssertionError
+        assert tls_integration  # nosec: B101
 
         tls_integration = typing.cast(Relation, tls_integration)
 
@@ -224,7 +220,7 @@ class TLSRelationService:
         invalidated_provider_certificate = provider_certificate
         if provider_certificate is None:
             # certificate should always be set here
-            assert certificate  # nosec
+            assert certificate  # nosec: B101
 
             matched_provider_certificate = self._get_cert(certificate)
             if not matched_provider_certificate:
@@ -234,7 +230,7 @@ class TLSRelationService:
 
         # For mypy only
         # invalidated_provider_certificate should always be set here
-        assert invalidated_provider_certificate
+        assert invalidated_provider_certificate  # nosec: B101
         try:
             hostname = get_hostname_from_cert(invalidated_provider_certificate.certificate)
             self.remove_certificate_from_unit(hostname)
