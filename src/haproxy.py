@@ -44,10 +44,6 @@ class HaproxyServiceReloadError(Exception):
     """Error when reloading the haproxy service."""
 
 
-class HaproxyServiceRestartError(Exception):
-    """Error when restarting the haproxy service."""
-
-
 class HAProxyService:
     """HAProxy service class."""
 
@@ -82,21 +78,6 @@ class HAProxyService:
             True if the haproxy is running.
         """
         return systemd.service_running(APT_PACKAGE_NAME)
-
-    def _render_file(self, path: Path, content: str, mode: int) -> None:
-        """Write a content rendered from a template to a file.
-
-        Args:
-            path: Path object to the file.
-            content: the data to be written to the file.
-            mode: access permission mask applied to the
-              file using chmod (e.g. 0o640).
-        """
-        path.write_text(content, encoding="utf-8")
-        os.chmod(path, mode)
-        u = pwd.getpwnam(HAPROXY_USER)
-        # Set the correct ownership for the file.
-        os.chown(path, uid=u.pw_uid, gid=u.pw_gid)
 
     def _render_haproxy_config(self, config: CharmConfig) -> None:
         """Render the haproxy configuration file.
