@@ -17,7 +17,7 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
 )
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
-from cryptography.x509.oid import NameOID, ExtensionOID
+from cryptography.x509.oid import ExtensionOID, NameOID
 from ops.model import Model, Relation, SecretNotFoundError
 
 from haproxy import render_file
@@ -154,13 +154,16 @@ class TLSRelationService:
 
         Returns:
             The encrypted private key.
+
+        Raises:
+            GetPrivateKeyError: When failed getting the required private key.
         """
         try:
             secret = self.model.get_secret(label=f"private-key-{hostname}")
             private_key = secret.get_content()["key"]
             password = secret.get_content()["password"]
         except SecretNotFoundError as exc:
-            logger.exception(f"Private key for hostname: {hostname} not found")
+            logger.exception("Private key for hostname: %s not found", hostname)
             raise GetPrivateKeyError(f"Private key for hostname: {hostname} not found") from exc
         return KeyPair(private_key, password)
 
@@ -182,6 +185,7 @@ class TLSRelationService:
 
     def certificate_expiring(self, certificate: str) -> None:
         """Handle the TLS Certificate expiring event.
+
         Generate a new CSR and request for a new certificate.
 
         Args:
@@ -213,10 +217,6 @@ class TLSRelationService:
             certificate: The invalidated certificate to match with a provider certificate.
             provider_certificate: The provider certificate, skip certificate matching
             if this is provided directly.
-
-        Raises:
-            AssertionError: In unexpected cases where
-            invalidated_provider_certificate/certificate is None.
         """
         if not certificate and not provider_certificate:
             return
@@ -242,6 +242,22 @@ class TLSRelationService:
             secret.remove_all_revisions()
         except SecretNotFoundError:
             logger.exception("Secret not found, skipping deletion")
+
+    def certificate_available(
+        self,
+        certificate: str,
+    ) -> None:
+        """Handle TLS Certificate available event.
+
+        Args:
+            certificate: The provided certificate.
+        """
+        self.write_certificate_to_unit(certificate)
+
+    def all_certificate_invalidated(self) -> None:
+        """Clean up certificates in unit and private key secrets."""
+        for cert in self.certificates.get_provider_certificates():
+            self.certificate_invalidated(provider_certificate=cert)
 
     def write_certificate_to_unit(self, certificate: str) -> None:
         """Write the certificate having "hostname" to haproxy cert directory.

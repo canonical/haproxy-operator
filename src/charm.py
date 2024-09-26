@@ -89,7 +89,7 @@ class HAProxyCharm(ops.CharmBase):
             event: Juju event
         """
         TLSInformation.validate(self)
-        self._tls.write_certificate_to_unit(event.certificate)
+        self._tls.certificate_available(event.certificate)
         self._reconcile()
 
     @validate_config_and_tls(defer=True, block_on_tls_not_ready=True)
@@ -101,6 +101,10 @@ class HAProxyCharm(ops.CharmBase):
         """
         TLSInformation.validate(self)
         self._tls.certificate_expiring(event.certificate)
+        hostname = get_hostname_from_cert(event.certificate)
+        self.unit.status = ops.MaintenanceStatus(
+            f"Waiting for new certificate for hostname: {hostname}"
+        )
 
     @validate_config_and_tls(defer=True, block_on_tls_not_ready=True)
     def _on_certificate_invalidated(self, event: CertificateInvalidatedEvent) -> None:
@@ -115,10 +119,15 @@ class HAProxyCharm(ops.CharmBase):
         if event.reason == "expired":
             self._tls.certificate_expiring(event.certificate)
         self.unit.status = ops.MaintenanceStatus("Waiting for new certificate")
+        hostname = get_hostname_from_cert(event.certificate)
+        self.unit.status = ops.MaintenanceStatus(
+            f"Waiting for new certificate for hostname: {hostname}"
+        )
 
     @validate_config_and_tls(defer=False, block_on_tls_not_ready=False)
     def _on_all_certificate_invalidated(self, _: AllCertificatesInvalidatedEvent) -> None:
         """Handle the TLS Certificate invalidation event."""
+        self._tls.all_certificate_invalidated()
         self._reconcile()
 
     def _on_get_certificate_action(self, event: ActionEvent) -> None:
@@ -153,10 +162,6 @@ class HAProxyCharm(ops.CharmBase):
         tls_information = TLSInformation.from_charm(self, self.certificates)
         current_certificate = None
         for certificate in self.certificates.get_provider_certificates():
-            logger.info(
-                "Checking certificate with hostname: %s",
-                get_hostname_from_cert(certificate.certificate),
-            )
             if (
                 get_hostname_from_cert(certificate.certificate)
                 != tls_information.external_hostname
