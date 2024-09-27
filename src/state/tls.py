@@ -44,7 +44,7 @@ class TLSInformation:
         """Get TLS information from a charm instance.
 
         Args:
-            charm: The gateway-api-integrator charm.
+            charm: The haproxy charm.
             certificates: TLS certificates requirer library.
 
         Returns:
@@ -76,7 +76,7 @@ class TLSInformation:
         """Validate the precondition to initialize this state component.
 
         Args:
-            charm: The gateway-api-integrator charm.
+            charm: The haproxy charm.
 
         Raises:
             TLSNotReadyError: if the charm is not ready to handle TLS.

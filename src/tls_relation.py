@@ -220,17 +220,16 @@ class TLSRelationService:
         invalidated_provider_certificate = provider_certificate
         if provider_certificate is None:
             # certificate should always be set here
-            assert certificate  # nosec: B101
-
-            matched_provider_certificate = self._get_cert(certificate)
+            matched_provider_certificate = self._get_cert(typing.cast(str, certificate))
             if not matched_provider_certificate:
                 logger.error("Cannot find provider certificate with provided certificate string.")
                 return
             invalidated_provider_certificate = matched_provider_certificate
 
-        # For mypy only
         # invalidated_provider_certificate should always be set here
-        assert invalidated_provider_certificate  # nosec: B101
+        invalidated_provider_certificate = typing.cast(
+            ProviderCertificate, invalidated_provider_certificate
+        )
         try:
             hostname = get_hostname_from_cert(invalidated_provider_certificate.certificate)
             self.remove_certificate_from_unit(hostname)
