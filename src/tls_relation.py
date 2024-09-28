@@ -143,7 +143,7 @@ class TLSRelationService:
             secret.grant(tls_integration)
 
     def _get_private_key(self, hostname: str) -> KeyPair:
-        """Return the private key and its password from either juju secrets or the relation data.
+        """Return the private key and its password from juju secrets.
 
         Args:
             hostname: The hostname of the private key we want to fetch.
