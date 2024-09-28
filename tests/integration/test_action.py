@@ -22,3 +22,11 @@ async def test_get_certificate_action(
     )
     await action.wait()
     assert action.results
+
+    action = await configured_application_with_tls.units[0].run(
+        "ls /var/lib/haproxy/certs", timeout=60
+    )
+    await action.wait()
+
+    stdout = action.results.get("stdout")
+    assert f"{TEST_EXTERNAL_HOSTNAME_CONFIG}.pem" in stdout
