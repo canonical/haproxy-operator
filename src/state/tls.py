@@ -44,7 +44,7 @@ class TLSInformation:
         """Get TLS information from a charm instance.
 
         Args:
-            charm: The gateway-api-integrator charm.
+            charm: The haproxy charm.
             certificates: TLS certificates requirer library.
 
         Returns:
@@ -75,11 +75,15 @@ class TLSInformation:
     def validate(cls, charm: ops.CharmBase) -> None:
         """Validate the precondition to initialize this state component.
 
-        Args:
-            charm: The gateway-api-integrator charm.
+                Args:
+        <<<<<<< HEAD
+                    charm: The gateway-api-integrator charm.
+        =======
+                    charm: The haproxy charm.
+        >>>>>>> origin/main
 
-        Raises:
-            TLSNotReadyError: if the charm is not ready to handle TLS.
+                Raises:
+                    TLSNotReadyError: if the charm is not ready to handle TLS.
         """
         tls_requirer_integration = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION)
         external_hostname = typing.cast(str, charm.config.get("external-hostname", ""))
