@@ -13,9 +13,11 @@ from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 async def test_get_certificate_action(
     configured_application_with_tls: Application,
 ):
-    """Deploy the charm with valid config and tls integration.
-
-    Assert on valid output of get-certificate.
+    """
+    arrange: Deploy the charm with valid config and tls integration.
+    act: Run the get-certificate action and run a sh command to check
+    the cert location on the unit.
+    assert: The output of both operations are valid.
     """
     action = await configured_application_with_tls.units[0].run_action(
         "get-certificate", hostname=TEST_EXTERNAL_HOSTNAME_CONFIG
