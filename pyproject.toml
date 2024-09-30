@@ -6,6 +6,9 @@ skips = ["*/*test.py", "*/test_*.py", "*tests/*.py"]
 # Testing tools configuration
 [tool.coverage.run]
 branch = true
+omit = [
+    "src/legacy.py"
+]
 
 # Formatting tools configuration
 [tool.black]
