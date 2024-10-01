@@ -10,14 +10,15 @@ import typing
 import ops
 
 from state.config import InvalidCharmConfigError
+from state.tls import TLSNotReadyError
 
 logger = logging.getLogger(__name__)
 
 C = typing.TypeVar("C", bound=ops.CharmBase)
 
 
-def validate_config_and_integration(
-    defer: bool = False,
+def validate_config_and_tls(
+    defer: bool = False, block_on_tls_not_ready: bool = False
 ) -> typing.Callable[
     [typing.Callable[[C, typing.Any], None]], typing.Callable[[C, typing.Any], None]
 ]:
@@ -25,6 +26,7 @@ def validate_config_and_integration(
 
     Args:
         defer: whether to defer the event.
+        block_on_tls_not_ready: Whether to block the charm if TLS is not ready.
 
     Returns:
         the function decorator.
@@ -53,15 +55,23 @@ def validate_config_and_integration(
             Returns:
                 The value returned from the original function. That is, None.
             """
+            event: ops.EventBase
             try:
                 return method(instance, *args)
             except InvalidCharmConfigError as exc:
                 if defer:
-                    event: ops.EventBase
                     event, *_ = args
                     event.defer()
                 logger.exception("Error setting up charm state.")
                 instance.unit.status = ops.BlockedStatus(str(exc))
+                return None
+            except TLSNotReadyError as exc:
+                if defer:
+                    event, *_ = args
+                    event.defer()
+                if block_on_tls_not_ready:
+                    instance.unit.status = ops.BlockedStatus(str(exc))
+                logger.exception("Not ready to handle TLS.")
                 return None
 
         return wrapper

@@ -9,6 +9,13 @@ async def test_config(application: Application):
     """Deploy the charm, set global-maxconn config and
     verify that the correct value is rendered.
     """
+    await application.set_config({"global-maxconn": "-1"})
+    await application.model.wait_for_idle(
+        apps=[application.name],
+        idle_period=10,
+        status="blocked",
+    )
+
     await application.set_config({"global-maxconn": "1024"})
     await application.model.wait_for_idle(
         apps=[application.name],

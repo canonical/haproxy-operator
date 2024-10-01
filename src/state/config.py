@@ -42,7 +42,7 @@ class CharmConfig:
             global_max_connection: The config to validate.
 
         Raises:
-            ValueError: When the configured value is not between 0 and "fs.nr_open.
+            ValueError: When the configured value is not between 0 and "fs.file-max".
 
         Returns:
             int: The validated global_max_connection config.
@@ -59,12 +59,13 @@ class CharmConfig:
             logger.exception("Cannot get system's max file descriptor value, skipping check.")
             return global_max_connection
 
-        _, _, fs_nr_open = output[0].partition("=")
-        if not fs_nr_open:
+        # Validate the configured max connection against the system's fd hard-limit
+        _, _, fs_file_max = output[0].partition("=")
+        if not fs_file_max:
             logger.warning("Error parsing sysctl output, skipping check.")
             return global_max_connection
 
-        if fs_nr_open and global_max_connection > int(fs_nr_open.strip()):
+        if fs_file_max and global_max_connection > int(fs_file_max.strip()):
             raise ValueError
         return global_max_connection
 
