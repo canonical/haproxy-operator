@@ -47,8 +47,8 @@ class HaproxyServiceReloadError(Exception):
     """Error when reloading the haproxy service."""
 
 
-class HaproxyServiceRestartError(Exception):
-    """Error when restarting the haproxy service."""
+class HaproxyInvalidRelationError(Exception):
+    """Exception raised when both the reverseproxy and ingress relation are established."""
 
 
 class HAProxyService:
@@ -81,7 +81,15 @@ class HAProxyService:
             config: charm config
             services_dict: The parsed services dict for reverseproxy.
             ingress_requirers_information: Information about ingress requirers.
+
+        Raises:
+            HaproxyInvalidRelationError: when both reversporxy and ingress is present.
         """
+        # At this point, the charm should already verify that
+        # only one relation is established
+        if services and ingress_requirers_information.backends:
+            raise HaproxyInvalidRelationError("reverseproxy and ingress are mutually exclusive.")
+
         self._render_haproxy_config(config, services, ingress_requirers_information)
         self._reload_haproxy_service()
 
