@@ -57,6 +57,27 @@ async def application_fixture(
     yield application
 
 
+@pytest_asyncio.fixture(scope="module", name="application_with_unit_address")
+async def application_with_unit_address_fixture(
+    application: Application,
+) -> tuple[Application, str]:
+    """Application with the unit address to make HTTP requests."""
+    status: FullStatus = await application.model.get_status([application.name])
+    unit_status: UnitStatus = next(iter(status.applications[application.name].units.values()))
+    assert unit_status.public_address, "Invalid unit address"
+    address = (
+        unit_status.public_address
+        if isinstance(unit_status.public_address, str)
+        else unit_status.public_address.decode()
+    )
+
+    unit_ip_address = ipaddress.ip_address(address)
+    url = f"http://{str(unit_ip_address)}"
+    if isinstance(unit_ip_address, ipaddress.IPv6Address):
+        url = f"http://[{str(unit_ip_address)}]"
+    return (application, url)
+
+
 @pytest_asyncio.fixture(scope="module", name="certificate_provider_application")
 async def certificate_provider_application_fixture(
     model: Model,
