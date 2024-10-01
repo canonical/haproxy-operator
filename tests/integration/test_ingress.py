@@ -3,22 +3,21 @@
 
 """Integration test for actions."""
 
-import ipaddress
-
 import pytest
 import requests
 from juju.application import Application
-from juju.client._definitions import FullStatus, UnitStatus
 
 
 @pytest.mark.abort_on_fail
 async def test_ingress_integration(
-    application: Application, any_charm_ingress_requirer: Application
+    application_with_unit_address: tuple[Application, str],
+    any_charm_ingress_requirer: Application,
 ):
     """Deploy the charm with anycharm ingress requirer that installs apache2.
 
     Assert that the requirer endpoint is available.
     """
+    application, unit_address = application_with_unit_address
     action = await any_charm_ingress_requirer.units[0].run_action(
         "rpc",
         method="start_server",
@@ -32,21 +31,8 @@ async def test_ingress_integration(
         idle_period=30,
         status="active",
     )
-    status: FullStatus = await application.model.get_status([application.name])
-    unit_status: UnitStatus = next(iter(status.applications[application.name].units.values()))
-    assert unit_status.public_address, "Invalid unit address"
-    address = (
-        unit_status.public_address
-        if isinstance(unit_status.public_address, str)
-        else unit_status.public_address.decode()
-    )
-
-    unit_ip_address = ipaddress.ip_address(address)
-    url = f"http://{str(unit_ip_address)}"
-    if isinstance(unit_ip_address, ipaddress.IPv6Address):
-        url = f"http://[{str(unit_ip_address)}]"
     path = f"{any_charm_ingress_requirer.model.name}-{any_charm_ingress_requirer.name}/ok"
-    response = requests.get(f"{url}/{path}", timeout=5)
+    response = requests.get(f"{unit_address}/{path}", timeout=5)
 
     assert response.status_code == 200
     assert "ok!" in response.text
