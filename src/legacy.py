@@ -15,6 +15,8 @@ from operator import itemgetter
 import os
 import logging
 from itertools import tee
+import base64
+import pwd
 
 default_haproxy_lib_dir = "/var/lib/haproxy"
 dupe_options = [
@@ -402,33 +404,30 @@ def generate_service_config(haproxy_frontend_prefix: str, services_dict): # noqa
         backends = service_config.get('backends', [])
 
         errorfiles = service_config.get('errorfiles', [])
-        # TODO: write errorfiles to fs in haproxy.py
-        # for errorfile in errorfiles:
-        #     path = get_service_lib_path(service_name)
-        #     full_path = os.path.join(
-        #         path, "%s.http" % errorfile["http_status"])
-        #     with open(full_path, 'wb') as f:
-        #         f.write(base64.b64decode(errorfile["content"]))
+        for errorfile in errorfiles:
+            path = get_service_lib_path(service_name)
+            full_path = os.path.join(
+                path, "%s.http" % errorfile["http_status"])
+            with open(full_path, 'wb') as f:
+                f.write(base64.b64decode(errorfile["content"]))
 
         # Write to disk the content of the given SSL certificates
         # or use a single path element to search for them.
         
         crts = service_config.get('crts', [])
-        # TODO: write passed crts to fs in haproxy.py
-        # if len(crts) == 1 and os.path.isdir(crts[0]):
-        #     logger.info("Service configured to use path to look for certificates in haproxy.cfg.")
-        # else:
-        #     for i, crt in enumerate(crts):
-        #         if crt == "DEFAULT" or crt == "EXTERNAL":
-        #             continue
-        #         content = base64.b64decode(crt)
-        #         path = get_service_lib_path(service_name)
-        #         full_path = os.path.join(path, "%d.pem" % i)
-        #         write_ssl_pem(full_path, content)
-        #         with open(full_path, 'w') as f:
-        #             f.write(content.decode('utf-8'))
+        if len(crts) == 1 and os.path.isdir(crts[0]):
+            logger.info("Service configured to use path to look for certificates in haproxy.cfg.")
+        else:
+            for i, crt in enumerate(crts):
+                if crt == "DEFAULT" or crt == "EXTERNAL":
+                    continue
+                content = base64.b64decode(crt)
+                path = get_service_lib_path(service_name)
+                full_path = os.path.join(path, "%d.pem" % i)
+                write_ssl_pem(full_path, content)
+                with open(full_path, 'w') as f:
+                    f.write(content.decode('utf-8'))
         
-        logger.info("service options: %r", service_config.get('service_options', []))
         generated_config.append(create_listen_stanza(
                 haproxy_frontend_prefix,
                 service_name,
@@ -439,3 +438,24 @@ def generate_service_config(haproxy_frontend_prefix: str, services_dict): # noqa
             )
         )
     return generated_config
+
+def get_service_lib_path(service_name):
+    # Get a service-specific lib path
+    path = os.path.join(default_haproxy_lib_dir,
+                        "service_%s" % service_name)
+    if not os.path.exists(path):
+        os.makedirs(path)
+    return path
+
+
+def write_ssl_pem(path, content):
+    """Write an SSL pem file and set permissions on it."""
+    # Set the umask so the child process will inherit it and we
+    # can make certificate files readable only by the 'haproxy'
+    # user (see below).
+    old_mask = os.umask(0o077)
+    with open(path, 'w') as f:
+        f.write(content.decode('utf-8'))
+    os.umask(old_mask)
+    uid = pwd.getpwnam('haproxy').pw_uid
+    os.chown(path, uid, -1)

@@ -3,6 +3,7 @@
 
 """The haproxy http interface module."""
 
+import abc
 import json
 import logging
 
@@ -63,12 +64,15 @@ class _IntegrationInterfaceBaseClass(Object):
         observe(charm.on[relation_name].relation_departed, self._on_relation_changed)
         observe(charm.on[relation_name].relation_broken, self._on_relation_broken)
 
+    @abc.abstractmethod
     def _on_relation_joined(self, _: RelationJoinedEvent) -> None:
         """Abstract method to handle relation-joined event."""
 
+    @abc.abstractmethod
     def _on_relation_changed(self, _: RelationChangedEvent) -> None:
         """Abstract method to handle relation-changed event."""
 
+    @abc.abstractmethod
     def _on_relation_broken(self, _: RelationBrokenEvent) -> None:
         """Abstract method to handle relation-changed event."""
 
