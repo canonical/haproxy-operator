@@ -320,7 +320,7 @@ def _append_backend(service_config, name, options, errorfiles, server_entries): 
             service_config.append(server_line)
         
 
-def create_listen_stanza(haproxy_frontend_prefix: str, service_name=None, service_ip=None,
+def create_listen_stanza(service_name=None, service_ip=None,
                          service_port=None, service_options=None,
                          server_entries=None, service_errorfiles=None,
                          service_crts=None, service_backends=None): # noqa
@@ -346,7 +346,10 @@ def create_listen_stanza(haproxy_frontend_prefix: str, service_name=None, servic
             out.extend(option for option, match in result
                        if match is cond and option not in out)
     service_config = []
-    service_config.append("frontend %s-%s" % (haproxy_frontend_prefix, service_port))
+    # In the legacy charm the frontend name is prefixed with the charm's unit name
+    # We changed this to haproxy-<service_port> as JUJU_UNIT_NAME env is no longer supported
+    # In newer versions of juju
+    service_config.append("frontend haproxy-%s" % service_port)
     bind_stanza = "    bind %s:%s" % (service_ip, service_port)
     if service_crts:
         # Enable SSL termination for this frontend, using the given
@@ -395,7 +398,7 @@ def create_listen_stanza(haproxy_frontend_prefix: str, service_name=None, servic
     return '\n'.join(service_config)
 
 
-def generate_service_config(haproxy_frontend_prefix: str, services_dict): # noqa
+def generate_service_config(services_dict): # noqa
     generated_config = []
     # Construct the new haproxy.cfg file
     for service_key, service_config in services_dict.items():
@@ -429,7 +432,6 @@ def generate_service_config(haproxy_frontend_prefix: str, services_dict): # noqa
                     f.write(content.decode('utf-8'))
         
         generated_config.append(create_listen_stanza(
-                haproxy_frontend_prefix,
                 service_name,
                 service_config['service_host'],
                 service_config['service_port'],
@@ -439,7 +441,7 @@ def generate_service_config(haproxy_frontend_prefix: str, services_dict): # noqa
         )
     return generated_config
 
-def get_service_lib_path(service_name):
+def get_service_lib_path(service_name): # noqa
     # Get a service-specific lib path
     path = os.path.join(default_haproxy_lib_dir,
                         "service_%s" % service_name)
@@ -448,7 +450,7 @@ def get_service_lib_path(service_name):
     return path
 
 
-def write_ssl_pem(path, content):
+def write_ssl_pem(path, content): # noqa
     """Write an SSL pem file and set permissions on it."""
     # Set the umask so the child process will inherit it and we
     # can make certificate files readable only by the 'haproxy'

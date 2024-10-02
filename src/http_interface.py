@@ -67,14 +67,17 @@ class _IntegrationInterfaceBaseClass(Object):
     @abc.abstractmethod
     def _on_relation_joined(self, _: RelationJoinedEvent) -> None:
         """Abstract method to handle relation-joined event."""
+        raise NotImplementedError
 
     @abc.abstractmethod
     def _on_relation_changed(self, _: RelationChangedEvent) -> None:
         """Abstract method to handle relation-changed event."""
+        raise NotImplementedError
 
     @abc.abstractmethod
     def _on_relation_broken(self, _: RelationBrokenEvent) -> None:
         """Abstract method to handle relation-changed event."""
+        raise NotImplementedError
 
     @property
     def relations(self) -> list[Relation]:
@@ -90,6 +93,7 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
     """
 
     on = HTTPProviderEvents()  # type: ignore
+    services: dict = dict()
 
     def _on_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Handle relation-changed event.

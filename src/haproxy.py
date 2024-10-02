@@ -65,14 +65,14 @@ class HAProxyService:
         if not self.is_active():
             raise RuntimeError("HAProxy service is not running.")
 
-    def reconcile(self, config: CharmConfig, http_provider: HTTPProvider) -> None:
+    def reconcile(self, config: CharmConfig, services_dict: dict) -> None:
         """Render the haproxy config and restart the haproxy service.
 
         Args:
             config: charm config
             http_provider: The http interface provider.
         """
-        self._render_haproxy_config(config, http_provider)
+        self._render_haproxy_config(config, services_dict)
         self._reload_haproxy_service()
 
     def is_active(self) -> bool:
@@ -83,7 +83,7 @@ class HAProxyService:
         """
         return systemd.service_running(APT_PACKAGE_NAME)
 
-    def _render_haproxy_config(self, config: CharmConfig, http_provider: HTTPProvider) -> None:
+    def _render_haproxy_config(self, config: CharmConfig, services_dict: dict) -> None:
         """Render the haproxy configuration file.
 
         Args:
@@ -95,10 +95,9 @@ class HAProxyService:
                 file.read(), keep_trailing_newline=True, trim_blocks=True, lstrip_blocks=True
             )
 
-        services_dict = http_provider.get_services_definition()
         rendered = template.render(
             config_global_max_connection=config.global_max_connection,
-            services=generate_service_config(config.haproxy_frontend_prefix, services_dict),
+            services=services_dict,
         )
         render_file(HAPROXY_CONFIG, rendered, 0o644)
 
