@@ -6,6 +6,7 @@
 import abc
 import json
 import logging
+import typing
 
 from ops import RelationBrokenEvent, RelationChangedEvent, RelationJoinedEvent
 from ops.charm import CharmBase, CharmEvents, RelationEvent
@@ -106,7 +107,10 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
     """
 
     on = HTTPProviderEvents()  # type: ignore
-    services: dict = {}
+
+    @property
+    def services(self) -> list[typing.Any]:
+        return legacy.generate_service_config(self.get_services_definition())
 
     def _on_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Handle relation-changed event.
@@ -126,7 +130,6 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
         Args:
             event: relation-changed event.
         """
-        self.services = self.get_services_definition()
         self.on.data_provided.emit(
             event.relation,
             event.app,
@@ -139,7 +142,6 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
         Args:
             event: relation-broken event.
         """
-        self.services = {}
         self.on.data_removed.emit(
             event.relation,
             event.app,
