@@ -66,17 +66,29 @@ class _IntegrationInterfaceBaseClass(Object):
 
     @abc.abstractmethod
     def _on_relation_joined(self, _: RelationJoinedEvent) -> None:
-        """Abstract method to handle relation-joined event."""
+        """Abstract method to handle relation-joined event.
+
+        Raises:
+            NotImplementedError: if the abstract method is not implemented.
+        """
         raise NotImplementedError
 
     @abc.abstractmethod
     def _on_relation_changed(self, _: RelationChangedEvent) -> None:
-        """Abstract method to handle relation-changed event."""
+        """Abstract method to handle relation-changed event.
+
+        Raises:
+            NotImplementedError: if the abstract method is not implemented.
+        """
         raise NotImplementedError
 
     @abc.abstractmethod
     def _on_relation_broken(self, _: RelationBrokenEvent) -> None:
-        """Abstract method to handle relation-changed event."""
+        """Abstract method to handle relation-changed event.
+
+        Raises:
+            NotImplementedError: if the abstract method is not implemented.
+        """
         raise NotImplementedError
 
     @property
@@ -90,10 +102,11 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
 
     Attrs:
         on: Custom events that are used to notify the charm using the provider.
+        services: Current services definition parsed from relation data.
     """
 
     on = HTTPProviderEvents()  # type: ignore
-    services: dict = dict()
+    services: dict = {}
 
     def _on_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Handle relation-changed event.
@@ -113,6 +126,7 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
         Args:
             event: relation-changed event.
         """
+        self.services = self.get_services_definition()
         self.on.data_provided.emit(
             event.relation,
             event.app,
@@ -125,6 +139,7 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
         Args:
             event: relation-broken event.
         """
+        self.services = {}
         self.on.data_removed.emit(
             event.relation,
             event.app,

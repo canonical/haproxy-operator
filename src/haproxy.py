@@ -12,8 +12,6 @@ from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Template
 
-from http_interface import HTTPProvider
-from legacy import generate_service_config
 from state.config import CharmConfig
 
 APT_PACKAGE_VERSION = "2.8.5-1ubuntu3"
@@ -69,8 +67,8 @@ class HAProxyService:
         """Render the haproxy config and restart the haproxy service.
 
         Args:
-            config: charm config
-            http_provider: The http interface provider.
+            config: Charm config.
+            services_dict: Services definition.
         """
         self._render_haproxy_config(config, services_dict)
         self._reload_haproxy_service()
@@ -87,8 +85,8 @@ class HAProxyService:
         """Render the haproxy configuration file.
 
         Args:
-            config: The charm config.
-            http_provider: The http interface provider.
+            config: Charm config.
+            services_dict: Services definition.
         """
         with open("templates/haproxy.cfg.j2", "r", encoding="utf-8") as file:
             template = Template(
