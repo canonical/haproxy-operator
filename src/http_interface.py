@@ -110,6 +110,11 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
 
     @property
     def services(self) -> list[typing.Any]:
+        """Parse the service configuration from the relation databag.
+
+        Returns:
+            The parsed services configuration.
+        """
         return legacy.generate_service_config(self.get_services_definition())
 
     def _on_relation_joined(self, event: RelationJoinedEvent) -> None:
