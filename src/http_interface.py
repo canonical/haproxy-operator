@@ -51,6 +51,7 @@ class _IntegrationInterfaceBaseClass(Object):
         Args:
             charm: The charm implementing the requirer or provider.
             relation_name: Name of the integration using the interface.
+            bind_address: The unit address.
         """
         super().__init__(charm, relation_name)
 
@@ -96,6 +97,17 @@ class _IntegrationInterfaceBaseClass(Object):
         """The list of Relation instances associated with the charm."""
         return list(self.charm.model.relations[self.relation_name])
 
+    @property
+    def bind_address(self) -> str:
+        """Get Unit bind address.
+
+        Returns:
+            The unit address, or an empty string if no address found.
+        """
+        if bind := self.model.get_binding("juju-info"):
+            return str(bind.network.bind_address)
+        return ""
+
 
 class HTTPProvider(_IntegrationInterfaceBaseClass):
     """HTTP interface provider class to be instantiated by the haproxy-operator charm.
@@ -103,7 +115,6 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
     Attrs:
         on: Custom events that are used to notify the charm using the provider.
         services: Current services definition parsed from relation data.
-        bind_address: The unit address.
     """
 
     on = HTTPProviderEvents()  # type: ignore
@@ -117,17 +128,6 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
         """
         super().__init__(charm, relation_name)
         self.services = legacy.generate_service_config(self.get_services_definition())
-
-    @property
-    def bind_address(self) -> str:
-        """Get Unit bind address.
-
-        Returns:
-            The unit address, or an empty string if no address found.
-        """
-        if bind := self.model.get_binding("juju-info"):
-            return str(bind.network.bind_address)
-        return ""
 
     def _on_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Handle relation-changed event.
