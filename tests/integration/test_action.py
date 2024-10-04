@@ -23,7 +23,11 @@ async def test_get_certificate_action(
         "get-certificate", hostname=TEST_EXTERNAL_HOSTNAME_CONFIG
     )
     await action.wait()
-    assert action.results
+    assert "-----BEGIN CERTIFICATE-----" in action.results.get("certificate")
+
+    with pytest.raises(Exception):
+        action = await configured_application_with_tls.units[0].run_action("get-certificate")
+        await action.wait()
 
     action = await configured_application_with_tls.units[0].run(
         "ls /var/lib/haproxy/certs", timeout=60

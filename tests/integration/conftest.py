@@ -6,9 +6,11 @@
 import logging
 import os.path
 import typing
+from pathlib import Path
 
 import pytest
 import pytest_asyncio
+import yaml
 from juju.application import Application
 from juju.model import Model
 from pytest_operator.plugin import OpsTest
@@ -17,6 +19,18 @@ logger = logging.getLogger(__name__)
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 GATEWAY_CLASS_CONFIG = "cilium"
+
+
+@pytest.fixture(scope="module", name="metadata")
+def metadata_fixture():
+    """Provide charm metadata."""
+    return yaml.safe_load(Path("./charmcraft.yaml").read_text(encoding="utf-8"))
+
+
+@pytest.fixture(scope="module", name="app_name")
+def app_name_fixture(metadata):
+    """Provide app name from the metadata."""
+    return metadata["name"]
 
 
 @pytest_asyncio.fixture(scope="module", name="model")
@@ -50,6 +64,33 @@ async def application_fixture(
         raise_on_error=True,
     )
     yield application
+
+
+@pytest_asyncio.fixture(scope="function", name="get_unit_ip_list")
+async def get_unit_ip_list_fixture(ops_test: OpsTest, app_name: str):
+    """Retrieve unit ip addresses, similar to fixture_get_unit_status_list."""
+
+    async def get_unit_ip_list_action():
+        """Extract the IPs from juju units.
+
+        Returns:
+            A list of IPs of the juju units in the model.
+        """
+        model = typing.cast(Model, ops_test.model)  # typing.cast used for mypy
+        status = await model.get_status()
+        units = status.applications[app_name].units
+        ip_list = [
+            units[key].address for key in sorted(units.keys(), key=lambda n: int(n.split("/")[-1]))
+        ]
+        return ip_list
+
+    yield get_unit_ip_list_action
+
+
+@pytest_asyncio.fixture(scope="function")
+async def unit_ip_list(get_unit_ip_list):
+    """Yield ip addresses of current units."""
+    yield await get_unit_ip_list()
 
 
 @pytest_asyncio.fixture(scope="module", name="certificate_provider_application")
