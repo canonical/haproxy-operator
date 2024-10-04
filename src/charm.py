@@ -21,7 +21,7 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
 from ops.charm import ActionEvent, RelationJoinedEvent
 
 from haproxy import HAProxyService
-from http_interface import HTTPBackendAvailable, HTTPBackendRemoved, HTTPProvider
+from http_interface import HTTPBackendAvailableEvent, HTTPBackendRemovedEvent, HTTPProvider
 from state.config import CharmConfig
 from state.tls import TLSInformation
 from state.validation import validate_config_and_tls
@@ -161,11 +161,11 @@ class HAProxyCharm(ops.CharmBase):
 
         event.fail(f"Missing or incomplete certificate data for {hostname}")
 
-    def _on_http_backend_available(self, _: HTTPBackendAvailable) -> None:
+    def _on_http_backend_available(self, _: HTTPBackendAvailableEvent) -> None:
         """Handle http_backend_available event for reverseproxy integration."""
         self._reconcile()
 
-    def _on_http_backend_removed(self, _: HTTPBackendRemoved) -> None:
+    def _on_http_backend_removed(self, _: HTTPBackendRemovedEvent) -> None:
         """Handle data_removed event for reverseproxy integration."""
         self._reconcile()
 

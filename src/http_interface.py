@@ -18,11 +18,11 @@ logger = logging.getLogger()
 SERVICES_CONFIGURATION_KEY = "services"
 
 
-class HTTPBackendAvailable(RelationEvent):
+class HTTPBackendAvailableEvent(RelationEvent):
     """Event representing that http data has been provided."""
 
 
-class HTTPBackendRemoved(RelationEvent):
+class HTTPBackendRemovedEvent(RelationEvent):
     """Event representing that http data has been removed."""
 
 
@@ -34,8 +34,8 @@ class HTTPProviderEvents(CharmEvents):
         http_backend_removed: Custom event when integration data is removed.
     """
 
-    http_backend_available = EventSource(HTTPBackendAvailable)
-    http_backend_removed = EventSource(HTTPBackendRemoved)
+    http_backend_available = EventSource(HTTPBackendAvailableEvent)
+    http_backend_removed = EventSource(HTTPBackendRemovedEvent)
 
 
 class _IntegrationInterfaceBaseClass(Object):
