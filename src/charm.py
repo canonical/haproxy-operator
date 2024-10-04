@@ -34,11 +34,7 @@ REVERSE_PROXY_INTEGRATION = "reverseproxy"
 
 
 class HAProxyCharm(ops.CharmBase):
-    """Charm haproxy.
-
-    Attrs:
-        bind_address: The IP address of each haproxy unit.
-    """
+    """Charm haproxy."""
 
     def __init__(self, *args: typing.Any):
         """Initialize the charm and register event handlers.
@@ -78,17 +74,6 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(
             self.http_provider.on.data_provided, self._on_reverse_proxy_data_removed
         )
-
-    @property
-    def bind_address(self) -> typing.Union[str, None]:
-        """Get Unit bind address.
-
-        Returns:
-            str: A single address that the charm's application should bind() to.
-        """
-        if bind := self.model.get_binding("juju-info"):
-            return str(bind.network.bind_address)
-        return None
 
     def _on_install(self, _: typing.Any) -> None:
         """Install the haproxy package."""
@@ -187,7 +172,6 @@ class HAProxyCharm(ops.CharmBase):
     def _reconcile(self) -> None:
         """Render the haproxy config and restart the service."""
         config = CharmConfig.from_charm(self)
-        logger.info("**** services dict: %r", self.http_provider.services)
         self.haproxy_service.reconcile(config, self.http_provider.services)
         self.unit.status = ops.ActiveStatus()
 

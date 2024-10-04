@@ -6,7 +6,6 @@
 import abc
 import json
 import logging
-import typing
 
 from ops import RelationBrokenEvent, RelationChangedEvent, RelationJoinedEvent
 from ops.charm import CharmBase, CharmEvents, RelationEvent
@@ -104,18 +103,31 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
     Attrs:
         on: Custom events that are used to notify the charm using the provider.
         services: Current services definition parsed from relation data.
+        bind_address: The unit address.
     """
 
     on = HTTPProviderEvents()  # type: ignore
 
+    def __init__(self, charm: CharmBase, relation_name: str):
+        """Initialize the HTTPProvider class and parse the relation data.
+
+        Args:
+            charm: The charm instance
+            relation_name: _description_
+        """
+        super().__init__(charm, relation_name)
+        self.services = legacy.generate_service_config(self.get_services_definition())
+
     @property
-    def services(self) -> list[typing.Any]:
-        """Parse the service configuration from the relation databag.
+    def bind_address(self) -> str:
+        """Get Unit bind address.
 
         Returns:
-            The parsed services configuration.
+            The unit address, or an empty string if no address found.
         """
-        return legacy.generate_service_config(self.get_services_definition())
+        if bind := self.model.get_binding("juju-info"):
+            return str(bind.network.bind_address)
+        return ""
 
     def _on_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Handle relation-changed event.
@@ -125,7 +137,7 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
         """
         event.relation.data[self.charm.unit].update(
             {
-                "public-address": self.charm.bind_address,  # type: ignore
+                "public-address": self.bind_address,
             }
         )
 
