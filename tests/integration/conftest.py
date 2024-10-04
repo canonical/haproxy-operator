@@ -3,6 +3,7 @@
 
 """General configuration module for integration tests."""
 
+import ipaddress
 import logging
 import os.path
 import typing
@@ -10,12 +11,13 @@ import typing
 import pytest
 import pytest_asyncio
 from juju.application import Application
+from juju.client._definitions import FullStatus, UnitStatus
 from juju.model import Model
 from pytest_operator.plugin import OpsTest
 
 logger = logging.getLogger(__name__)
 
-TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"
+TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 GATEWAY_CLASS_CONFIG = "cilium"
 
 
@@ -50,3 +52,54 @@ async def application_fixture(
         raise_on_error=True,
     )
     yield application
+
+
+@pytest_asyncio.fixture(scope="module", name="certificate_provider_application")
+async def certificate_provider_application_fixture(
+    model: Model,
+) -> Application:
+    """Deploy self-signed-certificates."""
+    application = await model.deploy("self-signed-certificates", channel="edge")
+    await model.wait_for_idle(apps=[application.name], status="active")
+    return application
+
+
+@pytest_asyncio.fixture(scope="module", name="configured_application_with_tls")
+async def configured_application_with_tls_fixture(
+    application: Application,
+    certificate_provider_application: Application,
+):
+    """The haproxy charm configured and integrated with tls provider."""
+    await application.set_config({"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
+    await application.model.add_relation(application.name, certificate_provider_application.name)
+    await application.model.wait_for_idle(
+        apps=[certificate_provider_application.name, application.name],
+        idle_period=30,
+        status="active",
+    )
+    return application
+
+
+async def get_unit_address(application: Application) -> str:
+    """Get the unit address to make HTTP requests.
+
+    Args:
+        application: The deployed application
+
+    Returns:
+        The unit address
+    """
+    status: FullStatus = await application.model.get_status([application.name])
+    unit_status: UnitStatus = next(iter(status.applications[application.name].units.values()))
+    assert unit_status.public_address, "Invalid unit address"
+    address = (
+        unit_status.public_address
+        if isinstance(unit_status.public_address, str)
+        else unit_status.public_address.decode()
+    )
+
+    unit_ip_address = ipaddress.ip_address(address)
+    url = f"http://{str(unit_ip_address)}"
+    if isinstance(unit_ip_address, ipaddress.IPv6Address):
+        url = f"http://[{str(unit_ip_address)}]"
+    return url
