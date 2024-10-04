@@ -95,9 +95,7 @@ class _IntegrationInterfaceBaseClass(Object):
     @property
     def relations(self) -> list[Relation]:
         """The list of Relation instances associated with the charm."""
-        relations = self.charm.model.relations.get(self.relation_name)
-        if relations is None:
-            return []
+        relations = self.charm.model.relations.get(self.relation_name, [])
         return relations
 
     @property
@@ -127,7 +125,7 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
 
         Args:
             charm: The charm instance
-            relation_name: _description_
+            relation_name: The name of the relation
         """
         super().__init__(charm, relation_name)
         self.services = legacy.generate_service_config(self.get_services_definition())
