@@ -18,11 +18,11 @@ logger = logging.getLogger()
 SERVICES_CONFIGURATION_KEY = "services"
 
 
-class HTTPDataProvidedEvent(RelationEvent):
+class HTTPBackendAvailable(RelationEvent):
     """Event representing that http data has been provided."""
 
 
-class HTTPDataRemovedEvent(RelationEvent):
+class HTTPBackendRemoved(RelationEvent):
     """Event representing that http data has been removed."""
 
 
@@ -30,12 +30,12 @@ class HTTPProviderEvents(CharmEvents):
     """Container for HTTP Provider events.
 
     Attrs:
-        data_provided: Custom event when integration data is provided.
-        data_removed: Custom event when integration data is removed.
+        http_backend_available: Custom event when integration data is provided.
+        http_backend_removed: Custom event when integration data is removed.
     """
 
-    data_provided = EventSource(HTTPDataProvidedEvent)
-    data_removed = EventSource(HTTPDataRemovedEvent)
+    http_backend_available = EventSource(HTTPBackendAvailable)
+    http_backend_removed = EventSource(HTTPBackendRemoved)
 
 
 class _IntegrationInterfaceBaseClass(Object):
@@ -43,6 +43,7 @@ class _IntegrationInterfaceBaseClass(Object):
 
     Attrs:
         relations: The list of Relation instances associated with the charm.
+        bind_address: The unit address.
     """
 
     def __init__(self, charm: CharmBase, relation_name: str):
@@ -51,7 +52,6 @@ class _IntegrationInterfaceBaseClass(Object):
         Args:
             charm: The charm implementing the requirer or provider.
             relation_name: Name of the integration using the interface.
-            bind_address: The unit address.
         """
         super().__init__(charm, relation_name)
 
@@ -147,7 +147,7 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
         Args:
             event: relation-changed event.
         """
-        self.on.data_provided.emit(
+        self.on.http_backend_available.emit(
             event.relation,
             event.app,
             event.unit,
@@ -159,7 +159,7 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
         Args:
             event: relation-broken event.
         """
-        self.on.data_removed.emit(
+        self.on.http_backend_removed.emit(
             event.relation,
             event.app,
             event.unit,
