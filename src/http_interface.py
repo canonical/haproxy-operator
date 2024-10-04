@@ -120,7 +120,7 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
         services: Current services definition parsed from relation data.
     """
 
-    on = HTTPProviderEvents()  # type: ignore
+    on = HTTPProviderEvents()
 
     def __init__(self, charm: CharmBase, relation_name: str):
         """Initialize the HTTPProvider class and parse the relation data.
