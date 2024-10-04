@@ -3,15 +3,15 @@
 
 """General configuration module for integration tests."""
 
+import ipaddress
 import logging
 import os.path
 import typing
-from pathlib import Path
 
 import pytest
 import pytest_asyncio
-import yaml
 from juju.application import Application
+from juju.client._definitions import FullStatus, UnitStatus
 from juju.model import Model
 from pytest_operator.plugin import OpsTest
 
@@ -19,18 +19,6 @@ logger = logging.getLogger(__name__)
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 GATEWAY_CLASS_CONFIG = "cilium"
-
-
-@pytest.fixture(scope="module", name="metadata")
-def metadata_fixture():
-    """Provide charm metadata."""
-    return yaml.safe_load(Path("./charmcraft.yaml").read_text(encoding="utf-8"))
-
-
-@pytest.fixture(scope="module", name="app_name")
-def app_name_fixture(metadata):
-    """Provide app name from the metadata."""
-    return metadata["name"]
 
 
 @pytest_asyncio.fixture(scope="module", name="model")
@@ -66,31 +54,25 @@ async def application_fixture(
     yield application
 
 
-@pytest_asyncio.fixture(scope="function", name="get_unit_ip_list")
-async def get_unit_ip_list_fixture(ops_test: OpsTest, app_name: str):
-    """Retrieve unit ip addresses, similar to fixture_get_unit_status_list."""
+@pytest_asyncio.fixture(scope="module", name="application_with_unit_address")
+async def application_with_unit_address_fixture(
+    application: Application,
+) -> tuple[Application, str]:
+    """Application with the unit address to make HTTP requests."""
+    status: FullStatus = await application.model.get_status([application.name])
+    unit_status: UnitStatus = next(iter(status.applications[application.name].units.values()))
+    assert unit_status.public_address, "Invalid unit address"
+    address = (
+        unit_status.public_address
+        if isinstance(unit_status.public_address, str)
+        else unit_status.public_address.decode()
+    )
 
-    async def get_unit_ip_list_action():
-        """Extract the IPs from juju units.
-
-        Returns:
-            A list of IPs of the juju units in the model.
-        """
-        model = typing.cast(Model, ops_test.model)  # typing.cast used for mypy
-        status = await model.get_status()
-        units = status.applications[app_name].units
-        ip_list = [
-            units[key].address for key in sorted(units.keys(), key=lambda n: int(n.split("/")[-1]))
-        ]
-        return ip_list
-
-    yield get_unit_ip_list_action
-
-
-@pytest_asyncio.fixture(scope="function")
-async def unit_ip_list(get_unit_ip_list):
-    """Yield ip addresses of current units."""
-    yield await get_unit_ip_list()
+    unit_ip_address = ipaddress.ip_address(address)
+    url = f"http://{str(unit_ip_address)}"
+    if isinstance(unit_ip_address, ipaddress.IPv6Address):
+        url = f"http://[{str(unit_ip_address)}]"
+    return (application, url)
 
 
 @pytest_asyncio.fixture(scope="module", name="certificate_provider_application")
