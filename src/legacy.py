@@ -7,7 +7,14 @@
 # pylint: skip-file
 # mypy: ignore-errors
 # fmt: off
-"""Legacy haproxy module."""
+"""Legacy haproxy module.
+
+IMPORTANT: This module contains the code of the legacy haproxy charm with some
+modifications to work with the ops framework. It does not match the quality standard
+for actively managed charms. However, we are using it here to ensure that the new 
+haproxy charm can serve as a drop-in replacement for the legacy haproxy charm and 
+that the behavior is the same between the 2.
+"""
 
 import textwrap
 import yaml
