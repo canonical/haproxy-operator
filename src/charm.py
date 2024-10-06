@@ -174,7 +174,7 @@ class HAProxyCharm(ops.CharmBase):
 
         event.fail(f"Missing or incomplete certificate data for {hostname}")
 
-    def _on_http_backend_available(self, event: HTTPBackendAvailableEvent) -> None:
+    def _on_http_backend_available(self, _: HTTPBackendAvailableEvent) -> None:
         """Handle http_backend_available event for reverseproxy integration."""
         self._reconcile()
 
@@ -223,7 +223,7 @@ class HAProxyCharm(ops.CharmBase):
         integration_data = self._ingress_provider.get_data(event.relation)
         path_prefix = f"{integration_data.app.model}-{integration_data.app.name}"
         self._ingress_provider.publish_url(
-            event.relation, f"http://{self.bind_address}/{path_prefix}/"
+            event.relation, f"http://{self.http_provider.bind_address}/{path_prefix}/"
         )
 
     @validate_config_and_tls(defer=True, block_on_tls_not_ready=True)
