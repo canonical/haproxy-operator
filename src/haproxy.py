@@ -6,7 +6,6 @@
 import logging
 import os
 import pwd
-import typing
 from pathlib import Path
 
 from charms.operator_libs_linux.v0 import apt
@@ -79,7 +78,7 @@ class HAProxyService:
 
         Args:
             config: charm config
-            services_dict: The parsed services dict for reverseproxy.
+            services: The parsed services dict for reverseproxy.
             ingress_requirers_information: Information about ingress requirers.
 
         Raises:
@@ -112,6 +111,7 @@ class HAProxyService:
         Args:
             config: Charm config.
             services: Services definition.
+            ingress_requirers_information: Information about ingress requirers.
         """
         with open("templates/haproxy.cfg.j2", "r", encoding="utf-8") as file:
             template = Template(
@@ -120,6 +120,7 @@ class HAProxyService:
 
         rendered = template.render(
             config_global_max_connection=config.global_max_connection,
+            services=services,
             ingress_requirers_information=ingress_requirers_information,
         )
         render_file(HAPROXY_CONFIG, rendered, 0o644)
