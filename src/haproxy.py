@@ -13,6 +13,7 @@ from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Template
 
 from state.config import CharmConfig
+from state.ingress import IngressRequirersInformation
 
 APT_PACKAGE_VERSION = "2.8.5-1ubuntu3"
 APT_PACKAGE_NAME = "haproxy"
@@ -37,11 +38,16 @@ HAPROXY_DH_PARAM = (
 HAPROXY_DHCONFIG = Path(HAPROXY_CONFIG_DIR / "ffdhe2048.txt")
 HAPROXY_SERVICE = "haproxy"
 
+
 logger = logging.getLogger()
 
 
 class HaproxyServiceReloadError(Exception):
     """Error when reloading the haproxy service."""
+
+
+class HaproxyInvalidRelationError(Exception):
+    """Exception raised when both the reverseproxy and ingress relation are established."""
 
 
 class HAProxyService:
@@ -62,13 +68,28 @@ class HAProxyService:
         if not self.is_active():
             raise RuntimeError("HAProxy service is not running.")
 
-    def reconcile(self, config: CharmConfig) -> None:
-        """Render the haproxy config and reload the haproxy service.
+    def reconcile(
+        self,
+        config: CharmConfig,
+        services: list,
+        ingress_requirers_information: IngressRequirersInformation,
+    ) -> None:
+        """Render the haproxy config and restart the haproxy service.
 
         Args:
             config: charm config
+            services: The parsed services dict for reverseproxy.
+            ingress_requirers_information: Information about ingress requirers.
+
+        Raises:
+            HaproxyInvalidRelationError: when both reversporxy and ingress is present.
         """
-        self._render_haproxy_config(config)
+        # At this point, the charm should already verify that
+        # only one relation is established
+        if services and ingress_requirers_information.backends:
+            raise HaproxyInvalidRelationError("reverseproxy and ingress are mutually exclusive.")
+
+        self._render_haproxy_config(config, services, ingress_requirers_information)
         self._reload_haproxy_service()
 
     def is_active(self) -> bool:
@@ -79,19 +100,33 @@ class HAProxyService:
         """
         return systemd.service_running(APT_PACKAGE_NAME)
 
-    def _render_haproxy_config(self, config: CharmConfig) -> None:
+    def _render_haproxy_config(
+        self,
+        config: CharmConfig,
+        services: list,
+        ingress_requirers_information: IngressRequirersInformation,
+    ) -> None:
         """Render the haproxy configuration file.
 
         Args:
-            config: charm config
+            config: Charm config.
+            services: Services definition.
+            ingress_requirers_information: Information about ingress requirers.
         """
         with open("templates/haproxy.cfg.j2", "r", encoding="utf-8") as file:
-            template = Template(file.read(), keep_trailing_newline=True)
-        rendered = template.render(config_global_max_connection=config.global_max_connection)
+            template = Template(
+                file.read(), keep_trailing_newline=True, trim_blocks=True, lstrip_blocks=True
+            )
+
+        rendered = template.render(
+            config_global_max_connection=config.global_max_connection,
+            services=services,
+            ingress_requirers_information=ingress_requirers_information,
+        )
         render_file(HAPROXY_CONFIG, rendered, 0o644)
 
     def _reload_haproxy_service(self) -> None:
-        """Reload the haporxy service.
+        """Reload the haproxy service.
 
         Raises:
             HaproxyServiceReloadError: when the haproxy service fails to reload.
