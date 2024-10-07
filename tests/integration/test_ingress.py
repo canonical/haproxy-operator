@@ -7,17 +7,19 @@ import pytest
 import requests
 from juju.application import Application
 
+from .conftest import get_unit_address
+
 
 @pytest.mark.abort_on_fail
 async def test_ingress_integration(
-    application_with_unit_address: tuple[Application, str],
+    application: Application,
     any_charm_ingress_requirer: Application,
 ):
     """Deploy the charm with anycharm ingress requirer that installs apache2.
 
     Assert that the requirer endpoint is available.
     """
-    application, unit_address = application_with_unit_address
+    unit_address = await get_unit_address(application)
     action = await any_charm_ingress_requirer.units[0].run_action(
         "rpc",
         method="start_server",
