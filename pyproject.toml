@@ -6,11 +6,14 @@ skips = ["*/*test.py", "*/test_*.py", "*tests/*.py"]
 # Testing tools configuration
 [tool.coverage.run]
 branch = true
+omit = [
+    "src/legacy.py"
+]
 
 # Formatting tools configuration
 [tool.black]
 line-length = 99
-target-version = ["py38"]
+target-version = ["py312"]
 
 [tool.coverage.report]
 show_missing = true
@@ -32,6 +35,7 @@ docstring-convention = "google"
 [tool.isort]
 line_length = 99
 profile = "black"
+skip = ["src/legacy.py"]
 
 [tool.mypy]
 check_untyped_defs = true
