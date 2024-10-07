@@ -6,8 +6,11 @@ from juju.application import Application
 
 
 async def test_config(application: Application):
-    """Deploy the charm, set global-maxconn config and
-    verify that the correct value is rendered.
+    """
+    arrange: Deploy the charm.
+    act: Update the charm config to a valid value and then an invalid value.
+    assert: The charm correctly blocks the first time and write the configured
+    value to haproxy.cfg the second time.
     """
     await application.set_config({"global-maxconn": "-1"})
     await application.model.wait_for_idle(

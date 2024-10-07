@@ -32,9 +32,17 @@ defaults
     timeout connect 5000
     timeout server 50000
 
+{% if not services %}
 frontend default
     bind :80
     default_backend default 
 
 backend default
     http-request return status 200 content-type "text/plain" string "Default page for the haproxy-operator charm"
+{% else %}
+
+{% for service in services %}
+{{ service }}
+{% endfor %}
+{% endif %}
+

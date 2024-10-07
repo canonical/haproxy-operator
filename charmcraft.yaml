@@ -49,6 +49,8 @@ requires:
   certificates:
     interface: tls-certificates
     limit: 1
+  reverseproxy:
+    interface: http
 
 config:
   options:
