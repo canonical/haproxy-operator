@@ -48,6 +48,7 @@ class HaproxyServiceReloadError(Exception):
 
 class ProxyMode(StrEnum):
     """StrEnum of possible http_route types.
+
     Attrs:
         INGRESS: when ingress is related.
         LEGACY: when reverseproxy is related.

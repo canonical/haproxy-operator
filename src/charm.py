@@ -165,10 +165,6 @@ class HAProxyCharm(ops.CharmBase):
         self._tls.all_certificate_invalidated()
         self._reconcile()
 
-    def _on_all_certificate_invalidated(self, _: AllCertificatesInvalidatedEvent) -> None:
-        """Handle the TLS Certificate invalidation event."""
-        self._reconcile()
-
     def _on_get_certificate_action(self, event: ActionEvent) -> None:
         """Triggered when users run the `get-certificate` Juju action.
 
