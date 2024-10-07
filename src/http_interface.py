@@ -26,7 +26,7 @@ class HTTPBackendRemovedEvent(RelationEvent):
     """Event representing that http data has been removed."""
 
 
-class HTTPProviderEvents(CharmEvents):
+class HTTPRequirerEvents(CharmEvents):
     """Container for HTTP Provider events.
 
     Attrs:
@@ -110,7 +110,7 @@ class _IntegrationInterfaceBaseClass(Object):
         return ""
 
 
-class HTTPProvider(_IntegrationInterfaceBaseClass):
+class HTTPRequirer(_IntegrationInterfaceBaseClass):
     """HTTP interface provider class to be instantiated by the haproxy-operator charm.
 
     Attrs:
@@ -118,10 +118,10 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
         services: Current services definition parsed from relation data.
     """
 
-    on = HTTPProviderEvents()
+    on = HTTPRequirerEvents()
 
     def __init__(self, charm: CharmBase, relation_name: str):
-        """Initialize the HTTPProvider class and parse the relation data.
+        """Initialize the HTTPRequirer class and parse the relation data.
 
         Args:
             charm: The charm instance
@@ -178,6 +178,51 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
             for unit in relation.units
         ]
         return legacy.get_services_from_relation_data(relation_data)
+
+
+class HTTPProvider(_IntegrationInterfaceBaseClass):
+    """HTTP interface provider class to be instantiated by the haproxy-operator charm.
+
+    Attrs:
+        on: Custom events that are used to notify the charm using the provider.
+        services: Current services definition parsed from relation data.
+    """
+
+    def _on_relation_joined(self, event: RelationJoinedEvent) -> None:
+        """Handle relation-changed event.
+
+        Args:
+            event: relation-changed event.
+        """
+        event.relation.data[self.charm.unit].update(
+            {
+                "public-address": self.bind_address,
+            }
+        )
+
+    def _on_relation_changed(self, event: RelationChangedEvent) -> None:
+        """Handle relation-changed event.
+
+        Args:
+            event: relation-changed event.
+        """
+        self.on.http_backend_available.emit(
+            event.relation,
+            event.app,
+            event.unit,
+        )
+
+    def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
+        """Handle relation-broken event.
+
+        Args:
+            event: relation-broken event.
+        """
+        self.on.http_backend_removed.emit(
+            event.relation,
+            event.app,
+            event.unit,
+        )
 
 
 def _load_relation_data(relation_data_content: RelationDataContent) -> dict:
