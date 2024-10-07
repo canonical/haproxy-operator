@@ -15,6 +15,7 @@ from tls_relation import get_hostname_from_cert
 
 TLS_CERTIFICATES_INTEGRATION = "certificates"
 HOSTNAME_REGEX = r"[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
+HAPROXY_CRT_DIR = "/var/lib/haproxy/certs/"
 
 logger = logging.getLogger()
 

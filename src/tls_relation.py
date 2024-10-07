@@ -143,7 +143,7 @@ class TLSRelationService:
             secret.grant(tls_integration)
 
     def _get_private_key(self, hostname: str) -> KeyPair:
-        """Return the private key and its password from either juju secrets or the relation data.
+        """Return the private key and its password from juju secrets.
 
         Args:
             hostname: The hostname of the private key we want to fetch.
@@ -277,7 +277,6 @@ class TLSRelationService:
             hostname: the hostname of the provider certificate.
         """
         pem_file_path = Path(HAPROXY_CERTS_DIR / f"{hostname}.pem")
-        logger.info("Removing certificate pem file: %r", pem_file_path)
         pem_file_path.unlink(missing_ok=True)
 
     def _get_cert(self, certificate: str) -> typing.Optional[ProviderCertificate]:
