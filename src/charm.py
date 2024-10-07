@@ -27,7 +27,7 @@ from charms.traefik_k8s.v2.ingress import (
 from ops.charm import ActionEvent, RelationJoinedEvent
 
 from haproxy import HAProxyService, ProxyMode
-from http_interface import HTTPBackendAvailableEvent, HTTPBackendRemovedEvent, HTTPProvider
+from http_interface import HTTPBackendAvailableEvent, HTTPBackendRemovedEvent, HTTPRequirer
 from state.config import CharmConfig
 from state.ingress import IngressRequirersInformation
 from state.tls import TLSInformation, TLSNotReadyError
@@ -55,7 +55,7 @@ class HAProxyCharm(ops.CharmBase):
         self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT_RELATION)
         self._tls = TLSRelationService(self.model, self.certificates)
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
-        self.http_provider = HTTPProvider(self, REVERSE_PROXY_RELATION)
+        self.http_provider = HTTPRequirer(self, REVERSE_PROXY_RELATION)
 
         self._grafana_agent = COSAgentProvider(
             self,
