@@ -226,7 +226,7 @@ class HAProxyCharm(ops.CharmBase):
             event.relation, f"http://{self.http_provider.bind_address}/{path_prefix}/"
         )
 
-    @validate_config_and_tls(defer=True, block_on_tls_not_ready=True)
+    @validate_config_and_tls(defer=False, block_on_tls_not_ready=True)
     def _on_ingress_data_removed(self, _: IngressPerAppDataRemovedEvent) -> None:
         """Handle the data-removed event."""
         self._reconcile()
