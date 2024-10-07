@@ -69,7 +69,7 @@ class HAProxyCharm(ops.CharmBase):
             self._on_all_certificate_invalidated,
         )
         self.framework.observe(
-            self.http_provider.on.http_backend_available, self._on_http_backend_removed
+            self.http_provider.on.http_backend_available, self._on_http_backend_available
         )
         self.framework.observe(
             self.http_provider.on.http_backend_removed, self._on_http_backend_removed
