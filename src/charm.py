@@ -25,13 +25,13 @@ from charms.traefik_k8s.v2.ingress import (
 )
 from ops.charm import ActionEvent, RelationJoinedEvent
 
-from haproxy import HAProxyService
+from haproxy import HAProxyService, ProxyMode
 from http_interface import HTTPBackendAvailableEvent, HTTPBackendRemovedEvent, HTTPProvider
 from state.config import CharmConfig
 from state.ingress import IngressRequirersInformation
-from state.tls import TLSInformation
+from state.tls import TLSInformation, TLSNotReadyError
 from state.validation import validate_config_and_tls
-from tls_relation import TLSRelationService, get_hostname_from_cert
+from tls_relation import HAPROXY_CERTS_DIR, TLSRelationService, get_hostname_from_cert
 
 logger = logging.getLogger(__name__)
 
@@ -184,13 +184,26 @@ class HAProxyCharm(ops.CharmBase):
 
     def _reconcile(self) -> None:
         """Render the haproxy config and restart the service."""
+        is_state_valid, proxy_mode = self._validate_state()
+        if not is_state_valid:
+            # We don't raise any exception/set status here as it should already be handled
+            # by the _validate_state method
+            return
+
         config = CharmConfig.from_charm(self)
-        ingress_requirers_information = IngressRequirersInformation.from_provider(
-            self._ingress_provider
-        )
-        self.haproxy_service.reconcile(
-            config, self.http_provider.services, ingress_requirers_information
-        )
+        kwargs = {}
+        if proxy_mode == ProxyMode.INGRESS:
+            ingress_requirers_information = IngressRequirersInformation.from_provider(
+                self._ingress_provider
+            )
+            tls_information = TLSInformation.from_charm(self, self.certificates)
+            kwargs["ingress_requirers_information"] = ingress_requirers_information
+            kwargs["haproxy_crt_dir"] = HAPROXY_CERTS_DIR
+            kwargs["config_external_hostname"] = tls_information.external_hostname
+        if proxy_mode == ProxyMode.LEGACY:
+            kwargs["services"] = self.http_provider.services
+
+        self.haproxy_service.reconcile(proxy_mode, config, **kwargs)
         self.unit.status = ops.ActiveStatus()
 
     def _reconcile_certificates(self) -> None:
@@ -220,16 +233,48 @@ class HAProxyCharm(ops.CharmBase):
             event: Juju event.
         """
         self._reconcile()
+        tls_information = TLSInformation.from_charm(self, self.certificates)
         integration_data = self._ingress_provider.get_data(event.relation)
         path_prefix = f"{integration_data.app.model}-{integration_data.app.name}"
+
         self._ingress_provider.publish_url(
-            event.relation, f"http://{self.http_provider.bind_address}/{path_prefix}/"
+            event.relation, f"https://{tls_information.external_hostname}/{path_prefix}/"
         )
 
     @validate_config_and_tls(defer=False, block_on_tls_not_ready=True)
     def _on_ingress_data_removed(self, _: IngressPerAppDataRemovedEvent) -> None:
         """Handle the data-removed event."""
         self._reconcile()
+
+    def _validate_state(self) -> tuple[bool, ProxyMode]:
+        """Validate if all the necessary preconditions are fulfilled.
+
+        Returns:
+            tuple[bool, ProxyMode]: Whether the preconditions are fulfilled
+            and the resulting proxy mode.
+        """
+        is_ingress_related = bool(self._ingress_provider.relations)
+        is_legacy_related = bool(self.http_provider.relations)
+
+        if is_ingress_related and is_legacy_related:
+            logger.error("Both ingress and reverseproxy is related.")
+            self.unit.status = ops.BlockedStatus("Both ingress and reverseproxy is related.")
+            return (False, ProxyMode.INVALID)
+
+        if is_ingress_related:
+            try:
+                TLSInformation.validate(self)
+            except TLSNotReadyError as exc:
+                logger.exception("Invalid hostname configuration and/or relation data.")
+                self.unit.status = ops.BlockedStatus(str(exc))
+                return (False, ProxyMode.INVALID)
+
+            return (True, ProxyMode.INGRESS)
+
+        if is_legacy_related:
+            return (True, ProxyMode.LEGACY)
+
+        return (True, ProxyMode.NOPROXY)
 
 
 if __name__ == "__main__":  # pragma: nocover

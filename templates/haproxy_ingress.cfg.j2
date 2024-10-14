@@ -1,0 +1,26 @@
+{% extends 'haproxy.cfg.j2' %}
+{% block proxy_configuration %}
+frontend ingress
+    mode http
+    bind :80
+    bind :443 ssl crt {{ haproxy_crt_dir }}
+
+    # Redirect HTTP to HTTPS
+    http-request redirect scheme https unless { ssl_fc }
+
+    # generate path ACLs for ingress
+{% for backend in ingress_requirers_information.backends %}
+    acl path_{{ backend.backend_name }} path -i -m beg /{{ backend.backend_name }}
+    acl host_{{ config_external_hostname }} hdr(host) -i {{ config_external_hostname }}
+    use_backend {{ backend.backend_name }} if path_{{ backend.backend_name }} host_{{ config_external_hostname }}
+    default_backend default
+{% endfor %}
+
+{% for backend in ingress_requirers_information.backends %}
+backend {{ backend.backend_name }}
+    balance roundrobin
+{% for server in backend.servers %}
+    server {{ server.server_name }} {{ server.hostname_or_ip }}:{{ server.port }} check
+{% endfor %}
+{% endfor %}
+{% endblock %}

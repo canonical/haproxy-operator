@@ -32,44 +32,17 @@ defaults
     timeout connect 5000
     timeout server 50000
 
-{% if services %}
-
-{% for service in services %}
-{{ service }}
-{% endfor %}
-
-{% elif ingress_requirers_information.backends %}
-
-frontend ingress
+frontend prometheus
+    bind :9123
     mode http
-    bind :80
-   
-    # Redirect HTTP to HTTPS
-    # http-request redirect scheme https unless { ssl_fc }
+    http-request use-service prometheus-exporter if { path /metrics }
+    no log
 
-    # generate path ACLs for ingress
-{% for backend in ingress_requirers_information.backends %}
-    acl path_{{ backend.backend_name }} path -i -m beg /{{ backend.backend_name }}
-    use_backend {{ backend.backend_name }} if path_{{ backend.backend_name }} 
-{% endfor %}
-
-{% for backend in ingress_requirers_information.backends %}
-backend {{ backend.backend_name }}
-    balance roundrobin
-{% for server in backend.servers %}
-    server {{ server.server_name }} {{ server.hostname_or_ip }}:{{ server.port }} check
-{% endfor %}
-{% endfor %}
-
-{% else %}
-
+{% block proxy_configuration %}
 frontend default
     bind :80
     default_backend default 
+{% endblock %}
 
 backend default
     http-request return status 200 content-type "text/plain" string "Default page for the haproxy-operator charm"
-
-
-{% endif %}
-
