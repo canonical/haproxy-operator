@@ -30,8 +30,8 @@ from haproxy import HAProxyService, ProxyMode
 from http_interface import (
     HTTPBackendAvailableEvent,
     HTTPBackendRemovedEvent,
-    HTTPRequirer,
     HTTPProvider,
+    HTTPRequirer,
 )
 from state.config import CharmConfig
 from state.ingress import IngressRequirersInformation

@@ -191,6 +191,16 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
         """
         event.relation.data[self.charm.unit].update({"hostname": self.bind_address, "port": 80})
 
+    # We add a dummy implementation of this method because of parent class
+    def _on_relation_changed(self, _: RelationChangedEvent) -> None:
+        """Handle relation-changed event."""
+        logger.warning("Nothing to do for relation-changed hook of website relation, skipping.")
+
+    # We add a dummy implementation of this method because of parent class
+    def _on_relation_broken(self, _: RelationBrokenEvent) -> None:
+        """Handle relation-broken event."""
+        logger.warning("Nothing to do for relation-broken hook of website relation, skipping.")
+
 
 def _load_relation_data(relation_data_content: RelationDataContent) -> dict:
     """Load relation data from the relation data bag.
