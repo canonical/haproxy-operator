@@ -12,10 +12,11 @@ The haproxy service module.
 - **HAPROXY_USER**
 - **HAPROXY_DH_PARAM**
 - **HAPROXY_SERVICE**
+- **HAPROXY_J2_TEMPLATE_MAPPING**
 
 ---
 
-<a href="../src/haproxy.py#L106"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/haproxy.py#L150"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `render_file`
 
@@ -44,7 +45,7 @@ HAProxy service class.
 
 ---
 
-<a href="../src/haproxy.py#L50"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/haproxy.py#L80"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `install`
 
@@ -62,7 +63,7 @@ Install the haproxy apt package.
 
 ---
 
-<a href="../src/haproxy.py#L74"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/haproxy.py#L106"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `is_active`
 
@@ -79,27 +80,49 @@ Indicate if the haproxy service is active.
 
 ---
 
-<a href="../src/haproxy.py#L65"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/haproxy.py#L95"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `reconcile`
 
 ```python
-reconcile(config: CharmConfig) → None
+reconcile(proxy_mode: ProxyMode, config: CharmConfig, **kwargs: Any) → None
 ```
 
-Render the haproxy config and reload the haproxy service. 
+Render the haproxy config and restart the haproxy service. 
 
 
 
 **Args:**
  
- - <b>`config`</b>:  charm config 
+ - <b>`proxy_mode`</b>:  proxy mode to decide which template to render. 
+ - <b>`config`</b>:  The charm's configuration. 
+ - <b>`kwargs`</b>:  Additional args specific to the child templates. 
+
+
+---
+
+## <kbd>class</kbd> `HaproxyInvalidRelationError`
+Exception raised when both the reverseproxy and ingress relation are established. 
+
+
+
 
 
 ---
 
 ## <kbd>class</kbd> `HaproxyServiceReloadError`
 Error when reloading the haproxy service. 
+
+
+
+
+
+---
+
+## <kbd>class</kbd> `ProxyMode`
+StrEnum of possible http_route types. 
+
+Attrs:  INGRESS: when ingress is related.  LEGACY: when reverseproxy is related.  NOPROXY: when haproxy should return a default page.  INVALID: when the charm state is invalid. 
 
 
 
