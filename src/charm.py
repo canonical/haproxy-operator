@@ -27,7 +27,12 @@ from charms.traefik_k8s.v2.ingress import (
 from ops.charm import ActionEvent, RelationJoinedEvent
 
 from haproxy import HAProxyService, ProxyMode
-from http_interface import HTTPBackendAvailableEvent, HTTPBackendRemovedEvent, HTTPRequirer
+from http_interface import (
+    HTTPBackendAvailableEvent,
+    HTTPBackendRemovedEvent,
+    HTTPRequirer,
+    HTTPProvider,
+)
 from state.config import CharmConfig
 from state.ingress import IngressRequirersInformation
 from state.tls import TLSInformation, TLSNotReadyError
@@ -39,6 +44,7 @@ logger = logging.getLogger(__name__)
 INGRESS_RELATION = "ingress"
 TLS_CERT_RELATION = "certificates"
 REVERSE_PROXY_RELATION = "reverseproxy"
+WEBSITE_RELATION = "website"
 
 
 class HAProxyCharm(ops.CharmBase):
@@ -55,7 +61,8 @@ class HAProxyCharm(ops.CharmBase):
         self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT_RELATION)
         self._tls = TLSRelationService(self.model, self.certificates)
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
-        self.http_provider = HTTPRequirer(self, REVERSE_PROXY_RELATION)
+        self.http_requirer = HTTPRequirer(self, REVERSE_PROXY_RELATION)
+        self.http_provider = HTTPProvider(self, WEBSITE_RELATION)
 
         self._grafana_agent = COSAgentProvider(
             self,
@@ -85,10 +92,10 @@ class HAProxyCharm(ops.CharmBase):
             self._on_all_certificate_invalidated,
         )
         self.framework.observe(
-            self.http_provider.on.http_backend_available, self._on_http_backend_available
+            self.http_requirer.on.http_backend_available, self._on_http_backend_available
         )
         self.framework.observe(
-            self.http_provider.on.http_backend_removed, self._on_http_backend_removed
+            self.http_requirer.on.http_backend_removed, self._on_http_backend_removed
         )
         self.framework.observe(
             self._ingress_provider.on.data_provided, self._on_ingress_data_provided
@@ -210,7 +217,7 @@ class HAProxyCharm(ops.CharmBase):
             kwargs["haproxy_crt_dir"] = HAPROXY_CERTS_DIR
             kwargs["config_external_hostname"] = tls_information.external_hostname
         if proxy_mode == ProxyMode.LEGACY:
-            kwargs["services"] = self.http_provider.services
+            kwargs["services"] = self.http_requirer.services
 
         self.haproxy_service.reconcile(proxy_mode, config, **kwargs)
         self.unit.status = ops.ActiveStatus()
@@ -234,7 +241,7 @@ class HAProxyCharm(ops.CharmBase):
             self._tls.generate_private_key(tls_information.external_hostname)
             self._tls.request_certificate(tls_information.external_hostname)
 
-    @validate_config_and_tls(defer=False, block_on_tls_not_ready=True)
+    @validate_config_and_tls(defer=True, block_on_tls_not_ready=True)
     def _on_ingress_data_provided(self, event: IngressPerAppDataProvidedEvent) -> None:
         """Handle the data-provided event.
 
@@ -263,7 +270,7 @@ class HAProxyCharm(ops.CharmBase):
             and the resulting proxy mode.
         """
         is_ingress_related = bool(self._ingress_provider.relations)
-        is_legacy_related = bool(self.http_provider.relations)
+        is_legacy_related = bool(self.http_requirer.relations)
 
         if is_ingress_related and is_legacy_related:
             logger.error("Both ingress and reverseproxy is related.")

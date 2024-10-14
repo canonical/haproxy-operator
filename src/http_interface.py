@@ -181,12 +181,7 @@ class HTTPRequirer(_IntegrationInterfaceBaseClass):
 
 
 class HTTPProvider(_IntegrationInterfaceBaseClass):
-    """HTTP interface provider class to be instantiated by the haproxy-operator charm.
-
-    Attrs:
-        on: Custom events that are used to notify the charm using the provider.
-        services: Current services definition parsed from relation data.
-    """
+    """HTTP interface provider class to be instantiated by the haproxy-operator charm."""
 
     def _on_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Handle relation-changed event.
@@ -194,35 +189,7 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
         Args:
             event: relation-changed event.
         """
-        event.relation.data[self.charm.unit].update(
-            {
-                "public-address": self.bind_address,
-            }
-        )
-
-    def _on_relation_changed(self, event: RelationChangedEvent) -> None:
-        """Handle relation-changed event.
-
-        Args:
-            event: relation-changed event.
-        """
-        self.on.http_backend_available.emit(
-            event.relation,
-            event.app,
-            event.unit,
-        )
-
-    def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
-        """Handle relation-broken event.
-
-        Args:
-            event: relation-broken event.
-        """
-        self.on.http_backend_removed.emit(
-            event.relation,
-            event.app,
-            event.unit,
-        )
+        event.relation.data[self.charm.unit].update({"hostname": self.bind_address, "port": 80})
 
 
 def _load_relation_data(relation_data_content: RelationDataContent) -> dict:
