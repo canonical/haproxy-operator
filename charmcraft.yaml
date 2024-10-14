@@ -57,6 +57,8 @@ provides:
     interface: ingress
   cos-agent:
     interface: cos_agent
+  website:
+    interface: http
 
 
 config:
