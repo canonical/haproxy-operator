@@ -8,7 +8,7 @@ from juju.application import Application
 async def test_config(application: Application):
     """
     arrange: Deploy the charm.
-    act: Update the charm config to a valid value and then an invalid value.
+    act: Update the charm config to an invalid value and then a valid value.
     assert: The charm correctly blocks the first time and write the configured
     value to haproxy.cfg the second time.
     """
