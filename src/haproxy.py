@@ -64,7 +64,7 @@ class HAProxyService:
             raise RuntimeError("HAProxy service is not running.")
 
     def reconcile(self, config: CharmConfig, services: list) -> None:
-        """Render the haproxy config and restart the haproxy service.
+        """Render the haproxy config and reload the haproxy service.
 
         Args:
             config: Charm config.
