@@ -119,15 +119,6 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
 
     on = HTTPProviderEvents()
 
-    def __init__(self, charm: CharmBase, relation_name: str):
-        """Initialize the HTTPProvider class and parse the relation data.
-
-        Args:
-            charm: The charm instance
-            relation_name: The name of the relation
-        """
-        super().__init__(charm, relation_name)
-
     def _on_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Handle relation-changed event.
 
