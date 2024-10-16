@@ -95,8 +95,7 @@ class _IntegrationInterfaceBaseClass(Object):
     @property
     def relations(self) -> list[Relation]:
         """The list of Relation instances associated with the charm."""
-        relations = self.charm.model.relations.get(self.relation_name, [])
-        return relations
+        return self.charm.model.relations.get(self.relation_name, [])
 
     @property
     def bind_address(self) -> str:
