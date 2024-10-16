@@ -59,10 +59,8 @@ class _IntegrationInterfaceBaseClass(Object):
         self.charm: CharmBase = charm
         self.relation_name = relation_name
 
-        observe(charm.on[relation_name].relation_created, self._on_relation_changed)
         observe(charm.on[relation_name].relation_joined, self._on_relation_joined)
         observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
-        observe(charm.on[relation_name].relation_departed, self._on_relation_changed)
         observe(charm.on[relation_name].relation_broken, self._on_relation_broken)
 
     @abc.abstractmethod
