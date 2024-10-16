@@ -100,7 +100,7 @@ Init method for the class.
 
 ---
 
-<a href="../src/tls_relation.py#L253"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L252"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `all_certificate_invalidated`
 
@@ -112,7 +112,7 @@ Clean up certificates in unit and private key secrets.
 
 ---
 
-<a href="../src/tls_relation.py#L242"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L241"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `certificate_available`
 
@@ -232,7 +232,7 @@ Get a cert from the provider's integration data that matches 'certificate'.
 
 ---
 
-<a href="../src/tls_relation.py#L274"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L273"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `remove_certificate_from_unit`
 
@@ -268,7 +268,7 @@ Handle the TLS Certificate joined event.
 
 ---
 
-<a href="../src/tls_relation.py#L258"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L257"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `write_certificate_to_unit`
 

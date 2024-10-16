@@ -15,10 +15,12 @@ import ops
 from pydantic import Field, ValidationError, field_validator
 from pydantic.dataclasses import dataclass
 
+from .exception import CharmStateValidationBaseError
+
 logger = logging.getLogger()
 
 
-class InvalidCharmConfigError(Exception):
+class InvalidCharmConfigError(CharmStateValidationBaseError):
     """Exception raised when a charm configuration is found to be invalid."""
 
 

@@ -7,7 +7,10 @@ haproxy-operator charm file.
 
 **Global Variables**
 ---------------
+- **INGRESS_RELATION**
 - **TLS_CERT_RELATION**
+- **REVERSE_PROXY_RELATION**
+- **WEBSITE_RELATION**
 
 
 ---
@@ -15,7 +18,7 @@ haproxy-operator charm file.
 ## <kbd>class</kbd> `HAProxyCharm`
 Charm haproxy. 
 
-<a href="../src/charm.py#L37"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/charm.py#L53"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `__init__`
 

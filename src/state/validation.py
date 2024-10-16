@@ -9,7 +9,7 @@ import typing
 
 import ops
 
-from state.config import InvalidCharmConfigError
+from state.exception import CharmStateValidationBaseError
 from state.tls import TLSNotReadyError
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ def validate_config_and_tls(
             event: ops.EventBase
             try:
                 return method(instance, *args)
-            except InvalidCharmConfigError as exc:
+            except CharmStateValidationBaseError as exc:
                 if defer:
                     event, *_ = args
                     event.defer()

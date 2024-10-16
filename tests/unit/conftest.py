@@ -117,3 +117,21 @@ def harness_with_mock_certificates_integration_fixture(
         relation_id, harness.model.app.name, {f"csr-{TEST_EXTERNAL_HOSTNAME_CONFIG}": "csr"}
     )
     return harness
+
+
+@pytest.fixture(scope="function", name="ingress_requirer_application_data")
+def ingress_requirer_application_data_fixture() -> dict[str, str]:
+    """Mock ingress requirer application data."""
+    return {
+        "name": '"ingress_requirer"',
+        "model": '"testing"',
+        "port": "8080",
+        "strip_prefix": "false",
+        "redirect_https": "false",
+    }
+
+
+@pytest.fixture(scope="function", name="ingress_requirer_unit_data")
+def ingress_requirer_unit_data_fixture() -> dict[str, str]:
+    """Mock ingress requirer unit data."""
+    return {"host": '"testing.ingress"', "ip": '"10.0.0.1"'}

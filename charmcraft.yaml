@@ -49,6 +49,17 @@ requires:
   certificates:
     interface: tls-certificates
     limit: 1
+  reverseproxy:
+    interface: http
+
+provides:
+  ingress:
+    interface: ingress
+  cos-agent:
+    interface: cos_agent
+  website:
+    interface: http
+
 
 config:
   options:
