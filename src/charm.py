@@ -191,12 +191,12 @@ class HAProxyCharm(ops.CharmBase):
 
         event.fail(f"Missing or incomplete certificate data for {hostname}")
 
-    @validate_config_and_tls(defer=False, block_on_tls_not_ready=True)
+    @validate_config_and_tls(defer=False, block_on_tls_not_ready=False)
     def _on_http_backend_available(self, _: HTTPBackendAvailableEvent) -> None:
         """Handle http_backend_available event for reverseproxy integration."""
         self._reconcile()
 
-    @validate_config_and_tls(defer=False, block_on_tls_not_ready=True)
+    @validate_config_and_tls(defer=False, block_on_tls_not_ready=False)
     def _on_http_backend_removed(self, _: HTTPBackendRemovedEvent) -> None:
         """Handle data_removed event for reverseproxy integration."""
         self._reconcile()
