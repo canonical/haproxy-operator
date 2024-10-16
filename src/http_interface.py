@@ -115,7 +115,6 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
 
     Attrs:
         on: Custom events that are used to notify the charm using the provider.
-        services: Current services definition parsed from relation data.
     """
 
     on = HTTPProviderEvents()
@@ -128,7 +127,6 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
             relation_name: The name of the relation
         """
         super().__init__(charm, relation_name)
-        self.services = legacy.generate_service_config(self.get_services_definition())
 
     def _on_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Handle relation-changed event.
@@ -165,6 +163,14 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
             event.app,
             event.unit,
         )
+
+    def get_services(self) -> list:
+        """Return the haproxy config for all services in the relation data.
+
+        Returns:
+            list: The list of haproxy config stanzas for all services in the relation data.
+        """
+        return legacy.generate_service_config(self.get_services_definition())
 
     def get_services_definition(self) -> dict:
         """Augment services_dict with service definitions from relation data.

@@ -172,7 +172,7 @@ class HAProxyCharm(ops.CharmBase):
     def _reconcile(self) -> None:
         """Render the haproxy config and restart the service."""
         config = CharmConfig.from_charm(self)
-        self.haproxy_service.reconcile(config, self.http_provider.services)
+        self.haproxy_service.reconcile(config, self.http_provider.get_services())
         self.unit.status = ops.ActiveStatus()
 
     def _reconcile_certificates(self) -> None:
