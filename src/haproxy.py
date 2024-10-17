@@ -6,8 +6,6 @@
 import logging
 import os
 import pwd
-import typing
-from enum import StrEnum
 from pathlib import Path
 
 from charms.operator_libs_linux.v0 import apt
@@ -46,29 +44,6 @@ HAPROXY_CERTS_DIR = Path("/var/lib/haproxy/certs")
 
 
 logger = logging.getLogger()
-
-
-class ProxyMode(StrEnum):
-    """StrEnum of possible http_route types.
-
-    Attrs:
-        INGRESS: when ingress is related.
-        LEGACY: when reverseproxy is related.
-        NOPROXY: when haproxy should return a default page.
-        INVALID: when the charm state is invalid.
-    """
-
-    INGRESS = "ingress"
-    LEGACY = "legacy"
-    NOPROXY = "noproxy"
-    INVALID = "invalid"
-
-
-HAPROXY_J2_TEMPLATE_MAPPING: dict[ProxyMode, str] = {
-    ProxyMode.INGRESS: "haproxy_ingress.cfg.j2",
-    ProxyMode.LEGACY: "haproxy_legacy.cfg.j2",
-    ProxyMode.NOPROXY: "haproxy.cfg.j2",
-}
 
 
 class HaproxyServiceReloadError(Exception):
