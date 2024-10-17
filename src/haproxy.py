@@ -6,7 +6,6 @@
 import logging
 import os
 import pwd
-from enum import StrEnum
 from pathlib import Path
 
 from charms.operator_libs_linux.v0 import apt
