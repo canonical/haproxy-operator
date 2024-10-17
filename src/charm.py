@@ -33,7 +33,7 @@ from state.config import CharmConfig
 from state.ingress import IngressRequirersInformation
 from state.tls import TLSInformation, TLSNotReadyError
 from state.validation import validate_config_and_tls
-from tls_relation import HAPROXY_CERTS_DIR, TLSRelationService, get_hostname_from_cert
+from tls_relation import TLSRelationService, get_hostname_from_cert
 
 logger = logging.getLogger(__name__)
 
