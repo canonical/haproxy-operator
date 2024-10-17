@@ -59,10 +59,8 @@ class _IntegrationInterfaceBaseClass(Object):
         self.charm: CharmBase = charm
         self.relation_name = relation_name
 
-        observe(charm.on[relation_name].relation_created, self._on_relation_changed)
         observe(charm.on[relation_name].relation_joined, self._on_relation_joined)
         observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
-        observe(charm.on[relation_name].relation_departed, self._on_relation_changed)
         observe(charm.on[relation_name].relation_broken, self._on_relation_broken)
 
     @abc.abstractmethod
@@ -95,8 +93,7 @@ class _IntegrationInterfaceBaseClass(Object):
     @property
     def relations(self) -> list[Relation]:
         """The list of Relation instances associated with the charm."""
-        relations = self.charm.model.relations.get(self.relation_name, [])
-        return relations
+        return self.charm.model.relations.get(self.relation_name, [])
 
     @property
     def bind_address(self) -> str:
@@ -115,20 +112,9 @@ class HTTPRequirer(_IntegrationInterfaceBaseClass):
 
     Attrs:
         on: Custom events that are used to notify the charm using the provider.
-        services: Current services definition parsed from relation data.
     """
 
     on = HTTPRequirerEvents()
-
-    def __init__(self, charm: CharmBase, relation_name: str):
-        """Initialize the HTTPRequirer class and parse the relation data.
-
-        Args:
-            charm: The charm instance
-            relation_name: The name of the relation
-        """
-        super().__init__(charm, relation_name)
-        self.services = legacy.generate_service_config(self.get_services_definition())
 
     def _on_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Handle relation-changed event.
@@ -165,6 +151,14 @@ class HTTPRequirer(_IntegrationInterfaceBaseClass):
             event.app,
             event.unit,
         )
+
+    def get_services(self) -> list:
+        """Return the haproxy config for all services in the relation data.
+
+        Returns:
+            list: The list of haproxy config stanzas for all services in the relation data.
+        """
+        return legacy.generate_service_config(self.get_services_definition())
 
     def get_services_definition(self) -> dict:
         """Augment services_dict with service definitions from relation data.
