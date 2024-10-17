@@ -236,7 +236,7 @@ class HAProxyCharm(ops.CharmBase):
                     config, ingress_requirers_information, tls_information.external_hostname
                 )
             case ProxyMode.LEGACY:
-                self.haproxy_service.reconcile_legacy(config, self.http_provider.get_services())
+                self.haproxy_service.reconcile_legacy(config, self.http_requirer.get_services())
             case _:
                 self.haproxy_service.reconcile_default(config)
         self.unit.status = ops.ActiveStatus()
