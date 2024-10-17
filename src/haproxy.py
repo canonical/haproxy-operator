@@ -6,7 +6,6 @@
 import logging
 import os
 import pwd
-import typing
 from enum import StrEnum
 from pathlib import Path
 
