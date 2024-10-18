@@ -193,7 +193,6 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
         """Handle relation-changed event."""
         logger.debug("Nothing to do for relation-changed hook of website relation, skipping.")
 
-    # We add a placeholder implementation of this method because of parent class
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle relation-broken event.
 
