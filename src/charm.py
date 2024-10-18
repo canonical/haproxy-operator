@@ -78,8 +78,8 @@ class HAProxyCharm(ops.CharmBase):
         self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT_RELATION)
         self._tls = TLSRelationService(self.model, self.certificates)
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
-        self.http_requirer = HTTPRequirer(self, REVERSE_PROXY_RELATION)
-        self.http_provider = HTTPProvider(self, WEBSITE_RELATION)
+        self.reverseproxy_requirer = HTTPRequirer(self, REVERSE_PROXY_RELATION)
+        self.website_requirer = HTTPProvider(self, WEBSITE_RELATION)
 
         self._grafana_agent = COSAgentProvider(
             self,
@@ -109,10 +109,10 @@ class HAProxyCharm(ops.CharmBase):
             self._on_all_certificate_invalidated,
         )
         self.framework.observe(
-            self.http_requirer.on.http_backend_available, self._on_http_backend_available
+            self.reverseproxy_requirer.on.http_backend_available, self._on_http_backend_available
         )
         self.framework.observe(
-            self.http_requirer.on.http_backend_removed, self._on_http_backend_removed
+            self.reverseproxy_requirer.on.http_backend_removed, self._on_http_backend_removed
         )
         self.framework.observe(
             self._ingress_provider.on.data_provided, self._on_ingress_data_provided
@@ -236,7 +236,9 @@ class HAProxyCharm(ops.CharmBase):
                     config, ingress_requirers_information, tls_information.external_hostname
                 )
             case ProxyMode.LEGACY:
-                self.haproxy_service.reconcile_legacy(config, self.http_requirer.get_services())
+                self.haproxy_service.reconcile_legacy(
+                    config, self.reverseproxy_requirer.get_services()
+                )
             case _:
                 self.haproxy_service.reconcile_default(config)
         self.unit.status = ops.ActiveStatus()
@@ -289,7 +291,7 @@ class HAProxyCharm(ops.CharmBase):
             and the resulting proxy mode.
         """
         is_ingress_related = bool(self._ingress_provider.relations)
-        is_legacy_related = bool(self.http_requirer.relations)
+        is_legacy_related = bool(self.reverseproxy_requirer.relations)
 
         if is_ingress_related and is_legacy_related:
             logger.error("Both ingress and reverseproxy is related.")

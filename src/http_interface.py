@@ -188,12 +188,16 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
     # We add a placeholder implementation of this method because of parent class
     def _on_relation_changed(self, _: RelationChangedEvent) -> None:
         """Handle relation-changed event."""
-        logger.warning("Nothing to do for relation-changed hook of website relation, skipping.")
+        logger.debug("Nothing to do for relation-changed hook of website relation, skipping.")
 
     # We add a placeholder implementation of this method because of parent class
-    def _on_relation_broken(self, _: RelationBrokenEvent) -> None:
-        """Handle relation-broken event."""
-        logger.warning("Nothing to do for relation-broken hook of website relation, skipping.")
+    def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
+        """Handle relation-broken event.
+
+        Args:
+            event: relation-broken event.
+        """
+        event.relation.data[self.charm.unit].clear()
 
 
 def _load_relation_data(relation_data_content: RelationDataContent) -> dict:
