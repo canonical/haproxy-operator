@@ -16,6 +16,7 @@ import legacy
 
 logger = logging.getLogger()
 SERVICES_CONFIGURATION_KEY = "services"
+DEFAULT_HAPROXY_PORT = 80
 
 
 class HTTPBackendAvailableEvent(RelationEvent):
@@ -183,7 +184,9 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
         Args:
             event: relation-changed event.
         """
-        event.relation.data[self.charm.unit].update({"hostname": self.bind_address, "port": 80})
+        event.relation.data[self.charm.unit].update(
+            {"hostname": self.bind_address, "port": f"{DEFAULT_HAPROXY_PORT}"}
+        )
 
     # We add a placeholder implementation of this method because of parent class
     def _on_relation_changed(self, _: RelationChangedEvent) -> None:

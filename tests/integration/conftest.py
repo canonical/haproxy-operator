@@ -264,7 +264,11 @@ async def reverseproxy_requirer_fixture(
 ) -> typing.AsyncGenerator[Application, None]:
     """Deploy any-charm and configure it to serve as a requirer for the http interface."""
     application = await model.deploy(
-        "apache2", application_name="reverseproxy_requirer", channel="latest/edge", revision="46"
+        "apache2",
+        application_name="reverseproxy-requirer",
+        channel="latest/edge",
+        revision=46,
+        base="ubuntu@22.04",
     )
     await model.wait_for_idle(apps=[application.name], status="active")
     yield application
