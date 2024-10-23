@@ -133,7 +133,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "reqps"
             },
             "overrides": [
               {
@@ -294,7 +294,7 @@
               "step": 240
             }
           ],
-          "title": "Number of HTTP status codes per interval",
+          "title": "HTTP status codes rate",
           "type": "timeseries"
         },
         {
@@ -302,7 +302,7 @@
             "type": "prometheus",
             "uid": "${prometheusds}"
           },
-          "description": "",
+          "description": "Backend-related data is flipped along the time axis",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -361,7 +361,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "KiBs"
             },
             "overrides": [
               {
@@ -512,7 +512,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "conn/s"
             },
             "overrides": [
               {
@@ -591,7 +591,7 @@
               "step": 240
             }
           ],
-          "title": "Number of connections per interval",
+          "title": "Connections per second",
           "type": "timeseries"
         },
         {
@@ -641,7 +641,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -649,7 +650,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "reqps"
             },
             "overrides": [
               {
@@ -824,7 +825,7 @@
               "step": 240
             }
           ],
-          "title": "Number of requests and responses per interval",
+          "title": "Requests and responses rate",
           "type": "timeseries"
         },
         {
@@ -874,7 +875,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -953,7 +955,7 @@
               "step": 240
             }
           ],
-          "title": "Number of active sessions per interval",
+          "title": "Active sessions rate",
           "type": "timeseries"
         },
         {
@@ -1004,7 +1006,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1012,7 +1015,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "reqps"
             },
             "overrides": []
           },
@@ -1108,7 +1111,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1116,7 +1120,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "reqps"
             },
             "overrides": []
           },
@@ -1237,7 +1241,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1266,7 +1271,7 @@
             "h": 4,
             "w": 22,
             "x": 0,
-            "y": 2
+            "y": 45
           },
           "id": 85,
           "links": [],
@@ -1344,7 +1349,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1360,7 +1366,7 @@
             "h": 4,
             "w": 2,
             "x": 22,
-            "y": 2
+            "y": 45
           },
           "id": 149,
           "links": [],
@@ -1427,7 +1433,7 @@
             "type": "prometheus",
             "uid": "${prometheusds}"
           },
-          "description": "",
+          "description": "Backend-related data is flipped along the time axis",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1469,7 +1475,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1477,7 +1484,7 @@
                   }
                 ]
               },
-              "unit": "bits"
+              "unit": "binbps"
             },
             "overrides": [
               {
@@ -1498,7 +1505,7 @@
             "h": 15,
             "w": 12,
             "x": 0,
-            "y": 3
+            "y": 50
           },
           "id": 42,
           "links": [],
@@ -1555,7 +1562,7 @@
             "type": "prometheus",
             "uid": "${prometheusds}"
           },
-          "description": "",
+          "description": "Backend-related data is flipped along the time axis",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1597,7 +1604,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1605,7 +1613,7 @@
                   }
                 ]
               },
-              "unit": "bits"
+              "unit": "binbps"
             },
             "overrides": [
               {
@@ -1626,7 +1634,7 @@
             "h": 15,
             "w": 12,
             "x": 12,
-            "y": 3
+            "y": 50
           },
           "id": 1,
           "links": [],
@@ -1716,7 +1724,7 @@
                   "mode": "none"
                 },
                 "thresholdsStyle": {
-                  "mode": "dashed"
+                  "mode": "off"
                 }
               },
               "links": [],
@@ -1725,7 +1733,8 @@
                 "mode": "percentage",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1741,7 +1750,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "conn/s"
             },
             "overrides": [
               {
@@ -1762,7 +1771,7 @@
             "h": 15,
             "w": 12,
             "x": 0,
-            "y": 18
+            "y": 65
           },
           "id": 43,
           "links": [],
@@ -1862,7 +1871,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1870,7 +1880,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "conn/s"
             },
             "overrides": [
               {
@@ -1891,7 +1901,7 @@
             "h": 15,
             "w": 12,
             "x": 12,
-            "y": 18
+            "y": 65
           },
           "id": 27,
           "links": [],
@@ -1992,7 +2002,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2008,7 +2019,7 @@
             "h": 15,
             "w": 12,
             "x": 0,
-            "y": 33
+            "y": 80
           },
           "id": 114,
           "links": [],
@@ -2095,7 +2106,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2103,7 +2115,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "conn/s"
             },
             "overrides": []
           },
@@ -2111,7 +2123,7 @@
             "h": 15,
             "w": 12,
             "x": 12,
-            "y": 33
+            "y": 80
           },
           "id": 131,
           "links": [],
@@ -2224,7 +2236,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2232,7 +2245,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "req/s"
             },
             "overrides": [
               {
@@ -2253,7 +2266,7 @@
             "h": 14,
             "w": 12,
             "x": 0,
-            "y": 4
+            "y": 96
           },
           "id": 134,
           "links": [],
@@ -2356,7 +2369,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2364,7 +2378,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "req/s"
             },
             "overrides": [
               {
@@ -2397,7 +2411,7 @@
             "h": 14,
             "w": 12,
             "x": 12,
-            "y": 4
+            "y": 96
           },
           "id": 46,
           "links": [],
@@ -2508,7 +2522,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2516,7 +2531,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "req/s"
             },
             "overrides": []
           },
@@ -2524,7 +2539,7 @@
             "h": 14,
             "w": 12,
             "x": 0,
-            "y": 18
+            "y": 110
           },
           "id": 126,
           "links": [],
@@ -2611,7 +2626,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2619,7 +2635,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "reqps"
             },
             "overrides": [
               {
@@ -2640,7 +2656,7 @@
             "h": 14,
             "w": 12,
             "x": 12,
-            "y": 18
+            "y": 110
           },
           "id": 115,
           "links": [],
@@ -2727,7 +2743,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2735,7 +2752,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "reqps"
             },
             "overrides": [
               {
@@ -2756,7 +2773,7 @@
             "h": 14,
             "w": 12,
             "x": 0,
-            "y": 32
+            "y": 124
           },
           "id": 35,
           "links": [],
@@ -2867,7 +2884,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2875,7 +2893,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "reqps"
             },
             "overrides": [
               {
@@ -2896,7 +2914,7 @@
             "h": 14,
             "w": 12,
             "x": 12,
-            "y": 32
+            "y": 124
           },
           "id": 138,
           "links": [],
@@ -3012,7 +3030,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -3028,7 +3047,7 @@
             "h": 14,
             "w": 12,
             "x": 0,
-            "y": 5
+            "y": 139
           },
           "id": 132,
           "links": [],
@@ -3115,7 +3134,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -3131,7 +3151,7 @@
             "h": 14,
             "w": 12,
             "x": 12,
-            "y": 5
+            "y": 139
           },
           "id": 209,
           "links": [],
@@ -3219,7 +3239,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -3235,7 +3256,7 @@
             "h": 14,
             "w": 12,
             "x": 0,
-            "y": 19
+            "y": 153
           },
           "id": 178,
           "links": [],
@@ -3323,7 +3344,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -3339,7 +3361,7 @@
             "h": 14,
             "w": 12,
             "x": 12,
-            "y": 19
+            "y": 153
           },
           "id": 210,
           "links": [],
@@ -3427,7 +3449,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -3443,7 +3466,7 @@
             "h": 14,
             "w": 12,
             "x": 0,
-            "y": 33
+            "y": 167
           },
           "id": 177,
           "links": [],
@@ -3531,7 +3554,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -3547,7 +3571,7 @@
             "h": 14,
             "w": 12,
             "x": 12,
-            "y": 33
+            "y": 167
           },
           "id": 211,
           "links": [],
@@ -3635,7 +3659,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -3651,7 +3676,7 @@
             "h": 14,
             "w": 12,
             "x": 0,
-            "y": 47
+            "y": 181
           },
           "id": 127,
           "links": [],
@@ -3739,7 +3764,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -3755,7 +3781,7 @@
             "h": 14,
             "w": 12,
             "x": 12,
-            "y": 47
+            "y": 181
           },
           "id": 212,
           "links": [],
@@ -3870,7 +3896,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -3878,7 +3905,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "res/s"
             },
             "overrides": []
           },
@@ -3886,7 +3913,7 @@
             "h": 13,
             "w": 12,
             "x": 0,
-            "y": 6
+            "y": 196
           },
           "id": 47,
           "links": [],
@@ -3974,7 +4001,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -3982,7 +4010,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "res/s"
             },
             "overrides": []
           },
@@ -3990,7 +4018,7 @@
             "h": 13,
             "w": 12,
             "x": 12,
-            "y": 6
+            "y": 196
           },
           "id": 24,
           "links": [],
@@ -4077,7 +4105,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -4085,7 +4114,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "res/s"
             },
             "overrides": []
           },
@@ -4093,7 +4122,7 @@
             "h": 11,
             "w": 24,
             "x": 0,
-            "y": 19
+            "y": 209
           },
           "id": 64,
           "links": [],
@@ -4207,7 +4236,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -4215,7 +4245,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "sess/s"
             },
             "overrides": [
               {
@@ -4236,7 +4266,7 @@
             "h": 13,
             "w": 12,
             "x": 0,
-            "y": 7
+            "y": 221
           },
           "id": 45,
           "links": [],
@@ -4352,7 +4382,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -4360,7 +4391,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "sess/s"
             },
             "overrides": []
           },
@@ -4368,7 +4399,7 @@
             "h": 13,
             "w": 12,
             "x": 12,
-            "y": 7
+            "y": 221
           },
           "id": 30,
           "links": [],
@@ -4471,7 +4502,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -4500,7 +4532,7 @@
             "h": 13,
             "w": 12,
             "x": 0,
-            "y": 20
+            "y": 234
           },
           "id": 34,
           "links": [],
@@ -4601,7 +4633,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -4630,7 +4663,7 @@
             "h": 13,
             "w": 12,
             "x": 12,
-            "y": 20
+            "y": 234
           },
           "id": 51,
           "links": [],
@@ -4731,7 +4764,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -4739,7 +4773,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "sess/s"
             },
             "overrides": []
           },
@@ -4747,7 +4781,7 @@
             "h": 13,
             "w": 12,
             "x": 0,
-            "y": 33
+            "y": 247
           },
           "id": 33,
           "links": [],
@@ -4836,7 +4870,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -4844,7 +4879,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "sess/s"
             },
             "overrides": [
               {
@@ -4865,7 +4900,7 @@
             "h": 13,
             "w": 12,
             "x": 12,
-            "y": 33
+            "y": 247
           },
           "id": 69,
           "links": [],
@@ -4965,7 +5000,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -4981,7 +5017,7 @@
             "h": 13,
             "w": 12,
             "x": 0,
-            "y": 46
+            "y": 260
           },
           "id": 117,
           "links": [],
@@ -5068,7 +5104,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -5084,7 +5121,7 @@
             "h": 13,
             "w": 12,
             "x": 12,
-            "y": 46
+            "y": 260
           },
           "id": 119,
           "links": [],
@@ -5171,7 +5208,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -5212,7 +5250,7 @@
             "h": 13,
             "w": 12,
             "x": 0,
-            "y": 59
+            "y": 273
           },
           "id": 124,
           "links": [],
@@ -5300,7 +5338,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -5316,7 +5355,7 @@
             "h": 13,
             "w": 12,
             "x": 12,
-            "y": 59
+            "y": 273
           },
           "id": 120,
           "links": [],
@@ -5404,7 +5443,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -5433,7 +5473,7 @@
             "h": 13,
             "w": 12,
             "x": 0,
-            "y": 72
+            "y": 286
           },
           "id": 128,
           "links": [],
@@ -5533,7 +5573,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -5562,7 +5603,7 @@
             "h": 13,
             "w": 12,
             "x": 12,
-            "y": 72
+            "y": 286
           },
           "id": 146,
           "links": [],
@@ -6028,7 +6069,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -6044,7 +6086,7 @@
             "h": 11,
             "w": 12,
             "x": 0,
-            "y": 45
+            "y": 301
           },
           "id": 113,
           "links": [],
@@ -6131,7 +6173,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -6147,7 +6190,7 @@
             "h": 11,
             "w": 12,
             "x": 12,
-            "y": 45
+            "y": 301
           },
           "id": 112,
           "links": [],
@@ -6234,7 +6277,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -6250,7 +6294,7 @@
             "h": 11,
             "w": 12,
             "x": 0,
-            "y": 56
+            "y": 312
           },
           "id": 205,
           "links": [],
@@ -6337,7 +6381,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -6353,7 +6398,7 @@
             "h": 11,
             "w": 12,
             "x": 12,
-            "y": 56
+            "y": 312
           },
           "id": 171,
           "links": [],
@@ -6455,7 +6500,7 @@
             "h": 11,
             "w": 12,
             "x": 0,
-            "y": 67
+            "y": 323
           },
           "id": 173,
           "links": [],
@@ -6557,7 +6602,7 @@
             "h": 11,
             "w": 12,
             "x": 12,
-            "y": 67
+            "y": 323
           },
           "id": 208,
           "links": [],
@@ -6668,7 +6713,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -6697,7 +6743,7 @@
             "h": 8,
             "w": 24,
             "x": 0,
-            "y": 11
+            "y": 302
           },
           "id": 129,
           "links": [],
@@ -6826,7 +6872,7 @@
             "h": 9,
             "w": 24,
             "x": 0,
-            "y": 19
+            "y": 310
           },
           "id": 219,
           "links": [],
@@ -6953,7 +6999,7 @@
             "h": 8,
             "w": 24,
             "x": 0,
-            "y": 28
+            "y": 319
           },
           "id": 130,
           "links": [],
@@ -7069,7 +7115,7 @@
             "h": 9,
             "w": 24,
             "x": 0,
-            "y": 36
+            "y": 327
           },
           "id": 179,
           "links": [],
@@ -7196,7 +7242,7 @@
             "h": 9,
             "w": 24,
             "x": 0,
-            "y": 45
+            "y": 336
           },
           "id": 186,
           "links": [],
