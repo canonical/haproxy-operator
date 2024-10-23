@@ -233,6 +233,7 @@ class HAProxyCharm(ops.CharmBase):
                     self._ingress_provider
                 )
                 tls_information = TLSInformation.from_charm(self, self.certificates)
+                self.unit.set_ports(80, 443)
                 self.haproxy_service.reconcile_ingress(
                     config, ingress_requirers_information, tls_information.external_hostname
                 )
@@ -241,23 +242,12 @@ class HAProxyCharm(ops.CharmBase):
                     Port(protocol="tcp", port=service["service_port"])
                     for service in self.reverseproxy_requirer.get_services_definition().values()
                 )
-                opened_ports = self.unit.opened_ports()
-                logger.info("Services: %r", self.reverseproxy_requirer.get_services_definition())
-                logger.info("Required ports to open: %r", required_ports)
-                logger.info("Currently opened ports: %r", opened_ports)
-
-                for port in required_ports - opened_ports:
-                    logger.info("Opening the following ports: %r", required_ports - opened_ports)
-                    self.unit.open_port("tcp", port.port)
-
-                for port in opened_ports - required_ports:
-                    logger.info("Closing the following ports: %r", opened_ports - required_ports)
-                    self.unit.close_port("tcp", port.port)
-
+                self.unit.set_ports(*required_ports)
                 self.haproxy_service.reconcile_legacy(
                     config, self.reverseproxy_requirer.get_services()
                 )
             case _:
+                self.unit.set_ports(80)
                 self.haproxy_service.reconcile_default(config)
         self.unit.status = ops.ActiveStatus()
 
