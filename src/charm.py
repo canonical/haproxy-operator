@@ -244,7 +244,7 @@ class HAProxyCharm(ops.CharmBase):
                     config, ingress_requirers_information, tls_information.external_hostname
                 )
             case ProxyMode.LEGACY:
-                required_ports = set(
+                required_ports: set[Port] = set(
                     Port(protocol="tcp", port=service["service_port"])
                     for service in self.reverseproxy_requirer.get_services_definition().values()
                 )
