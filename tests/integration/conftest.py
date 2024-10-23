@@ -120,7 +120,7 @@ async def any_charm_src_fixture() -> dict[str, str]:
         from subprocess import STDOUT, check_call
         import os
         import textwrap
-        
+
         nginx_config = textwrap.dedent(
             \"\"\"
                 events {}
@@ -185,16 +185,27 @@ async def any_charm_src_fixture() -> dict[str, str]:
                 relation = self.model.get_relation("provide-http")
                 bind_address = self.bind_address
                 relation.data[self.unit].update(
-                    {"services": relation_data % (bind_address, bind_address), "hostname": "", "port": ""}
+                    {
+                        "services": relation_data % (bind_address, bind_address),
+                        "hostname": "", "port": ""
+                    }
                 )
-                
+
             def start_server(self):
-                check_call(['apt-get', 'install', '-y', 'nginx'], stdout=open(os.devnull,'wb'), stderr=STDOUT)
+                check_call(
+                    ['apt-get', 'install', '-y', 'nginx'],
+                    stdout=open(os.devnull,'wb'),
+                    stderr=STDOUT
+                )
                 www_dir = pathlib.Path("/var/www/html")
                 pathlib.Path("/etc/nginx/nginx.conf").write_text(nginx_config, encoding="utf-8")
                 check_call(['nginx', '-T'], stdout=open(os.devnull,'wb'), stderr=STDOUT)
-                check_call(['systemctl', 'restart', 'nginx'], stdout=open(os.devnull,'wb'), stderr=STDOUT)
-                
+                check_call(
+                    ['systemctl', 'restart', 'nginx'],
+                    stdout=open(os.devnull,'wb'),
+                    stderr=STDOUT
+                )
+
                 self.unit.status = ops.ActiveStatus("server ready")
         """
     )
