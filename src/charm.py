@@ -26,6 +26,7 @@ from charms.traefik_k8s.v2.ingress import (
     IngressPerAppProvider,
 )
 from ops.charm import ActionEvent, RelationJoinedEvent
+from ops.model import Port
 
 from haproxy import HAProxyService
 from http_interface import (
@@ -232,14 +233,21 @@ class HAProxyCharm(ops.CharmBase):
                     self._ingress_provider
                 )
                 tls_information = TLSInformation.from_charm(self, self.certificates)
+                self.unit.set_ports(80, 443)
                 self.haproxy_service.reconcile_ingress(
                     config, ingress_requirers_information, tls_information.external_hostname
                 )
             case ProxyMode.LEGACY:
+                required_ports: set[Port] = set(
+                    Port(protocol="tcp", port=service["service_port"])
+                    for service in self.reverseproxy_requirer.get_services_definition().values()
+                )
+                self.unit.set_ports(*required_ports)
                 self.haproxy_service.reconcile_legacy(
                     config, self.reverseproxy_requirer.get_services()
                 )
             case _:
+                self.unit.set_ports(80)
                 self.haproxy_service.reconcile_default(config)
         self.unit.status = ops.ActiveStatus()
 
