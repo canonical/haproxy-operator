@@ -65,6 +65,18 @@ class ProxyMode(StrEnum):
     INVALID = "invalid"
 
 
+def validate_port(port: int) -> bool:
+    """Validate if the given value is a valid TCP port.
+
+    Args:
+        port: The port number to validate.
+
+    Returns:
+        bool: True if valid, False otherwise.
+    """
+    return 0 <= port <= 65535
+
+
 class HAProxyCharm(ops.CharmBase):
     """Charm haproxy."""
 
@@ -238,10 +250,14 @@ class HAProxyCharm(ops.CharmBase):
                     config, ingress_requirers_information, tls_information.external_hostname
                 )
             case ProxyMode.LEGACY:
-                required_ports: set[Port] = set(
-                    Port(protocol="tcp", port=service["service_port"])
-                    for service in self.reverseproxy_requirer.get_services_definition().values()
-                )
+                required_ports: set[Port] = set()
+                for service in self.reverseproxy_requirer.get_services_definition().values():
+                    port = service["service_port"]
+                    if not validate_port(port):
+                        logger.error("Requested port: %s is not a valid tcp port. Skipping", port)
+                        continue
+                    required_ports.add(Port(protocol="tcp", port=port))
+
                 self.unit.set_ports(*required_ports)
                 self.haproxy_service.reconcile_legacy(
                     config, self.reverseproxy_requirer.get_services()
