@@ -65,7 +65,7 @@ class ProxyMode(StrEnum):
     INVALID = "invalid"
 
 
-def validate_port(port: int) -> bool:
+def _validate_port(port: int) -> bool:
     """Validate if the given value is a valid TCP port.
 
     Args:
@@ -253,7 +253,7 @@ class HAProxyCharm(ops.CharmBase):
                 required_ports: set[Port] = set()
                 for service in self.reverseproxy_requirer.get_services_definition().values():
                     port = service["service_port"]
-                    if not validate_port(port):
+                    if not _validate_port(port):
                         logger.error("Requested port: %s is not a valid tcp port. Skipping", port)
                         continue
                     required_ports.add(Port(protocol="tcp", port=port))
