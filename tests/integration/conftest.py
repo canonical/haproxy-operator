@@ -177,18 +177,15 @@ async def any_charm_ingress_requirer_name_fixture() -> str:
 
 
 @pytest_asyncio.fixture(scope="module", name="any_charm_src_ingress_requirer")
-async def any_charm_src_ingress_requirer_fixture(
-    model: Model, any_charm_ingress_requirer_name: str
-) -> dict[str, str]:
+async def any_charm_src_ingress_requirer_fixture() -> dict[str, str]:
     """
     assert: None
     action: Build and deploy nginx-ingress-integrator charm, also deploy and relate an any-charm
         application with ingress relation for test purposes.
     assert: HTTP request should be forwarded to the application.
     """
-    ingress_path_prefix = f"{model.name}-{any_charm_ingress_requirer_name}"
     any_charm_py = textwrap.dedent(
-        f"""\
+        """\
     import pathlib
     import subprocess
     import ops
@@ -199,13 +196,13 @@ async def any_charm_src_ingress_requirer_fixture(
     class AnyCharm(AnyCharmBase):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
-            self.ingress = IngressPerAppRequirer(self, port=80)
+            self.ingress = IngressPerAppRequirer(self, port=80, strip_prefix=True)
 
         def start_server(self):
             apt.update()
             apt.add_package(package_names="apache2")
             www_dir = pathlib.Path("/var/www/html")
-            file_path = www_dir / "{ingress_path_prefix}" / "ok"
+            file_path = www_dir / "ok"
             file_path.parent.mkdir(exist_ok=True)
             file_path.write_text("ok!")
             self.unit.status = ops.ActiveStatus("Server ready")

@@ -33,8 +33,7 @@ async def test_ingress_integration(
         idle_period=30,
         status="active",
     )
-    path = f"{any_charm_ingress_requirer.model.name}-{any_charm_ingress_requirer.name}/ok"
-    response = requests.get(f"{unit_address}/{path}", timeout=5)
+    response = requests.get(f"{unit_address}/ok", timeout=5)
 
     assert response.status_code == 200
     assert "ok!" in response.text
