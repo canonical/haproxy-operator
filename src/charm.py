@@ -26,6 +26,7 @@ from charms.traefik_k8s.v2.ingress import (
     IngressPerAppProvider,
 )
 from ops.charm import ActionEvent, RelationJoinedEvent
+from ops.model import Port
 
 from haproxy import HAProxyService
 from http_interface import (
@@ -91,6 +92,7 @@ class HAProxyCharm(ops.CharmBase):
 
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(self.on.get_certificate_action, self._on_get_certificate_action)
         self.framework.observe(
             self.on.certificates_relation_joined, self._on_certificates_relation_joined
@@ -131,6 +133,11 @@ class HAProxyCharm(ops.CharmBase):
         """Handle the config-changed event."""
         self._reconcile()
         self._reconcile_certificates()
+
+    def _on_upgrade_charm(self, _: typing.Any) -> None:
+        """Handle the upgrade-charm event."""
+        self.haproxy_service.install()
+        self.unit.status = ops.MaintenanceStatus("Waiting for haproxy to be configured.")
 
     @validate_config_and_tls(defer=True, block_on_tls_not_ready=True)
     def _on_certificates_relation_joined(self, _: RelationJoinedEvent) -> None:
@@ -232,14 +239,21 @@ class HAProxyCharm(ops.CharmBase):
                     self._ingress_provider
                 )
                 tls_information = TLSInformation.from_charm(self, self.certificates)
+                self.unit.set_ports(80, 443)
                 self.haproxy_service.reconcile_ingress(
                     config, ingress_requirers_information, tls_information.external_hostname
                 )
             case ProxyMode.LEGACY:
+                required_ports: set[Port] = set(
+                    Port(protocol="tcp", port=service["service_port"])
+                    for service in self.reverseproxy_requirer.get_services_definition().values()
+                )
+                self.unit.set_ports(*required_ports)
                 self.haproxy_service.reconcile_legacy(
                     config, self.reverseproxy_requirer.get_services()
                 )
             case _:
+                self.unit.set_ports(80)
                 self.haproxy_service.reconcile_default(config)
         self.unit.status = ops.ActiveStatus()
 
