@@ -4,21 +4,25 @@
 """Integration test for actions."""
 
 import pytest
-import requests
 from juju.application import Application
+from pytest_operator.plugin import OpsTest
+from requests import Session
 
-from .conftest import get_unit_address
+from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG, get_unit_address
+from .helper import DNSResolverHTTPSAdapter, get_ingress_url_for_application
 
 
 @pytest.mark.abort_on_fail
 async def test_ingress_integration(
-    application: Application,
+    configured_application_with_tls: Application,
     any_charm_ingress_requirer: Application,
+    ops_test: OpsTest,
 ):
     """Deploy the charm with anycharm ingress requirer that installs apache2.
 
     Assert that the requirer endpoint is available.
     """
+    application = configured_application_with_tls
     unit_address = await get_unit_address(application)
     action = await any_charm_ingress_requirer.units[0].run_action(
         "rpc",
@@ -33,7 +37,29 @@ async def test_ingress_integration(
         idle_period=30,
         status="active",
     )
-    response = requests.get(f"{unit_address}/ok", timeout=5)
 
+    ingress_url = await get_ingress_url_for_application(any_charm_ingress_requirer, ops_test)
+    assert ingress_url.netloc == TEST_EXTERNAL_HOSTNAME_CONFIG
+    assert ingress_url.path == f"/{application.model.name}-{any_charm_ingress_requirer.name}"
+
+    session = Session()
+    session.mount("https://", DNSResolverHTTPSAdapter(ingress_url.netloc, unit_address))
+
+    response = session.get(
+        f"http://{unit_address}{ingress_url.path}",
+        headers={"Host": ingress_url.netloc},
+        verify=False,  # nosec - calling charm ingress URL
+        allow_redirects=False,
+        timeout=30,
+    )
+    assert response.status_code == 301
+    assert response.headers["location"] == f"https://{ingress_url.netloc}:443{ingress_url.path}"
+
+    response = session.get(
+        f"http://{unit_address}{ingress_url.path}/ok",
+        headers={"Host": ingress_url.netloc},
+        verify=False,  # nosec - calling charm ingress URL
+        timeout=30,
+    )
     assert response.status_code == 200
     assert "ok!" in response.text
