@@ -78,7 +78,8 @@ class HAProxyCharm(ops.CharmBase):
             charm=self,
             relationship_name=TLS_CERT_RELATION,
             certificate_requests=self._get_certificate_requests(),
-            mode=Mode.UNIT,
+            refresh_events=[self.on.config_changed],
+            mode=Mode.APP,
         )
         self._tls = TLSRelationService(self.model, self.certificates)
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
@@ -123,12 +124,8 @@ class HAProxyCharm(ops.CharmBase):
         self._reconcile()
 
     @validate_config_and_tls(defer=True, block_on_tls_not_ready=True)
-    def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
-        """Handle the TLS Certificate available event.
-
-        Args:
-            event: Juju event
-        """
+    def _on_certificate_available(self, _: CertificateAvailableEvent) -> None:
+        """Handle the TLS Certificate available event."""
         TLSInformation.validate(self)
         self._tls.certificate_available()
         self._reconcile()
@@ -147,7 +144,7 @@ class HAProxyCharm(ops.CharmBase):
                 {
                     "certificate": provider_cert.certificate,
                     "ca": provider_cert.ca,
-                    "chain": provider_cert.chain_as_pem(),
+                    "chain": "\n\n".join([str(cert) for cert in provider_cert.chain]),
                 }
             )
             return
@@ -196,7 +193,9 @@ class HAProxyCharm(ops.CharmBase):
         Returns:
             typing.List[CertificateRequestAttributes]: List of certificate request attributes.
         """
-        external_hostname = self.config["external-hostname"]
+        external_hostname = self.config.get("external-hostname", None)
+        if not external_hostname:
+            return []
         return [
             CertificateRequestAttributes(
                 common_name=external_hostname, sans_dns=frozenset([external_hostname])

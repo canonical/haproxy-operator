@@ -16,7 +16,7 @@ from charms.tls_certificates_interface.v4.tls_certificates import (
 )
 from ops.model import Model
 
-from haproxy import read_file, render_file
+from haproxy import file_exists, read_file, render_file
 
 TLS_CERT = "certificates"
 HAPROXY_CERTS_DIR = Path("/var/lib/haproxy/certs")
@@ -50,10 +50,12 @@ class TLSRelationService:
         Returns:
             typing.Optional[ProviderCertificate]: ProviderCertificate if exists, else None.
         """
-        provider_certificate = self.certificates.get_assigned_certificate(
-            certificate_request=self.certificates.certificate_requests
+        provider_certificate, _ = self.certificates.get_assigned_certificate(
+            certificate_request=self.certificates.certificate_requests[0]
         )
         if not provider_certificate:
+            return None
+        if not provider_certificate.certificate:
             return None
         if provider_certificate.certificate.common_name != hostname:
             return None
@@ -62,10 +64,14 @@ class TLSRelationService:
     def certificate_available(self) -> None:
         """Handle TLS Certificate available event."""
         provider_certificate, private_key = self.certificates.get_assigned_certificate(
-            certificate_request=self.certificates.certificate_requests
+            certificate_request=self.certificates.certificate_requests[0]
         )
+
+        if not provider_certificate:
+            logger.warning("Provider certificate is not available")
+            return
         if not provider_certificate or not private_key:
-            logger.warning("Certificate or private key is not available")
+            logger.warning("Private key is not available")
             return
         if not self._certificate_matches_stored_content(
             certificate=provider_certificate.certificate,
@@ -85,6 +91,8 @@ class TLSRelationService:
             certificate: The certificate to check.
             private_key: The private key to check.
         """
+        if not file_exists(HAPROXY_CERTS_DIR / f"{certificate.common_name}.pem"):
+            return False
         expected_certificate = f"{str(certificate)}\n{str(private_key)}"
         existing_certificate = read_file(HAPROXY_CERTS_DIR / f"{certificate.common_name}.pem")
         return expected_certificate == existing_certificate
@@ -96,6 +104,8 @@ class TLSRelationService:
             certificate: The certificate to store.
             private_key: The private key to store.
         """
+        if not HAPROXY_CERTS_DIR.exists(follow_symlinks=False):
+            HAPROXY_CERTS_DIR.mkdir(exist_ok=True)
         hostname = certificate.common_name
         pem_file_path = Path(HAPROXY_CERTS_DIR / f"{hostname}.pem")
         pem_file_content = f"{str(certificate)}\n{str(private_key)}"

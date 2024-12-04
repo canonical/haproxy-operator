@@ -187,3 +187,15 @@ def read_file(path: Path) -> str:
         str: The content of the file.
     """
     return path.read_text(encoding="utf-8")
+
+
+def file_exists(path: Path) -> bool:
+    """Check if a file exists.
+
+    Args:
+        path: Path object to the file.
+
+    Returns:
+        bool: True if the file exists.
+    """
+    return path.exists()
