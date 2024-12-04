@@ -38,10 +38,12 @@ class HAProxyBackend:
     Attrs:
         backend_name: The name of the backend (computed).
         servers: The list of server each corresponding to a requirer unit.
+        strip_prefix: Whether to strip the prefix from the ingress url.
     """
 
     backend_name: str
     servers: list[HAProxyServer]
+    strip_prefix: bool = False
 
 
 @dataclasses.dataclass(frozen=True)
@@ -73,6 +75,7 @@ class IngressRequirersInformation:
         for integration in ingress_provider.relations:
             try:
                 integration_data = ingress_provider.get_data(integration)
+                strip_prefix = bool(integration_data.app.strip_prefix)
                 backend_name = f"{integration_data.app.model}-{integration_data.app.name}"
                 servers = []
                 for i, unit_data in enumerate(integration_data.units):
@@ -85,11 +88,13 @@ class IngressRequirersInformation:
                             server_name=f"{backend_name}-{i}",
                         )
                     )
-                backends.append(HAProxyBackend(backend_name=backend_name, servers=servers))
+                backends.append(
+                    HAProxyBackend(
+                        backend_name=backend_name, servers=servers, strip_prefix=strip_prefix
+                    )
+                )
             except DataValidationError as exc:
                 raise IngressIntegrationDataValidationError(
                     "Validation of ingress relation data failed."
                 ) from exc
-        return cls(
-            backends=backends,
-        )
+        return cls(backends=backends)
