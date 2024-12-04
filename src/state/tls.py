@@ -9,7 +9,7 @@ import typing
 from dataclasses import dataclass
 
 import ops
-from charms.tls_certificates_interface.v3.tls_certificates import TLSCertificatesRequiresV3
+from charms.tls_certificates_interface.v4.tls_certificates import TLSCertificatesRequiresV4
 
 from tls_relation import get_hostname_from_cert
 
@@ -39,7 +39,7 @@ class TLSInformation:
 
     @classmethod
     def from_charm(
-        cls, charm: ops.CharmBase, certificates: TLSCertificatesRequiresV3
+        cls, charm: ops.CharmBase, certificates: TLSCertificatesRequiresV4
     ) -> "TLSInformation":
         """Get TLS information from a charm instance.
 
