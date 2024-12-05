@@ -9,9 +9,7 @@ import typing
 from dataclasses import dataclass
 
 import ops
-from charms.tls_certificates_interface.v3.tls_certificates import TLSCertificatesRequiresV3
-
-from tls_relation import get_hostname_from_cert
+from charms.tls_certificates_interface.v4.tls_certificates import TLSCertificatesRequiresV4
 
 TLS_CERTIFICATES_INTEGRATION = "certificates"
 HOSTNAME_REGEX = r"[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
@@ -30,16 +28,14 @@ class TLSInformation:
     Attributes:
         external_hostname: Configured external hostname.
         tls_certs: A dict of hostname: certificate obtained from the relation.
-        tls_keys: A dict of hostname: private_key stored in juju secrets.
     """
 
     external_hostname: str
     tls_certs: dict[str, str]
-    tls_keys: dict[str, dict[str, str]]
 
     @classmethod
     def from_charm(
-        cls, charm: ops.CharmBase, certificates: TLSCertificatesRequiresV3
+        cls, charm: ops.CharmBase, certificates: TLSCertificatesRequiresV4
     ) -> "TLSInformation":
         """Get TLS information from a charm instance.
 
@@ -54,21 +50,15 @@ class TLSInformation:
 
         external_hostname = typing.cast(str, charm.config.get("external-hostname"))
         tls_certs = {}
-        tls_keys = {}
 
-        for cert in certificates.get_provider_certificates():
-            hostname = get_hostname_from_cert(cert.certificate)
-            tls_certs[hostname] = cert.certificate
-            secret = charm.model.get_secret(label=f"private-key-{hostname}")
-            tls_keys[hostname] = {
-                "key": secret.get_content()["key"],
-                "password": secret.get_content()["password"],
-            }
+        provider_certificates, _ = certificates.get_assigned_certificates()
+        for provider_certificate in provider_certificates:
+            hostname = provider_certificate.certificate.common_name
+            tls_certs[hostname] = provider_certificate.certificate
 
         return cls(
             external_hostname=external_hostname,
             tls_certs=tls_certs,
-            tls_keys=tls_keys,
         )
 
     @classmethod
@@ -85,7 +75,11 @@ class TLSInformation:
         external_hostname = typing.cast(str, charm.config.get("external-hostname", ""))
 
         if not re.match(HOSTNAME_REGEX, external_hostname):
-            logger.error("Configured hostname does not match regex: %s", HOSTNAME_REGEX)
+            logger.error(
+                "Configured hostname (%s) does not match regex: %s",
+                external_hostname,
+                HOSTNAME_REGEX,
+            )
             raise TLSNotReadyError("Invalid hostname configuration.")
 
         if (

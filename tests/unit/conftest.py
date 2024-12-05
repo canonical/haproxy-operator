@@ -2,14 +2,14 @@
 # See LICENSE file for licensing details.
 
 """Fixtures for haproxy-operator unit tests."""
+import typing
 from unittest.mock import MagicMock
 
 import pytest
-from ops.model import Secret
+from charms.tls_certificates_interface.v4.tls_certificates import Certificate, PrivateKey
 from ops.testing import Harness
 
 from charm import HAProxyCharm
-from tls_relation import TLSRelationService, generate_private_key
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 
@@ -42,81 +42,45 @@ def certificates_relation_data_fixture(mock_certificate: str) -> dict[str, str]:
     }
 
 
-@pytest.fixture(scope="function", name="private_key_and_password")
-def private_key_and_password_fixture(harness: Harness) -> tuple[str, str]:
-    """Mock private key juju secret."""
-    tls = TLSRelationService(harness.model, MagicMock())
-    password = tls.generate_password().encode()
-    private_key = generate_private_key(password=password)
-    return (password.decode(), private_key.decode())
-
-
-@pytest.fixture(scope="function", name="mock_certificate")
-def mock_certificate_fixture(monkeypatch: pytest.MonkeyPatch) -> str:
+@pytest.fixture(scope="function", name="mock_certificate_and_key")
+def mock_certificate_fixture(
+    monkeypatch: pytest.MonkeyPatch,
+) -> typing.Tuple[Certificate, PrivateKey]:
     """Mock tls certificate from a tls provider charm."""
-    cert = (
-        "-----BEGIN CERTIFICATE-----"
-        "MIIDgDCCAmigAwIBAgIUbKlLu3PxWNcLKePoKoq21y7bcCkwDQYJKoZIhvcNAQEL"
-        "BQAwOTELMAkGA1UEBhMCVVMxKjAoBgNVBAMMIXNlbGYtc2lnbmVkLWNlcnRpZmlj"
-        "YXRlcy1vcGVyYXRvcjAeFw0yNDA4MTIxOTA0MDBaFw0yNTA4MTIxOTA0MDBaMEox"
-        "GTAXBgNVBAMMEGhhcHJveHkuaW50ZXJuYWwxLTArBgNVBC0MJDQxYWE2YmE0LWI3"
-        "ZjktNGJmMy1iYTJhLTk1YWZhYTQ3ZDJkMzCCASIwDQYJKoZIhvcNAQEBBQADggEP"
-        "ADCCAQoCggEBALFq15bjeRJlhVDRmUFJk7V7gwFSzYPhcLaGy8UHZpznxKIdZ2bQ"
-        "wnQgpbSPdt7mFK9uyKWBpj+hCfPcoPkg+3XWlEQm5o/HzN08lp2gC+1KBzx/mdDd"
-        "fDYy1Uv/EyeeubI8UEofKXN4RZ5PHuSBnjb8548XiS1WPuFL80qUCWnIgvm2otUX"
-        "BEddSNEi+xUCjdSLk6zzIYzZ0CHUr7LziX2DFi/JbklJEl7YmHqMoz9BP3n/Xt9A"
-        "yjN9yi4jxPBoNrXAP+DuBXL2bq3EyD7CKTlsd8pe1HtobyL+3cw5vAhdkBjiM3uI"
-        "8PdbGibmNZI36j6GoihJdRVmH76Ix6oRthkCAwEAAaNvMG0wIQYDVR0jBBowGIAW"
-        "BBR2ca55yP746dDO1L3w/lSsKAi60DAdBgNVHQ4EFgQUY5Ou1cim6db0e+Va95VH"
-        "ZC9jn/MwDAYDVR0TAQH/BAIwADAbBgNVHREEFDASghBoYXByb3h5LmludGVybmFs"
-        "MA0GCSqGSIb3DQEBCwUAA4IBAQAO7oiD4X4D17VuHGwJJO6WmhBzRNV8ff9p/6fq"
-        "NhbdA8IylzGLZ0PRld8o6rVbYNs2ufvz14cQxZaO5GqOxl4KufjapRxbxdEN7Pr1"
-        "wLavXGoMzpCtwLhW5B0qxA+DDoTB7KEGaNxe49dkm4JDMrTxaa29QV3rOH6+zKH3"
-        "vHfmBbx27xaPDgoQUfbTFt5tG32j7HnMCh/s/+0l+deUSFIsaz/3yopLpScgUXuy"
-        "+0rhQ3KFsp9dxfhvpip6BHZwoPGzD8NVAmbkSQ6G8SXIxcAxwtayczsGm9tdygc8"
-        "Dhahajgpkum+TaLU2o6PXIawuE1tvux7BvELWx1VS61LSa31"
-        "-----END CERTIFICATE-----"
-    )
+    with open("tests/unit/cert.pem", encoding="utf-8") as f:
+        cert = f.read()
+    with open("tests/unit/key.pem", encoding="utf-8") as f:
+        key = f.read()
+
     provider_cert_mock = MagicMock()
-    provider_cert_mock.certificate = cert
+    private_key = PrivateKey.from_string(key)
+    certificate = Certificate.from_string(cert)
+    provider_cert_mock.certificate = certificate
     monkeypatch.setattr(
         (
-            "charms.tls_certificates_interface.v3.tls_certificates"
-            ".TLSCertificatesRequiresV3.get_provider_certificates"
+            "charms.tls_certificates_interface.v4.tls_certificates"
+            ".TLSCertificatesRequiresV4.get_assigned_certificate"
         ),
-        MagicMock(return_value=[provider_cert_mock]),
+        MagicMock(return_value=(provider_cert_mock, private_key)),
     )
-    return cert
+    return certificate, private_key
 
 
-@pytest.fixture(scope="function", name="juju_secret_mock")
-def juju_secret_mock_fixture(
-    monkeypatch: pytest.MonkeyPatch,
-    private_key_and_password: tuple[str, str],
-) -> tuple[str, str]:
-    """Mock certificates integration."""
-    password, private_key = private_key_and_password
-    juju_secret_mock = MagicMock(spec=Secret)
-    juju_secret_mock.get_content.return_value = {"key": private_key, "password": password}
-    monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(return_value=juju_secret_mock))
-    return juju_secret_mock
-
-
-@pytest.fixture(scope="function", name="harness_with_mock_certificates_integration")
-def harness_with_mock_certificates_integration_fixture(
-    harness: Harness,
-    certificates_relation_data: dict[str, str],
-) -> Harness:
-    """Mock certificates integration."""
-    harness.set_leader()
-    harness.update_config({"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
-    relation_id = harness.add_relation(
-        "certificates", "self-signed-certificates", app_data=certificates_relation_data
-    )
-    harness.update_relation_data(
-        relation_id, harness.model.app.name, {f"csr-{TEST_EXTERNAL_HOSTNAME_CONFIG}": "csr"}
-    )
-    return harness
+# @pytest.fixture(scope="function", name="harness_with_mock_certificates_integration")
+# def harness_with_mock_certificates_integration_fixture(
+#     harness: Harness,
+#     certificates_relation_data: dict[str, str],
+# ) -> Harness:
+#     """Mock certificates integration."""
+#     harness.set_leader()
+#     harness.update_config({"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
+#     relation_id = harness.add_relation(
+#         "certificates", "self-signed-certificates", app_data=certificates_relation_data
+#     )
+#     harness.update_relation_data(
+#         relation_id, harness.model.app.name, {f"csr-{TEST_EXTERNAL_HOSTNAME_CONFIG}": "csr"}
+#     )
+#     return harness
 
 
 @pytest.fixture(scope="function", name="ingress_requirer_application_data")
