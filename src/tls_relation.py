@@ -50,6 +50,8 @@ class TLSRelationService:
         Returns:
             typing.Optional[ProviderCertificate]: ProviderCertificate if exists, else None.
         """
+        if len(self.certificates.certificate_requests) == 0:
+            return None
         provider_certificate, _ = self.certificates.get_assigned_certificate(
             certificate_request=self.certificates.certificate_requests[0]
         )
@@ -63,14 +65,16 @@ class TLSRelationService:
 
     def certificate_available(self) -> None:
         """Handle TLS Certificate available event."""
+        if len(self.certificates.certificate_requests) == 0:
+            logger.warning("No certificate was requested")
+            return
         provider_certificate, private_key = self.certificates.get_assigned_certificate(
             certificate_request=self.certificates.certificate_requests[0]
         )
-
         if not provider_certificate:
             logger.warning("Provider certificate is not available")
             return
-        if not provider_certificate or not private_key:
+        if not private_key:
             logger.warning("Private key is not available")
             return
         if not self._certificate_matches_stored_content(
