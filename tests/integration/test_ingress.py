@@ -40,7 +40,7 @@ async def test_ingress_integration(
 
     ingress_url = await get_ingress_url_for_application(any_charm_ingress_requirer, ops_test)
     assert ingress_url.netloc == TEST_EXTERNAL_HOSTNAME_CONFIG
-    assert ingress_url.path == f"/{application.model.name}-{any_charm_ingress_requirer.name}"
+    assert ingress_url.path == f"/{application.model.name}-{any_charm_ingress_requirer.name}/"
 
     session = Session()
     session.mount("https://", DNSResolverHTTPSAdapter(ingress_url.netloc, unit_address))
