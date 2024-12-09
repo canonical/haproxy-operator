@@ -83,7 +83,7 @@ async def configured_application_with_tls_fixture(
     return application
 
 
-async def get_unit_address(application: Application) -> str:
+async def get_unit_ip_address(application: Application) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
     """Get the unit address to make HTTP requests.
 
     Args:
@@ -101,7 +101,19 @@ async def get_unit_address(application: Application) -> str:
         else unit_status.public_address.decode()
     )
 
-    unit_ip_address = ipaddress.ip_address(address)
+    return ipaddress.ip_address(address)
+
+
+async def get_unit_address(application: Application) -> str:
+    """Get the unit address to make HTTP requests.
+
+    Args:
+        application: The deployed application
+
+    Returns:
+        The unit address
+    """
+    unit_ip_address = await get_unit_ip_address(application)
     url = f"http://{str(unit_ip_address)}"
     if isinstance(unit_ip_address, ipaddress.IPv6Address):
         url = f"http://[{str(unit_ip_address)}]"

@@ -3,12 +3,14 @@
 
 """Integration test for actions."""
 
+import ipaddress
+
 import pytest
 from juju.application import Application
 from pytest_operator.plugin import OpsTest
 from requests import Session
 
-from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG, get_unit_address
+from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG, get_unit_ip_address
 from .helper import DNSResolverHTTPSAdapter, get_ingress_url_for_application
 
 
@@ -23,7 +25,7 @@ async def test_ingress_integration(
     Assert that the requirer endpoint is available.
     """
     application = configured_application_with_tls
-    unit_address = await get_unit_address(application)
+    unit_ip_address = await get_unit_ip_address(application)
     action = await any_charm_ingress_requirer.units[0].run_action(
         "rpc",
         method="start_server",
@@ -43,20 +45,23 @@ async def test_ingress_integration(
     assert ingress_url.path == f"/{application.model.name}-{any_charm_ingress_requirer.name}/"
 
     session = Session()
-    session.mount("https://", DNSResolverHTTPSAdapter(ingress_url.netloc, unit_address))
+    session.mount("https://", DNSResolverHTTPSAdapter(ingress_url.netloc, str(unit_ip_address)))
 
+    requirer_url = f"http://{str(unit_ip_address)}/{ingress_url.path}ok"
+    if isinstance(unit_ip_address, ipaddress.IPv6Address):
+        requirer_url = f"http://[{str(unit_ip_address)}]/{ingress_url.path}ok"
     response = session.get(
-        f"{unit_address}{ingress_url.path}",
+        requirer_url,
         headers={"Host": ingress_url.netloc},
         verify=False,  # nosec - calling charm ingress URL
         allow_redirects=False,
         timeout=30,
     )
     assert response.status_code == 302
-    assert response.headers["location"] == f"https://{ingress_url.netloc}{ingress_url.path}"
+    assert response.headers["location"] == f"https://{ingress_url.netloc}{ingress_url.path}ok"
 
     response = session.get(
-        f"{unit_address}{ingress_url.path}ok",
+        requirer_url,
         headers={"Host": ingress_url.netloc},
         verify=False,  # nosec - calling charm ingress URL
         timeout=30,
