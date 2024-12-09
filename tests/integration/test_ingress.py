@@ -52,7 +52,7 @@ async def test_ingress_integration(
         allow_redirects=False,
         timeout=30,
     )
-    assert response.status_code == 301
+    assert response.status_code == 302
     assert response.headers["location"] == f"https://{ingress_url.netloc}:443{ingress_url.path}"
 
     response = session.get(
