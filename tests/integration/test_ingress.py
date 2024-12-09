@@ -46,7 +46,7 @@ async def test_ingress_integration(
     session.mount("https://", DNSResolverHTTPSAdapter(ingress_url.netloc, unit_address))
 
     response = session.get(
-        f"http://{unit_address}{ingress_url.path}",
+        f"{unit_address}{ingress_url.path}",
         headers={"Host": ingress_url.netloc},
         verify=False,  # nosec - calling charm ingress URL
         allow_redirects=False,
@@ -56,7 +56,7 @@ async def test_ingress_integration(
     assert response.headers["location"] == f"https://{ingress_url.netloc}:443{ingress_url.path}"
 
     response = session.get(
-        f"http://{unit_address}{ingress_url.path}/ok",
+        f"{unit_address}{ingress_url.path}/ok",
         headers={"Host": ingress_url.netloc},
         verify=False,  # nosec - calling charm ingress URL
         timeout=30,
