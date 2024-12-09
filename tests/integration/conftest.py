@@ -83,7 +83,9 @@ async def configured_application_with_tls_fixture(
     return application
 
 
-async def get_unit_ip_address(application: Application) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
+async def get_unit_ip_address(
+    application: Application,
+) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
     """Get the unit address to make HTTP requests.
 
     Args:
