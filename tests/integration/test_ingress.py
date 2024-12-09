@@ -3,23 +3,29 @@
 
 """Integration test for actions."""
 
-import pytest
-import requests
-from juju.application import Application
+import ipaddress
 
-from .conftest import get_unit_address
+import pytest
+from juju.application import Application
+from pytest_operator.plugin import OpsTest
+from requests import Session
+
+from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG, get_unit_ip_address
+from .helper import DNSResolverHTTPSAdapter, get_ingress_url_for_application
 
 
 @pytest.mark.abort_on_fail
 async def test_ingress_integration(
-    application: Application,
+    configured_application_with_tls: Application,
     any_charm_ingress_requirer: Application,
+    ops_test: OpsTest,
 ):
     """Deploy the charm with anycharm ingress requirer that installs apache2.
 
     Assert that the requirer endpoint is available.
     """
-    unit_address = await get_unit_address(application)
+    application = configured_application_with_tls
+    unit_ip_address = await get_unit_ip_address(application)
     action = await any_charm_ingress_requirer.units[0].run_action(
         "rpc",
         method="start_server",
@@ -33,8 +39,32 @@ async def test_ingress_integration(
         idle_period=30,
         status="active",
     )
-    path = f"{any_charm_ingress_requirer.model.name}-{any_charm_ingress_requirer.name}/ok"
-    response = requests.get(f"{unit_address}/{path}", timeout=5)
 
+    ingress_url = await get_ingress_url_for_application(any_charm_ingress_requirer, ops_test)
+    assert ingress_url.netloc == TEST_EXTERNAL_HOSTNAME_CONFIG
+    assert ingress_url.path == f"/{application.model.name}-{any_charm_ingress_requirer.name}/"
+
+    session = Session()
+    session.mount("https://", DNSResolverHTTPSAdapter(ingress_url.netloc, str(unit_ip_address)))
+
+    requirer_url = f"http://{str(unit_ip_address)}/{ingress_url.path}ok"
+    if isinstance(unit_ip_address, ipaddress.IPv6Address):
+        requirer_url = f"http://[{str(unit_ip_address)}]/{ingress_url.path}ok"
+    response = session.get(
+        requirer_url,
+        headers={"Host": ingress_url.netloc},
+        verify=False,  # nosec - calling charm ingress URL
+        allow_redirects=False,
+        timeout=30,
+    )
+    assert response.status_code == 302
+    assert response.headers["location"] == f"https://{ingress_url.netloc}{ingress_url.path}ok"
+
+    response = session.get(
+        requirer_url,
+        headers={"Host": ingress_url.netloc},
+        verify=False,  # nosec - calling charm ingress URL
+        timeout=30,
+    )
     assert response.status_code == 200
     assert "ok!" in response.text

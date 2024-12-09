@@ -83,7 +83,9 @@ async def configured_application_with_tls_fixture(
     return application
 
 
-async def get_unit_address(application: Application) -> str:
+async def get_unit_ip_address(
+    application: Application,
+) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
     """Get the unit address to make HTTP requests.
 
     Args:
@@ -101,7 +103,19 @@ async def get_unit_address(application: Application) -> str:
         else unit_status.public_address.decode()
     )
 
-    unit_ip_address = ipaddress.ip_address(address)
+    return ipaddress.ip_address(address)
+
+
+async def get_unit_address(application: Application) -> str:
+    """Get the unit address to make HTTP requests.
+
+    Args:
+        application: The deployed application
+
+    Returns:
+        The unit address
+    """
+    unit_ip_address = await get_unit_ip_address(application)
     url = f"http://{str(unit_ip_address)}"
     if isinstance(unit_ip_address, ipaddress.IPv6Address):
         url = f"http://[{str(unit_ip_address)}]"
@@ -177,18 +191,15 @@ async def any_charm_ingress_requirer_name_fixture() -> str:
 
 
 @pytest_asyncio.fixture(scope="module", name="any_charm_src_ingress_requirer")
-async def any_charm_src_ingress_requirer_fixture(
-    model: Model, any_charm_ingress_requirer_name: str
-) -> dict[str, str]:
+async def any_charm_src_ingress_requirer_fixture() -> dict[str, str]:
     """
     assert: None
     action: Build and deploy nginx-ingress-integrator charm, also deploy and relate an any-charm
         application with ingress relation for test purposes.
     assert: HTTP request should be forwarded to the application.
     """
-    ingress_path_prefix = f"{model.name}-{any_charm_ingress_requirer_name}"
     any_charm_py = textwrap.dedent(
-        f"""\
+        """\
     import pathlib
     import subprocess
     import ops
@@ -199,13 +210,13 @@ async def any_charm_src_ingress_requirer_fixture(
     class AnyCharm(AnyCharmBase):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
-            self.ingress = IngressPerAppRequirer(self, port=80)
+            self.ingress = IngressPerAppRequirer(self, port=80, strip_prefix=True)
 
         def start_server(self):
             apt.update()
             apt.add_package(package_names="apache2")
             www_dir = pathlib.Path("/var/www/html")
-            file_path = www_dir / "{ingress_path_prefix}" / "ok"
+            file_path = www_dir / "ok"
             file_path.parent.mkdir(exist_ok=True)
             file_path.write_text("ok!")
             self.unit.status = ops.ActiveStatus("Server ready")

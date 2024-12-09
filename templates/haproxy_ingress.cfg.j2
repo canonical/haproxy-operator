@@ -19,6 +19,9 @@ frontend ingress
 {% for backend in ingress_requirers_information.backends %}
 backend {{ backend.backend_name }}
     balance roundrobin
+{% if backend.strip_prefix %}
+    http-request set-path %[path,regsub(^/{{ backend.backend_name }},/,)]
+{% endif %}
 {% for server in backend.servers %}
     server {{ server.server_name }} {{ server.hostname_or_ip }}:{{ server.port }} check
 {% endfor %}
