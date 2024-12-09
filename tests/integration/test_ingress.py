@@ -56,7 +56,7 @@ async def test_ingress_integration(
     assert response.headers["location"] == f"https://{ingress_url.netloc}{ingress_url.path}"
 
     response = session.get(
-        f"{unit_address}{ingress_url.path}/ok",
+        f"{unit_address}{ingress_url.path}ok",
         headers={"Host": ingress_url.netloc},
         verify=False,  # nosec - calling charm ingress URL
         timeout=30,
