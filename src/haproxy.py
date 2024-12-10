@@ -175,3 +175,27 @@ def render_file(path: Path, content: str, mode: int) -> None:
     u = pwd.getpwnam(HAPROXY_USER)
     # Set the correct ownership for the file.
     os.chown(path, uid=u.pw_uid, gid=u.pw_gid)
+
+
+def read_file(path: Path) -> str:
+    """Read the content of a file.
+
+    Args:
+        path: Path object to the file.
+
+    Returns:
+        str: The content of the file.
+    """
+    return path.read_text(encoding="utf-8")
+
+
+def file_exists(path: Path) -> bool:
+    """Check if a file exists.
+
+    Args:
+        path: Path object to the file.
+
+    Returns:
+        bool: True if the file exists.
+    """
+    return path.exists()
