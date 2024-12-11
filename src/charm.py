@@ -24,7 +24,8 @@ from charms.traefik_k8s.v2.ingress import (
     IngressPerAppDataRemovedEvent,
     IngressPerAppProvider,
 )
-from ops.charm import ActionEvent
+from ops.charm import ActionEvent, RelationJoinedEvent
+from ops.model import Port
 
 from haproxy import HAProxyService
 from http_interface import (
@@ -61,6 +62,18 @@ class ProxyMode(StrEnum):
     LEGACY = "legacy"
     NOPROXY = "noproxy"
     INVALID = "invalid"
+
+
+def _validate_port(port: int) -> bool:
+    """Validate if the given value is a valid TCP port.
+
+    Args:
+        port: The port number to validate.
+
+    Returns:
+        bool: True if valid, False otherwise.
+    """
+    return 0 <= port <= 65535
 
 
 class HAProxyCharm(ops.CharmBase):
@@ -176,14 +189,25 @@ class HAProxyCharm(ops.CharmBase):
                     self._ingress_provider
                 )
                 tls_information = TLSInformation.from_charm(self, self.certificates)
+                self.unit.set_ports(80, 443)
                 self.haproxy_service.reconcile_ingress(
                     config, ingress_requirers_information, tls_information.external_hostname
                 )
             case ProxyMode.LEGACY:
+                required_ports: set[Port] = set()
+                for service in self.reverseproxy_requirer.get_services_definition().values():
+                    port = service["service_port"]
+                    if not _validate_port(port):
+                        logger.error("Requested port: %s is not a valid tcp port. Skipping", port)
+                        continue
+                    required_ports.add(Port(protocol="tcp", port=port))
+
+                self.unit.set_ports(*required_ports)
                 self.haproxy_service.reconcile_legacy(
                     config, self.reverseproxy_requirer.get_services()
                 )
             case _:
+                self.unit.set_ports(80)
                 self.haproxy_service.reconcile_default(config)
         self.unit.status = ops.ActiveStatus()
 
