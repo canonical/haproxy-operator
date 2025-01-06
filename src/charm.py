@@ -24,7 +24,7 @@ from charms.traefik_k8s.v2.ingress import (
     IngressPerAppDataRemovedEvent,
     IngressPerAppProvider,
 )
-from ops.charm import ActionEvent, RelationJoinedEvent
+from ops.charm import ActionEvent
 from ops.model import Port
 
 from haproxy import HAProxyService
