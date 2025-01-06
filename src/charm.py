@@ -183,6 +183,7 @@ class HAProxyCharm(ops.CharmBase):
             return
 
         config = CharmConfig.from_charm(self)
+        legacy_invalid_requested_port: list[str] = {}
         match proxy_mode:
             case ProxyMode.INGRESS:
                 ingress_requirers_information = IngressRequirersInformation.from_provider(
@@ -199,6 +200,7 @@ class HAProxyCharm(ops.CharmBase):
                     port = service["service_port"]
                     if not _validate_port(port):
                         logger.error("Requested port: %s is not a valid tcp port. Skipping", port)
+                        legacy_invalid_requested_port.append(f"{service['service-name']:{port}}")
                         continue
                     required_ports.add(Port(protocol="tcp", port=port))
 
@@ -209,6 +211,11 @@ class HAProxyCharm(ops.CharmBase):
             case _:
                 self.unit.set_ports(80)
                 self.haproxy_service.reconcile_default(config)
+        if legacy_invalid_requested_port:
+            self.unit.status = ops.BlockedStatus(
+                f"Services are requesting invalid ports: {','.join(legacy_invalid_requested_port)}"
+            )
+            return
         self.unit.status = ops.ActiveStatus()
 
     def _get_certificate_requests(self) -> typing.List[CertificateRequestAttributes]:
