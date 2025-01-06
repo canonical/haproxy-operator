@@ -52,7 +52,7 @@ async def test_reverseproxy_relation(
     assert response.status_code == 200
     assert "server 1 healthy" in response.text
 
-    any_charm_requirer.set_config(
+    await any_charm_requirer.set_config(
         {"src-overwrite": json.dumps(any_charm_src_invalid_port)},
     )
     action = await any_charm_requirer.units[0].run_action(
@@ -61,7 +61,7 @@ async def test_reverseproxy_relation(
     )
     await action.wait()
     await application.model.wait_for_idle(
-        apps=[application.name, any_charm_requirer.name],
+        apps=[application.name],
         idle_period=30,
         status="blocked",
     )
