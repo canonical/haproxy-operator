@@ -1,4 +1,4 @@
-# Copyright 2024 Canonical Ltd.
+# Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """General configuration module for integration tests."""
@@ -95,7 +95,8 @@ async def get_unit_ip_address(
         The unit address
     """
     status: FullStatus = await application.model.get_status([application.name])
-    unit_status: UnitStatus = next(iter(status.applications[application.name].units.values()))
+    application = typing.cast(Application, status.applications[application.name])
+    unit_status: UnitStatus = next(iter(application.units.values()))
     assert unit_status.public_address, "Invalid unit address"
     address = (
         unit_status.public_address

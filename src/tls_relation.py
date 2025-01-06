@@ -1,4 +1,4 @@
-# Copyright 2024 Canonical Ltd.
+# Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 # Since the relations invoked in the methods are taken from the charm,
 # mypy guesses the relations might be None about all of them.
