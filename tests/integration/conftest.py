@@ -226,6 +226,54 @@ async def any_charm_src_fixture() -> dict[str, str]:
     return {"any_charm.py": any_charm_py}
 
 
+@pytest_asyncio.fixture(scope="module", name="any_charm_src_invalid_port")
+async def any_charm_src_invalid_port_fixture() -> dict[str, str]:
+    """any-charm configuration to test with haproxy."""
+    any_charm_py = textwrap.dedent(
+        """\
+        import ops
+        from any_charm_base import AnyCharmBase
+        import textwrap
+
+        relation_data = textwrap.dedent(
+            \"\"\"
+                - service_name: my_web_app
+                  service_host: 0.0.0.0
+                  service_port: 80000
+                  service_options:
+                  - mode http
+                  - timeout client 300000
+                  - timeout server 300000
+                  - balance leastconn
+                  - option httpchk HEAD / HTTP/1.0
+                  - acl server1 path_beg -i /server1/health
+                  - use_backend server1 if server1
+                  servers:
+                  - - default
+                    - 10.0.0.1
+                    - 80000
+                    - check
+            \"\"\"
+        )
+
+        class AnyCharm(AnyCharmBase):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+
+
+            def update_relation_data(self):
+                relation = self.model.get_relation("provide-http")
+                relation.data[self.unit].update(
+                    {
+                        "services": relation_data,
+                        "hostname": "", "port": ""
+                    }
+                )
+        """
+    )
+    return {"any_charm.py": any_charm_py}
+
+
 @pytest_asyncio.fixture(scope="module", name="any_charm_ingress_requirer_name")
 async def any_charm_ingress_requirer_name_fixture() -> str:
     """Name of the ingress requirer charm."""
