@@ -183,7 +183,6 @@ class HAProxyCharm(ops.CharmBase):
             return
 
         config = CharmConfig.from_charm(self)
-        legacy_invalid_requested_port: list[str] = {}
         match proxy_mode:
             case ProxyMode.INGRESS:
                 ingress_requirers_information = IngressRequirersInformation.from_provider(
@@ -195,14 +194,21 @@ class HAProxyCharm(ops.CharmBase):
                     config, ingress_requirers_information, tls_information.external_hostname
                 )
             case ProxyMode.LEGACY:
+                legacy_invalid_requested_port: list[str] = []
                 required_ports: set[Port] = set()
                 for service in self.reverseproxy_requirer.get_services_definition().values():
                     port = service["service_port"]
                     if not _validate_port(port):
                         logger.error("Requested port: %s is not a valid tcp port. Skipping", port)
-                        legacy_invalid_requested_port.append(f"{service['service-name']:{port}}")
+                        legacy_invalid_requested_port.append(f"{service['service_name']:{port}}")
                         continue
                     required_ports.add(Port(protocol="tcp", port=port))
+
+                if legacy_invalid_requested_port:
+                    self.unit.status = ops.BlockedStatus(
+                        f"Invalid ports requested: {','.join(legacy_invalid_requested_port)}"
+                    )
+                    return
 
                 self.unit.set_ports(*required_ports)
                 self.haproxy_service.reconcile_legacy(
@@ -211,11 +217,6 @@ class HAProxyCharm(ops.CharmBase):
             case _:
                 self.unit.set_ports(80)
                 self.haproxy_service.reconcile_default(config)
-        if legacy_invalid_requested_port:
-            self.unit.status = ops.BlockedStatus(
-                f"Services are requesting invalid ports: {','.join(legacy_invalid_requested_port)}"
-            )
-            return
         self.unit.status = ops.ActiveStatus()
 
     def _get_certificate_requests(self) -> typing.List[CertificateRequestAttributes]:
