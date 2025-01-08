@@ -24,6 +24,7 @@ from charms.traefik_k8s.v2.ingress import (
     IngressPerAppDataRemovedEvent,
     IngressPerAppProvider,
 )
+from interface_hacluster.ops_ha_interface import HAServiceRequires
 from ops.charm import ActionEvent
 from ops.model import Port
 
@@ -46,7 +47,7 @@ INGRESS_RELATION = "ingress"
 TLS_CERT_RELATION = "certificates"
 REVERSE_PROXY_RELATION = "reverseproxy"
 WEBSITE_RELATION = "website"
-
+HACLUSTER_RELATION = "hacluster"
 
 class ProxyMode(StrEnum):
     """StrEnum of possible http_route types.
@@ -106,7 +107,8 @@ class HAProxyCharm(ops.CharmBase):
             ],
             dashboard_dirs=["./src/grafana_dashboards"],
         )
-
+        
+        self.hacluster = HAServiceRequires(self, HACLUSTER_RELATION)
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.get_certificate_action, self._on_get_certificate_action)

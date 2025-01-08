@@ -51,6 +51,8 @@ requires:
     limit: 1
   reverseproxy:
     interface: http
+  ha:
+    interface: hacluster
 
 provides:
   ingress:

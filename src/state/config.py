@@ -12,7 +12,7 @@ import typing
 from subprocess import STDOUT, CalledProcessError, check_output  # nosec B404
 
 import ops
-from pydantic import Field, ValidationError, field_validator
+from pydantic import Field, ValidationError, field_validator, IPvAnyAddress
 from pydantic.dataclasses import dataclass
 
 from .exception import CharmStateValidationBaseError
@@ -31,9 +31,11 @@ class CharmConfig:
     Attributes:
         global_max_connection: The maximum per-process number of concurrent connections.
         Must be between 0 and "fs.nr_open" sysctl config.
+        vip: The configured virtual IP.
     """
 
     global_max_connection: int = Field(alias="global_max_connection")
+    vip: typing.Optional[IPvAnyAddress]
 
     @field_validator("global_max_connection")
     @classmethod
@@ -85,10 +87,12 @@ class CharmConfig:
             CharmConfig: Instance of the charm config state component.
         """
         global_max_connection = typing.cast(int, charm.config.get("global-maxconn"))
+        vip = typing.cast(str, charm.config.get("vip"))
 
         try:
             return cls(
                 global_max_connection=global_max_connection,
+                vip=vip
             )
         except ValidationError as exc:
             error_field_str = ",".join(f"{field}" for field in get_invalid_config_fields(exc))
