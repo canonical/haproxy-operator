@@ -15,6 +15,7 @@ parts:
       - pkg-config
       - libffi-dev
       - libssl-dev
+      - git
     build-snaps:
       - rustup
     override-build: |
@@ -67,14 +68,17 @@ config:
   options:
     external-hostname:
       default: ""
-      description: Hostname of haproxy.
       type: string
+      description: Hostname of haproxy.
     global-maxconn:
       default: 4096
       type: int
       description: |
           Sets the maximum per-process number of concurrent connections to
           <number>. Must be greater than 0.
+    vip:
+      type: string
+      description: Virtual IP address, used in active-passive ha mode.
 
 actions:
   get-certificate:

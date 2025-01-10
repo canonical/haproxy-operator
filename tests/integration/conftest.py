@@ -372,3 +372,15 @@ async def reverseproxy_requirer_fixture(
     )
     await model.wait_for_idle(apps=[application.name], status="active")
     yield application
+
+
+@pytest_asyncio.fixture(scope="function", name="hacluster")
+async def hacluster_fixture(
+    model: Model,
+) -> typing.AsyncGenerator[Application, None]:
+    """Deploy hacluster."""
+    application = await model.deploy(
+        "hacluster", application_name="hacluster", channel="2.4/edge", series="noble"
+    )
+    await model.wait_for_idle(apps=[application.name], wait_for_at_least_units=0, status="unknown")
+    yield application
