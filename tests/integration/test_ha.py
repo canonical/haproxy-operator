@@ -2,8 +2,9 @@
 # See LICENSE file for licensing details.
 
 """Integration test for haproxy charm."""
-from juju.action import Action
+import requests
 from juju.application import Application
+from pytest_operator.plugin import OpsTest
 
 from .conftest import get_unit_ip_address
 
@@ -14,7 +15,7 @@ async def test_ha(application: Application, hacluster: Application):
     act: request chrony_exporter metrics endpoint.
     assert: confirm that metrics are scraped.
     """
-    await application.add_unit(count=2)
+    await application.add_unit(count=3)
     await application.model.wait_for_idle(
         apps=[application.name],
         idle_period=30,
@@ -29,7 +30,10 @@ async def test_ha(application: Application, hacluster: Application):
         idle_period=30,
         status="active",
     )
-    for unit in application.units:
-        action: Action = await unit.run("sudo pcs status")
-        await action.wait()
-        assert "Pacemaker is running" in action.results["stdout"]
+    response = requests.get(url=f"http://{vip}")
+    assert "Default page for the haproxy-operator charm" in response.text
+
+    await application.units[0].machine.destroy(force=True)
+
+    response = requests.get(url=f"http://{vip}")
+    assert "Default page for the haproxy-operator charm" in response.text
