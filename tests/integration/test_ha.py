@@ -4,7 +4,6 @@
 """Integration test for haproxy charm."""
 import requests
 from juju.application import Application
-from pytest_operator.plugin import OpsTest
 
 from .conftest import get_unit_ip_address
 
@@ -36,10 +35,10 @@ async def test_ha(application: Application, hacluster: Application):
         idle_period=30,
         status="active",
     )
-    response = requests.get(url=f"http://{vip}")
+    response = requests.get(url=f"http://{vip}", timeout=30)
     assert "Default page for the haproxy-operator charm" in response.text
 
     await application.units[0].machine.destroy(force=True)
 
-    response = requests.get(url=f"http://{vip}")
+    response = requests.get(url=f"http://{vip}", timeout=30)
     assert "Default page for the haproxy-operator charm" in response.text
