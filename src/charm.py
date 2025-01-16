@@ -48,7 +48,7 @@ INGRESS_RELATION = "ingress"
 TLS_CERT_RELATION = "certificates"
 REVERSE_PROXY_RELATION = "reverseproxy"
 WEBSITE_RELATION = "website"
-
+HAPROXY_PEER_RELATION = "haproxy-peer"
 
 class ProxyMode(StrEnum):
     """StrEnum of possible http_route types.
@@ -307,10 +307,17 @@ class HAProxyCharm(ops.CharmBase):
         if not ha_information.integration_ready:
             logger.info("ha integration is not ready, skipping.")
             return
+
+        peer_relation = self.model.get_relation(HAPROXY_PEER_RELATION)
+        configured_vip = peer_relation.data[self.app].get("vip")
+        if configured_vip and configured_vip != str(ha_information.vip):
+            self.hacluster.remove_vip(self.app.name, configured_vip)
+
         self.hacluster.add_vip(self.app.name, str(ha_information.vip))
         self.hacluster.add_systemd_service(f"{self.app.name}-{HAPROXY_SERVICE}", HAPROXY_SERVICE)
         self.hacluster.bind_resources()
-
+        if self.unit.is_leader():
+            peer_relation.data[self.app.name].update({"vip": str(ha_information.vip)})
 
 if __name__ == "__main__":  # pragma: nocover
     ops.main(HAProxyCharm)

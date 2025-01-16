@@ -63,6 +63,9 @@ provides:
   website:
     interface: http
 
+peer:
+  haproxy-peer:
+    interface: haproxy-peer
 
 config:
   options:
