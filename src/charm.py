@@ -50,6 +50,7 @@ REVERSE_PROXY_RELATION = "reverseproxy"
 WEBSITE_RELATION = "website"
 HAPROXY_PEER_RELATION = "haproxy-peer"
 
+
 class ProxyMode(StrEnum):
     """StrEnum of possible http_route types.
 
@@ -318,6 +319,7 @@ class HAProxyCharm(ops.CharmBase):
         self.hacluster.bind_resources()
         if self.unit.is_leader():
             peer_relation.data[self.app.name].update({"vip": str(ha_information.vip)})
+
 
 if __name__ == "__main__":  # pragma: nocover
     ops.main(HAProxyCharm)
