@@ -6,7 +6,7 @@
 import pytest
 from ops.testing import Harness
 
-from state.ha import HACLUSTER_RELATION, HAInformation, HAInformationValidationError
+from state.ha import HACLUSTER_INTEGRATION, HAInformation, HAInformationValidationError
 
 
 def test_ha_information(harness: Harness):
@@ -16,12 +16,12 @@ def test_ha_information(harness: Harness):
     assert: State component is correctly generated.
     """
     mock_vip = "10.0.0.1"
-    harness.add_relation(HACLUSTER_RELATION, "hacluster", unit_data={})
+    harness.add_relation(HACLUSTER_INTEGRATION, "hacluster", unit_data={})
     harness.update_config({"vip": mock_vip})
     harness.begin()
     ha_information = HAInformation.from_charm(harness.charm)
     assert str(ha_information.vip) == mock_vip
-    assert ha_information.integration_ready
+    assert ha_information.ha_integration_ready
 
 
 def test_ha_information_vip_invalid(harness: Harness):
@@ -31,7 +31,7 @@ def test_ha_information_vip_invalid(harness: Harness):
     assert: HAInformationValidationError is raised.
     """
     mock_vip = "invalid"
-    harness.add_relation(HACLUSTER_RELATION, "hacluster")
+    harness.add_relation(HACLUSTER_INTEGRATION, "hacluster")
     harness.update_config({"vip": mock_vip})
     harness.begin()
     with pytest.raises(HAInformationValidationError):
@@ -42,9 +42,9 @@ def test_ha_information_vip_integration_not_ready(harness: Harness):
     """
     arrange: Given a charm with ha integration missing.
     act: Initialize HAInformation state component.
-    assert: integration_ready is False and vip is None.
+    assert: ha_integration_ready is False and vip is None.
     """
     harness.begin()
     ha_information = HAInformation.from_charm(harness.charm)
-    assert not ha_information.integration_ready
+    assert not ha_information.ha_integration_ready
     assert ha_information.vip is None

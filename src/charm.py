@@ -36,7 +36,7 @@ from http_interface import (
     HTTPRequirer,
 )
 from state.config import CharmConfig
-from state.ha import HACLUSTER_RELATION, HAInformation
+from state.ha import HACLUSTER_INTEGRATION, HAPROXY_PEER_INTEGRATION, HAInformation
 from state.ingress import IngressRequirersInformation
 from state.tls import TLSInformation, TLSNotReadyError
 from state.validation import validate_config_and_tls
@@ -48,7 +48,6 @@ INGRESS_RELATION = "ingress"
 TLS_CERT_RELATION = "certificates"
 REVERSE_PROXY_RELATION = "reverseproxy"
 WEBSITE_RELATION = "website"
-HAPROXY_PEER_RELATION = "haproxy-peer"
 
 
 class ProxyMode(StrEnum):
@@ -111,7 +110,7 @@ class HAProxyCharm(ops.CharmBase):
             dashboard_dirs=["./src/grafana_dashboards"],
         )
 
-        self.hacluster = HAServiceRequires(self, HACLUSTER_RELATION)
+        self.hacluster = HAServiceRequires(self, HACLUSTER_INTEGRATION)
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.get_certificate_action, self._on_get_certificate_action)
@@ -305,20 +304,24 @@ class HAProxyCharm(ops.CharmBase):
         Args:
             ha_information: HAInformation charm state component.
         """
-        if not ha_information.integration_ready:
+        if not ha_information.ha_integration_ready:
             logger.info("ha integration is not ready, skipping.")
             return
 
-        peer_relation = self.model.get_relation(HAPROXY_PEER_RELATION)
-        configured_vip = peer_relation.data[self.app].get("vip")
-        if configured_vip and configured_vip != str(ha_information.vip):
-            self.hacluster.remove_vip(self.app.name, configured_vip)
+        if not ha_information.haproxy_peer_integration_ready:
+            logger.info("haproxy-peers integration is not ready, skipping.")
+            return
+
+        peer_relation = typing.cast(
+            ops.model.Relation, self.model.get_relation(HAPROXY_PEER_INTEGRATION)
+        )
+        if ha_information.configured_vip and ha_information.configured_vip != ha_information.vip:
+            self.hacluster.remove_vip(self.app.name, str(ha_information.configured_vip))
+            peer_relation.data[self.unit].update({"vip": str(ha_information.vip)})
 
         self.hacluster.add_vip(self.app.name, str(ha_information.vip))
         self.hacluster.add_systemd_service(f"{self.app.name}-{HAPROXY_SERVICE}", HAPROXY_SERVICE)
         self.hacluster.bind_resources()
-        if self.unit.is_leader():
-            peer_relation.data[self.app.name].update({"vip": str(ha_information.vip)})
 
 
 if __name__ == "__main__":  # pragma: nocover
