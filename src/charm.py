@@ -36,7 +36,12 @@ from http_interface import (
     HTTPRequirer,
 )
 from state.config import CharmConfig
-from state.ha import HACLUSTER_INTEGRATION, HAPROXY_PEER_INTEGRATION, HAInformation
+from state.ha import (
+    HACLUSTER_INTEGRATION,
+    HAPROXY_PEER_INTEGRATION,
+    HAInformation,
+    LOCAL_UNIT_PEER_INTEGRATION_DATA_KEY,
+)
 from state.ingress import IngressRequirersInformation
 from state.tls import TLSInformation, TLSNotReadyError
 from state.validation import validate_config_and_tls
@@ -317,7 +322,9 @@ class HAProxyCharm(ops.CharmBase):
         )
         if ha_information.configured_vip and ha_information.configured_vip != ha_information.vip:
             self.hacluster.remove_vip(self.app.name, str(ha_information.configured_vip))
-            peer_relation.data[self.unit].update({"vip": str(ha_information.vip)})
+            peer_relation.data[LOCAL_UNIT_PEER_INTEGRATION_DATA_KEY].update(
+                {"vip": str(ha_information.vip)}
+            )
 
         self.hacluster.add_vip(self.app.name, str(ha_information.vip))
         self.hacluster.add_systemd_service(f"{self.app.name}-{HAPROXY_SERVICE}", HAPROXY_SERVICE)
