@@ -14,7 +14,6 @@ from .exception import CharmStateValidationBaseError
 
 HACLUSTER_INTEGRATION = "ha"
 HAPROXY_PEER_INTEGRATION = "haproxy-peers"
-LOCAL_UNIT_PEER_INTEGRATION_DATA_KEY = "local-unit"
 
 class HAInformationValidationError(CharmStateValidationBaseError):
     """Exception raised when validation of the ha_information state component failed."""
@@ -68,7 +67,7 @@ class HAInformation:
 
         haproxy_peer_integration = charm.model.get_relation(HAPROXY_PEER_INTEGRATION)
         configured_vip = (
-            haproxy_peer_integration.data[LOCAL_UNIT_PEER_INTEGRATION_DATA_KEY].get("vip")
+            haproxy_peer_integration.data[charm.unit].get("vip")
             if haproxy_peer_integration
             else None
         )
