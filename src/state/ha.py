@@ -15,6 +15,7 @@ from .exception import CharmStateValidationBaseError
 HACLUSTER_INTEGRATION = "ha"
 HAPROXY_PEER_INTEGRATION = "haproxy-peers"
 
+
 class HAInformationValidationError(CharmStateValidationBaseError):
     """Exception raised when validation of the ha_information state component failed."""
 
