@@ -126,63 +126,153 @@ async def get_unit_address(application: Application) -> str:
 @pytest_asyncio.fixture(scope="module", name="any_charm_src")
 async def any_charm_src_fixture() -> dict[str, str]:
     """any-charm configuration to test with haproxy."""
-    return {
-        "any_charm.py": textwrap.dedent(
-            """
+    any_charm_py = textwrap.dedent(
+        """\
+        import pathlib
+        import ops
         from any_charm_base import AnyCharmBase
+        import apt
+        from subprocess import STDOUT, check_call
+        import os
         import textwrap
-        import logging
-        logger = logging.getLogger()
+
+        nginx_config = textwrap.dedent(
+            \"\"\"
+                events {}
+                http {
+                    server {
+                        listen 8000;
+                        location /  {
+                            add_header Content-Type text/plain;
+                            return 200 'default server healthy';
+                        }
+                    }
+
+                    server {
+                        listen 8001;
+                        location /server1/health {
+                            add_header Content-Type text/plain;
+                            return 200 'server 1 healthy';
+                        }
+                    }
+                }
+            \"\"\"
+        )
         relation_data = textwrap.dedent(
             \"\"\"
                 - service_name: my_web_app
                   service_host: 0.0.0.0
-                  service_port: 80
+                  service_port: 8994
                   service_options:
                   - mode http
                   - timeout client 300000
                   - timeout server 300000
                   - balance leastconn
                   - option httpchk HEAD / HTTP/1.0
-                  - acl service_1 path_beg -i /service_1
-                  - use_backend extra_service_1 if service_1
-                  servers: [[server1, 10.0.1.1, 80, [check, rise 2, fall 5, maxconn 50]]]
+                  - acl server1 path_beg -i /server1/health
+                  - use_backend server1 if server1
+                  servers:
+                  - - default
+                    - %s
+                    - 8000
+                    - check
                   backends:
-                  - backend_name: extra_service_1
+                  - backend_name: server1
                     servers:
-                    - - extra_server_1
-                      - 10.0.1.1
-                      - 8000
-                      - &id001
-                        - check
-                        - inter 5000
-                        - rise 2
-                        - fall 5
-                        - maxconn 50
-                    - - extra_server_2
-                      - 10.0.1.2
+                    - - server1
+                      - %s
                       - 8001
-                      - *id001
+                      - check
             \"\"\"
         )
+
         class AnyCharm(AnyCharmBase):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
 
+            @property
+            def bind_address(self) -> str:
+                if bind := self.model.get_binding("juju-info"):
+                    return str(bind.network.bind_address)
+                return ""
+
+            def update_relation_data(self):
+                relation = self.model.get_relation("provide-http")
+                bind_address = self.bind_address
+                relation.data[self.unit].update(
+                    {
+                        "services": relation_data % (bind_address, bind_address),
+                        "hostname": "", "port": ""
+                    }
+                )
+
+            def start_server(self):
+                check_call(
+                    ['apt-get', 'install', '-y', 'nginx'],
+                    stdout=open(os.devnull,'wb'),
+                    stderr=STDOUT
+                )
+                www_dir = pathlib.Path("/var/www/html")
+                pathlib.Path("/etc/nginx/nginx.conf").write_text(nginx_config, encoding="utf-8")
+                check_call(['nginx', '-T'], stdout=open(os.devnull,'wb'), stderr=STDOUT)
+                check_call(
+                    ['systemctl', 'restart', 'nginx'],
+                    stdout=open(os.devnull,'wb'),
+                    stderr=STDOUT
+                )
+
+                self.unit.status = ops.ActiveStatus("server ready")
+        """
+    )
+    return {"any_charm.py": any_charm_py}
+
+
+@pytest_asyncio.fixture(scope="module", name="any_charm_src_invalid_port")
+async def any_charm_src_invalid_port_fixture() -> dict[str, str]:
+    """any-charm configuration to test with haproxy."""
+    any_charm_py = textwrap.dedent(
+        """\
+        import ops
+        from any_charm_base import AnyCharmBase
+        import textwrap
+
+        relation_data = textwrap.dedent(
+            \"\"\"
+                - service_name: my_web_app
+                  service_host: 0.0.0.0
+                  service_port: 80000
+                  service_options:
+                  - mode http
+                  - timeout client 300000
+                  - timeout server 300000
+                  - balance leastconn
+                  - option httpchk HEAD / HTTP/1.0
+                  - acl server1 path_beg -i /server1/health
+                  - use_backend server1 if server1
+                  servers:
+                  - - default
+                    - 10.0.0.1
+                    - 80000
+                    - check
+            \"\"\"
+        )
+
+        class AnyCharm(AnyCharmBase):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+
+
             def update_relation_data(self):
                 relation = self.model.get_relation("provide-http")
                 relation.data[self.unit].update(
-                    {"services": relation_data, "hostname": "", "port": ""}
-                )
-
-            def update_relation_data_single_service(self):
-                relation = self.model.get_relation("provide-http")
-                relation.data[self.unit].update(
-                    {"hostname": "10.0.0.0", "port": "80", "services": ""}
+                    {
+                        "services": relation_data,
+                        "hostname": "", "port": ""
+                    }
                 )
         """
-        ),
-    }
+    )
+    return {"any_charm.py": any_charm_py}
 
 
 @pytest_asyncio.fixture(scope="module", name="any_charm_ingress_requirer_name")
