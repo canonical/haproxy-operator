@@ -2,9 +2,9 @@ groups:
   - name: haproxy_no_quorum
     rules:
       - alert: HaproxyNoQuorumError
-        expr: rate({%%juju_topology%%} |~ `resource management disabled due to lack of quorum` [5m]) > 0
+        expr: count_over_time({%%juju_topology%%} |~ `resource management disabled due to lack of quorum` [5m]) > 0
         for: 0s
         labels:
-            severity: page
+            severity: error
         annotations:
             summary: Resource Management was disable on 1 or more node due to lack of quorum
