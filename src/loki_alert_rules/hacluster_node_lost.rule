@@ -2,7 +2,7 @@ groups:
   - name: haproxy_node_lost
     rules:
       - alert: HaproxyNodeLostError
-        expr: rate({%%juju_topology%%} |~ ``Node (.*) is no longer a peer` [5m]) > 0
+        expr: rate({%%juju_topology%%} |~ `Node (.*) is no longer a peer` [5m]) > 0
         for: 0s
         labels:
             severity: page
