@@ -5,6 +5,6 @@ groups:
         expr: count_over_time({%%juju_topology%%} |~ `resource management disabled due to lack of quorum` [5m]) > 0
         for: 0s
         labels:
-            severity: error
+            severity: critical
         annotations:
             summary: Resource Management was disable on 1 or more node due to lack of quorum
