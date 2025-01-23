@@ -1,0 +1,10 @@
+groups:
+  - name: haproxy_vip_stopped
+    rules:
+      - alert: HaproxyVipStoppedError
+        expr: rate({%%juju_topology%%} |~ `Stopping res_haproxy_.*_vip` [5m]) > 0
+        for: 0s
+        labels:
+            severity: page
+        annotations:
+            summary: Haproxy VIP resource stopped
