@@ -24,4 +24,5 @@ header:
     - 'lib/**'
     - '.woke.yaml'
     - 'templates/**'
+    - 'src/loki_alert_rules/*.rule'
   comment: on-failure
