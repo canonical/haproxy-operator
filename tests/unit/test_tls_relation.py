@@ -85,9 +85,17 @@ def test_certificate_available(
     monkeypatch.setattr(
         "tls_relation.TLSRelationService.write_certificate_to_unit", write_cert_mock
     )
-    tls_relation.certificate_available()
+
+    tls_information = TLSInformation(
+        external_hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
+        tls_cert_and_ca_chain={
+            TEST_EXTERNAL_HOSTNAME_CONFIG: (mock_certificate, [mock_certificate])
+        },
+        private_key=mock_private_key,
+    )
+    tls_relation.certificate_available(tls_information)
     write_cert_mock.assert_called_once_with(
-        certificate=mock_certificate, private_key=mock_private_key
+        certificate=mock_certificate, chain=[mock_certificate], private_key=mock_private_key
     )
 
 
@@ -112,6 +120,10 @@ def test_write_certificate_to_unit(
     monkeypatch.setattr("pwd.getpwnam", MagicMock())
     monkeypatch.setattr("os.chown", MagicMock())
 
-    tls_relation.write_certificate_to_unit(mock_certificate, mock_private_key)
-    pem_file_content = f"{str(mock_certificate)}\n{str(mock_private_key)}"
+    tls_relation.write_certificate_to_unit(mock_certificate, [mock_certificate], mock_private_key)
+    pem_file_content = (
+        f"{str(mock_certificate)}\n"
+        f"{'\n'.join([str(cert) for cert in [mock_certificate]])}\n"
+        f"{str(mock_private_key)}"
+    )
     write_text_mock.assert_called_once_with(pem_file_content, encoding="utf-8")
