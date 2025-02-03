@@ -35,7 +35,7 @@ def validate_config_and_tls(  # noqa: C901
     """
 
     def decorator(
-        method: typing.Callable[[C, typing.Any], None]
+        method: typing.Callable[[C, typing.Any], None],
     ) -> typing.Callable[[C, typing.Any], None]:
         """Create a decorator that puts the charm in blocked state if the config is wrong.
 
