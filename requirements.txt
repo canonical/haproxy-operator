@@ -1,7 +1,7 @@
 cryptography==44.0.0
 jinja2==3.1.5
 jsonschema==4.23.0
-ops==2.18.0
+ops==2.18.1
 pydantic==2.10.6
 interface_hacluster @ git+https://github.com/charmed-kubernetes/charm-interface-hacluster@1.31+ck1
 cosl==0.0.54
