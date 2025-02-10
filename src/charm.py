@@ -95,7 +95,7 @@ class HAProxyCharm(ops.CharmBase):
             relationship_name=TLS_CERT_RELATION,
             certificate_requests=self._get_certificate_requests(),
             refresh_events=[self.on.config_changed],
-            mode=Mode.APP,
+            mode=Mode.UNIT,
         )
         self._tls = TLSRelationService(self.model, self.certificates)
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
@@ -144,8 +144,8 @@ class HAProxyCharm(ops.CharmBase):
     @validate_config_and_tls(defer=True, block_on_tls_not_ready=True)
     def _on_certificate_available(self, _: CertificateAvailableEvent) -> None:
         """Handle the TLS Certificate available event."""
-        TLSInformation.validate(self)
-        self._tls.certificate_available()
+        tls_information = TLSInformation.from_charm(self, self.certificates)
+        self._tls.certificate_available(tls_information)
         self._reconcile()
 
     def _on_get_certificate_action(self, event: ActionEvent) -> None:

@@ -17,6 +17,7 @@ from charms.tls_certificates_interface.v4.tls_certificates import (
 from ops.model import Model
 
 from haproxy import file_exists, read_file, render_file
+from state.tls import TLSInformation
 
 TLS_CERT = "certificates"
 HAPROXY_CERTS_DIR = Path("/var/lib/haproxy/certs")
@@ -63,55 +64,65 @@ class TLSRelationService:
             return None
         return provider_certificate
 
-    def certificate_available(self) -> None:
-        """Handle TLS Certificate available event."""
+    def certificate_available(self, tls_information: TLSInformation) -> None:
+        """Handle TLS Certificate available event.
+
+        Args:
+            tls_information: TLSInformation charm state component.
+        """
         if len(self.certificates.certificate_requests) == 0:
             logger.warning("No certificate was requested")
             return
-        provider_certificate, private_key = self.certificates.get_assigned_certificate(
-            certificate_request=self.certificates.certificate_requests[0]
-        )
-        if not provider_certificate:
-            logger.warning("Provider certificate is not available")
-            return
-        if not private_key:
-            logger.warning("Private key is not available")
-            return
-        if not self._certificate_matches_stored_content(
-            certificate=provider_certificate.certificate,
-            private_key=private_key,
-        ):
-            self.write_certificate_to_unit(
-                certificate=provider_certificate.certificate,
-                private_key=private_key,
-            )
+        for certificate, chain in tls_information.tls_cert_and_ca_chain.values():
+            if not self._certificate_matches_stored_content(
+                certificate=certificate,
+                chain=chain,
+                private_key=tls_information.private_key,
+            ):
+                self.write_certificate_to_unit(
+                    certificate=certificate,
+                    chain=chain,
+                    private_key=tls_information.private_key,
+                )
 
     def _certificate_matches_stored_content(
-        self, certificate: Certificate, private_key: PrivateKey
+        self, certificate: Certificate, chain: list[Certificate], private_key: PrivateKey
     ) -> bool:
         """Check if the certificate matches the stored content.
 
         Args:
             certificate: The certificate to check.
+            chain: The ca chain.
             private_key: The private key to check.
         """
         if not file_exists(HAPROXY_CERTS_DIR / f"{certificate.common_name}.pem"):
             return False
-        expected_certificate = f"{str(certificate)}\n{str(private_key)}"
+        expected_certificate = (
+            f"{str(certificate)}\n"
+            f"{'\n'.join([str(cert) for cert in chain])}\n"
+            f"{str(private_key)}"
+        )
         existing_certificate = read_file(HAPROXY_CERTS_DIR / f"{certificate.common_name}.pem")
         return expected_certificate == existing_certificate
 
-    def write_certificate_to_unit(self, certificate: Certificate, private_key: PrivateKey) -> None:
+    def write_certificate_to_unit(
+        self, certificate: Certificate, chain: list[Certificate], private_key: PrivateKey
+    ) -> None:
         """Store certificate in workload.
 
         Args:
             certificate: The certificate to store.
+            chain: The ca chain.
             private_key: The private key to store.
         """
         if not HAPROXY_CERTS_DIR.exists(follow_symlinks=False):
             HAPROXY_CERTS_DIR.mkdir(exist_ok=True)
         hostname = certificate.common_name
         pem_file_path = Path(HAPROXY_CERTS_DIR / f"{hostname}.pem")
-        pem_file_content = f"{str(certificate)}\n{str(private_key)}"
+        pem_file_content = (
+            f"{str(certificate)}\n"
+            f"{'\n'.join([str(cert) for cert in chain])}\n"
+            f"{str(private_key)}"
+        )
         render_file(pem_file_path, pem_file_content, 0o644)
         logger.info("Certificate pem file written: %r", pem_file_path)
