@@ -38,7 +38,7 @@ from http_interface import (
 from state.config import CharmConfig
 from state.ha import HACLUSTER_INTEGRATION, HAPROXY_PEER_INTEGRATION, HAInformation
 from state.ingress import IngressRequirersInformation
-from state.tls import TLSInformation, TLSNotReadyError
+from state.tls import TLSInformation
 from state.validation import validate_config_and_tls
 from tls_relation import TLSRelationService
 
@@ -90,6 +90,9 @@ class HAProxyCharm(ops.CharmBase):
         """
         super().__init__(*args)
         self.haproxy_service = HAProxyService()
+        # Order is important here as we want _ensure_tls to check if the hostname is configured
+        self.framework.observe(self.on[TLS_CERT_RELATION].relation_created, self._ensure_tls)
+        self.framework.observe(self.on[TLS_CERT_RELATION].relation_changed, self._ensure_tls)
         self.certificates = TLSCertificatesRequiresV4(
             charm=self,
             relationship_name=TLS_CERT_RELATION,
@@ -97,6 +100,7 @@ class HAProxyCharm(ops.CharmBase):
             refresh_events=[self.on.config_changed],
             mode=Mode.UNIT,
         )
+
         self._tls = TLSRelationService(self.model, self.certificates)
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
         self.reverseproxy_requirer = HTTPRequirer(self, REVERSE_PROXY_RELATION)
@@ -136,16 +140,14 @@ class HAProxyCharm(ops.CharmBase):
         self.haproxy_service.install()
         self.unit.status = ops.MaintenanceStatus("Waiting for haproxy to be configured.")
 
-    @validate_config_and_tls(defer=False, block_on_tls_not_ready=False)
+    @validate_config_and_tls(defer=False)
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
         self._reconcile()
 
-    @validate_config_and_tls(defer=True, block_on_tls_not_ready=True)
+    @validate_config_and_tls(defer=True)
     def _on_certificate_available(self, _: CertificateAvailableEvent) -> None:
         """Handle the TLS Certificate available event."""
-        tls_information = TLSInformation.from_charm(self, self.certificates)
-        self._tls.certificate_available(tls_information)
         self._reconcile()
 
     def _on_get_certificate_action(self, event: ActionEvent) -> None:
@@ -169,26 +171,31 @@ class HAProxyCharm(ops.CharmBase):
 
         event.fail(f"Missing or incomplete certificate data for {hostname}")
 
-    @validate_config_and_tls(defer=False, block_on_tls_not_ready=False)
+    @validate_config_and_tls(defer=False)
     def _on_http_backend_available(self, _: HTTPBackendAvailableEvent) -> None:
         """Handle http_backend_available event for reverseproxy integration."""
         self._reconcile()
 
-    @validate_config_and_tls(defer=False, block_on_tls_not_ready=False)
+    @validate_config_and_tls(defer=False)
     def _on_http_backend_removed(self, _: HTTPBackendRemovedEvent) -> None:
         """Handle data_removed event for reverseproxy integration."""
         self._reconcile()
 
     def _reconcile(self) -> None:
         """Render the haproxy config and restart the service."""
-        ha_information = HAInformation.from_charm(self)
-        self._reconcile_ha(ha_information)
-
         proxy_mode = self._validate_state()
         if proxy_mode == ProxyMode.INVALID:
             # We don't raise any exception/set status here as it should already be handled
             # by the _validate_state method
             return
+
+        if self.certificates._tls_relation_created():  # pylint: disable=protected-access
+            # Reconcile certificates in case the certificates relation is present
+            tls_information = TLSInformation.from_charm(self, self.certificates)
+            self._tls.certificate_available(tls_information)
+
+        ha_information = HAInformation.from_charm(self)
+        self._reconcile_ha(ha_information)
 
         config = CharmConfig.from_charm(self)
         match proxy_mode:
@@ -196,7 +203,6 @@ class HAProxyCharm(ops.CharmBase):
                 ingress_requirers_information = IngressRequirersInformation.from_provider(
                     self._ingress_provider
                 )
-                tls_information = TLSInformation.from_charm(self, self.certificates)
                 self.unit.set_ports(80, 443)
                 self.haproxy_service.reconcile_ingress(
                     config, ingress_requirers_information, tls_information.external_hostname
@@ -242,7 +248,7 @@ class HAProxyCharm(ops.CharmBase):
             )
         ]
 
-    @validate_config_and_tls(defer=True, block_on_tls_not_ready=True)
+    @validate_config_and_tls(defer=True)
     def _on_ingress_data_provided(self, event: IngressPerAppDataProvidedEvent) -> None:
         """Handle the data-provided event.
 
@@ -250,15 +256,15 @@ class HAProxyCharm(ops.CharmBase):
             event: Juju event.
         """
         self._reconcile()
-        tls_information = TLSInformation.from_charm(self, self.certificates)
-        integration_data = self._ingress_provider.get_data(event.relation)
-        path_prefix = f"{integration_data.app.model}-{integration_data.app.name}"
+        if self.unit.is_leader():
+            tls_information = TLSInformation.from_charm(self, self.certificates)
+            integration_data = self._ingress_provider.get_data(event.relation)
+            path_prefix = f"{integration_data.app.model}-{integration_data.app.name}"
+            self._ingress_provider.publish_url(
+                event.relation, f"https://{tls_information.external_hostname}/{path_prefix}/"
+            )
 
-        self._ingress_provider.publish_url(
-            event.relation, f"https://{tls_information.external_hostname}/{path_prefix}/"
-        )
-
-    @validate_config_and_tls(defer=False, block_on_tls_not_ready=True)
+    @validate_config_and_tls(defer=False)
     def _on_ingress_data_removed(self, _: IngressPerAppDataRemovedEvent) -> None:
         """Handle the data-removed event."""
         self._reconcile()
@@ -279,13 +285,7 @@ class HAProxyCharm(ops.CharmBase):
             return ProxyMode.INVALID
 
         if is_ingress_related:
-            try:
-                TLSInformation.validate(self)
-            except TLSNotReadyError as exc:
-                logger.exception("Invalid hostname configuration and/or relation data.")
-                self.unit.status = ops.BlockedStatus(str(exc))
-                return ProxyMode.INVALID
-
+            TLSInformation.validate(self)
             return ProxyMode.INGRESS
 
         if is_legacy_related:
@@ -293,7 +293,7 @@ class HAProxyCharm(ops.CharmBase):
 
         return ProxyMode.NOPROXY
 
-    @validate_config_and_tls(defer=False, block_on_tls_not_ready=False)
+    @validate_config_and_tls(defer=False)
     def _on_ha_ready(self, _: HAServiceReadyEvent) -> None:
         """Handle the ha-ready event."""
         self._reconcile()
@@ -323,6 +323,11 @@ class HAProxyCharm(ops.CharmBase):
         self.hacluster.add_systemd_service(f"{self.app.name}-{HAPROXY_SERVICE}", HAPROXY_SERVICE)
         self.hacluster.bind_resources()
         peer_relation.data[self.unit].update({"vip": str(ha_information.vip)})
+
+    @validate_config_and_tls(defer=True)
+    def _ensure_tls(self, _: ops.EventBase) -> None:
+        """Ensure that the charm is ready to handle TLS-related events."""
+        TLSInformation.validate(self)
 
 
 if __name__ == "__main__":  # pragma: nocover

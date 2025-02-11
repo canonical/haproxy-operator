@@ -20,7 +20,7 @@ C = typing.TypeVar("C", bound=ops.CharmBase)
 # We ignore flake8 complexity warning here because
 # the decorator is complex by design as it needs to catch all exceptions
 def validate_config_and_tls(  # noqa: C901
-    defer: bool = False, block_on_tls_not_ready: bool = False
+    defer: bool = False,
 ) -> typing.Callable[
     [typing.Callable[[C, typing.Any], None]], typing.Callable[[C, typing.Any], None]
 ]:
@@ -28,7 +28,6 @@ def validate_config_and_tls(  # noqa: C901
 
     Args:
         defer: whether to defer the event.
-        block_on_tls_not_ready: Whether to block the charm if TLS is not ready.
 
     Returns:
         the function decorator.
@@ -71,8 +70,7 @@ def validate_config_and_tls(  # noqa: C901
                 if defer:
                     event, *_ = args
                     event.defer()
-                if block_on_tls_not_ready:
-                    instance.unit.status = ops.BlockedStatus(str(exc))
+                instance.unit.status = ops.BlockedStatus(str(exc))
                 logger.exception("Not ready to handle TLS.")
                 return None
             except PrivateKeyNotGeneratedError as exc:
