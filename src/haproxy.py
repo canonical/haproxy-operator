@@ -41,7 +41,8 @@ HAPROXY_INGRESS_CONFIG_TEMPLATE = "haproxy_ingress.cfg.j2"
 HAPROXY_LEGACY_CONFIG_TEMPLATE = "haproxy_legacy.cfg.j2"
 HAPROXY_DEFAULT_CONFIG_TEMPLATE = "haproxy.cfg.j2"
 HAPROXY_CERTS_DIR = Path("/var/lib/haproxy/certs")
-
+HAPROXY_CAS_DIR = Path("/var/lib/haproxy/cas")
+HAPROXY_CAS_FILE = Path(HAPROXY_CAS_DIR / "cas.pem")
 
 logger = logging.getLogger()
 
@@ -112,6 +113,7 @@ class HAProxyService:
             "ingress_requirers_information": ingress_requirers_information,
             "config_external_hostname": external_hostname,
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
+            "haproxy_cas_file": HAPROXY_CAS_FILE if HAPROXY_CAS_FILE.exists() else None,
         }
         self._render_haproxy_config(HAPROXY_INGRESS_CONFIG_TEMPLATE, template_context)
         self._reload_haproxy_service()
