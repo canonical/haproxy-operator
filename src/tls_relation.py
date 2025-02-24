@@ -133,7 +133,7 @@ class TLSRelationService:
             chain: The ca chain.
             private_key: The private key to store.
         """
-        if not HAPROXY_CERTS_DIR.exists():
+        if not HAPROXY_CERTS_DIR.exists(follow_symlinks=False):
             HAPROXY_CERTS_DIR.mkdir(exist_ok=True)
         hostname = certificate.common_name
         pem_file_path = Path(HAPROXY_CERTS_DIR / f"{hostname}.pem")

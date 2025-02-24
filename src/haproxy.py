@@ -113,8 +113,9 @@ class HAProxyService:
             "ingress_requirers_information": ingress_requirers_information,
             "config_external_hostname": external_hostname,
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
-            "haproxy_cas_file": HAPROXY_CAS_FILE if HAPROXY_CAS_FILE.exists() else None,
         }
+        if HAPROXY_CAS_FILE.exists():
+            template_context["haproxy_cas_file"] = HAPROXY_CAS_FILE
         self._render_haproxy_config(HAPROXY_INGRESS_CONFIG_TEMPLATE, template_context)
         self._reload_haproxy_service()
 
