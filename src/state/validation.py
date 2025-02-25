@@ -8,10 +8,10 @@ import logging
 import typing
 
 import ops
+from charms.haproxy.v0.haproxy_route import HaproxyRouteInvalidRelationDataError
 
 from state.exception import CharmStateValidationBaseError
 from state.tls import PrivateKeyNotGeneratedError, TLSNotReadyError
-from charms.haproxy.v0.haproxy_route import HaproxyRouteInvalidRelationDataError
 
 logger = logging.getLogger(__name__)
 
