@@ -614,10 +614,10 @@ class HaproxyRouteProvider(Object):
             try:
                 application_data = self._get_requirer_application_data(relation)
                 units_data = self._get_requirer_units_data(relation)
-                harpoxy_route_requirer_data = HaproxyRouteRequirerData(
+                haproxy_route_requirer_data = HaproxyRouteRequirerData(
                     application_data=application_data, units_data=units_data
                 )
-                requirers_data.append(harpoxy_route_requirer_data)
+                requirers_data.append(haproxy_route_requirer_data)
             except DataValidationError as exc:
                 logger.exception("haproxy-route data validation failed for relation %s", relation)
                 raise HaproxyRouteInvalidRelationDataError(
