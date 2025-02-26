@@ -819,8 +819,8 @@ class HaproxyRouteRequirer(Object):
     # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
     def provide_haproxy_route_requirements(
         self,
-        service: Optional[str] = None,
-        ports: Optional[list[int]] = None,
+        service: str,
+        ports: list[int],
         paths: Optional[list[str]] = None,
         subdomains: Optional[list[str]] = None,
         check_interval: Optional[int] = None,
@@ -905,7 +905,7 @@ class HaproxyRouteRequirer(Object):
         self.update_relation_data()
 
     # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
-    def _generate_application_data(
+    def _generate_application_data(  # noqa: C901
         self,
         service: Optional[str] = None,
         ports: Optional[list[int]] = None,
@@ -966,30 +966,26 @@ class HaproxyRouteRequirer(Object):
         Returns:
             dict: A dictionary containing the complete application data structure.
         """
-        (
-            _ports,
-            _paths,
-            _check_paths,
-            _path_rewrite_expressions,
-            _query_rewrite_expressions,
-            _header_rewrite_expressions,
-            _deny_paths,
-        ) = map(
-            lambda x: x if x else [],
-            [
-                ports,
-                paths,
-                check_paths,
-                path_rewrite_expressions,
-                query_rewrite_expressions,
-                header_rewrite_expressions,
-                deny_paths,
-            ],
-        )
+        # Apply default value to list parameters to avoid problems with mutable default args.
+        if not ports:
+            ports = []
+        if not paths:
+            paths = []
+        if not check_paths:
+            check_paths = []
+        if not path_rewrite_expressions:
+            path_rewrite_expressions = []
+        if not query_rewrite_expressions:
+            query_rewrite_expressions = []
+        if not header_rewrite_expressions:
+            header_rewrite_expressions = []
+        if not deny_paths:
+            deny_paths = []
+
         application_data: dict[str, Any] = {
             "service": service,
-            "ports": _ports,
-            "paths": _paths,
+            "ports": ports,
+            "paths": paths,
             "subdomains": subdomains,
             "load_balancing": {
                 "algorithm": load_balancing_algorithm,
@@ -1000,19 +996,19 @@ class HaproxyRouteRequirer(Object):
                 "client": client_timeout,
                 "queue": queue_timeout,
             },
-            "deny_paths": _deny_paths,
+            "deny_paths": deny_paths,
             "server_maxconn": server_maxconn,
         }
 
         if check := self._generate_server_healthcheck_configuration(
-            check_interval, check_rise, check_fall, cast(list[str], _check_paths)
+            check_interval, check_rise, check_fall, check_paths
         ):
             application_data["check"] = check
 
         if rewrites := self._generate_rewrite_configuration(
-            cast(list[str], _path_rewrite_expressions),
-            cast(list[str], _query_rewrite_expressions),
-            cast(list[tuple[str, str]], _header_rewrite_expressions),
+            path_rewrite_expressions,
+            query_rewrite_expressions,
+            header_rewrite_expressions,
         ):
             application_data["rewrites"] = rewrites
 
