@@ -70,9 +70,46 @@ class SomeCharm(CharmBase):
     self.framework.observe(
         self.framework.on.config_changed, self._on_config_changed
     )
+    self.framework.observe(
+        self.haproxy_route_requirer.on.ready, self._on_endpoints_ready
+    )
+    self.framework.observe(
+        self.haproxy_route_requirer.on.removed, self._on_endpoints_removed
+    )
 
-    def _on_config_changed(self, event: IngressPerAppReadyEvent):
+    def _on_config_changed(self, event: ConfigChangedEvent) -> None:
         self.haproxy_route_requirer.provide_haproxy_route_requirements(...)
+
+    def _on_endpoints_ready(self, _: EventBase) -> None:
+        # Handle endpoints ready event
+        ...
+
+    def _on_endpoints_removed(self, _: EventBase) -> None:
+        # Handle endpoints removed event
+        ...
+
+## Using the library as the provider
+The provider charm should expose the interface as shown below:
+```yaml
+provides:
+    haproxy-route:
+        interface: haproxy-route
+```
+Note that this interface supports relating to multiple endpoints.
+
+Then, to initialise the library:
+```python
+from charms.haproxy.v0.haproxy_route import HaproxyRouteRequirer
+
+class SomeCharm(CharmBase):
+    self.haproxy_route_provider = HaproxyRouteProvider(self)
+    self.framework.observe(
+        self.haproxy_route_provider.on.data_available, self._on_haproxy_route_data_available
+    )
+
+    def _on_haproxy_route_data_available(self, event: EventBase) -> None:
+        data = self.haproxy_route_provider.get_data(self.haproxy_route_provider.relations)
+        ...
 """
 
 import json
@@ -489,15 +526,24 @@ class HaproxyRouteEnpointsAvailableEvent(EventBase):
     """
 
 
+class HaproxyRouteEnpointsRemovedEvent(EventBase):
+    """HaproxyRouteEnpointsRemovedEvent custom event.
+
+    This event indicates that one of the endpoints was removed.
+    """
+
+
 class HaproxyRouteProviderEvents(CharmEvents):
     """List of events that the TLS Certificates requirer charm can leverage.
 
     Attributes:
         endpoints_available: This event indicates that
             the haproxy-route endpoints are available.
+        endpoint_removed: This event indicates that one of the endpoints was removed.
     """
 
     endpoints_available = EventSource(HaproxyRouteEnpointsAvailableEvent)
+    endpoint_removed = EventSource(HaproxyRouteEnpointsRemovedEvent)
 
 
 class HaproxyRouteProvider(Object):
@@ -528,8 +574,10 @@ class HaproxyRouteProvider(Object):
         on = self.charm.on
         self.framework.observe(on[self._relation_name].relation_created, self._configure)
         self.framework.observe(on[self._relation_name].relation_changed, self._configure)
-        self.framework.observe(on[self._relation_name].relation_broken, self._on_data_removed)
-        self.framework.observe(on[self._relation_name].relation_departed, self._on_data_removed)
+        self.framework.observe(on[self._relation_name].relation_broken, self._on_endpoint_removed)
+        self.framework.observe(
+            on[self._relation_name].relation_departed, self._on_endpoint_removed
+        )
 
     @property
     def relations(self) -> list[Relation]:
@@ -541,13 +589,13 @@ class HaproxyRouteProvider(Object):
         try:
             if relations := self.relations:
                 self.get_data(relations)
-                self.on.data_available.emit()  # type: ignore
+                self.on.endpoints_available.emit()  # type: ignore
         except HaproxyRouteInvalidRelationDataError:
             logger.exception("Invalid requirer data, skipping.")
 
-    def _on_data_removed(self, _: EventBase) -> None:
+    def _on_endpoint_removed(self, _: EventBase) -> None:
         """Handle relation broken/departed events."""
-        self.on.data_available.emit()
+        self.on.endpoint_removed.emit()
 
     def get_data(self, relations: list[Relation]) -> HaproxyRouteRequirersData:
         """Fetch requirer data.
