@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 """Haproxy-route interface library.
 
 ## Getting Started
@@ -534,7 +535,6 @@ class HaproxyRouteProvider(Object):
                 self.on.data_available.emit()  # type: ignore
         except HaproxyRouteInvalidRelationDataError:
             logger.exception("Invalid requirer data, skipping.")
-            return
 
     def get_data(self, relations: list[Relation]) -> HaproxyRouteRequirersData:
         """Fetch requirer data.
@@ -643,16 +643,16 @@ class HaproxyRouteRequirer(Object):
         charm: CharmBase,
         relation_name: str,
         service: Optional[str] = None,
-        ports: list[int] = [],
-        paths: list[str] = [],
+        ports: Optional[list[int]] = None,
+        paths: Optional[list[str]] = None,
         subdomains: list[str] = [],
         check_interval: Optional[int] = None,
         check_rise: Optional[int] = None,
         check_fall: Optional[int] = None,
-        check_paths: list[str] = [],
-        path_rewrite_expressions: list[str] = [],
-        query_rewrite_expressions: list[str] = [],
-        header_rewrite_expressions: list[tuple[str, str]] = [],
+        check_paths: Optional[list[str]] = None,
+        path_rewrite_expressions: Optional[list[str]] = None,
+        query_rewrite_expressions: Optional[list[str]] = None,
+        header_rewrite_expressions: Optional[list[tuple[str, str]]] = None,
         load_balancing_algorithm: LoadBalancingAlgorithm = LoadBalancingAlgorithm.LEASTCONN,
         load_balancing_cookie: Optional[str] = None,
         rate_limit_connections_per_minute: Optional[int] = None,
@@ -662,7 +662,7 @@ class HaproxyRouteRequirer(Object):
         retry_count: Optional[int] = None,
         retry_interval: Optional[int] = None,
         retry_redispatch: bool = False,
-        deny_paths: list[str] = [],
+        deny_paths: Optional[list[str]] = None,
         server_timeout: int = 60,
         client_timeout: int = 60,
         queue_timeout: int = 60,
@@ -757,16 +757,16 @@ class HaproxyRouteRequirer(Object):
     def provide_haproxy_route_requirements(
         self,
         service: Optional[str] = None,
-        ports: list[int] = [],
-        paths: list[str] = [],
+        ports: Optional[list[int]] = None,
+        paths: Optional[list[str]] = None,
         subdomains: list[str] = [],
         check_interval: Optional[int] = None,
         check_rise: Optional[int] = None,
         check_fall: Optional[int] = None,
-        check_paths: list[str] = [],
-        path_rewrite_expressions: list[str] = [],
-        query_rewrite_expressions: list[str] = [],
-        header_rewrite_expressions: list[tuple[str, str]] = [],
+        check_paths: Optional[list[str]] = None,
+        path_rewrite_expressions: Optional[list[str]] = None,
+        query_rewrite_expressions: Optional[list[str]] = None,
+        header_rewrite_expressions: Optional[list[tuple[str, str]]] = None,
         load_balancing_algorithm: LoadBalancingAlgorithm = LoadBalancingAlgorithm.LEASTCONN,
         load_balancing_cookie: Optional[str] = None,
         rate_limit_connections_per_minute: Optional[int] = None,
@@ -776,7 +776,7 @@ class HaproxyRouteRequirer(Object):
         retry_count: Optional[int] = None,
         retry_interval: Optional[int] = None,
         retry_redispatch: bool = False,
-        deny_paths: list[str] = [],
+        deny_paths: Optional[list[str]] = None,
         server_timeout: int = 60,
         client_timeout: int = 60,
         queue_timeout: int = 60,
@@ -844,16 +844,16 @@ class HaproxyRouteRequirer(Object):
     def _generate_application_data(
         self,
         service: Optional[str] = None,
-        ports: list[int] = [],
-        paths: list[str] = [],
+        ports: Optional[list[int]] = None,
+        paths: Optional[list[str]] = None,
         subdomains: list[str] = [],
         check_interval: Optional[int] = None,
         check_rise: Optional[int] = None,
         check_fall: Optional[int] = None,
-        check_paths: list[str] = [],
-        path_rewrite_expressions: list[str] = [],
-        query_rewrite_expressions: list[str] = [],
-        header_rewrite_expressions: list[tuple[str, str]] = [],
+        check_paths: Optional[list[str]] = None,
+        path_rewrite_expressions: Optional[list[str]] = None,
+        query_rewrite_expressions: Optional[list[str]] = None,
+        header_rewrite_expressions: Optional[list[tuple[str, str]]] = None,
         load_balancing_algorithm: LoadBalancingAlgorithm = LoadBalancingAlgorithm.LEASTCONN,
         load_balancing_cookie: Optional[str] = None,
         rate_limit_connections_per_minute: Optional[int] = None,
@@ -863,7 +863,7 @@ class HaproxyRouteRequirer(Object):
         retry_count: Optional[int] = None,
         retry_interval: Optional[int] = None,
         retry_redispatch: bool = False,
-        deny_paths: list[str] = [],
+        deny_paths: Optional[list[str]] = None,
         server_timeout: int = 60,
         client_timeout: int = 60,
         queue_timeout: int = 60,
@@ -902,10 +902,30 @@ class HaproxyRouteRequirer(Object):
         Returns:
             dict: A dictionary containing the complete application data structure.
         """
+        (
+            _ports,
+            _paths,
+            _check_paths,
+            _path_rewrite_expressions,
+            _query_rewrite_expressions,
+            _header_rewrite_expressions,
+            _deny_paths,
+        ) = map(
+            lambda x: x if x else [],
+            [
+                ports,
+                paths,
+                check_paths,
+                path_rewrite_expressions,
+                query_rewrite_expressions,
+                header_rewrite_expressions,
+                deny_paths,
+            ],
+        )
         application_data: dict[str, Any] = {
             "service": service,
-            "ports": ports,
-            "paths": paths,
+            "ports": _ports,
+            "paths": _paths,
             "subdomains": subdomains,
             "load_balancing": {
                 "algorithm": load_balancing_algorithm,
@@ -916,17 +936,17 @@ class HaproxyRouteRequirer(Object):
                 "client": client_timeout,
                 "queue": queue_timeout,
             },
-            "deny_paths": deny_paths,
+            "deny_paths": _deny_paths,
             "server_maxconn": server_maxconn,
         }
 
         if check := self._generate_server_healthcheck_configuration(
-            check_interval, check_rise, check_fall, check_paths
+            check_interval, check_rise, check_fall, _check_paths
         ):
             application_data["check"] = check
 
         if rewrites := self._generate_rewrite_configuration(
-            path_rewrite_expressions, query_rewrite_expressions, header_rewrite_expressions
+            _path_rewrite_expressions, _query_rewrite_expressions, _header_rewrite_expressions
         ):
             application_data["rewrites"] = rewrites
 
@@ -960,7 +980,7 @@ class HaproxyRouteRequirer(Object):
         Returns:
             dict[str, str | list[str]]: Health check configuration dictionary.
         """
-        server_healthcheck_configuration = {}
+        server_healthcheck_configuration: dict[str, str | list[str]] = {}
         if interval and rise and fall:
             server_healthcheck_configuration = {
                 "interval": interval,
@@ -987,7 +1007,7 @@ class HaproxyRouteRequirer(Object):
             list[dict[str, str]]: List of generated rewrite configurations.
         """
         # rewrite configuration
-        rewrite_configurations: list[dict[str, str]] = []
+        rewrite_configurations: list[dict[str, str | HaproxyRewriteMethod]] = []
         for expression in path_rewrite_expressions:
             rewrite_configurations.append(
                 {"method": HaproxyRewriteMethod.SET_PATH, "expression": expression}
@@ -1114,7 +1134,7 @@ class HaproxyRouteRequirer(Object):
         """
         host = self._host
         if not host:
-            network_binding = self.charm.model.get_binding(self.relation)
+            network_binding = self.charm.model.get_binding("juju-info")
             if (
                 network_binding is not None
                 and (bind_address := network_binding.network.bind_address) is not None
@@ -1146,7 +1166,10 @@ class HaproxyRouteRequirer(Object):
             return []
 
         try:
-            return str(HaproxyRouteProviderAppData.load(databag).endpoints)
+            provider_data = cast(
+                HaproxyRouteProviderAppData, HaproxyRouteProviderAppData.load(databag)
+            )
+            return provider_data.endpoints
         except DataValidationError:
             logger.exception("Invalid provider url.")
-            return None
+            return []
