@@ -197,7 +197,7 @@ class _DatabagModel(BaseModel):
             return cls.model_validate_json(json.dumps(data))
         except ValidationError as e:
             msg = f"failed to validate databag: {databag}"
-            logger.debug(msg, exc_info=True)
+            logger.error(msg, exc_info=True)
             raise DataValidationError(msg) from e
 
     @classmethod
@@ -560,17 +560,23 @@ class HaproxyRouteProvider(Object):
         self,
         charm: CharmBase,
         relation_name: str = HAPROXY_ROUTE_RELATION_NAME,
+        raise_on_validation_error: bool = False,
     ) -> None:
         """Initialize the HaproxyRouteProvider.
 
         Args:
             charm: The charm that is instantiating the library.
             relation_name: The name of the relation.
+            raise_on_validation_error: Whether the library should raise
+                HaproxyRouteInvalidRelationDataError when requirer data validation fails.
+                If this is set to True the provider charm needs to also catch and handle the
+                thrown exception.
         """
         super().__init__(charm, relation_name)
 
         self._relation_name = relation_name
         self.charm = charm
+        self._raise_on_validation_error = raise_on_validation_error
         on = self.charm.on
         self.framework.observe(on[self._relation_name].relation_created, self._configure)
         self.framework.observe(on[self._relation_name].relation_changed, self._configure)
@@ -586,12 +592,9 @@ class HaproxyRouteProvider(Object):
 
     def _configure(self, _: EventBase) -> None:
         """Handle relation events."""
-        try:
-            if relations := self.relations:
-                self.get_data(relations)
-                self.on.endpoints_available.emit()  # type: ignore
-        except HaproxyRouteInvalidRelationDataError:
-            logger.exception("Invalid requirer data, skipping.")
+        if relations := self.relations:
+            self.get_data(relations)
+            self.on.endpoints_available.emit()
 
     def _on_endpoint_removed(self, _: EventBase) -> None:
         """Handle relation broken/departed events."""
@@ -619,10 +622,16 @@ class HaproxyRouteProvider(Object):
                 )
                 requirers_data.append(haproxy_route_requirer_data)
             except DataValidationError as exc:
-                logger.exception("haproxy-route data validation failed for relation %s", relation)
-                raise HaproxyRouteInvalidRelationDataError(
-                    f"haproxy-route data validation failed for relation: {relation}"
-                ) from exc
+                if self._raise_on_validation_error:
+                    logger.error(
+                        "haproxy-route data validation failed for relation %s: %s",
+                        relation,
+                        str(exc),
+                    )
+                    raise HaproxyRouteInvalidRelationDataError(
+                        f"haproxy-route data validation failed for relation: {relation}"
+                    ) from exc
+                continue
         return HaproxyRouteRequirersData(requirers_data=requirers_data)
 
     def _get_requirer_units_data(self, relation: Relation) -> list[RequirerUnitData]:
@@ -645,7 +654,7 @@ class HaproxyRouteProvider(Object):
                 data = cast(RequirerUnitData, RequirerUnitData.load(databag))
                 requirer_units_data.append(data)
             except DataValidationError:
-                logger.exception("Invalid requirer application data for %s", unit)
+                logger.error("Invalid requirer application data for %s", unit)
                 raise
         return requirer_units_data
 
@@ -666,7 +675,7 @@ class HaproxyRouteProvider(Object):
                 RequirerApplicationData, RequirerApplicationData.load(relation.data[relation.app])
             )
         except DataValidationError:
-            logger.exception("Invalid requirer application data for %s", relation.app.name)
+            logger.error("Invalid requirer application data for %s", relation.app.name)
             raise
 
 
