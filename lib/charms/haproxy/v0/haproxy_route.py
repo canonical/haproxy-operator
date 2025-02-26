@@ -819,6 +819,10 @@ class HaproxyRouteRequirer(Object):
         """Handle relation events."""
         self.update_relation_data()
         if self.relation and self.get_proxied_endpoints():
+            # This event is only emitted when the provider databag changes
+            # which only happens when relevant changes happened
+            # Additionally this event is purely informational and it's up to the requirer to
+            # fetch the proxied endpoints in their code using get_proxied_endpoints
             self.on.ready.emit()
 
     def _on_relation_broken(self, _: RelationBrokenEvent) -> None:
