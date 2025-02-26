@@ -237,7 +237,7 @@ class ServerHealthCheck(BaseModel):
 
 # tarpit is not yet implemented
 class RateLimitPolicy(Enum):
-    """Enum of possible http_route types.
+    """Enum of possible rate limiting policies.
 
     Attrs:
         DENY: deny a client's HTTP request to return a 403 Forbidden error.
