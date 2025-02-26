@@ -593,7 +593,8 @@ class HaproxyRouteProvider(Object):
     def _configure(self, _: EventBase) -> None:
         """Handle relation events."""
         if relations := self.relations:
-            self.get_data(relations)
+            # Only for data validation
+            _ = self.get_data(relations)
             self.on.endpoints_available.emit()
 
     def _on_endpoint_removed(self, _: EventBase) -> None:
