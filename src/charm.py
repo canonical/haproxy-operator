@@ -333,7 +333,8 @@ class HAProxyCharm(ops.CharmBase):
     def _on_haproxy_route_data_available(self, _: HAServiceReadyEvent) -> None:
         """Handle the ha-ready event."""
         data = self.haproxy_route_provider.get_data(self.haproxy_route_provider.relations)
-        logger.info("%s", data)
+        # This is temporary as the logic to generate the haproxy config will be added later.
+        logger.debug("Aggregated requirer data: %s", data)
 
     @validate_config_and_tls(defer=True)
     def _ensure_tls(self, _: ops.EventBase) -> None:

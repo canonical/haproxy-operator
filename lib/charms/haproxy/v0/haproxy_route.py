@@ -225,14 +225,16 @@ class ServerHealthCheck(BaseModel):
         paths: List of URL paths to use for HTTP health checks.
     """
 
-    interval: int = Field(description="The interval between health checks.", default=60)
+    interval: int = Field(
+        description="The interval (in seconds) between health checks.", default=60
+    )
     rise: int = Field(
         description="How many successful health checks before server is considered up.", default=2
     )
     fall: int = Field(
         description="How many failed health checks before server is considered down.", default=3
     )
-    paths: list[str] = Field(description="The health check path.", default=[])
+    paths: Optional[str] = Field(description="The health check path.", default=None)
 
 
 # tarpit is not yet implemented
@@ -336,15 +338,21 @@ class TimeoutConfiguration(BaseModel):
         queue: Timeout for requests waiting in the queue after server-maxconn is reached.
     """
 
-    server: int = Field(description="Timeout for requests from haproxy to backend servers.")
-    client: int = Field(description="Timeout for client requests to haproxy.")
+    server: int = Field(
+        description="Timeout (in seconds) for requests from haproxy to backend servers.",
+        default=60,
+    )
+    client: int = Field(
+        description="Timeout (in seconds) for client requests to haproxy.", default=60
+    )
     queue: int = Field(
-        description="Timeout for requests waiting in the queue after server-maxconn is reached."
+        description="Timeout (in seconds) for requests in the queue.",
+        default=60,
     )
 
 
 class HaproxyRewriteMethod(Enum):
-    """Enum of possible http_route types.
+    """Enum of possible HTTP rewrite methods.
 
     Attrs:
         SET_PATH: The server with the lowest number of connections receives the connection.
@@ -404,7 +412,7 @@ class RequirerApplicationData(_DatabagModel):
     )
     check: ServerHealthCheck = Field(
         description="Configure health check for the service.",
-        default=ServerHealthCheck(interval=60, rise=2, fall=3),
+        default=ServerHealthCheck(),
     )
     load_balancing: LoadBalancingConfiguration = LoadBalancingConfiguration(
         algorithm=LoadBalancingAlgorithm.LEASTCONN
@@ -423,7 +431,7 @@ class RequirerApplicationData(_DatabagModel):
     )
     timeout: TimeoutConfiguration = Field(
         description="Configure timeout",
-        default=TimeoutConfiguration(server=60, client=60, queue=60),
+        default=TimeoutConfiguration(),
     )
     server_maxconn: Optional[int] = Field(
         description="Configure maximum connection per server", default=None
@@ -520,7 +528,8 @@ class HaproxyRouteProvider(Object):
         on = self.charm.on
         self.framework.observe(on[self._relation_name].relation_created, self._configure)
         self.framework.observe(on[self._relation_name].relation_changed, self._configure)
-        self.framework.observe(on[self._relation_name].relation_broken, self._configure)
+        self.framework.observe(on[self._relation_name].relation_broken, self._on_data_removed)
+        self.framework.observe(on[self._relation_name].relation_departed, self._on_data_removed)
 
     @property
     def relations(self) -> list[Relation]:
@@ -535,6 +544,10 @@ class HaproxyRouteProvider(Object):
                 self.on.data_available.emit()  # type: ignore
         except HaproxyRouteInvalidRelationDataError:
             logger.exception("Invalid requirer data, skipping.")
+
+    def _on_data_removed(self, _: EventBase) -> None:
+        """Handle relation broken/departed events."""
+        self.on.data_available.emit()
 
     def get_data(self, relations: list[Relation]) -> HaproxyRouteRequirersData:
         """Fetch requirer data.
