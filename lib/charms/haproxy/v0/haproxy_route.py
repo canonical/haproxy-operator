@@ -638,6 +638,7 @@ class HaproxyRouteRequirer(Object):
 
     on = HaproxyRouteRequirerEvents()
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
     def __init__(
         self,
         charm: CharmBase,
@@ -645,7 +646,7 @@ class HaproxyRouteRequirer(Object):
         service: Optional[str] = None,
         ports: Optional[list[int]] = None,
         paths: Optional[list[str]] = None,
-        subdomains: list[str] = [],
+        subdomains: Optional[list[str]] = None,
         check_interval: Optional[int] = None,
         check_rise: Optional[int] = None,
         check_fall: Optional[int] = None,
@@ -754,12 +755,13 @@ class HaproxyRouteRequirer(Object):
         """Handle relation broken event."""
         self.on.removed.emit()
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
     def provide_haproxy_route_requirements(
         self,
         service: Optional[str] = None,
         ports: Optional[list[int]] = None,
         paths: Optional[list[str]] = None,
-        subdomains: list[str] = [],
+        subdomains: Optional[list[str]] = None,
         check_interval: Optional[int] = None,
         check_rise: Optional[int] = None,
         check_fall: Optional[int] = None,
@@ -841,12 +843,13 @@ class HaproxyRouteRequirer(Object):
         )
         self.update_relation_data()
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
     def _generate_application_data(
         self,
         service: Optional[str] = None,
         ports: Optional[list[int]] = None,
         paths: Optional[list[str]] = None,
-        subdomains: list[str] = [],
+        subdomains: Optional[list[str]] = None,
         check_interval: Optional[int] = None,
         check_rise: Optional[int] = None,
         check_fall: Optional[int] = None,
@@ -941,12 +944,14 @@ class HaproxyRouteRequirer(Object):
         }
 
         if check := self._generate_server_healthcheck_configuration(
-            check_interval, check_rise, check_fall, _check_paths
+            check_interval, check_rise, check_fall, cast(list[str], _check_paths)
         ):
             application_data["check"] = check
 
         if rewrites := self._generate_rewrite_configuration(
-            _path_rewrite_expressions, _query_rewrite_expressions, _header_rewrite_expressions
+            cast(list[str], _path_rewrite_expressions),
+            cast(list[str], _query_rewrite_expressions),
+            cast(list[tuple[str, str]], _header_rewrite_expressions),
         ):
             application_data["rewrites"] = rewrites
 
@@ -968,7 +973,7 @@ class HaproxyRouteRequirer(Object):
 
     def _generate_server_healthcheck_configuration(
         self, interval: Optional[int], rise: Optional[int], fall: Optional[int], paths: list[str]
-    ) -> dict[str, str | list[str]]:
+    ) -> dict[str, int | list[str]]:
         """Generate configuration for server health checks.
 
         Args:
@@ -980,7 +985,7 @@ class HaproxyRouteRequirer(Object):
         Returns:
             dict[str, str | list[str]]: Health check configuration dictionary.
         """
-        server_healthcheck_configuration: dict[str, str | list[str]] = {}
+        server_healthcheck_configuration: dict[str, int | list[str]] = {}
         if interval and rise and fall:
             server_healthcheck_configuration = {
                 "interval": interval,
@@ -995,7 +1000,7 @@ class HaproxyRouteRequirer(Object):
         path_rewrite_expressions: list[str],
         query_rewrite_expressions: list[str],
         header_rewrite_expressions: list[tuple[str, str]],
-    ) -> list[dict[str, str]]:
+    ) -> list[dict[str, str | HaproxyRewriteMethod]]:
         """Generate rewrite configuration from provided expressions.
 
         Args:
@@ -1091,20 +1096,29 @@ class HaproxyRouteRequirer(Object):
             logger.warning("Required field(s) are missing, skipping update of the relation data.")
             return
 
-        self._update_application_data()
-        self._update_unit_data()
+        if relation := self.relation:
+            self._update_application_data(relation)
+            self._update_unit_data(relation)
 
-    def _update_application_data(self) -> None:
-        """Update application data in the relation databag."""
+    def _update_application_data(self, relation: Relation) -> None:
+        """Update application data in the relation databag.
+
+        Args:
+            relation: The relation instance.
+        """
         if self.charm.unit.is_leader():
             application_data = self._prepare_application_data()
-            self.relation.data[self.app].update(application_data.dump())
+            relation.data[self.app].update(application_data.dump())
 
-    def _update_unit_data(self) -> None:
-        """Prepare and update the unit data in the relation databag."""
+    def _update_unit_data(self, relation: Relation) -> None:
+        """Prepare and update the unit data in the relation databag.
+
+        Args:
+            relation: The relation instance.
+        """
         unit_data = self._prepare_unit_data()
-        self.relation.data[self.charm.unit].clear()
-        self.relation.data[self.charm.unit].update(unit_data.dump())
+        relation.data[self.charm.unit].clear()
+        relation.data[self.charm.unit].update(unit_data.dump())
 
     def _prepare_application_data(self) -> RequirerApplicationData:
         """Prepare and validate the application data.
@@ -1116,7 +1130,9 @@ class HaproxyRouteRequirer(Object):
             RequirerApplicationData: The validated application data model.
         """
         try:
-            return RequirerApplicationData.from_dict(self._application_data)
+            return cast(
+                RequirerApplicationData, RequirerApplicationData.from_dict(self._application_data)
+            )
         except ValidationError as exc:
             logger.exception("Validation error when preparing requirer application data.")
             raise DataValidationError(
