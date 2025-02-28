@@ -8,6 +8,7 @@ import logging
 import typing
 
 import ops
+from charms.haproxy.v0.haproxy_route import HaproxyRouteInvalidRelationDataError
 
 from state.exception import CharmStateValidationBaseError
 from state.tls import PrivateKeyNotGeneratedError, TLSNotReadyError
@@ -59,7 +60,7 @@ def validate_config_and_tls(  # noqa: C901
             event: ops.EventBase
             try:
                 return method(instance, *args)
-            except CharmStateValidationBaseError as exc:
+            except (CharmStateValidationBaseError, HaproxyRouteInvalidRelationDataError) as exc:
                 if defer:
                     event, *_ = args
                     event.defer()

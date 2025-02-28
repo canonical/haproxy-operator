@@ -13,6 +13,7 @@ from enum import StrEnum
 
 import ops
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
+from charms.haproxy.v0.haproxy_route import HaproxyRouteProvider
 from charms.tls_certificates_interface.v4.tls_certificates import (
     CertificateAvailableEvent,
     CertificateRequestAttributes,
@@ -115,6 +116,7 @@ class HAProxyCharm(ops.CharmBase):
         )
 
         self.hacluster = HAServiceRequires(self, HACLUSTER_INTEGRATION)
+        self.haproxy_route_provider = HaproxyRouteProvider(self)
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.get_certificate_action, self._on_get_certificate_action)
@@ -134,6 +136,12 @@ class HAProxyCharm(ops.CharmBase):
             self._ingress_provider.on.data_removed, self._on_ingress_data_removed
         )
         self.framework.observe(self.hacluster.on.ha_ready, self._on_ha_ready)
+        self.framework.observe(
+            self.haproxy_route_provider.on.data_available, self._configure_haproxy_route
+        )
+        self.framework.observe(
+            self.haproxy_route_provider.on.data_removed, self._configure_haproxy_route
+        )
 
     def _on_install(self, _: typing.Any) -> None:
         """Install the haproxy package."""
@@ -323,6 +331,13 @@ class HAProxyCharm(ops.CharmBase):
         self.hacluster.add_systemd_service(f"{self.app.name}-{HAPROXY_SERVICE}", HAPROXY_SERVICE)
         self.hacluster.bind_resources()
         peer_relation.data[self.unit].update({"vip": str(ha_information.vip)})
+
+    @validate_config_and_tls(defer=False)
+    def _configure_haproxy_route(self, _: HAServiceReadyEvent) -> None:
+        """Handle the ha-ready event."""
+        data = self.haproxy_route_provider.get_data(self.haproxy_route_provider.relations)
+        # This is temporary as the logic to generate the haproxy config will be added later.
+        logger.debug("Aggregated requirer data: %s", data)
 
     @validate_config_and_tls(defer=True)
     def _ensure_tls(self, _: ops.EventBase) -> None:
