@@ -78,3 +78,10 @@ Performing the same request, replacing $HAPROXY_IP with $VIP and you should see 
 $ curl -H "Host: $HAPROXY_HOSTNAME" $VIP/haproxy-tutorial-requirer/ok -L --insecure --resolve $HAPROXY_HOSTNAME:443:$VIP
 ok!
 ```
+
+# Clean up the Environment
+Well done! You've successfully completed the Deploy haproxy tutorial. To remove the model environment you created during this tutorial, use the following command.
+
+```
+juju destroy-model haproxy-tutorial
+```
