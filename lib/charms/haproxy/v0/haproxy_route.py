@@ -519,15 +519,15 @@ class HaproxyRouteRequirersData:
     requirers_data: list[HaproxyRouteRequirerData]
 
 
-class HaproxyRouteEnpointsAvailableEvent(EventBase):
-    """HaproxyRouteEnpointsAvailableEvent custom event.
+class HaproxyRouteDataAvailableEvent(EventBase):
+    """HaproxyRouteDataAvailableEvent custom event.
 
-    This event indicates that the haproxy-route endpoints are available.
+    This event indicates that the requirers data are available.
     """
 
 
-class HaproxyRouteEnpointsRemovedEvent(EventBase):
-    """HaproxyRouteEnpointsRemovedEvent custom event.
+class HaproxyRouteDataRemovedEvent(EventBase):
+    """HaproxyRouteDataRemovedEvent custom event.
 
     This event indicates that one of the endpoints was removed.
     """
@@ -537,13 +537,13 @@ class HaproxyRouteProviderEvents(CharmEvents):
     """List of events that the TLS Certificates requirer charm can leverage.
 
     Attributes:
-        endpoints_available: This event indicates that
+        data_available: This event indicates that
             the haproxy-route endpoints are available.
-        endpoint_removed: This event indicates that one of the endpoints was removed.
+        data_removed: This event indicates that one of the endpoints was removed.
     """
 
-    endpoints_available = EventSource(HaproxyRouteEnpointsAvailableEvent)
-    endpoint_removed = EventSource(HaproxyRouteEnpointsRemovedEvent)
+    data_available = EventSource(HaproxyRouteDataAvailableEvent)
+    data_removed = EventSource(HaproxyRouteDataRemovedEvent)
 
 
 class HaproxyRouteProvider(Object):
@@ -590,12 +590,12 @@ class HaproxyRouteProvider(Object):
         """The list of Relation instances associated with this endpoint."""
         return list(self.charm.model.relations[self._relation_name])
 
-    def _configure(self, _: EventBase) -> None:
+    def _configure(self, _event: EventBase) -> None:
         """Handle relation events."""
         if relations := self.relations:
             # Only for data validation
             _ = self.get_data(relations)
-            self.on.endpoints_available.emit()
+            self.on.data_removed.emit()
 
     def _on_endpoint_removed(self, _: EventBase) -> None:
         """Handle relation broken/departed events."""

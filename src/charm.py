@@ -137,7 +137,10 @@ class HAProxyCharm(ops.CharmBase):
         )
         self.framework.observe(self.hacluster.on.ha_ready, self._on_ha_ready)
         self.framework.observe(
-            self.haproxy_route_provider.on.data_available, self._on_haproxy_route_data_available
+            self.haproxy_route_provider.on.data_available, self._configure_haproxy_route
+        )
+        self.framework.observe(
+            self.haproxy_route_provider.on.data_removed, self._configure_haproxy_route
         )
 
     def _on_install(self, _: typing.Any) -> None:
@@ -330,7 +333,7 @@ class HAProxyCharm(ops.CharmBase):
         peer_relation.data[self.unit].update({"vip": str(ha_information.vip)})
 
     @validate_config_and_tls(defer=False)
-    def _on_haproxy_route_data_available(self, _: HAServiceReadyEvent) -> None:
+    def _configure_haproxy_route(self, _: HAServiceReadyEvent) -> None:
         """Handle the ha-ready event."""
         data = self.haproxy_route_provider.get_data(self.haproxy_route_provider.relations)
         # This is temporary as the logic to generate the haproxy config will be added later.
