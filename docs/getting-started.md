@@ -54,7 +54,7 @@ $ curl -H "Host: $HAPROXY_HOSTNAME" $HAPROXY_IP/haproxy-tutorial-requirer/ok -L 
 ok!
 ```
 
-# Configure high-availability
+## Configure high-availability
 ### Scale the haproxy charm to 4 units
 ```
 juju add-unit haproxy -n 3
