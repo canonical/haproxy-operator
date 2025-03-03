@@ -55,7 +55,7 @@ ok!
 ```
 
 # Configure high-availability
-## Scale the haproxy charm to 4 units
+### Scale the haproxy charm to 4 units
 ```
 juju add-unit haproxy -n 3
 ```
