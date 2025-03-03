@@ -25,7 +25,7 @@ juju deploy haproxy --channel=2.8/edge --base=ubuntu@24.04
 # Configure TLS
 ```
 juju deploy self-signed-certificates cert
-juju relate haproxy cert
+juju integrate haproxy cert
 
 HAPROXY_HOSTNAME="haproxy.internal"
 juju config haproxy external-hostname=$HAPROXY_HOSTNAME
