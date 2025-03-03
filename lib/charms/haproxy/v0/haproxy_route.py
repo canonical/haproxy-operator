@@ -114,15 +114,15 @@ class SomeCharm(CharmBase):
 
 import json
 import logging
-from dataclasses import dataclass
 from enum import Enum
-from typing import Any, MutableMapping, Optional, cast
+from typing import Any, MutableMapping, Optional, cast, Self
 
 from ops import CharmBase, ModelError, RelationBrokenEvent
 from ops.charm import CharmEvents
 from ops.framework import EventBase, EventSource, Object
 from ops.model import Relation
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, ValidationError
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic.dataclasses import dataclass
 
 # The unique Charmhub library identifier, never change it
 LIBID = "08b6347482f6455486b5f5bb4dc4e6cf"
@@ -518,6 +518,24 @@ class HaproxyRouteRequirersData:
 
     requirers_data: list[HaproxyRouteRequirerData]
 
+    @model_validator(mode="after")
+    def check_services_unique(self) -> Self:
+        """Check that requirers define unique services.
+
+        Raises:
+            ValidationError: When requirers declared duplicate services.
+
+        Returns:
+            The validated model.
+        """
+        services = [
+            requirer_data.application_data.service for requirer_data in self.requirers_data
+        ]
+        if len(services) != len(set(services)):
+            raise ValidationError("Services declaration by requirers must be unique.")
+
+        return self
+
 
 class HaproxyRouteDataAvailableEvent(EventBase):
     """HaproxyRouteDataAvailableEvent custom event.
@@ -576,7 +594,7 @@ class HaproxyRouteProvider(Object):
 
         self._relation_name = relation_name
         self.charm = charm
-        self._raise_on_validation_error = raise_on_validation_error
+        self.raise_on_validation_error = raise_on_validation_error
         on = self.charm.on
         self.framework.observe(on[self._relation_name].relation_created, self._configure)
         self.framework.observe(on[self._relation_name].relation_changed, self._configure)
@@ -623,7 +641,7 @@ class HaproxyRouteProvider(Object):
                 )
                 requirers_data.append(haproxy_route_requirer_data)
             except DataValidationError as exc:
-                if self._raise_on_validation_error:
+                if self.raise_on_validation_error:
                     logger.error(
                         "haproxy-route data validation failed for relation %s: %s",
                         relation,
