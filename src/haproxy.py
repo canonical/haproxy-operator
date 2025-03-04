@@ -13,6 +13,7 @@ from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from state.config import CharmConfig
+from state.haproxy_route import HaproxyRouteRequirersInformation
 from state.ingress import IngressRequirersInformation
 
 APT_PACKAGE_VERSION = "2.8.5-1ubuntu3"
@@ -39,6 +40,7 @@ HAPROXY_DHCONFIG = Path(HAPROXY_CONFIG_DIR / "ffdhe2048.txt")
 HAPROXY_SERVICE = "haproxy"
 HAPROXY_INGRESS_CONFIG_TEMPLATE = "haproxy_ingress.cfg.j2"
 HAPROXY_LEGACY_CONFIG_TEMPLATE = "haproxy_legacy.cfg.j2"
+HAPROXY_ROUTE_CONFIG_TEMPLATE = "haproxy_route.cfg.j2"
 HAPROXY_DEFAULT_CONFIG_TEMPLATE = "haproxy.cfg.j2"
 HAPROXY_CERTS_DIR = Path("/var/lib/haproxy/certs")
 
@@ -112,6 +114,22 @@ class HAProxyService:
             "ingress_requirers_information": ingress_requirers_information,
             "config_external_hostname": external_hostname,
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
+        }
+        self._render_haproxy_config(HAPROXY_INGRESS_CONFIG_TEMPLATE, template_context)
+        self._reload_haproxy_service()
+
+    def reconcile_haproxy_route(
+        self, haproxy_route_requirers_information: HaproxyRouteRequirersInformation
+    ) -> None:
+        """Render the haproxy config for haproxy-route.
+
+        Args:
+            haproxy_route_requirers_information: HaproxyRouteRequirersInformation state component.
+        """
+        template_context = {
+            "backends": haproxy_route_requirers_information.backends,
+            "stick_table_entries": haproxy_route_requirers_information.stick_table_entries,
+            "peer_units_address": haproxy_route_requirers_information.peers,
         }
         self._render_haproxy_config(HAPROXY_INGRESS_CONFIG_TEMPLATE, template_context)
         self._reload_haproxy_service()

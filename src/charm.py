@@ -38,6 +38,7 @@ from http_interface import (
 )
 from state.config import CharmConfig
 from state.ha import HACLUSTER_INTEGRATION, HAPROXY_PEER_INTEGRATION, HAInformation
+from state.haproxy_route import HaproxyRouteRequirersInformation
 from state.ingress import IngressRequirersInformation
 from state.tls import TLSInformation
 from state.validation import validate_config_and_tls
@@ -55,12 +56,14 @@ class ProxyMode(StrEnum):
     """StrEnum of possible http_route types.
 
     Attrs:
+        HAPROXY_ROUTE: When haproxy-route is related.
         INGRESS: when ingress is related.
         LEGACY: when reverseproxy is related.
         NOPROXY: when haproxy should return a default page.
         INVALID: when the charm state is invalid.
     """
 
+    HAPROXY_ROUTE = "haproxy-route"
     INGRESS = "ingress"
     LEGACY = "legacy"
     NOPROXY = "noproxy"
@@ -208,6 +211,7 @@ class HAProxyCharm(ops.CharmBase):
         config = CharmConfig.from_charm(self)
         match proxy_mode:
             case ProxyMode.INGRESS:
+                tls_information = TLSInformation.from_charm(self, self.certificates)
                 ingress_requirers_information = IngressRequirersInformation.from_provider(
                     self._ingress_provider
                 )
@@ -236,6 +240,12 @@ class HAProxyCharm(ops.CharmBase):
                 self.haproxy_service.reconcile_legacy(
                     config, self.reverseproxy_requirer.get_services()
                 )
+            case ProxyMode.HAPROXY_ROUTE:
+                tls_information = TLSInformation.from_charm(self, self.certificates)
+                haproxy_route_requirers_information = HaproxyRouteRequirersInformation.from_charm(
+                    self, self.haproxy_route_provider, tls_information
+                )
+                self.haproxy_service.reconcile_haproxy_route(haproxy_route_requirers_information)
             case _:
                 self.unit.set_ports(80)
                 self.haproxy_service.reconcile_default(config)
@@ -286,10 +296,24 @@ class HAProxyCharm(ops.CharmBase):
         """
         is_ingress_related = bool(self._ingress_provider.relations)
         is_legacy_related = bool(self.reverseproxy_requirer.relations)
+        is_haproxy_route_related = bool(self.haproxy_route_provider.relations)
 
-        if is_ingress_related and is_legacy_related:
-            logger.error("Both ingress and reverseproxy is related.")
-            self.unit.status = ops.BlockedStatus("Both ingress and reverseproxy is related.")
+        if (
+            len(
+                [
+                    related
+                    for related in [
+                        is_ingress_related,
+                        is_legacy_related,
+                        is_haproxy_route_related,
+                    ]
+                    if related
+                ]
+            )
+            > 1
+        ):
+            logger.error("Only one relation type is supported at a time.")
+            self.unit.status = ops.BlockedStatus("Only one relation type is supported at a time.")
             return ProxyMode.INVALID
 
         if is_ingress_related:
@@ -298,6 +322,10 @@ class HAProxyCharm(ops.CharmBase):
 
         if is_legacy_related:
             return ProxyMode.LEGACY
+
+        if is_haproxy_route_related:
+            TLSInformation.validate(self)
+            return ProxyMode.HAPROXY_ROUTE
 
         return ProxyMode.NOPROXY
 

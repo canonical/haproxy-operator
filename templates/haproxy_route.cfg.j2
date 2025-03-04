@@ -1,0 +1,48 @@
+{% extends 'haproxy.cfg.j2' %}
+{% block proxy_configuration %}
+frontend ingress
+    mode http
+    bind [::]:80 v4v6
+    bind [::]:443 v4v6 ssl crt {{ haproxy_crt_dir }}
+{% for backend in backends %}
+{% for path in backend.application_data.paths %}
+    acl acl_{{ backend.backend_name }} path_beg -i {{ path }}
+    acl acl_host_{{ backend.backend_name }} req.hdr(Host) -m str {% for hostname in backend.hostname_acls%}{{hostname}} {% endfor %}
+    use_backend {{ backend.backend_name }} if acl_{{ backend.backend_name }} acl_host_{{ backend.backend_name }}
+{% endfor %}
+{% endfor %}
+
+peers haproxy_peers
+{% for address in peer_units_address %}
+    peer {{ address }}
+{% endfor %}
+{% for entry in stick_table_entries %}
+    table {{ entry }}_rate_limit type ip size 100k expire 2m store http_req_rate(1m)
+{% endfor %}
+
+{% for backend in backends %}
+backend {{ backend.backend_name }}
+    balance {{ backend.load_balancing_configuration }}
+    timeout server {{ backend.application_data.timeout.server }}
+    timeout connect {{ backend.application_data.timeout.connect }}
+    timeout queue {{ backend.application_data.timeout.queue }}
+{% if backend.application_data.check.path %}
+    option httpchk GET {{ backend.application_data.check.path }}
+{% endif %}
+
+{% if backend.application_data.check.path %}
+    option httpchk GET {{ backend.application_data.check.path }}
+{% endif %}
+{% if backend.application_data.rate_limit %}
+    http-request track-sc0 src table  haproxy_peers/{{ backend.backend_name }}_rate_limit
+    http-request {{ backend.application_data.rate_limit.policy }} if { sc_http_req_rate(0,haproxy_peers/{{ backend.backend_name }}_rate_limit) gt {{ backend.application_data.rate_limit.connections_per_minute }} }
+{% endif %}
+{% for rewrite_configuration in backend.rewrite_configurations %}
+    http-request {{ rewrite_configuration }}
+{% endfor %}
+{% for server in backend.servers %}
+    server {{ server.server_name }} {{ server.host }}:{{ server.port }} check inter {{ server.check.interval }} rise {{ server.check.rise }} fall {{ server.check.fall }}
+{% endfor %}
+
+{% endfor %}
+{% endblock %}
