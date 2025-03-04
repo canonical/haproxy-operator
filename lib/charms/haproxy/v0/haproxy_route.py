@@ -53,7 +53,7 @@ class SomeCharm(CharmBase):
         retry_redispatch=<optional>,
         deny_paths=<optional>,
         server_timeout=<optional>,
-        client_timeout=<optional>,
+        connect_timeout=<optional>,
         queue_timeout=<optional>,
         server_maxconn=<optional>,
     )
@@ -114,15 +114,15 @@ class SomeCharm(CharmBase):
 
 import json
 import logging
-from dataclasses import dataclass
 from enum import Enum
-from typing import Any, MutableMapping, Optional, cast
+from typing import Any, MutableMapping, Optional, Self, cast
 
 from ops import CharmBase, ModelError, RelationBrokenEvent
 from ops.charm import CharmEvents
 from ops.framework import EventBase, EventSource, Object
 from ops.model import Relation
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, ValidationError
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic.dataclasses import dataclass
 
 # The unique Charmhub library identifier, never change it
 LIBID = "08b6347482f6455486b5f5bb4dc4e6cf"
@@ -259,7 +259,7 @@ class ServerHealthCheck(BaseModel):
         interval: Number of seconds between consecutive health check attempts.
         rise: Number of consecutive successful health checks required for up.
         fall: Number of consecutive failed health checks required for DOWN.
-        paths: List of URL paths to use for HTTP health checks.
+        path: List of URL paths to use for HTTP health checks.
     """
 
     interval: int = Field(
@@ -271,7 +271,7 @@ class ServerHealthCheck(BaseModel):
     fall: int = Field(
         description="How many failed health checks before server is considered down.", default=3
     )
-    paths: Optional[str] = Field(description="The health check path.", default=None)
+    path: Optional[str] = Field(description="The health check path.", default=None)
 
 
 # tarpit is not yet implemented
@@ -371,7 +371,7 @@ class TimeoutConfiguration(BaseModel):
 
     Attributes:
         server: Timeout for requests from haproxy to backend servers.
-        client: Timeout for client requests to haproxy.
+        connect: Timeout for client requests to haproxy.
         queue: Timeout for requests waiting in the queue after server-maxconn is reached.
     """
 
@@ -379,7 +379,7 @@ class TimeoutConfiguration(BaseModel):
         description="Timeout (in seconds) for requests from haproxy to backend servers.",
         default=60,
     )
-    client: int = Field(
+    connect: int = Field(
         description="Timeout (in seconds) for client requests to haproxy.", default=60
     )
     queue: int = Field(
@@ -518,6 +518,24 @@ class HaproxyRouteRequirersData:
 
     requirers_data: list[HaproxyRouteRequirerData]
 
+    @model_validator(mode="after")
+    def check_services_unique(self) -> Self:
+        """Check that requirers define unique services.
+
+        Raises:
+            ValidationError: When requirers declared duplicate services.
+
+        Returns:
+            The validated model.
+        """
+        services = [
+            requirer_data.application_data.service for requirer_data in self.requirers_data
+        ]
+        if len(services) != len(set(services)):
+            raise ValidationError("Services declaration by requirers must be unique.")
+
+        return self
+
 
 class HaproxyRouteDataAvailableEvent(EventBase):
     """HaproxyRouteDataAvailableEvent custom event.
@@ -576,7 +594,7 @@ class HaproxyRouteProvider(Object):
 
         self._relation_name = relation_name
         self.charm = charm
-        self._raise_on_validation_error = raise_on_validation_error
+        self.raise_on_validation_error = raise_on_validation_error
         on = self.charm.on
         self.framework.observe(on[self._relation_name].relation_created, self._configure)
         self.framework.observe(on[self._relation_name].relation_changed, self._configure)
@@ -623,7 +641,7 @@ class HaproxyRouteProvider(Object):
                 )
                 requirers_data.append(haproxy_route_requirer_data)
             except DataValidationError as exc:
-                if self._raise_on_validation_error:
+                if self.raise_on_validation_error:
                     logger.error(
                         "haproxy-route data validation failed for relation %s: %s",
                         relation,
@@ -721,7 +739,7 @@ class HaproxyRouteRequirer(Object):
         check_interval: Optional[int] = None,
         check_rise: Optional[int] = None,
         check_fall: Optional[int] = None,
-        check_paths: Optional[list[str]] = None,
+        check_path: Optional[str] = None,
         path_rewrite_expressions: Optional[list[str]] = None,
         query_rewrite_expressions: Optional[list[str]] = None,
         header_rewrite_expressions: Optional[list[tuple[str, str]]] = None,
@@ -736,7 +754,7 @@ class HaproxyRouteRequirer(Object):
         retry_redispatch: bool = False,
         deny_paths: Optional[list[str]] = None,
         server_timeout: int = 60,
-        client_timeout: int = 60,
+        connect_timeout: int = 60,
         queue_timeout: int = 60,
         server_maxconn: Optional[int] = None,
         host: Optional[str] = None,
@@ -753,7 +771,7 @@ class HaproxyRouteRequirer(Object):
             check_interval: Interval between health checks in seconds.
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
-            check_paths: List of paths to use for health checks.
+            check_path: The path to use for server health checks.
             path_rewrite_expressions: List of regex expressions for path rewrites.
             query_rewrite_expressions: List of regex expressions for query rewrites.
             header_rewrite_expressions: List of tuples containing header name
@@ -769,7 +787,7 @@ class HaproxyRouteRequirer(Object):
             retry_redispatch: Whether to redispatch failed requests to another server.
             deny_paths: List of paths that should not be routed to the backend.
             server_timeout: Timeout for requests from haproxy to backend servers in seconds.
-            client_timeout: Timeout for client requests to haproxy in seconds.
+            connect_timeout: Timeout for client requests to haproxy in seconds.
             queue_timeout: Timeout for requests waiting in queue in seconds.
             server_maxconn: Maximum connections per server.
             host: Hostname or IP address of the unit (if not provided, will use binding address).
@@ -790,7 +808,7 @@ class HaproxyRouteRequirer(Object):
             check_interval,
             check_rise,
             check_fall,
-            check_paths,
+            check_path,
             path_rewrite_expressions,
             query_rewrite_expressions,
             header_rewrite_expressions,
@@ -805,7 +823,7 @@ class HaproxyRouteRequirer(Object):
             retry_redispatch,
             deny_paths,
             server_timeout,
-            client_timeout,
+            connect_timeout,
             queue_timeout,
             server_maxconn,
         )
@@ -840,7 +858,7 @@ class HaproxyRouteRequirer(Object):
         check_interval: Optional[int] = None,
         check_rise: Optional[int] = None,
         check_fall: Optional[int] = None,
-        check_paths: Optional[list[str]] = None,
+        check_path: Optional[str] = None,
         path_rewrite_expressions: Optional[list[str]] = None,
         query_rewrite_expressions: Optional[list[str]] = None,
         header_rewrite_expressions: Optional[list[tuple[str, str]]] = None,
@@ -855,7 +873,7 @@ class HaproxyRouteRequirer(Object):
         retry_redispatch: bool = False,
         deny_paths: Optional[list[str]] = None,
         server_timeout: int = 60,
-        client_timeout: int = 60,
+        connect_timeout: int = 60,
         queue_timeout: int = 60,
         server_maxconn: Optional[int] = None,
     ) -> None:
@@ -869,7 +887,7 @@ class HaproxyRouteRequirer(Object):
             check_interval: Interval between health checks in seconds.
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
-            check_paths: List of paths to use for health checks.
+            check_path: The path to use for server health checks.
             path_rewrite_expressions: List of regex expressions for path rewrites.
             query_rewrite_expressions: List of regex expressions for query rewrites.
             header_rewrite_expressions: List of tuples containing header name
@@ -885,7 +903,7 @@ class HaproxyRouteRequirer(Object):
             retry_redispatch: Whether to redispatch failed requests to another server.
             deny_paths: List of paths that should not be routed to the backend.
             server_timeout: Timeout for requests from haproxy to backend servers in seconds.
-            client_timeout: Timeout for client requests to haproxy in seconds.
+            connect_timeout: Timeout for client requests to haproxy in seconds.
             queue_timeout: Timeout for requests waiting in queue in seconds.
             server_maxconn: Maximum connections per server.
         """
@@ -897,7 +915,7 @@ class HaproxyRouteRequirer(Object):
             check_interval,
             check_rise,
             check_fall,
-            check_paths,
+            check_path,
             path_rewrite_expressions,
             query_rewrite_expressions,
             header_rewrite_expressions,
@@ -912,7 +930,7 @@ class HaproxyRouteRequirer(Object):
             retry_redispatch,
             deny_paths,
             server_timeout,
-            client_timeout,
+            connect_timeout,
             queue_timeout,
             server_maxconn,
         )
@@ -928,7 +946,7 @@ class HaproxyRouteRequirer(Object):
         check_interval: Optional[int] = None,
         check_rise: Optional[int] = None,
         check_fall: Optional[int] = None,
-        check_paths: Optional[list[str]] = None,
+        check_path: Optional[str] = None,
         path_rewrite_expressions: Optional[list[str]] = None,
         query_rewrite_expressions: Optional[list[str]] = None,
         header_rewrite_expressions: Optional[list[tuple[str, str]]] = None,
@@ -943,7 +961,7 @@ class HaproxyRouteRequirer(Object):
         retry_redispatch: bool = False,
         deny_paths: Optional[list[str]] = None,
         server_timeout: int = 60,
-        client_timeout: int = 60,
+        connect_timeout: int = 60,
         queue_timeout: int = 60,
         server_maxconn: Optional[int] = None,
     ) -> dict[str, Any]:
@@ -957,7 +975,7 @@ class HaproxyRouteRequirer(Object):
             check_interval: Interval between health checks in seconds.
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
-            check_paths: List of paths to use for health checks.
+            check_path: The path to use for server health checks.
             path_rewrite_expressions: List of regex expressions for path rewrites.
             query_rewrite_expressions: List of regex expressions for query rewrites.
             header_rewrite_expressions: List of tuples containing header name and
@@ -973,7 +991,7 @@ class HaproxyRouteRequirer(Object):
             retry_redispatch: Whether to redispatch failed requests to another server.
             deny_paths: List of paths that should not be routed to the backend.
             server_timeout: Timeout for requests from haproxy to backend servers in seconds.
-            client_timeout: Timeout for client requests to haproxy in seconds.
+            connect_timeout: Timeout for client requests to haproxy in seconds.
             queue_timeout: Timeout for requests waiting in queue in seconds.
             server_maxconn: Maximum connections per server.
 
@@ -985,8 +1003,6 @@ class HaproxyRouteRequirer(Object):
             ports = []
         if not paths:
             paths = []
-        if not check_paths:
-            check_paths = []
         if not path_rewrite_expressions:
             path_rewrite_expressions = []
         if not query_rewrite_expressions:
@@ -1007,7 +1023,7 @@ class HaproxyRouteRequirer(Object):
             },
             "timeout": {
                 "server": server_timeout,
-                "client": client_timeout,
+                "connect": connect_timeout,
                 "queue": queue_timeout,
             },
             "deny_paths": deny_paths,
@@ -1015,7 +1031,7 @@ class HaproxyRouteRequirer(Object):
         }
 
         if check := self._generate_server_healthcheck_configuration(
-            check_interval, check_rise, check_fall, check_paths
+            check_interval, check_rise, check_fall, check_path
         ):
             application_data["check"] = check
 
@@ -1043,26 +1059,30 @@ class HaproxyRouteRequirer(Object):
         return application_data
 
     def _generate_server_healthcheck_configuration(
-        self, interval: Optional[int], rise: Optional[int], fall: Optional[int], paths: list[str]
-    ) -> dict[str, int | list[str]]:
+        self,
+        interval: Optional[int],
+        rise: Optional[int],
+        fall: Optional[int],
+        path: Optional[str],
+    ) -> dict[str, int | Optional[str]]:
         """Generate configuration for server health checks.
 
         Args:
             interval: Time between health checks in seconds.
             rise: Number of successful checks before marking server as up.
             fall: Number of failed checks before marking server as down.
-            paths: List of paths to use for health checks.
+            path: the path to use for health checks.
 
         Returns:
-            dict[str, str | list[str]]: Health check configuration dictionary.
+            dict[str, int | Optional[str]]: Health check configuration dictionary.
         """
-        server_healthcheck_configuration: dict[str, int | list[str]] = {}
+        server_healthcheck_configuration: dict[str, int | Optional[str]] = {}
         if interval and rise and fall:
             server_healthcheck_configuration = {
                 "interval": interval,
                 "rise": rise,
                 "fall": fall,
-                "paths": paths,
+                "path": path,
             }
         return server_healthcheck_configuration
 
