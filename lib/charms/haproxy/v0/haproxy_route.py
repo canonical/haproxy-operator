@@ -121,7 +121,15 @@ from ops import CharmBase, ModelError, RelationBrokenEvent
 from ops.charm import CharmEvents
 from ops.framework import EventBase, EventSource, Object
 from ops.model import Relation
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import (
+    AnyHttpUrl,
+    BaseModel,
+    ConfigDict,
+    Field,
+    IPvAnyAddress,
+    ValidationError,
+    model_validator,
+)
 from pydantic.dataclasses import dataclass
 
 # The unique Charmhub library identifier, never change it
@@ -492,7 +500,7 @@ class RequirerUnitData(_DatabagModel):
         host: hostname or IP address of the unit.
     """
 
-    host: str = Field(description="Hostname or IP address of the unit.")
+    host: IPvAnyAddress = Field(description="Hostname or IP address of the unit.")
 
 
 @dataclass
@@ -848,7 +856,7 @@ class HaproxyRouteRequirer(Object):
         """Handle relation broken event."""
         self.on.removed.emit()
 
-    # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def provide_haproxy_route_requirements(
         self,
         service: str,
@@ -1250,7 +1258,7 @@ class HaproxyRouteRequirer(Object):
             else:
                 logger.error("No host or unit IP available.")
                 raise DataValidationError("No host or unit IP available.")
-        return RequirerUnitData(host=host)
+        return RequirerUnitData(host=cast(IPvAnyAddress, host))
 
     def get_proxied_endpoints(self) -> list[AnyHttpUrl]:
         """The full ingress URL to reach the current unit.

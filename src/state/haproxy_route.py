@@ -7,7 +7,6 @@ import logging
 from functools import cached_property
 from typing import Optional, Self, cast
 
-import ops
 from charms.haproxy.v0.haproxy_route import (
     DataValidationError,
     HaproxyRewriteMethod,
@@ -17,7 +16,7 @@ from charms.haproxy.v0.haproxy_route import (
     RequirerApplicationData,
     ServerHealthCheck,
 )
-from pydantic import AnyHttpUrl, model_validator
+from pydantic import IPvAnyAddress, model_validator
 from pydantic.dataclasses import dataclass
 
 from state.tls import TLSInformation
@@ -84,6 +83,10 @@ class HAProxyRouteBackend:
         """Build the list of hostname ACL for the backend.
 
         Appends subdomain to the configured external_hostname.
+        For example, with the configured hostname of `haproxy.internal`, and requested subdomains
+        ['api'] will result in the following haproxy ACL:
+
+        acl acl_host_<backend_name> req.hdr(Host) -m str api.haproxy.internal
 
         Returns:
             list[str]: List of hostname for ACL matching.
@@ -116,6 +119,11 @@ class HAProxyRouteBackend:
     def rewrite_configurations(self) -> list[str]:
         """Build the rewrite configurations.
 
+        For example, method = SET_HEADER, header = COOKIE, expression = "testing"
+        will result in the following rewrite config:
+
+        http-request set-header COOKIE testing
+
         Returns:
             list[str]: The rewrite configurations.
         """
@@ -142,21 +150,18 @@ class HaproxyRouteRequirersInformation:
 
     backends: list[HAProxyRouteBackend]
     stick_table_entries: list[str]
-    peers: list[AnyHttpUrl]
+    peers: list[IPvAnyAddress]
 
     @classmethod
     def from_charm(
-        cls,
-        charm: ops.CharmBase,
-        haproxy_route: HaproxyRouteProvider,
-        tls_information: TLSInformation,
+        cls, haproxy_route: HaproxyRouteProvider, tls_information: TLSInformation, peers: list[str]
     ) -> "HaproxyRouteRequirersInformation":
         """Initialize the HaproxyRouteRequirersInformation state component.
 
         Args:
-            charm: The charm initializing this state component.
             haproxy_route: The haproxy-route provider class.
             tls_information: The charm's TLS information state component.
+            peers: List of IP address of haproxy peer units.
 
         Raises:
             HaproxyRouteIntegrationDataValidationError: When data validation failed.
@@ -189,18 +194,10 @@ class HaproxyRouteRequirersInformation:
                 )
                 backends.append(backend)
 
-            # Fetch address of all units for `peer:` section
-            peers: list[str] = []
-            unit_address = get_unit_address(charm)
-            if not unit_address:
-                raise HaproxyRouteIntegrationDataValidationError("Couldn't get the unit address.")
-            peers.append(unit_address)
-            peers.extend(get_peer_units_address(charm))
-
             return HaproxyRouteRequirersInformation(
                 backends=backends,
                 stick_table_entries=stick_table_entries,
-                peers=list(map(lambda x: cast(AnyHttpUrl, x), peers)),
+                peers=list(map(lambda x: cast(IPvAnyAddress, x), peers)),
             )
         except DataValidationError as exc:
             # This exception is only raised if the provider has "raise_on_validation_error" set
@@ -237,45 +234,6 @@ class HaproxyRouteRequirersInformation:
                 )
             )
         return self
-
-
-def get_unit_address(charm: ops.CharmBase) -> Optional[str]:
-    """Get the current unit's address.
-
-    Args:
-        charm: The charm.
-
-    Returns:
-        Optional[str]: The unit's address from juju-info binding,
-            or None if the address cannot be fetched
-    """
-    network_binding = charm.model.get_binding("juju-info")
-    if (
-        network_binding is not None
-        and (bind_address := network_binding.network.bind_address) is not None
-    ):
-        return str(bind_address)
-    return None
-
-
-def get_peer_units_address(charm: ops.CharmBase) -> list[str]:
-    """Get the current unit's address.
-
-    Args:
-        charm: The charm.
-
-    Returns:
-        liststr]: The list of peer units address.
-    """
-    peer_units_address: list[str] = []
-    if haproxy_peer_integration := charm.model.get_relation(HAPROXY_PEER_INTEGRATION):
-        for unit in haproxy_peer_integration.units:
-            if unit != charm.unit:
-                if peer_unit_address := haproxy_peer_integration.data[unit].get("private-address"):
-                    peer_units_address.append(peer_unit_address)
-                else:
-                    logger.error("Cannot get address for peer unit: %s. Skipping", unit)
-    return peer_units_address
 
 
 def get_servers_definition_from_requirer_data(
