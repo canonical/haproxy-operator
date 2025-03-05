@@ -5,7 +5,7 @@
 
 import logging
 from functools import cached_property
-from typing import Optional, Self, cast
+from typing import Optional, cast
 
 from charms.haproxy.v0.haproxy_route import (
     DataValidationError,
@@ -18,6 +18,7 @@ from charms.haproxy.v0.haproxy_route import (
 )
 from pydantic import IPvAnyAddress, model_validator
 from pydantic.dataclasses import dataclass
+from typing_extensions import Self
 
 from state.tls import TLSInformation
 

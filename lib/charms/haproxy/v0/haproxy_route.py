@@ -115,7 +115,7 @@ class SomeCharm(CharmBase):
 import json
 import logging
 from enum import Enum
-from typing import Any, MutableMapping, Optional, Self, cast
+from typing import Any, MutableMapping, Optional, cast
 
 from ops import CharmBase, ModelError, RelationBrokenEvent
 from ops.charm import CharmEvents
@@ -131,6 +131,7 @@ from pydantic import (
     model_validator,
 )
 from pydantic.dataclasses import dataclass
+from typing_extensions import Self
 
 # The unique Charmhub library identifier, never change it
 LIBID = "08b6347482f6455486b5f5bb4dc4e6cf"
