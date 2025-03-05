@@ -48,7 +48,7 @@ juju run requirer/0 rpc method=start_server
 juju relate requirer haproxy
 ```
 
-You should now see that the request has been properly proxied to the backend service
+You should now see that the request has been properly proxied to the backend service. The `--insecure` option is needed here as we are using a self-signed-certificate, as well as the `--resolve` option to manually perform a DNS lookup as haproxy will issue an HTTPS redirect to `$HAPROXY_HOSTNAME`. Finally, `-L` is also needed to automatically follow redirects.
 ```
 $ curl -H "Host: $HAPROXY_HOSTNAME" $HAPROXY_IP/haproxy-tutorial-requirer/ok -L --insecure --resolve $HAPROXY_HOSTNAME:443:$HAPROXY_IP
 ok!
