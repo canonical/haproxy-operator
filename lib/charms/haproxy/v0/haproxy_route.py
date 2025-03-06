@@ -356,8 +356,10 @@ class BandwidthLimit(BaseModel):
         download: Limit download speed (bytes per second).
     """
 
-    upload: int = Field(description="Upload limit (bytes per seconds).")
-    download: int = Field(description="Download limit (bytes per seconds).")
+    upload: Optional[int] = Field(description="Upload limit (bytes per seconds).", default=None)
+    download: Optional[int] = Field(
+        description="Download limit (bytes per seconds).", default=None
+    )
 
 
 # retry-on is not yet implemented
@@ -468,8 +470,8 @@ class RequirerApplicationData(_DatabagModel):
     rate_limit: Optional[RateLimit] = Field(
         description="Configure rate limit for the service.", default=None
     )
-    bandwidth_limit: Optional[BandwidthLimit] = Field(
-        description="Configure bandwidth limit for the service.", default=None
+    bandwidth_limit: BandwidthLimit = Field(
+        description="Configure bandwidth limit for the service.", default=BandwidthLimit()
     )
     retry: Optional[Retry] = Field(
         description="Configure retry for incoming requests.", default=None
@@ -1078,6 +1080,10 @@ class HaproxyRouteRequirer(Object):
                 "connect": connect_timeout,
                 "queue": queue_timeout,
             },
+            "bandwidth_limit": {
+                "download": download_limit,
+                "upload": upload_limit,
+            },
             "deny_paths": deny_paths,
             "server_maxconn": server_maxconn,
         }
@@ -1098,11 +1104,6 @@ class HaproxyRouteRequirer(Object):
             rate_limit_connections_per_minute, rate_limit_policy
         ):
             application_data["rate_limit"] = rate_limit
-
-        if bandwidth_limit := self._generate_bandwidth_limit_configuration(
-            download_limit, upload_limit
-        ):
-            application_data["bandwidth_limit"] = bandwidth_limit
 
         if retry := self._generate_retry_configuration(
             retry_count, retry_interval, retry_redispatch
@@ -1193,23 +1194,6 @@ class HaproxyRouteRequirer(Object):
                 "policy": rate_limit_policy,
             }
         return rate_limit_configuration
-
-    def _generate_bandwidth_limit_configuration(
-        self, download: Optional[int], upload: Optional[int]
-    ) -> dict[str, Any]:
-        """Generate bandwidth limit configuration.
-
-        Args:
-            download: Maximum download bandwidth in bytes per second.
-            upload: Maximum upload bandwidth in bytes per second.
-
-        Returns:
-            dict[str, Any]: Bandwidth limit configuration, or empty dict if no limits are set.
-        """
-        bandwidth_limit_configuration = {}
-        if download and upload:
-            bandwidth_limit_configuration = {"upload": upload, "download": download}
-        return bandwidth_limit_configuration
 
     def _generate_retry_configuration(
         self, count: Optional[int], interval: Optional[int], redispatch: bool
