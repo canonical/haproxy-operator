@@ -114,7 +114,7 @@ class SomeCharm(CharmBase):
 
 import json
 import logging
-from enum import Enum
+from enum import StrEnum
 from typing import Any, MutableMapping, Optional, cast
 
 from ops import CharmBase, ModelError, RelationBrokenEvent
@@ -128,6 +128,7 @@ from pydantic import (
     Field,
     IPvAnyAddress,
     ValidationError,
+    field_validator,
     model_validator,
 )
 from pydantic.dataclasses import dataclass
@@ -284,8 +285,8 @@ class ServerHealthCheck(BaseModel):
 
 
 # tarpit is not yet implemented
-class RateLimitPolicy(Enum):
-    """Enum of possible rate limiting policies.
+class RateLimitPolicy(StrEnum):
+    """StrEnum of possible rate limiting policies.
 
     Attrs:
         DENY: deny a client's HTTP request to return a 403 Forbidden error.
@@ -313,8 +314,8 @@ class RateLimit(BaseModel):
     )
 
 
-class LoadBalancingAlgorithm(Enum):
-    """Enum of possible http_route types.
+class LoadBalancingAlgorithm(StrEnum):
+    """StrEnum of possible http_route types.
 
     Attrs:
         LEASTCONN: The server with the lowest number of connections receives the connection.
@@ -338,7 +339,8 @@ class LoadBalancingConfiguration(BaseModel):
     """
 
     algorithm: LoadBalancingAlgorithm = Field(
-        description="Configure the load balancing algorithm for the service."
+        description="Configure the load balancing algorithm for the service.",
+        default=LoadBalancingAlgorithm.LEASTCONN,
     )
     cookie: Optional[str] = Field(
         description="Only used when algorithm is COOKIE. Define the cookie to load balance on.",
@@ -397,8 +399,8 @@ class TimeoutConfiguration(BaseModel):
     )
 
 
-class HaproxyRewriteMethod(Enum):
-    """Enum of possible HTTP rewrite methods.
+class HaproxyRewriteMethod(StrEnum):
+    """StrEnum of possible HTTP rewrite methods.
 
     Attrs:
         SET_PATH: The server with the lowest number of connections receives the connection.
@@ -460,8 +462,8 @@ class RequirerApplicationData(_DatabagModel):
         description="Configure health check for the service.",
         default=ServerHealthCheck(),
     )
-    load_balancing: LoadBalancingConfiguration = LoadBalancingConfiguration(
-        algorithm=LoadBalancingAlgorithm.LEASTCONN
+    load_balancing: LoadBalancingConfiguration = Field(
+        description="Configure loadbalancing.", default=LoadBalancingConfiguration()
     )
     rate_limit: Optional[RateLimit] = Field(
         description="Configure rate limit for the service.", default=None
@@ -482,6 +484,45 @@ class RequirerApplicationData(_DatabagModel):
     server_maxconn: Optional[int] = Field(
         description="Configure maximum connection per server", default=None
     )
+
+    @field_validator("load_balancing")
+    @classmethod
+    def validate_load_balancing_configuration(
+        cls, configuration: LoadBalancingConfiguration
+    ) -> LoadBalancingConfiguration:
+        """Validate the parsed load balancing configuration.
+
+        Args:
+            configuration: The configuration to validate.
+
+        Raises:
+            ValueError: When cookie is not set under COOKIE load balancing mode.
+
+        Returns:
+            LoadBalancingConfiguration: The validated configuration.
+        """
+        if configuration.algorithm == LoadBalancingAlgorithm.COOKIE and not configuration.cookie:
+            raise ValueError("cookie must be set if load balacing algorithm is COOKIE.")
+        return configuration
+
+    @field_validator("rewrites")
+    @classmethod
+    def validate_rewrites(cls, rewrites: list[RewriteConfiguration]) -> list[RewriteConfiguration]:
+        """Validate the parsed list of rewrite configurations.
+
+        Args:
+            rewrites: The configurations to validate.
+
+        Raises:
+            ValueError: When header is not set under SET_HEADER rewrite method.
+
+        Returns:
+            list[RewriteConfiguration]: The validated configurations.
+        """
+        for rewrite in rewrites:
+            if rewrite.method == HaproxyRewriteMethod.SET_HEADER and not rewrite.method:
+                raise ValueError("header must be set if rewrite method is SET_HEADER.")
+        return rewrites
 
 
 class HaproxyRouteProviderAppData(_DatabagModel):

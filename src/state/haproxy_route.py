@@ -103,6 +103,9 @@ class HAProxyRouteBackend:
             )
         )
 
+    # We disable no-member here because pylint doesn't know that
+    # self.application_data.load_balancing Has a default value set
+    # pylint: disable=no-member
     @property
     def load_balancing_configuration(self) -> str:
         """Build the load balancing configuration for the haproxy backend.
@@ -111,7 +114,7 @@ class HAProxyRouteBackend:
             str: The haproxy load balancing configuration for the backend.
         """
         if self.application_data.load_balancing.algorithm == LoadBalancingAlgorithm.COOKIE:
-            # The library needs to ensure that if algorithm == cookie
+            # The library ensures that if algorithm == cookie
             # then the cookie attribute must be not none
             return f"hash req.cookie({cast(str, self.application_data.load_balancing.cookie)})"
         return str(self.application_data.load_balancing.algorithm.value)
@@ -135,7 +138,7 @@ class HAProxyRouteBackend:
                     f"{str(rewrite.method)} {rewrite.header} {rewrite.expression}"
                 )
                 continue
-            rewrite_configurations.append(f"{str(rewrite.method)} {rewrite.expression}")
+            rewrite_configurations.append(f"{str(rewrite.method.value)} {rewrite.expression}")
         return rewrite_configurations
 
 
