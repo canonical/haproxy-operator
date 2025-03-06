@@ -539,10 +539,10 @@ class RequirerUnitData(_DatabagModel):
     """haproxy-route requirer unit data.
 
     Attributes:
-        host: hostname or IP address of the unit.
+        address: IP address of the unit.
     """
 
-    host: IPvAnyAddress = Field(description="Hostname or IP address of the unit.")
+    address: IPvAnyAddress = Field(description="IP address of the unit.")
 
 
 @dataclass
@@ -807,7 +807,7 @@ class HaproxyRouteRequirer(Object):
         connect_timeout: int = 60,
         queue_timeout: int = 60,
         server_maxconn: Optional[int] = None,
-        host: Optional[str] = None,
+        unit_address: Optional[str] = None,
     ) -> None:
         """Initialize the HaproxyRouteRequirer.
 
@@ -840,7 +840,7 @@ class HaproxyRouteRequirer(Object):
             connect_timeout: Timeout for client requests to haproxy in seconds.
             queue_timeout: Timeout for requests waiting in queue in seconds.
             server_maxconn: Maximum connections per server.
-            host: Hostname or IP address of the unit (if not provided, will use binding address).
+            unit_address: IP address of the unit (if not provided, will use binding address).
         """
         super().__init__(charm, relation_name)
 
@@ -877,7 +877,7 @@ class HaproxyRouteRequirer(Object):
             queue_timeout,
             server_maxconn,
         )
-        self._host = host
+        self._unit_address = unit_address
 
         on = self.charm.on
         self.framework.observe(on[self._relation_name].relation_created, self._configure)
@@ -1291,18 +1291,18 @@ class HaproxyRouteRequirer(Object):
         Returns:
             RequirerUnitData: The validated unit data model.
         """
-        host = self._host
-        if not host:
+        address = self._unit_address
+        if not address:
             network_binding = self.charm.model.get_binding("juju-info")
             if (
                 network_binding is not None
                 and (bind_address := network_binding.network.bind_address) is not None
             ):
-                host = str(bind_address)
+                address = str(bind_address)
             else:
-                logger.error("No host or unit IP available.")
-                raise DataValidationError("No host or unit IP available.")
-        return RequirerUnitData(host=cast(IPvAnyAddress, host))
+                logger.error("No unit IP available.")
+                raise DataValidationError("No unit IP available.")
+        return RequirerUnitData(address=cast(IPvAnyAddress, address))
 
     def get_proxied_endpoints(self) -> list[AnyHttpUrl]:
         """The full ingress URL to reach the current unit.

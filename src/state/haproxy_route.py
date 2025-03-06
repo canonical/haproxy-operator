@@ -39,14 +39,14 @@ class HAProxyRouteServer:
 
     Attrs:
         server_name: The name of the unit with invalid characters replaced.
-        host: The host or ip address of the requirer unit.
+        address: The IP address of the requirer unit.
         port: The port that the requirer application wishes to be exposed.
         check: Health check configuration.
         maxconn: Maximum allowed connections before requests are queued.
     """
 
     server_name: str
-    host: IPvAnyAddress
+    address: IPvAnyAddress
     port: int
     check: ServerHealthCheck
     maxconn: Optional[int]
@@ -157,7 +157,7 @@ class HaproxyRouteRequirersInformation:
     peers: list[IPvAnyAddress]
 
     @classmethod
-    def from_charm(
+    def from_provider(
         cls, haproxy_route: HaproxyRouteProvider, tls_information: TLSInformation, peers: list[str]
     ) -> "HaproxyRouteRequirersInformation":
         """Initialize the HaproxyRouteRequirersInformation state component.
@@ -189,7 +189,9 @@ class HaproxyRouteRequirersInformation:
                         "Requirers requested duplicate backend names."
                     )
                 backend_names.add(requirer.application_data.service)
-                stick_table_entries.append(f"{requirer.application_data.service}_rate_limit")
+
+                if requirer.application_data.rate_limit:
+                    stick_table_entries.append(f"{requirer.application_data.service}_rate_limit")
 
                 backend = HAProxyRouteBackend(
                     application_data=requirer.application_data,
@@ -257,7 +259,7 @@ def get_servers_definition_from_requirer_data(
             servers.append(
                 HAProxyRouteServer(
                     server_name=f"{requirer.application_data.service}_{port}_{i}",
-                    host=unit_data.host,
+                    address=unit_data.address,
                     port=port,
                     check=requirer.application_data.check,
                     maxconn=requirer.application_data.server_maxconn,

@@ -257,8 +257,10 @@ class HAProxyCharm(ops.CharmBase):
                 peers.append(unit_address)
                 peers.extend(self._get_peer_units_address())
 
-                haproxy_route_requirers_information = HaproxyRouteRequirersInformation.from_charm(
-                    self.haproxy_route_provider, tls_information, peers
+                haproxy_route_requirers_information = (
+                    HaproxyRouteRequirersInformation.from_provider(
+                        self.haproxy_route_provider, tls_information, peers
+                    )
                 )
                 self.haproxy_service.reconcile_haproxy_route(
                     config, haproxy_route_requirers_information
