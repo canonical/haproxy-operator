@@ -26,9 +26,6 @@ backend {{ backend.backend_name }}
     timeout server {{ backend.application_data.timeout.server }}
     timeout connect {{ backend.application_data.timeout.connect }}
     timeout queue {{ backend.application_data.timeout.queue }}
-{% if backend.application_data.check.path %}
-    option httpchk GET {{ backend.application_data.check.path }}
-{% endif %}
 
 {% if backend.application_data.check.path %}
     option httpchk GET {{ backend.application_data.check.path }}
