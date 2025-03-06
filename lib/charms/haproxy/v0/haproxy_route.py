@@ -114,7 +114,7 @@ class SomeCharm(CharmBase):
 
 import json
 import logging
-from enum import StrEnum
+from enum import Enum
 from typing import Any, MutableMapping, Optional, cast
 
 from ops import CharmBase, ModelError, RelationBrokenEvent
@@ -285,8 +285,8 @@ class ServerHealthCheck(BaseModel):
 
 
 # tarpit is not yet implemented
-class RateLimitPolicy(StrEnum):
-    """StrEnum of possible rate limiting policies.
+class RateLimitPolicy(Enum):
+    """Enum of possible rate limiting policies.
 
     Attrs:
         DENY: deny a client's HTTP request to return a 403 Forbidden error.
@@ -314,8 +314,8 @@ class RateLimit(BaseModel):
     )
 
 
-class LoadBalancingAlgorithm(StrEnum):
-    """StrEnum of possible http_route types.
+class LoadBalancingAlgorithm(Enum):
+    """Enum of possible http_route types.
 
     Attrs:
         LEASTCONN: The server with the lowest number of connections receives the connection.
@@ -401,8 +401,8 @@ class TimeoutConfiguration(BaseModel):
     )
 
 
-class HaproxyRewriteMethod(StrEnum):
-    """StrEnum of possible HTTP rewrite methods.
+class HaproxyRewriteMethod(Enum):
+    """Enum of possible HTTP rewrite methods.
 
     Attrs:
         SET_PATH: The server with the lowest number of connections receives the connection.
