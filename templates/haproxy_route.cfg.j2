@@ -1,6 +1,6 @@
 {% extends 'haproxy.cfg.j2' %}
 {% block proxy_configuration %}
-frontend ingress
+frontend haproxy
     mode http
     bind [::]:80 v4v6
     bind [::]:443 v4v6 ssl crt {{ haproxy_crt_dir }}

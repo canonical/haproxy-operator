@@ -260,7 +260,9 @@ class HAProxyCharm(ops.CharmBase):
                 haproxy_route_requirers_information = HaproxyRouteRequirersInformation.from_charm(
                     self.haproxy_route_provider, tls_information, peers
                 )
-                self.haproxy_service.reconcile_haproxy_route(haproxy_route_requirers_information)
+                self.haproxy_service.reconcile_haproxy_route(
+                    config, haproxy_route_requirers_information
+                )
                 self.unit.set_ports(80, 443)
             case _:
                 self.unit.set_ports(80)
@@ -371,6 +373,7 @@ class HAProxyCharm(ops.CharmBase):
         data = self.haproxy_route_provider.get_data(self.haproxy_route_provider.relations)
         # This is temporary as the logic to generate the haproxy config will be added later.
         logger.debug("Aggregated requirer data: %s", data)
+        self._reconcile()
 
     @validate_config_and_tls(defer=True)
     def _ensure_tls(self, _: ops.EventBase) -> None:

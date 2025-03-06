@@ -119,19 +119,24 @@ class HAProxyService:
         self._reload_haproxy_service()
 
     def reconcile_haproxy_route(
-        self, haproxy_route_requirers_information: HaproxyRouteRequirersInformation
+        self,
+        config: CharmConfig,
+        haproxy_route_requirers_information: HaproxyRouteRequirersInformation,
     ) -> None:
         """Render the haproxy config for haproxy-route.
 
         Args:
+            config: The charm's config.
             haproxy_route_requirers_information: HaproxyRouteRequirersInformation state component.
         """
         template_context = {
+            "config_global_max_connection": config.global_max_connection,
             "backends": haproxy_route_requirers_information.backends,
             "stick_table_entries": haproxy_route_requirers_information.stick_table_entries,
             "peer_units_address": haproxy_route_requirers_information.peers,
+            "haproxy_crt_dir": HAPROXY_CERTS_DIR,
         }
-        self._render_haproxy_config(HAPROXY_INGRESS_CONFIG_TEMPLATE, template_context)
+        self._render_haproxy_config(HAPROXY_ROUTE_CONFIG_TEMPLATE, template_context)
         self._reload_haproxy_service()
 
     def reconcile_default(self, config: CharmConfig) -> None:

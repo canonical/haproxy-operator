@@ -622,11 +622,11 @@ class HaproxyRouteProvider(Object):
         if relations := self.relations:
             # Only for data validation
             _ = self.get_data(relations)
-            self.on.data_removed.emit()
+            self.on.data_available.emit()
 
     def _on_endpoint_removed(self, _: EventBase) -> None:
         """Handle relation broken/departed events."""
-        self.on.endpoint_removed.emit()
+        self.on.data_removed.emit()
 
     def get_data(self, relations: list[Relation]) -> HaproxyRouteRequirersData:
         """Fetch requirer data.
@@ -1012,6 +1012,8 @@ class HaproxyRouteRequirer(Object):
             ports = []
         if not paths:
             paths = []
+        if not subdomains:
+            subdomains = []
         if not path_rewrite_expressions:
             path_rewrite_expressions = []
         if not query_rewrite_expressions:

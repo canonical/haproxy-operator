@@ -46,7 +46,7 @@ class HAProxyRouteServer:
     """
 
     server_name: str
-    host: str
+    host: IPvAnyAddress
     port: int
     check: ServerHealthCheck
     maxconn: Optional[int]
@@ -114,7 +114,7 @@ class HAProxyRouteBackend:
             # The library needs to ensure that if algorithm == cookie
             # then the cookie attribute must be not none
             return f"hash req.cookie({cast(str, self.application_data.load_balancing.cookie)})"
-        return str(self.application_data.load_balancing.algorithm)
+        return str(self.application_data.load_balancing.algorithm.value)
 
     @property
     def rewrite_configurations(self) -> list[str]:
