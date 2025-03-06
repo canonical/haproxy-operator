@@ -31,7 +31,7 @@ class SomeCharm(CharmBase):
     # There are 2 ways you can use the requirer implementation:
     # 1. To initialize the requirer with parameters:
     self.haproxy_route_requirer = HaproxyRouteRequirer(self,
-        host=<required>,
+        address=<required>,
         port=<required>,
         paths=<optional>,
         subdomains=<optional>,
@@ -65,7 +65,7 @@ class SomeCharm(CharmBase):
     # Afterwards regardless of how you initialized the requirer you can call the
     # provide_haproxy_route_requirements method anywhere in your charm to update the requirer data.
     # The method takes the same number of parameters as the requirer class.
-    # provide_haproxy_route_requirements(host=, port=, ...)
+    # provide_haproxy_route_requirements(address=, port=, ...)
 
     self.framework.observe(
         self.framework.on.config_changed, self._on_config_changed
@@ -1270,7 +1270,7 @@ class HaproxyRouteRequirer(Object):
         """Prepare and validate unit data.
 
         Raises:
-            DataValidationError: When no host or unit IP is available.
+            DataValidationError: When no address or unit IP is available.
 
         Returns:
             RequirerUnitData: The validated unit data model.
