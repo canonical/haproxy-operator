@@ -57,6 +57,7 @@ class HAProxyRouteBackend:
     """A component of charm state that represent an ingress requirer application.
 
     Attrs:
+        relation_id: The id of the relation, used to publish the proxied endpoints.
         application_data: requirer application data.
         backend_name: The name of the backend (computed).
         servers: The list of server each corresponding to a requirer unit.
@@ -68,6 +69,7 @@ class HAProxyRouteBackend:
         deny_path_acl_required: Indicate if deny_path is required.
     """
 
+    relation_id: int
     application_data: RequirerApplicationData
     servers: list[HAProxyRouteServer]
     external_hostname: str
@@ -217,6 +219,7 @@ class HaproxyRouteRequirersInformation:
                     stick_table_entries.append(f"{requirer.application_data.service}_rate_limit")
 
                 backend = HAProxyRouteBackend(
+                    relation_id=requirer.relation_id,
                     application_data=requirer.application_data,
                     servers=get_servers_definition_from_requirer_data(requirer),
                     external_hostname=tls_information.external_hostname,

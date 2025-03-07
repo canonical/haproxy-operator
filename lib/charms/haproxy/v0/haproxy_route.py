@@ -552,10 +552,12 @@ class HaproxyRouteRequirerData:
     """haproxy-route requirer data.
 
     Attributes:
+        relation_id: Id of the relation.
         application_data: Application data.
         units_data: Units data
     """
 
+    relation_id: int
     application_data: RequirerApplicationData
     units_data: list[RequirerUnitData]
 
@@ -689,7 +691,9 @@ class HaproxyRouteProvider(Object):
                 application_data = self._get_requirer_application_data(relation)
                 units_data = self._get_requirer_units_data(relation)
                 haproxy_route_requirer_data = HaproxyRouteRequirerData(
-                    application_data=application_data, units_data=units_data
+                    application_data=application_data,
+                    units_data=units_data,
+                    relation_id=relation.id,
                 )
                 requirers_data.append(haproxy_route_requirer_data)
             except DataValidationError as exc:
@@ -748,6 +752,17 @@ class HaproxyRouteProvider(Object):
         except DataValidationError:
             logger.error("Invalid requirer application data for %s", relation.app.name)
             raise
+
+    def publish_proxied_endpoints(self, endpoints: list[str], relation: Relation) -> None:
+        """Publish to the app databag the proxied endpoints.
+
+        Args:
+            endpoints: The list of proxied endpoints to publish.
+            relation: The relation with the requirer application.
+        """
+        HaproxyRouteProviderAppData(
+            endpoints=list(map(lambda x: cast(AnyHttpUrl, x), endpoints))
+        ).dump(relation.data[self.charm.app], clear=True)
 
 
 class HaproxyRouteEnpointsReadyEvent(EventBase):

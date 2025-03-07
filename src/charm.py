@@ -266,6 +266,14 @@ class HAProxyCharm(ops.CharmBase):
                     config, haproxy_route_requirers_information
                 )
                 self.unit.set_ports(80, 443)
+                if self.unit.is_leader():
+                    for backend in haproxy_route_requirers_information.backends:
+                        relation = self.model.get_relation(backend.relation_id)
+                        if not relation:
+                            logger.error("Relation does not exist, skipping.")
+                        self.haproxy_route_provider.publish_proxied_endpoints(
+                            list(map(lambda x: f"https://{x}", backend.hostname_acls)), relation
+                        )
             case _:
                 self.unit.set_ports(80)
                 self.haproxy_service.reconcile_default(config)

@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 GATEWAY_CLASS_CONFIG = "cilium"
+HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/haproxy_route_requirer_src.json"
 
 
 @pytest_asyncio.fixture(scope="module", name="model")
@@ -383,4 +384,22 @@ async def hacluster_fixture(
         "hacluster", application_name="hacluster", channel="2.4/edge", series="noble"
     )
     await model.wait_for_idle(apps=[application.name], wait_for_at_least_units=0, status="unknown")
+    yield application
+
+
+@pytest_asyncio.fixture(scope="function", name="haproxy_route_requirer")
+async def haproxy_route_requirer_fixture(
+    model: Model,
+) -> typing.AsyncGenerator[Application, None]:
+    """Deploy any-charm and configure it to serve as a requirer for the http interface."""
+    application = await model.deploy(
+        "any-charm",
+        application_name="haproxy_route_requirer",
+        channel="beta",
+        config={
+            "src-overwrite": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(encoding="utf-8"),
+            "python-packages": "pydantic",
+        },
+    )
+    await model.wait_for_idle(apps=[application.name], status="active")
     yield application
