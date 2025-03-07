@@ -1086,19 +1086,17 @@ class HaproxyRouteRequirer(Object):
             },
             "deny_paths": deny_paths,
             "server_maxconn": server_maxconn,
+            "rewrites": self._generate_rewrite_configuration(
+                path_rewrite_expressions,
+                query_rewrite_expressions,
+                header_rewrite_expressions,
+            ),
         }
 
         if check := self._generate_server_healthcheck_configuration(
             check_interval, check_rise, check_fall, check_path
         ):
             application_data["check"] = check
-
-        if rewrites := self._generate_rewrite_configuration(
-            path_rewrite_expressions,
-            query_rewrite_expressions,
-            header_rewrite_expressions,
-        ):
-            application_data["rewrites"] = rewrites
 
         if rate_limit := self._generate_rate_limit_configuration(
             rate_limit_connections_per_minute, rate_limit_policy
@@ -1235,7 +1233,7 @@ class HaproxyRouteRequirer(Object):
         """
         if self.charm.unit.is_leader():
             application_data = self._prepare_application_data()
-            relation.data[self.app].update(application_data.dump())
+            application_data.dump(relation.data[self.app], clear=True)
 
     def _update_unit_data(self, relation: Relation) -> None:
         """Prepare and update the unit data in the relation databag.
@@ -1244,8 +1242,7 @@ class HaproxyRouteRequirer(Object):
             relation: The relation instance.
         """
         unit_data = self._prepare_unit_data()
-        relation.data[self.charm.unit].clear()
-        relation.data[self.charm.unit].update(unit_data.dump())
+        unit_data.dump(relation.data[self.charm.unit], clear=True)
 
     def _prepare_application_data(self) -> RequirerApplicationData:
         """Prepare and validate the application data.
@@ -1261,7 +1258,7 @@ class HaproxyRouteRequirer(Object):
                 RequirerApplicationData, RequirerApplicationData.from_dict(self._application_data)
             )
         except ValidationError as exc:
-            logger.exception("Validation error when preparing requirer application data.")
+            logger.error("Validation error when preparing requirer application data.")
             raise DataValidationError(
                 "Validation error when preparing requirer application data."
             ) from exc

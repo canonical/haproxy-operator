@@ -64,6 +64,8 @@ class HAProxyRouteBackend:
         hostname_acls: The list of hostname ACLs.
         load_balancing_configuration: Load balancing configuration for the haproxy backend.
         rewrite_configurations: Rewrite configuration.
+        path_acl_required: Indicate if path routing is required.
+        deny_path_acl_required: Indicate if deny_path is required.
     """
 
     application_data: RequirerApplicationData
@@ -79,6 +81,24 @@ class HAProxyRouteBackend:
         """
         return self.application_data.service
 
+    @property
+    def path_acl_required(self) -> bool:
+        """Indicate if path routing is required.
+
+        Returns:
+            bool: Whether the `paths` attribute in the requirer data is empty.
+        """
+        return bool(self.application_data.paths)
+
+    @property
+    def deny_path_acl_required(self) -> bool:
+        """Indicate if deny_path is required.
+
+        Returns:
+            bool: Whether the `deny_paths` attribute in the requirer data is empty.
+        """
+        return bool(self.application_data.deny_paths)
+
     @cached_property
     def hostname_acls(self) -> list[str]:
         """Build the list of hostname ACL for the backend.
@@ -92,6 +112,9 @@ class HAProxyRouteBackend:
         Returns:
             list[str]: List of hostname for ACL matching.
         """
+        if not self.application_data.subdomains:
+            return [self.external_hostname]
+
         return list(
             map(
                 lambda subdomain: (

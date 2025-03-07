@@ -180,7 +180,7 @@ class HAProxyService:
         try:
             systemd.service_reload(HAPROXY_SERVICE)
         except systemd.SystemdError as exc:
-            logger.exception("Failed reloading the haproxy service.")
+            logger.error("Failed reloading the haproxy service.")
             raise HaproxyServiceReloadError("Failed reloading the haproxy service.") from exc
 
 
