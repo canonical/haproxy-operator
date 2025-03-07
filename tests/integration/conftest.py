@@ -394,7 +394,7 @@ async def haproxy_route_requirer_fixture(
     """Deploy any-charm and configure it to serve as a requirer for the http interface."""
     application = await model.deploy(
         "any-charm",
-        application_name="haproxy_route_requirer",
+        application_name="haproxy-route-requirer",
         channel="beta",
         config={
             "src-overwrite": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(encoding="utf-8"),
