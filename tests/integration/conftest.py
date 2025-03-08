@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 GATEWAY_CLASS_CONFIG = "cilium"
+HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/haproxy_route_requirer_src.json"
 
 
 @pytest_asyncio.fixture(scope="module", name="model")
@@ -384,3 +385,32 @@ async def hacluster_fixture(
     )
     await model.wait_for_idle(apps=[application.name], wait_for_at_least_units=0, status="unknown")
     yield application
+
+
+@pytest_asyncio.fixture(scope="function", name="haproxy_route_requirer")
+async def haproxy_route_requirer_fixture(
+    model: Model, requirer_charm: str
+) -> typing.AsyncGenerator[Application, None]:
+    """Deploy any-charm and configure it to serve as a requirer for the http interface."""
+    application = await model.deploy(
+        requirer_charm,
+        application_name="haproxy-route-requirer",
+        config={
+            "src-overwrite": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(encoding="utf-8"),
+            "python-packages": "pydantic",
+        },
+    )
+    await model.wait_for_idle(apps=[application.name], status="active")
+    yield application
+
+
+@pytest_asyncio.fixture(scope="module", name="requirer_charm")
+async def requirer_charm_fixture(pytestconfig: pytest.Config) -> str:
+    """Get value from parameter any-charm-file."""
+    charm = pytestconfig.getoption("--any-charm-file")
+    if not charm:
+        return "ch:any-charm"
+    if not os.path.exists(charm):
+        logger.info("Using parent directory.")
+        charm = os.path.join("..", charm)
+    return charm

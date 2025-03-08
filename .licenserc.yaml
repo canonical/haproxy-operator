@@ -25,4 +25,5 @@ header:
     - '.woke.yaml'
     - 'templates/**'
     - 'src/loki_alert_rules/*.rule'
+    - 'tests/integration/haproxy_route_requirer_src.json'
   comment: on-failure
