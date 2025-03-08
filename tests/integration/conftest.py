@@ -389,13 +389,12 @@ async def hacluster_fixture(
 
 @pytest_asyncio.fixture(scope="function", name="haproxy_route_requirer")
 async def haproxy_route_requirer_fixture(
-    model: Model,
+    model: Model, requirer_charm: str
 ) -> typing.AsyncGenerator[Application, None]:
     """Deploy any-charm and configure it to serve as a requirer for the http interface."""
     application = await model.deploy(
-        "any-charm",
+        requirer_charm,
         application_name="haproxy-route-requirer",
-        channel="beta",
         config={
             "src-overwrite": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(encoding="utf-8"),
             "python-packages": "pydantic",
@@ -403,3 +402,15 @@ async def haproxy_route_requirer_fixture(
     )
     await model.wait_for_idle(apps=[application.name], status="active")
     yield application
+
+
+@pytest_asyncio.fixture(scope="module", name="requirer_charm")
+async def requirer_charm_fixture(pytestconfig: pytest.Config) -> str:
+    """Get value from parameter any-charm-file."""
+    charm = pytestconfig.getoption("--any-charm-file")
+    if not charm:
+        return "ch:any-charm"
+    if not os.path.exists(charm):
+        logger.info("Using parent directory.")
+        charm = os.path.join("..", charm)
+    return charm

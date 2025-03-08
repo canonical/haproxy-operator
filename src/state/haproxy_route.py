@@ -24,7 +24,7 @@ from state.tls import TLSInformation
 
 from .exception import CharmStateValidationBaseError
 
-HAPROXY_ROUTE_RELATION = "haproxy_route"
+HAPROXY_ROUTE_RELATION = "haproxy-route"
 HAPROXY_PEER_INTEGRATION = "haproxy-peers"
 logger = logging.getLogger()
 

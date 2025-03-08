@@ -38,7 +38,7 @@ from http_interface import (
 )
 from state.config import CharmConfig
 from state.ha import HACLUSTER_INTEGRATION, HAPROXY_PEER_INTEGRATION, HAInformation
-from state.haproxy_route import HaproxyRouteRequirersInformation
+from state.haproxy_route import HaproxyRouteRequirersInformation, HAPROXY_ROUTE_RELATION
 from state.ingress import IngressRequirersInformation
 from state.tls import TLSInformation
 from state.validation import validate_config_and_tls
@@ -268,7 +268,9 @@ class HAProxyCharm(ops.CharmBase):
                 self.unit.set_ports(80, 443)
                 if self.unit.is_leader():
                     for backend in haproxy_route_requirers_information.backends:
-                        relation = self.model.get_relation(backend.relation_id)
+                        relation = self.model.get_relation(
+                            HAPROXY_ROUTE_RELATION, backend.relation_id
+                        )
                         if not relation:
                             logger.error("Relation does not exist, skipping.")
                         self.haproxy_route_provider.publish_proxied_endpoints(
