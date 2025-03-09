@@ -33,7 +33,7 @@ async def test_get_certificate_action(
     stdout = action.results.get("stdout")
     assert f"{TEST_EXTERNAL_HOSTNAME_CONFIG}.pem" in stdout
 
-    # The action should fail 
+    # The action should fail
     # when we run the get-certificate action without the required hostname parameter.
     with pytest.raises(Exception):
         action = await configured_application_with_tls.units[0].run_action("get-certificate")

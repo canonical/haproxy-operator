@@ -277,6 +277,11 @@ class HAProxyCharm(ops.CharmBase):
                             list(map(lambda x: f"https://{x}", backend.hostname_acls)), relation
                         )
             case _:
+                if self.model.get_relation(TLS_CERT_RELATION):
+                    # Reconcile certificates in case the certificates relation is present
+                    tls_information = TLSInformation.from_charm(self, self.certificates)
+                    self._tls.certificate_available(tls_information)
+
                 self.unit.set_ports(80)
                 self.haproxy_service.reconcile_default(config)
         self.unit.status = ops.ActiveStatus()
