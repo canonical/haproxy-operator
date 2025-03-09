@@ -38,7 +38,7 @@ from http_interface import (
 )
 from state.config import CharmConfig
 from state.ha import HACLUSTER_INTEGRATION, HAPROXY_PEER_INTEGRATION, HAInformation
-from state.haproxy_route import HaproxyRouteRequirersInformation, HAPROXY_ROUTE_RELATION
+from state.haproxy_route import HAPROXY_ROUTE_RELATION, HaproxyRouteRequirersInformation
 from state.ingress import IngressRequirersInformation
 from state.tls import TLSInformation
 from state.validation import validate_config_and_tls

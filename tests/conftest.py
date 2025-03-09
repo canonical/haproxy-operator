@@ -12,4 +12,3 @@ def pytest_addoption(parser):
     """
     parser.addoption("--charm-file", action="store")
     parser.addoption("--any-charm-file", action="store")
-
