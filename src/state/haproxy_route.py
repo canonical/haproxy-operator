@@ -251,7 +251,7 @@ class HaproxyRouteRequirersInformation:
             requirers_hostnames.extend(backend.hostname_acls)
 
         if len(requirers_paths) != len(set(requirers_paths)):
-            logger.error(
+            logger.warning(
                 (
                     "Requirers defined path(s) that map to multiple backends."
                     "This can cause unintended behaviours."
@@ -259,7 +259,7 @@ class HaproxyRouteRequirersInformation:
             )
 
         if len(requirers_hostnames) != len(set(requirers_hostnames)):
-            logger.error(
+            logger.warning(
                 (
                     "Requirers defined hostname(s) that map to multiple backends."
                     "This can cause unintended behaviours."
