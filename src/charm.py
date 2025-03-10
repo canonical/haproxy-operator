@@ -37,6 +37,7 @@ from http_interface import (
     HTTPRequirer,
 )
 from state.config import CharmConfig
+from state.exception import CharmStateValidationBaseError
 from state.ha import HACLUSTER_INTEGRATION, HAPROXY_PEER_INTEGRATION, HAInformation
 from state.haproxy_route import HAPROXY_ROUTE_RELATION, HaproxyRouteRequirersInformation
 from state.ingress import IngressRequirersInformation
@@ -50,6 +51,10 @@ INGRESS_RELATION = "ingress"
 TLS_CERT_RELATION = "certificates"
 REVERSE_PROXY_RELATION = "reverseproxy"
 WEBSITE_RELATION = "website"
+
+
+class HaproxyUnitAddressNotAvailableError(CharmStateValidationBaseError):
+    """Exception raised when ingress integration is not established."""
 
 
 class ProxyMode(StrEnum):
@@ -246,20 +251,9 @@ class HAProxyCharm(ops.CharmBase):
                 tls_information = TLSInformation.from_charm(self, self.certificates)
                 self._tls.certificate_available(tls_information)
 
-                # Get peer units information
-                peers: list[str] = []
-                unit_address = self._get_unit_address()
-                if not unit_address:
-                    self.unit.status = ops.BlockedStatus(
-                        "Couldn't get the executing unit's IP address."
-                    )
-                    return
-                peers.append(unit_address)
-                peers.extend(self._get_peer_units_address())
-
                 haproxy_route_requirers_information = (
                     HaproxyRouteRequirersInformation.from_provider(
-                        self.haproxy_route_provider, tls_information, peers
+                        self.haproxy_route_provider, tls_information, self._get_peer_units_address()
                     )
                 )
                 self.haproxy_service.reconcile_haproxy_route(
@@ -397,6 +391,29 @@ class HAProxyCharm(ops.CharmBase):
         """Ensure that the charm is ready to handle TLS-related events."""
         TLSInformation.validate(self)
 
+    def _get_peer_units_address(self) -> list[str]:
+        """Get address of peer units.
+
+        Returns:
+            list[str]: The list of peer units address.
+        """
+        unit_address = self._get_unit_address()
+        if not unit_address:
+            raise HaproxyUnitAddressNotAvailableError(
+                "Couldn't get the executing unit's IP address."
+            )
+        peer_units_address: list[str] = [unit_address]
+        if haproxy_peer_integration := self.model.get_relation(HAPROXY_PEER_INTEGRATION):
+            for unit in haproxy_peer_integration.units:
+                if unit != self.unit:
+                    if peer_unit_address := haproxy_peer_integration.data[unit].get(
+                        "private-address"
+                    ):
+                        peer_units_address.append(peer_unit_address)
+                    else:
+                        logger.warning("Cannot get address for peer unit: %s. Skipping", unit)
+        return peer_units_address
+
     def _get_unit_address(self) -> typing.Optional[str]:
         """Get the current unit's address.
 
@@ -411,24 +428,6 @@ class HAProxyCharm(ops.CharmBase):
         ):
             return str(bind_address)
         return None
-
-    def _get_peer_units_address(self) -> list[str]:
-        """Get address of peer units.
-
-        Returns:
-            liststr]: The list of peer units address.
-        """
-        peer_units_address: list[str] = []
-        if haproxy_peer_integration := self.model.get_relation(HAPROXY_PEER_INTEGRATION):
-            for unit in haproxy_peer_integration.units:
-                if unit != self.unit:
-                    if peer_unit_address := haproxy_peer_integration.data[unit].get(
-                        "private-address"
-                    ):
-                        peer_units_address.append(peer_unit_address)
-                    else:
-                        logger.warning("Cannot get address for peer unit: %s. Skipping", unit)
-        return peer_units_address
 
 
 if __name__ == "__main__":  # pragma: nocover
