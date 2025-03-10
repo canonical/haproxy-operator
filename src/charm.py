@@ -253,7 +253,9 @@ class HAProxyCharm(ops.CharmBase):
 
                 haproxy_route_requirers_information = (
                     HaproxyRouteRequirersInformation.from_provider(
-                        self.haproxy_route_provider, tls_information, self._get_peer_units_address()
+                        self.haproxy_route_provider,
+                        tls_information,
+                        self._get_peer_units_address(),
                     )
                 )
                 self.haproxy_service.reconcile_haproxy_route(
