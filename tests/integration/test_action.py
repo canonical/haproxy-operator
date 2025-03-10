@@ -33,16 +33,8 @@ async def test_get_certificate_action(
     stdout = action.results.get("stdout")
     assert f"{TEST_EXTERNAL_HOSTNAME_CONFIG}.pem" in stdout
 
-
-@pytest.mark.abort_on_fail
-async def test_get_certificate_action_missing_param(
-    configured_application_with_tls: Application,
-):
-    """
-    arrange: Deploy the charm with valid config and tls integration.
-    act: Run the get-certificate action without the required hostname parameter.
-    assert: The action fails.
-    """
+    # The action should fail
+    # when we run the get-certificate action without the required hostname parameter.
     with pytest.raises(Exception):
         action = await configured_application_with_tls.units[0].run_action("get-certificate")
         await action.wait()

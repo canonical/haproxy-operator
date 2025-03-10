@@ -22,10 +22,9 @@ async def test_ha(application: Application, hacluster: Application):
     )
 
     await application.model.add_relation(f"{application.name}:ha", f"{hacluster.name}:ha")
+    # We wait for 10 minutes to ensure that hacluster has enough time to go into idle state.
     await application.model.wait_for_idle(
-        apps=[application.name],
-        idle_period=30,
-        status="blocked",
+        apps=[application.name], idle_period=30, status="blocked", timeout=600
     )
 
     vip = await get_unit_ip_address(application)
