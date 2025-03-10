@@ -233,7 +233,6 @@ class HaproxyRouteRequirersInformation:
             )
         except DataValidationError as exc:
             # This exception is only raised if the provider has "raise_on_validation_error" set
-            logger.error("Error validating requirer data: %s", str(exc))
             raise HaproxyRouteIntegrationDataValidationError from exc
 
     @model_validator(mode="after")
