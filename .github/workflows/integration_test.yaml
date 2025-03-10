@@ -13,7 +13,3 @@ jobs:
       self-hosted-runner: true
       charmcraft-channel: latest/edge
       modules: '["test_action.py","test_config.py","test_cos.py","test_charm.py","test_ha.py","test_haproxy_route.py","test_http_interface.py","test_ingress.py"]'
-      pre-run-script: |
-        -c "curl -L https://github.com/canonical/haproxy-operator/releases/download/rev136/any-charm_ubuntu-22.04-amd64.charm -o ${GITHUB_WORKSPACE}/any-charm_ubuntu-22.04-amd64.charm"
-      extra-arguments: |
-        --any-charm-file=${GITHUB_WORKSPACE}/any-charm_ubuntu-22.04-amd64.charm
