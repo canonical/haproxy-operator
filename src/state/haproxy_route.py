@@ -227,7 +227,14 @@ class HaproxyRouteRequirersInformation:
                 backends.append(backend)
 
             return HaproxyRouteRequirersInformation(
-                backends=backends,
+                # Sort backend by the max depth of the required path.
+                # This is to ensure that backends with deeper path ACLs get routed first.
+                backends=sorted(
+                    backends,
+                    key=lambda backend: max(
+                        map(len, cast(HAProxyRouteBackend, backend).application_data.paths)
+                    ),
+                ),
                 stick_table_entries=stick_table_entries,
                 peers=list(map(lambda x: cast(IPvAnyAddress, x), peers)),
             )
