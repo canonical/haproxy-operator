@@ -392,6 +392,7 @@ async def haproxy_route_requirer_fixture(model: Model) -> typing.AsyncGenerator[
     """Deploy any-charm and configure it to serve as a requirer for the http interface."""
     application = await model.deploy(
         "any-charm",
+        channel="beta",
         revision=40,
         application_name="haproxy-route-requirer",
         config={
