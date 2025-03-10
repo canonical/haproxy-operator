@@ -427,7 +427,7 @@ class HAProxyCharm(ops.CharmBase):
                     ):
                         peer_units_address.append(peer_unit_address)
                     else:
-                        logger.error("Cannot get address for peer unit: %s. Skipping", unit)
+                        logger.warning("Cannot get address for peer unit: %s. Skipping", unit)
         return peer_units_address
 
 
