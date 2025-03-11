@@ -270,7 +270,7 @@ class HAProxyCharm(ops.CharmBase):
                         if not relation:
                             logger.error("Relation does not exist, skipping.")
                         self.haproxy_route_provider.publish_proxied_endpoints(
-                            list(map(lambda x: f"https://{x}", backend.hostname_acls)), relation
+                            [f"https://{hostname}" for hostname in backend.hostname_acls], relation
                         )
             case _:
                 if self.model.get_relation(TLS_CERT_RELATION):

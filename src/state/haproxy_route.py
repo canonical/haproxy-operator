@@ -232,7 +232,8 @@ class HaproxyRouteRequirersInformation:
                 backends=sorted(
                     backends,
                     key=lambda backend: max(
-                        map(len, cast(HAProxyRouteBackend, backend).application_data.paths)
+                        len(path)
+                        for path in cast(HAProxyRouteBackend, backend).application_data.paths
                     ),
                 ),
                 stick_table_entries=stick_table_entries,
