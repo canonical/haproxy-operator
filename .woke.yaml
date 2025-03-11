@@ -1,5 +1,6 @@
 ignore_files:
   - lib/*
+  - tests/integration/any_charm_ingress_requirer_src_rewrite.json
 
 rules:
   # Ignore whitelist - we are using it to ignore pydantic in pyptoject.toml
