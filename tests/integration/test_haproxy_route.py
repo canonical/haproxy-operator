@@ -25,8 +25,7 @@ async def test_haproxy_route_integration(
     Assert that the requirer endpoint is available.
     """
     application = configured_application_with_tls
-    action = await haproxy_route_requirer.units[0].run_action("rpc", method="start_server")
-    await action.wait()
+
     await application.model.add_relation(
         f"{application.name}:haproxy-route", f"{haproxy_route_requirer.name}:require-haproxy-route"
     )

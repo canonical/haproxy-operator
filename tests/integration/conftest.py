@@ -400,4 +400,7 @@ async def haproxy_route_requirer_fixture(model: Model) -> typing.AsyncGenerator[
         },
     )
     await model.wait_for_idle(apps=[application.name], status="active")
+
+    action = await application.units[0].run_action("rpc", method="start_server")
+    await action.wait()
     yield application
