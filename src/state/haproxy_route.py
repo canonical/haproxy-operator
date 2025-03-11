@@ -229,15 +229,9 @@ class HaproxyRouteRequirersInformation:
             return HaproxyRouteRequirersInformation(
                 # Sort backend by the max depth of the required path.
                 # This is to ensure that backends with deeper path ACLs get routed first.
-                backends=sorted(
-                    backends,
-                    key=lambda backend: max(
-                        len(path)
-                        for path in cast(HAProxyRouteBackend, backend).application_data.paths
-                    ),
-                ),
+                backends=sorted(backends, key=get_backend_max_path_depth, reverse=True),
                 stick_table_entries=stick_table_entries,
-                peers=list(map(lambda x: cast(IPvAnyAddress, x), peers)),
+                peers=[cast(IPvAnyAddress, peer_address) for peer_address in peers],
             )
         except DataValidationError as exc:
             # This exception is only raised if the provider has "raise_on_validation_error" set
@@ -299,3 +293,20 @@ def get_servers_definition_from_requirer_data(
                 )
             )
     return servers
+
+
+def get_backend_max_path_depth(backend: HAProxyRouteBackend) -> int:
+    """Return the max depth of requested paths for the given backend.
+
+    Return 1 if no custom path is requested.
+
+    Args:
+        backend: haproxy-route backend.
+
+    Returns:
+        int: The max requested path depth
+    """
+    paths = backend.application_data.paths
+    if not paths:
+        return 1
+    return max(len(path) for path in paths)

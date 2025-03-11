@@ -393,7 +393,6 @@ async def haproxy_route_requirer_fixture(model: Model) -> typing.AsyncGenerator[
     application = await model.deploy(
         "any-charm",
         channel="beta",
-        revision=40,
         application_name="haproxy-route-requirer",
         config={
             "src-overwrite": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(encoding="utf-8"),
