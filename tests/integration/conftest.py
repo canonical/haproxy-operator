@@ -343,6 +343,8 @@ async def any_charm_ingress_requirer_fixture(
         },
     )
     await model.wait_for_idle(apps=[application.name], status="active")
+    action = await application.units[0].run_action("rpc", method="start_server")
+    await action.wait()
     yield application
 
 
