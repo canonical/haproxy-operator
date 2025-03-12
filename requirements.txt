@@ -4,4 +4,4 @@ jsonschema==4.23.0
 ops==2.19.0
 pydantic==2.10.6
 interface_hacluster @ git+https://github.com/charmed-kubernetes/charm-interface-hacluster@1.31+ck1
-cosl==0.0.56
+cosl==0.0.57
