@@ -22,7 +22,9 @@ logger = logging.getLogger(__name__)
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 GATEWAY_CLASS_CONFIG = "cilium"
-HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/haproxy_route_requirer_src.json"
+HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/haproxy_route_requirer.py"
+HAPROXY_ROUTE_LIB_SRC = "lib/charms/haproxy/v0/haproxy_route.py"
+APT_LIB_SRC = "lib/charms/operator_libs_linux/v0/apt.py"
 
 
 @pytest_asyncio.fixture(scope="module", name="model")
@@ -397,7 +399,17 @@ async def haproxy_route_requirer_fixture(model: Model) -> typing.AsyncGenerator[
         channel="beta",
         application_name="haproxy-route-requirer",
         config={
-            "src-overwrite": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(encoding="utf-8"),
+            "src-overwrite": json.dumps(
+                {
+                    "any_charm.py": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(
+                        encoding="utf-8"
+                    ),
+                    "haproxy_route.py": pathlib.Path(HAPROXY_ROUTE_LIB_SRC).read_text(
+                        encoding="utf-8"
+                    ),
+                    "apt.py": pathlib.Path(APT_LIB_SRC).read_text(encoding="utf-8"),
+                }
+            ),
             "python-packages": "pydantic",
         },
     )

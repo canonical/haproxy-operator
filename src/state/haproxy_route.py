@@ -309,4 +309,4 @@ def get_backend_max_path_depth(backend: HAProxyRouteBackend) -> int:
     paths = backend.application_data.paths
     if not paths:
         return 1
-    return max(len(path) for path in paths)
+    return max(len(path.rstrip("/").split("/")) for path in paths)
