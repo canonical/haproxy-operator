@@ -208,11 +208,7 @@ class HaproxyRouteRequirersInformation:
             requirers = haproxy_route.get_data(haproxy_route.relations)
             backends: list[HAProxyRouteBackend] = []
             for requirer in requirers.requirers_data:
-                if requirer.application_data.service in backend_names:
-                    logger.error("Requirers requested duplicate backend names.")
-                    raise HaproxyRouteIntegrationDataValidationError(
-                        "Requirers requested duplicate backend names."
-                    )
+                # Duplicate backend names check is done in the library's `get_data` method
                 backend_names.add(requirer.application_data.service)
 
                 if requirer.application_data.rate_limit:

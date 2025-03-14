@@ -142,7 +142,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 3
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -577,7 +577,7 @@ class HaproxyRouteRequirersData:
         """Check that requirers define unique services.
 
         Raises:
-            ValidationError: When requirers declared duplicate services.
+            DataValidationError: When requirers declared duplicate services.
 
         Returns:
             The validated model.
@@ -586,7 +586,7 @@ class HaproxyRouteRequirersData:
             requirer_data.application_data.service for requirer_data in self.requirers_data
         ]
         if len(services) != len(set(services)):
-            raise ValidationError("Services declaration by requirers must be unique.")
+            raise DataValidationError("Services declaration by requirers must be unique.")
 
         return self
 
