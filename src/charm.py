@@ -37,7 +37,9 @@ from http_interface import (
     HTTPRequirer,
 )
 from state.config import CharmConfig
+from state.exception import CharmStateValidationBaseError
 from state.ha import HACLUSTER_INTEGRATION, HAPROXY_PEER_INTEGRATION, HAInformation
+from state.haproxy_route import HAPROXY_ROUTE_RELATION, HaproxyRouteRequirersInformation
 from state.ingress import IngressRequirersInformation
 from state.tls import TLSInformation
 from state.validation import validate_config_and_tls
@@ -51,16 +53,22 @@ REVERSE_PROXY_RELATION = "reverseproxy"
 WEBSITE_RELATION = "website"
 
 
+class HaproxyUnitAddressNotAvailableError(CharmStateValidationBaseError):
+    """Exception raised when ingress integration is not established."""
+
+
 class ProxyMode(StrEnum):
     """StrEnum of possible http_route types.
 
     Attrs:
+        HAPROXY_ROUTE: When haproxy-route is related.
         INGRESS: when ingress is related.
         LEGACY: when reverseproxy is related.
         NOPROXY: when haproxy should return a default page.
         INVALID: when the charm state is invalid.
     """
 
+    HAPROXY_ROUTE = "haproxy-route"
     INGRESS = "ingress"
     LEGACY = "legacy"
     NOPROXY = "noproxy"
@@ -197,17 +205,15 @@ class HAProxyCharm(ops.CharmBase):
             # by the _validate_state method
             return
 
-        if self.certificates._tls_relation_created():  # pylint: disable=protected-access
-            # Reconcile certificates in case the certificates relation is present
-            tls_information = TLSInformation.from_charm(self, self.certificates)
-            self._tls.certificate_available(tls_information)
-
         ha_information = HAInformation.from_charm(self)
         self._reconcile_ha(ha_information)
 
         config = CharmConfig.from_charm(self)
         match proxy_mode:
             case ProxyMode.INGRESS:
+                tls_information = TLSInformation.from_charm(self, self.certificates)
+                self._tls.certificate_available(tls_information)
+
                 ingress_requirers_information = IngressRequirersInformation.from_provider(
                     self._ingress_provider
                 )
@@ -216,6 +222,11 @@ class HAProxyCharm(ops.CharmBase):
                     config, ingress_requirers_information, tls_information.external_hostname
                 )
             case ProxyMode.LEGACY:
+                if self.model.get_relation(TLS_CERT_RELATION):
+                    # Reconcile certificates in case the certificates relation is present
+                    tls_information = TLSInformation.from_charm(self, self.certificates)
+                    self._tls.certificate_available(tls_information)
+
                 legacy_invalid_requested_port: list[str] = []
                 required_ports: set[Port] = set()
                 for service in self.reverseproxy_requirer.get_services_definition().values():
@@ -236,7 +247,42 @@ class HAProxyCharm(ops.CharmBase):
                 self.haproxy_service.reconcile_legacy(
                     config, self.reverseproxy_requirer.get_services()
                 )
+            case ProxyMode.HAPROXY_ROUTE:
+                tls_information = TLSInformation.from_charm(self, self.certificates)
+                self._tls.certificate_available(tls_information)
+
+                haproxy_route_requirers_information = (
+                    HaproxyRouteRequirersInformation.from_provider(
+                        self.haproxy_route_provider,
+                        tls_information,
+                        self._get_peer_units_address(),
+                    )
+                )
+                self.haproxy_service.reconcile_haproxy_route(
+                    config, haproxy_route_requirers_information
+                )
+                self.unit.set_ports(80, 443)
+                if self.unit.is_leader():
+                    for backend in haproxy_route_requirers_information.backends:
+                        relation = self.model.get_relation(
+                            HAPROXY_ROUTE_RELATION, backend.relation_id
+                        )
+                        if not relation:
+                            logger.error("Relation does not exist, skipping.")
+                        self.haproxy_route_provider.publish_proxied_endpoints(
+                            [
+                                f"https://{hostname}/{path}"
+                                for hostname in backend.hostname_acls
+                                for path in backend.application_data.paths
+                            ],
+                            relation,
+                        )
             case _:
+                if self.model.get_relation(TLS_CERT_RELATION):
+                    # Reconcile certificates in case the certificates relation is present
+                    tls_information = TLSInformation.from_charm(self, self.certificates)
+                    self._tls.certificate_available(tls_information)
+
                 self.unit.set_ports(80)
                 self.haproxy_service.reconcile_default(config)
         self.unit.status = ops.ActiveStatus()
@@ -286,18 +332,25 @@ class HAProxyCharm(ops.CharmBase):
         """
         is_ingress_related = bool(self._ingress_provider.relations)
         is_legacy_related = bool(self.reverseproxy_requirer.relations)
+        is_haproxy_route_related = bool(self.haproxy_route_provider.relations)
 
-        if is_ingress_related and is_legacy_related:
-            logger.error("Both ingress and reverseproxy is related.")
-            self.unit.status = ops.BlockedStatus("Both ingress and reverseproxy is related.")
+        if is_ingress_related + is_legacy_related + is_haproxy_route_related > 1:
+            msg = (
+                "Only one integration out of 'ingress', 'reverseproxy' or 'haproxy-route' "
+                "can be active at a time."
+            )
+            logger.error(msg)
+            self.unit.status = ops.BlockedStatus(msg)
             return ProxyMode.INVALID
 
         if is_ingress_related:
-            TLSInformation.validate(self)
             return ProxyMode.INGRESS
 
         if is_legacy_related:
             return ProxyMode.LEGACY
+
+        if is_haproxy_route_related:
+            return ProxyMode.HAPROXY_ROUTE
 
         return ProxyMode.NOPROXY
 
@@ -338,11 +391,50 @@ class HAProxyCharm(ops.CharmBase):
         data = self.haproxy_route_provider.get_data(self.haproxy_route_provider.relations)
         # This is temporary as the logic to generate the haproxy config will be added later.
         logger.debug("Aggregated requirer data: %s", data)
+        self._reconcile()
 
     @validate_config_and_tls(defer=True)
     def _ensure_tls(self, _: ops.EventBase) -> None:
         """Ensure that the charm is ready to handle TLS-related events."""
         TLSInformation.validate(self)
+
+    def _get_peer_units_address(self) -> list[str]:
+        """Get address of peer units.
+
+        Returns:
+            list[str]: The list of peer units address.
+        """
+        unit_address = self._get_unit_address()
+        if not unit_address:
+            raise HaproxyUnitAddressNotAvailableError(
+                "Couldn't get the executing unit's IP address."
+            )
+        peer_units_address: list[str] = [unit_address]
+        if haproxy_peer_integration := self.model.get_relation(HAPROXY_PEER_INTEGRATION):
+            for unit in haproxy_peer_integration.units:
+                if unit != self.unit:
+                    if peer_unit_address := haproxy_peer_integration.data[unit].get(
+                        "private-address"
+                    ):
+                        peer_units_address.append(peer_unit_address)
+                    else:
+                        logger.warning("Cannot get address for peer unit: %s. Skipping", unit)
+        return peer_units_address
+
+    def _get_unit_address(self) -> typing.Optional[str]:
+        """Get the current unit's address.
+
+        Returns:
+            Optional[str]: The unit's address from juju-info binding,
+                or None if the address cannot be fetched
+        """
+        network_binding = self.model.get_binding("juju-info")
+        if (
+            network_binding is not None
+            and (bind_address := network_binding.network.bind_address) is not None
+        ):
+            return str(bind_address)
+        return None
 
 
 if __name__ == "__main__":  # pragma: nocover
