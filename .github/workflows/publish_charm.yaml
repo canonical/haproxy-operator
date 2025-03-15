@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: |
-          python3 - <<'____HERE' > /tmp/haproxy_route_requirer_src.json
+          python3 - <<'EOF' > /tmp/haproxy_route_requirer_src.json
           import json
           import pathlib
           import os
@@ -39,7 +39,7 @@ jobs:
               "apt.py": pathlib.Path(f"{workspace}/lib/charms/operator_libs_linux/v0/apt.py").read_text(encoding="utf-8"),
             }
           )
-          ____HERE
+          EOF
       - uses: actions/upload-artifact@v4
         with:
           name: haproxy_route_requirer_src
