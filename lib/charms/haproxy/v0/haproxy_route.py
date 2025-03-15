@@ -142,7 +142,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 3
+LIBPATCH = 4
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -943,6 +943,7 @@ class HaproxyRouteRequirer(Object):
         connect_timeout: int = 60,
         queue_timeout: int = 60,
         server_maxconn: Optional[int] = None,
+        unit_address: Optional[str] = None,
     ) -> None:
         """Update haproxy-route requirements data in the relation.
 
@@ -973,6 +974,7 @@ class HaproxyRouteRequirer(Object):
             connect_timeout: Timeout for client requests to haproxy in seconds.
             queue_timeout: Timeout for requests waiting in queue in seconds.
             server_maxconn: Maximum connections per server.
+            unit_address: IP address of the unit (if not provided, will use binding address).
         """
         self._application_data = self._generate_application_data(
             service,
@@ -1001,6 +1003,8 @@ class HaproxyRouteRequirer(Object):
             queue_timeout,
             server_maxconn,
         )
+        self._unit_address = unit_address
+
         self.update_relation_data()
 
     # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
