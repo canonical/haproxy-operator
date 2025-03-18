@@ -31,7 +31,7 @@ class SomeCharm(CharmBase):
     # There are 2 ways you can use the requirer implementation:
     # 1. To initialize the requirer with parameters:
     self.haproxy_route_requirer = HaproxyRouteRequirer(self,
-        host=<required>,
+        address=<required>,
         port=<required>,
         paths=<optional>,
         subdomains=<optional>,
@@ -65,7 +65,7 @@ class SomeCharm(CharmBase):
     # Afterwards regardless of how you initialized the requirer you can call the
     # provide_haproxy_route_requirements method anywhere in your charm to update the requirer data.
     # The method takes the same number of parameters as the requirer class.
-    # provide_haproxy_route_requirements(host=, port=, ...)
+    # provide_haproxy_route_requirements(address=, port=, ...)
 
     self.framework.observe(
         self.framework.on.config_changed, self._on_config_changed
@@ -115,14 +115,24 @@ class SomeCharm(CharmBase):
 import json
 import logging
 from enum import Enum
-from typing import Any, MutableMapping, Optional, Self, cast
+from typing import Any, MutableMapping, Optional, cast
 
 from ops import CharmBase, ModelError, RelationBrokenEvent
 from ops.charm import CharmEvents
 from ops.framework import EventBase, EventSource, Object
 from ops.model import Relation
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import (
+    AnyHttpUrl,
+    BaseModel,
+    ConfigDict,
+    Field,
+    IPvAnyAddress,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 from pydantic.dataclasses import dataclass
+from typing_extensions import Self
 
 # The unique Charmhub library identifier, never change it
 LIBID = "08b6347482f6455486b5f5bb4dc4e6cf"
@@ -132,7 +142,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 3
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -329,7 +339,8 @@ class LoadBalancingConfiguration(BaseModel):
     """
 
     algorithm: LoadBalancingAlgorithm = Field(
-        description="Configure the load balancing algorithm for the service."
+        description="Configure the load balancing algorithm for the service.",
+        default=LoadBalancingAlgorithm.LEASTCONN,
     )
     cookie: Optional[str] = Field(
         description="Only used when algorithm is COOKIE. Define the cookie to load balance on.",
@@ -345,8 +356,10 @@ class BandwidthLimit(BaseModel):
         download: Limit download speed (bytes per second).
     """
 
-    upload: int = Field(description="Upload limit (bytes per seconds).")
-    download: int = Field(description="Download limit (bytes per seconds).")
+    upload: Optional[int] = Field(description="Upload limit (bytes per seconds).", default=None)
+    download: Optional[int] = Field(
+        description="Download limit (bytes per seconds).", default=None
+    )
 
 
 # retry-on is not yet implemented
@@ -451,14 +464,14 @@ class RequirerApplicationData(_DatabagModel):
         description="Configure health check for the service.",
         default=ServerHealthCheck(),
     )
-    load_balancing: LoadBalancingConfiguration = LoadBalancingConfiguration(
-        algorithm=LoadBalancingAlgorithm.LEASTCONN
+    load_balancing: LoadBalancingConfiguration = Field(
+        description="Configure loadbalancing.", default=LoadBalancingConfiguration()
     )
     rate_limit: Optional[RateLimit] = Field(
         description="Configure rate limit for the service.", default=None
     )
-    bandwidth_limit: Optional[BandwidthLimit] = Field(
-        description="Configure bandwidth limit for the service.", default=None
+    bandwidth_limit: BandwidthLimit = Field(
+        description="Configure bandwidth limit for the service.", default=BandwidthLimit()
     )
     retry: Optional[Retry] = Field(
         description="Configure retry for incoming requests.", default=None
@@ -473,6 +486,45 @@ class RequirerApplicationData(_DatabagModel):
     server_maxconn: Optional[int] = Field(
         description="Configure maximum connection per server", default=None
     )
+
+    @field_validator("load_balancing")
+    @classmethod
+    def validate_load_balancing_configuration(
+        cls, configuration: LoadBalancingConfiguration
+    ) -> LoadBalancingConfiguration:
+        """Validate the parsed load balancing configuration.
+
+        Args:
+            configuration: The configuration to validate.
+
+        Raises:
+            ValueError: When cookie is not set under COOKIE load balancing mode.
+
+        Returns:
+            LoadBalancingConfiguration: The validated configuration.
+        """
+        if configuration.algorithm == LoadBalancingAlgorithm.COOKIE and not configuration.cookie:
+            raise ValueError("cookie must be set if load balacing algorithm is COOKIE.")
+        return configuration
+
+    @field_validator("rewrites")
+    @classmethod
+    def validate_rewrites(cls, rewrites: list[RewriteConfiguration]) -> list[RewriteConfiguration]:
+        """Validate the parsed list of rewrite configurations.
+
+        Args:
+            rewrites: The configurations to validate.
+
+        Raises:
+            ValueError: When header is not set under SET_HEADER rewrite method.
+
+        Returns:
+            list[RewriteConfiguration]: The validated configurations.
+        """
+        for rewrite in rewrites:
+            if rewrite.method == HaproxyRewriteMethod.SET_HEADER and not rewrite.method:
+                raise ValueError("header must be set if rewrite method is SET_HEADER.")
+        return rewrites
 
 
 class HaproxyRouteProviderAppData(_DatabagModel):
@@ -489,10 +541,10 @@ class RequirerUnitData(_DatabagModel):
     """haproxy-route requirer unit data.
 
     Attributes:
-        host: hostname or IP address of the unit.
+        address: IP address of the unit.
     """
 
-    host: str = Field(description="Hostname or IP address of the unit.")
+    address: IPvAnyAddress = Field(description="IP address of the unit.")
 
 
 @dataclass
@@ -500,10 +552,12 @@ class HaproxyRouteRequirerData:
     """haproxy-route requirer data.
 
     Attributes:
+        relation_id: Id of the relation.
         application_data: Application data.
         units_data: Units data
     """
 
+    relation_id: int
     application_data: RequirerApplicationData
     units_data: list[RequirerUnitData]
 
@@ -523,7 +577,7 @@ class HaproxyRouteRequirersData:
         """Check that requirers define unique services.
 
         Raises:
-            ValidationError: When requirers declared duplicate services.
+            DataValidationError: When requirers declared duplicate services.
 
         Returns:
             The validated model.
@@ -532,7 +586,7 @@ class HaproxyRouteRequirersData:
             requirer_data.application_data.service for requirer_data in self.requirers_data
         ]
         if len(services) != len(set(services)):
-            raise ValidationError("Services declaration by requirers must be unique.")
+            raise DataValidationError("Services declaration by requirers must be unique.")
 
         return self
 
@@ -613,11 +667,11 @@ class HaproxyRouteProvider(Object):
         if relations := self.relations:
             # Only for data validation
             _ = self.get_data(relations)
-            self.on.data_removed.emit()
+            self.on.data_available.emit()
 
     def _on_endpoint_removed(self, _: EventBase) -> None:
         """Handle relation broken/departed events."""
-        self.on.endpoint_removed.emit()
+        self.on.data_removed.emit()
 
     def get_data(self, relations: list[Relation]) -> HaproxyRouteRequirersData:
         """Fetch requirer data.
@@ -637,7 +691,9 @@ class HaproxyRouteProvider(Object):
                 application_data = self._get_requirer_application_data(relation)
                 units_data = self._get_requirer_units_data(relation)
                 haproxy_route_requirer_data = HaproxyRouteRequirerData(
-                    application_data=application_data, units_data=units_data
+                    application_data=application_data,
+                    units_data=units_data,
+                    relation_id=relation.id,
                 )
                 requirers_data.append(haproxy_route_requirer_data)
             except DataValidationError as exc:
@@ -696,6 +752,17 @@ class HaproxyRouteProvider(Object):
         except DataValidationError:
             logger.error("Invalid requirer application data for %s", relation.app.name)
             raise
+
+    def publish_proxied_endpoints(self, endpoints: list[str], relation: Relation) -> None:
+        """Publish to the app databag the proxied endpoints.
+
+        Args:
+            endpoints: The list of proxied endpoints to publish.
+            relation: The relation with the requirer application.
+        """
+        HaproxyRouteProviderAppData(
+            endpoints=list(map(lambda x: cast(AnyHttpUrl, x), endpoints))
+        ).dump(relation.data[self.charm.app], clear=True)
 
 
 class HaproxyRouteEnpointsReadyEvent(EventBase):
@@ -757,7 +824,7 @@ class HaproxyRouteRequirer(Object):
         connect_timeout: int = 60,
         queue_timeout: int = 60,
         server_maxconn: Optional[int] = None,
-        host: Optional[str] = None,
+        unit_address: Optional[str] = None,
     ) -> None:
         """Initialize the HaproxyRouteRequirer.
 
@@ -790,7 +857,7 @@ class HaproxyRouteRequirer(Object):
             connect_timeout: Timeout for client requests to haproxy in seconds.
             queue_timeout: Timeout for requests waiting in queue in seconds.
             server_maxconn: Maximum connections per server.
-            host: Hostname or IP address of the unit (if not provided, will use binding address).
+            unit_address: IP address of the unit (if not provided, will use binding address).
         """
         super().__init__(charm, relation_name)
 
@@ -827,7 +894,7 @@ class HaproxyRouteRequirer(Object):
             queue_timeout,
             server_maxconn,
         )
-        self._host = host
+        self._unit_address = unit_address
 
         on = self.charm.on
         self.framework.observe(on[self._relation_name].relation_created, self._configure)
@@ -848,7 +915,7 @@ class HaproxyRouteRequirer(Object):
         """Handle relation broken event."""
         self.on.removed.emit()
 
-    # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def provide_haproxy_route_requirements(
         self,
         service: str,
@@ -1003,6 +1070,8 @@ class HaproxyRouteRequirer(Object):
             ports = []
         if not paths:
             paths = []
+        if not subdomains:
+            subdomains = []
         if not path_rewrite_expressions:
             path_rewrite_expressions = []
         if not query_rewrite_expressions:
@@ -1026,8 +1095,17 @@ class HaproxyRouteRequirer(Object):
                 "connect": connect_timeout,
                 "queue": queue_timeout,
             },
+            "bandwidth_limit": {
+                "download": download_limit,
+                "upload": upload_limit,
+            },
             "deny_paths": deny_paths,
             "server_maxconn": server_maxconn,
+            "rewrites": self._generate_rewrite_configuration(
+                path_rewrite_expressions,
+                query_rewrite_expressions,
+                header_rewrite_expressions,
+            ),
         }
 
         if check := self._generate_server_healthcheck_configuration(
@@ -1035,22 +1113,10 @@ class HaproxyRouteRequirer(Object):
         ):
             application_data["check"] = check
 
-        if rewrites := self._generate_rewrite_configuration(
-            path_rewrite_expressions,
-            query_rewrite_expressions,
-            header_rewrite_expressions,
-        ):
-            application_data["rewrites"] = rewrites
-
         if rate_limit := self._generate_rate_limit_configuration(
             rate_limit_connections_per_minute, rate_limit_policy
         ):
             application_data["rate_limit"] = rate_limit
-
-        if bandwidth_limit := self._generate_bandwidth_limit_configuration(
-            download_limit, upload_limit
-        ):
-            application_data["bandwidth_limit"] = bandwidth_limit
 
         if retry := self._generate_retry_configuration(
             retry_count, retry_interval, retry_redispatch
@@ -1142,23 +1208,6 @@ class HaproxyRouteRequirer(Object):
             }
         return rate_limit_configuration
 
-    def _generate_bandwidth_limit_configuration(
-        self, download: Optional[int], upload: Optional[int]
-    ) -> dict[str, Any]:
-        """Generate bandwidth limit configuration.
-
-        Args:
-            download: Maximum download bandwidth in bytes per second.
-            upload: Maximum upload bandwidth in bytes per second.
-
-        Returns:
-            dict[str, Any]: Bandwidth limit configuration, or empty dict if no limits are set.
-        """
-        bandwidth_limit_configuration = {}
-        if download and upload:
-            bandwidth_limit_configuration = {"upload": upload, "download": download}
-        return bandwidth_limit_configuration
-
     def _generate_retry_configuration(
         self, count: Optional[int], interval: Optional[int], redispatch: bool
     ) -> dict[str, Any]:
@@ -1199,7 +1248,7 @@ class HaproxyRouteRequirer(Object):
         """
         if self.charm.unit.is_leader():
             application_data = self._prepare_application_data()
-            relation.data[self.app].update(application_data.dump())
+            application_data.dump(relation.data[self.app], clear=True)
 
     def _update_unit_data(self, relation: Relation) -> None:
         """Prepare and update the unit data in the relation databag.
@@ -1208,8 +1257,7 @@ class HaproxyRouteRequirer(Object):
             relation: The relation instance.
         """
         unit_data = self._prepare_unit_data()
-        relation.data[self.charm.unit].clear()
-        relation.data[self.charm.unit].update(unit_data.dump())
+        unit_data.dump(relation.data[self.charm.unit], clear=True)
 
     def _prepare_application_data(self) -> RequirerApplicationData:
         """Prepare and validate the application data.
@@ -1225,7 +1273,7 @@ class HaproxyRouteRequirer(Object):
                 RequirerApplicationData, RequirerApplicationData.from_dict(self._application_data)
             )
         except ValidationError as exc:
-            logger.exception("Validation error when preparing requirer application data.")
+            logger.error("Validation error when preparing requirer application data.")
             raise DataValidationError(
                 "Validation error when preparing requirer application data."
             ) from exc
@@ -1234,23 +1282,23 @@ class HaproxyRouteRequirer(Object):
         """Prepare and validate unit data.
 
         Raises:
-            DataValidationError: When no host or unit IP is available.
+            DataValidationError: When no address or unit IP is available.
 
         Returns:
             RequirerUnitData: The validated unit data model.
         """
-        host = self._host
-        if not host:
+        address = self._unit_address
+        if not address:
             network_binding = self.charm.model.get_binding("juju-info")
             if (
                 network_binding is not None
                 and (bind_address := network_binding.network.bind_address) is not None
             ):
-                host = str(bind_address)
+                address = str(bind_address)
             else:
-                logger.error("No host or unit IP available.")
-                raise DataValidationError("No host or unit IP available.")
-        return RequirerUnitData(host=host)
+                logger.error("No unit IP available.")
+                raise DataValidationError("No unit IP available.")
+        return RequirerUnitData(address=cast(IPvAnyAddress, address))
 
     def get_proxied_endpoints(self) -> list[AnyHttpUrl]:
         """The full ingress URL to reach the current unit.
