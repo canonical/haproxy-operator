@@ -28,7 +28,7 @@ jobs:
           import os
 
           workspace = os.environ["GITHUB_WORKSPACE"]
-          json.dumps(
+          print(json.dumps(
             {
               "any_charm.py": pathlib.Path(f"{workspace}/tests/integration/haproxy_route_requirer.py").read_text(
                 encoding="utf-8"
@@ -38,7 +38,7 @@ jobs:
               ),
               "apt.py": pathlib.Path(f"{workspace}/lib/charms/operator_libs_linux/v0/apt.py").read_text(encoding="utf-8"),
             }
-          )
+          ))
           EOF
       - uses: actions/upload-artifact@v4
         with:
