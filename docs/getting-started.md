@@ -107,7 +107,7 @@ curl -H "Host: $HAPROXY_HOSTNAME" $VIP/haproxy-tutorial-requirer/ok -L --insecur
 
 If successful, the terminal will respond with ok!
 
-# Clean up the Environment
+## Clean up the environment
 Well done! You've successfully completed the Deploy haproxy tutorial. To remove the model environment you created during this tutorial, use the following command.
 ```
 juju destroy-model haproxy-tutorial
