@@ -8,20 +8,20 @@ In this tutorial we'll look at how to deploy the haproxy charm to provide ingres
 * Juju 3.3 or higher installed and bootstrapped to a LXD controller. You can accomplish
 this process by using a [Multipass](https://multipass.run/) VM as outlined in this guide: [Set up / Tear down your test environment](https://canonical-juju.readthedocs-hosted.com/en/3.6/user/howto/manage-your-deployment/manage-your-deployment-environment/#set-things-up)
 
-### Set up a tutorial model
+## Set up a tutorial model
 
 To manage resources effectively and to separate this tutorial's workload from your usual work, create a new model using the following command.
 ```
 juju add-model haproxy-tutorial
 ```
 
-# Deploy the haproxy charm
+## Deploy the haproxy charm
 We will deploy charm from Charmhub, the `--base=ubuntu@24.04` is used so that the latest revision is correctly fetched. 
 ```
 juju deploy haproxy --channel=2.8/edge --base=ubuntu@24.04
 ```
 
-# Configure TLS
+## Configure TLS
 Haproxy enforces HTTPS when using the `ingress` integration. To set up the TLS for the `haproxy` charm, deploy the `self-signed-certificates` charm as the `cert` application, integrate with the haproxy charm and configure a hostname.
 ```
 juju deploy self-signed-certificates cert
@@ -109,7 +109,7 @@ curl -H "Host: $HAPROXY_HOSTNAME" $VIP/haproxy-tutorial-requirer/ok -L --insecur
 If successful, the terminal will respond with ok!
 
 ## Clean up the environment
-Well done! You've successfully completed the Deploy haproxy tutorial. To remove the model environment you created during this tutorial, use the following command.
+Well done! You've successfully completed the haproxy tutorial. To remove the model environment you created, use the following command.
 ```
 juju destroy-model haproxy-tutorial
 ```
