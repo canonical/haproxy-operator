@@ -11,7 +11,6 @@ this process by using a [Multipass](https://multipass.run/) VM as outlined in th
 ### Set up a tutorial model
 
 To manage resources effectively and to separate this tutorial's workload from your usual work, create a new model using the following command.
-
 ```
 juju add-model haproxy-tutorial
 ```
@@ -24,7 +23,6 @@ juju deploy haproxy --channel=2.8/edge --base=ubuntu@24.04
 
 # Configure TLS
 Haproxy enforces HTTPS when using the `ingress` integration. To set up the TLS for the `haproxy` charm, deploy the `self-signed-certificates` charm as the `cert` application, integrate with the haproxy charm and configure a hostname.
-
 ```
 juju deploy self-signed-certificates cert
 juju integrate haproxy cert
@@ -34,7 +32,6 @@ juju config haproxy external-hostname=$HAPROXY_HOSTNAME
 ```
 
 Check the status of the charms using juju status. The output should look similar to the following:
-
 ```
 haproxy-tutorial  lxd         localhost/localhost  3.6.4    unsupported  13:56:51+01:00
 
@@ -49,16 +46,14 @@ haproxy/0*  active    idle   0        10.208.204.138  80/tcp
 Machine  State    Address         Inst id        Base          AZ  Message
 0        started  10.208.204.138  juju-1d3062-0  ubuntu@24.04      Running
 1        started  10.208.204.86   juju-1d3062-1  ubuntu@24.04      Running
-
 ```
-Note the IP address of the haproxy unit; in the above example, the relevant IP address is `10.208.204.138`. Save the IP address to an environment variable named HAPROXY_IP:
 
+Note the IP address of the haproxy unit; in the above example, the relevant IP address is `10.208.204.138`. Save the IP address to an environment variable named HAPROXY_IP:
 ```
 HAPROXY_IP=10.208.204.138
 ```
 
 Now let's verify with curl:
-
 ```
 curl $HAPROXY_IP
 ```
@@ -83,7 +78,10 @@ ok!
 ```
 
 ## Configure high-availability
-### Scale the haproxy charm to 4 units
+High availability (HA) allows for the haproxy charm to continue to function even if some units fails, while maintaining the same address across all units. We'll do that with the help of the `hacluster` subordinate charm.
+
+### Scale the haproxy charm to 3 units
+We'll start by scaling the haproxy charm to 3 units as by default it's the minimum required by the `hacluster` charm.
 ```
 juju add-unit haproxy -n 3
 ```
@@ -104,13 +102,13 @@ juju config haproxy vip=$VIP
 
 Performing the same request, replacing $HAPROXY_IP with $VIP and you should see that the request is properly routed to the requirer.
 ```
-$ curl -H "Host: $HAPROXY_HOSTNAME" $VIP/haproxy-tutorial-requirer/ok -L --insecure --resolve $HAPROXY_HOSTNAME:443:$VIP
-ok!
+curl -H "Host: $HAPROXY_HOSTNAME" $VIP/haproxy-tutorial-requirer/ok -L --insecure --resolve $HAPROXY_HOSTNAME:443:$VIP
 ```
+
+If successful, the terminal will respond with ok!
 
 # Clean up the Environment
 Well done! You've successfully completed the Deploy haproxy tutorial. To remove the model environment you created during this tutorial, use the following command.
-
 ```
 juju destroy-model haproxy-tutorial
 ```
