@@ -71,7 +71,7 @@ Default page for the haproxy-operator charm
 
 ## Deploy the requirer application and relate to the haproxy charm
 ```
-juju deploy any-charm requirer --channel beta --config src-overwrite="$(curl https://raw.githubusercontent.com/canonical/haproxy-operator/2518f9efe58f48ef60a140f3cffe039078855b1d/tests/integration/any_charm_ingress_requirer_src_rewrite.json)" --config python-packages="pydantic<2.0"
+juju deploy any-charm requirer --channel beta --config src-overwrite="$(curl https://github.com/canonical/haproxy-operator/releases/download/rev141/haproxy_route_requirer_src.json)" --config python-packages="pydantic~=2.10"
 juju run requirer/0 rpc method=start_server
 juju relate requirer haproxy
 ```
