@@ -86,11 +86,11 @@ We'll start by scaling the haproxy charm to 3 units as by default it's the minim
 juju add-unit haproxy -n 3
 ```
 
-## Deploy the `hacluster` subordinate charm and relate it to the haproxy charm.
+### Deploy and integrate the `hacluster` subordinate charm
 We specify `--base=ubuntu@24.04` so that the charm is deployed with a base matching the `haproxy` charm
 ```
 juju deploy hacluster --channel=2.4/edge --base=ubuntu@24.04
-juju relate hacluster haproxy
+juju integrate hacluster haproxy
 ```
 
 ### Configure a virtual IP (vip)
