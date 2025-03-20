@@ -32,7 +32,7 @@ HAPROXY_HOSTNAME="haproxy.internal"
 juju config haproxy external-hostname=$HAPROXY_HOSTNAME
 ```
 
-After the charm has been successfully deployed, verify that it's serving the default page.
+After the charm has been successfully deployed, let's verify that it's serving the default page.
 ```
 juju status
 # Note down the IP address of the haproxy unit
