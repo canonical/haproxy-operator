@@ -79,7 +79,7 @@ $ curl -H "Host: $HAPROXY_HOSTNAME" $HAPROXY_IP/haproxy-tutorial-requirer/ok -L 
 If successful, the terminal will respond with `ok!`
 
 ## Configure high-availability
-High availability (HA) allows for the haproxy charm to continue to function even if some units fails, while maintaining the same address across all units. We'll do that with the help of the `hacluster` subordinate charm.
+High availability (HA) allows the haproxy charm to continue to function even if some units fails, while maintaining the same address across all units. We'll do that with the help of the `hacluster` subordinate charm.
 
 ### Scale the haproxy charm to 3 units
 We'll start by scaling the haproxy charm to 3 units as by default it's the minimum required by the `hacluster` charm.
