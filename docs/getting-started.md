@@ -68,14 +68,15 @@ Default page for the haproxy-operator charm
 ```
 juju deploy any-charm requirer --channel beta --config src-overwrite="$(curl https://github.com/canonical/haproxy-operator/releases/download/rev141/haproxy_route_requirer_src.json)" --config python-packages="pydantic~=2.10"
 juju run requirer/0 rpc method=start_server
-juju relate requirer haproxy
+juju integrate requirer haproxy
 ```
 
-You should now see that the request has been properly proxied to the backend service. The `--insecure` option is needed here as we are using a self-signed-certificate, as well as the `--resolve` option to manually perform a DNS lookup as haproxy will issue an HTTPS redirect to `$HAPROXY_HOSTNAME`. Finally, `-L` is also needed to automatically follow redirects.
+Let's check that the request has been properly proxied to the backend service. The `--insecure` option is needed here as we are using a self-signed-certificate, as well as the `--resolve` option to manually perform a DNS lookup as haproxy will issue an HTTPS redirect to `$HAPROXY_HOSTNAME`. Finally, `-L` is also needed to automatically follow redirects.
 ```
 $ curl -H "Host: $HAPROXY_HOSTNAME" $HAPROXY_IP/haproxy-tutorial-requirer/ok -L --insecure --resolve $HAPROXY_HOSTNAME:443:$HAPROXY_IP
-ok!
 ```
+
+If successful, the terminal will respond with `ok!`
 
 ## Configure high-availability
 High availability (HA) allows for the haproxy charm to continue to function even if some units fails, while maintaining the same address across all units. We'll do that with the help of the `hacluster` subordinate charm.
