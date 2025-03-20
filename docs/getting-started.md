@@ -10,8 +10,7 @@ this process by using a [Multipass](https://multipass.run/) VM as outlined in th
 
 ### Set up a tutorial model
 
-To manage resources effectively and to separate this tutorial's workload from
-your usual work, create a new model using the following command.
+To manage resources effectively and to separate this tutorial's workload from your usual work, create a new model using the following command.
 
 ```
 juju add-model haproxy-tutorial
@@ -24,6 +23,8 @@ juju deploy haproxy --channel=2.8/edge --base=ubuntu@24.04
 ```
 
 # Configure TLS
+Haproxy enforces HTTPS when using the `ingress` integration. To set up the TLS for the `haproxy` charm, deploy the `self-signed-certificates` charm as the `cert` application, integrate with the haproxy charm and configure a hostname.
+
 ```
 juju deploy self-signed-certificates cert
 juju integrate haproxy cert
@@ -32,14 +33,40 @@ HAPROXY_HOSTNAME="haproxy.internal"
 juju config haproxy external-hostname=$HAPROXY_HOSTNAME
 ```
 
-After the charm has been successfully deployed, let's verify that it's serving the default page.
+Check the status of the charms using juju status. The output should look similar to the following:
+
 ```
-juju status
-# Note down the IP address of the haproxy unit
-# Save the IP address to an environment variable named HAPROXY_IP
-HAPROXY_IP=
-# Verify with curl
+haproxy-tutorial  lxd         localhost/localhost  3.6.4    unsupported  13:56:51+01:00
+
+App      Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+cert              active      1  self-signed-certificates  1/stable  263  no       
+haproxy           active      1  haproxy                   2.8/edge  141  no       
+
+Unit        Workload  Agent  Machine  Public address  Ports   Message
+cert/0*     active    idle   1        10.208.204.86           
+haproxy/0*  active    idle   0        10.208.204.138  80/tcp  
+
+Machine  State    Address         Inst id        Base          AZ  Message
+0        started  10.208.204.138  juju-1d3062-0  ubuntu@24.04      Running
+1        started  10.208.204.86   juju-1d3062-1  ubuntu@24.04      Running
+
+```
+Note the IP address of the haproxy unit; in the above example, the relevant IP address is `10.208.204.138`. Save the IP address to an environment variable named HAPROXY_IP:
+
+```
+HAPROXY_IP=10.208.204.138
+```
+
+Now let's verify with curl:
+
+```
 curl $HAPROXY_IP
+```
+
+If successful, the terminal will output
+```
+ubuntu@primary:~$ curl $HAPROXY_IP
+Default page for the haproxy-operator charm
 ```
 
 ## Deploy the requirer application and relate to the haproxy charm
