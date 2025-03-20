@@ -63,9 +63,10 @@ If successful, the terminal will output
 Default page for the haproxy-operator charm
 ```
 
-## Deploy the requirer application and relate to the haproxy charm
+## Deploy the backend application and relate to the haproxy charm
+In this tutorial we will use `any-charm` as the backend application. We will fetch the predefined source file using `curl` and pass it to the charm with the `src-overwrite` option. This source file will allow us to start an Apache web server and communicate the relevant details to the `haproxy` charm so that traffic is properly routed to the Apache web server.
 ```
-juju deploy any-charm requirer --channel beta --config src-overwrite="$(curl https://github.com/canonical/haproxy-operator/releases/download/rev141/haproxy_route_requirer_src.json)" --config python-packages="pydantic~=2.10"
+juju deploy any-charm requirer --channel beta --config src-overwrite="$(curl -L https://github.com/canonical/haproxy-operator/releases/download/rev141/haproxy_route_requirer_src.json)" --config python-packages="pydantic~=2.10"
 juju run requirer/0 rpc method=start_server
 juju integrate requirer haproxy
 ```
