@@ -76,7 +76,7 @@ Let's check that the request has been properly proxied to the backend service. T
 curl -H "Host: $HAPROXY_HOSTNAME" $HAPROXY_IP/haproxy-tutorial-requirer/ok -L --insecure --resolve $HAPROXY_HOSTNAME:443:$HAPROXY_IP
 ```
 
-If successful, the terminal will respond with `ok!`
+If successful, the terminal will respond with `ok!`.
 
 ## Configure high-availability
 High availability (HA) allows the haproxy charm to continue to function even if some units fails, while maintaining the same address across all units. We'll do that with the help of the `hacluster` subordinate charm.
