@@ -16,7 +16,7 @@ juju add-model haproxy-tutorial
 ```
 
 ## Deploy the haproxy charm
-We will deploy charm from Charmhub, the `--base=ubuntu@24.04` is used so that the latest revision is correctly fetched. 
+We will deploy charm from Charmhub. The `--base=ubuntu@24.04` is used so that the latest revision is correctly fetched. 
 ```
 juju deploy haproxy --channel=2.8/edge --base=ubuntu@24.04
 ```
