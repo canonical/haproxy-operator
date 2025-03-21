@@ -106,7 +106,7 @@ Performing the same request as before, let's replace `$HAPROXY_IP` with `$VIP`. 
 curl -H "Host: $HAPROXY_HOSTNAME" $VIP/haproxy-tutorial-requirer/ok -L --insecure --resolve $HAPROXY_HOSTNAME:443:$VIP
 ```
 
-If successful, the terminal will respond with ok!
+If successful, the terminal will respond with `ok!`.
 
 ## Clean up the environment
 Well done! You've successfully completed the haproxy tutorial. To remove the model environment you created, use the following command.
