@@ -1,6 +1,5 @@
 ignore_files:
   - lib/*
-  - tests/integration/haproxy_route_requirer_src.json
 
 rules:
   # Ignore whitelist - we are using it to ignore pydantic in pyptoject.toml
