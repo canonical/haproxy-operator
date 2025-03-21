@@ -31,7 +31,7 @@ HAPROXY_HOSTNAME="haproxy.internal"
 juju config haproxy external-hostname=$HAPROXY_HOSTNAME
 ```
 
-Check the status of the charms using juju status. The output should look similar to the following:
+Check the status of the charms using `juju status`. The output should look similar to the following:
 ```
 haproxy-tutorial  lxd         localhost/localhost  3.6.4    unsupported  13:56:51+01:00
 
