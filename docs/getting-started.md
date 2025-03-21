@@ -88,7 +88,7 @@ juju add-unit haproxy -n 3
 ```
 
 ### Deploy and integrate the `hacluster` subordinate charm
-We specify `--base=ubuntu@24.04` so that the charm is deployed with a base matching the `haproxy` charm
+Deploy the subordinate charm, and specify `--base=ubuntu@24.04` so that the charm is deployed with a base matching the `haproxy` charm.
 ```
 juju deploy hacluster --channel=2.4/edge --base=ubuntu@24.04
 juju integrate hacluster haproxy
