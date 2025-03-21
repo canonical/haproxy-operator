@@ -58,7 +58,7 @@ Now let's verify with curl:
 curl $HAPROXY_IP
 ```
 
-If successful, the terminal will output
+If successful, the terminal will output:
 ```
 Default page for the haproxy-operator charm
 ```
