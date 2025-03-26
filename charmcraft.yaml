@@ -66,6 +66,8 @@ provides:
     interface: cos_agent
   website:
     interface: http
+  haproxy-route:
+    interface: haproxy-route
 
 peers:
   haproxy-peers:
