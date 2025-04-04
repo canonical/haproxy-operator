@@ -12,7 +12,9 @@ To configure a single entrypoint for all haproxy charm units, we can employ a va
 * DNS round-robin
 * Using a load balancer
 
-Note: Configuration of the entrypoint for the active-active configuration is outside of the scope of responsibility for the haproxy charm.
+[note]
+Configuration of the entrypoint for the active-active configuration is outside of the scope of responsibility for the haproxy charm.
+[/note]
 
 ## DNS round-robin
 DNS round-robin provides a single entrypoint for all haproxy units with no overhead, shifting the responsibility to the DNS server for load balancing purposes. However,  most DNS solutions lack health checks of unhealthy hosts, as well as requiring configuration changes every time there’s a change in the number of haproxy units or their IP addresses.
