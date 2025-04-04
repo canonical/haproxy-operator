@@ -18,7 +18,7 @@ Note: Configuration of the entrypoint for the active-active configuration is out
 DNS round-robin provides a single entrypoint for all haproxy units with no overhead, shifting the responsibility to the DNS server for load balancing purposes. However,  most DNS solutions lack health checks of unhealthy hosts, as well as requiring configuration changes every time there’s a change in the number of haproxy units or their IP addresses.
 
 ## Load balancing
-Most of the time a load balancer will be configured with a health check monitor and a floating IP to ensure availability of backend hosts as well as retain control of the assigned external IP address. Here is an example using Octavia: https://docs.openstack.org/octavia/stein/user/guides/basic-cookbook.html#basic-lb-with-hm-and-fip
+Most of the time a load balancer will be configured with a health check monitor and a floating IP to ensure availability of backend hosts as well as retain control of the assigned external IP address. For an example using Octavia, see the [OpenStack documentation](https://docs.openstack.org/octavia/stein/user/guides/basic-cookbook.html#basic-lb-with-hm-and-fip).
 
 
 # Active/passive
