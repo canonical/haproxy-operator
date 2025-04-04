@@ -34,7 +34,7 @@ Number of peer units required to bootstrap cluster services.
 
 ### [no_quorum_policy](https://opendev.org/openstack/charm-hacluster/src/commit/2449932bf7c618fda4fa412228a133688db13b02/config.yaml#L221)
 What to do when the cluster does not have quorum. Allowed values are:
-* ignore: continue all resource management,
-* freeze: continue resource management, but don’t recover resources from nodes not in the affected partition,
-* stop: stop all resources in the affected cluster partition,
-* suicide: fence all nodes in the affected cluster partition
+* ignore: continue all resource management.
+* freeze: continue resource management, but don’t recover resources from nodes not in the affected partition.
+* stop: stop all resources in the affected cluster partition.
+* suicide: fence all nodes in the affected cluster partition.
