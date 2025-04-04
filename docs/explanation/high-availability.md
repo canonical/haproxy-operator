@@ -24,7 +24,7 @@ Most of the time a load balancer will be configured with a health check monitor 
 # Active/passive
 An active-passive configuration consists of two or more nodes. In this configuration, only one unit is considered "active" at any given time. All other units are considered "passive" meaning they don't reply to incoming requests. The single entrypoint for all haproxy charm units exists in the form of a virtual IP address. The `hacluster` subordinate charm is responsible for managing this virtual IP address, attaching it to the "active" HAProxy unit and moving it to a "passive" unit when the "active" unit goes down.
 
-By default it is required to have at least 3 Haproxy units when using the `hacluster` subordinate charm to maintain a quorum. However, this can be configured. See the section on [Active/passive cluster configuration](##active/passive-cluster-configuration) for more details.
+By default it is required to have at least 3 HAProxy units when using the `hacluster` subordinate charm to maintain a quorum. However, this number can be configured. See the next section on active/passive cluster configuration for more details.
 
 ## Active/passive cluster configuration
 The `hacluster` charm provide operators with configuration options to fine-tune the cluster's behavior. Below are some key settings for Haproxy:
