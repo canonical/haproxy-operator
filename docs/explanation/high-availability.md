@@ -7,7 +7,7 @@ An active-active configuration consists of two or more Haproxy units that reply 
 juju add-unit haproxy -n 2
 ```
 
-To configure a single entrypoint for all haproxy units, we can employ a variety of methods, which includes but not limited to:
+To configure a single entrypoint for all haproxy charm units, we can employ a variety of methods, which includes but not limited to:
 * Using a floating IP address
 * DNS round-robin
 * Using a load balancer
