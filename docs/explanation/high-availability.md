@@ -12,15 +12,15 @@ To configure a single entrypoint for all haproxy charm units, we can employ a va
 * DNS round-robin
 * Using a load balancer
 
-[note]
-Configuration of the entrypoint for the active-active configuration is outside of the scope of responsibility for the haproxy charm.
-[/note]
+> **_NOTE:_**: Configuration of the entrypoint for the active-active configuration is outside of the scope of responsibility for the haproxy charm.
 
 ## DNS round-robin
 DNS round-robin provides a single entrypoint for all haproxy charm units with no overhead, shifting the responsibility to the DNS server for load balancing purposes. However, most DNS solutions lack health checks of unhealthy hosts, as well as requiring configuration changes every time there’s a change in the number of haproxy charm units or their IP addresses.
 
 ## Load balancing
 Most of the time a load balancer will be configured with a health check monitor and a floating IP to ensure availability of backend hosts as well as retain control of the assigned external IP address. For an example using Octavia, see the [OpenStack documentation](https://docs.openstack.org/octavia/stein/user/guides/basic-cookbook.html#basic-lb-with-hm-and-fip).
+
+> **_NOTE:_**: Sticky session should be configured explicitly at the load balancer level.
 
 
 # Active/passive
