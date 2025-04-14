@@ -1,4 +1,4 @@
-# How to configure a virtual IP on openstack
+# How to configure a virtual IP on OpenStack
 ## Create the openstack port for the virtual IP
 We need to do this to ensure that this IP will not get assigned to a new machine in the openstack subnet. Create the port using `openstack port create`:
 ```
