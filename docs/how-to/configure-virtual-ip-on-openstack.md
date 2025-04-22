@@ -40,7 +40,7 @@ Run `openstack port list` to get the ID of the corresponding OpenStack ports. Th
 +--------------------------------------+------+-------------------+------------------------------------------------------------------------------+--------+
 ```
 
-In this example, the openstack port IDs of the relevant units are `38861254-8991-4d1a-b686-050a016b2622`, `6885fbf7-8a3d-463b-9a85-5a74f88559c2`, `75ed7444-9fb6-42f9-bf33-237022b59255` and `fa086c2f-f8c4-41c1-87e6-89c4751c2cd3`. For each port, run `openstack port set --allow-address` to allow the virtual IP to forward traffic to the haproxy charm units:
+In this example, the OpenStack port IDs of the relevant units are `38861254-8991-4d1a-b686-050a016b2622`, `6885fbf7-8a3d-463b-9a85-5a74f88559c2`, `75ed7444-9fb6-42f9-bf33-237022b59255` and `fa086c2f-f8c4-41c1-87e6-89c4751c2cd3`. For each port, run `openstack port set --allow-address` to allow the virtual IP to forward traffic to the haproxy charm units:
 ```
 openstack port set 38861254-8991-4d1a-b686-050a016b2622 --allowed-address ip-address=10.142.65.2
 openstack port set 6885fbf7-8a3d-463b-9a85-5a74f88559c2 --allowed-address ip-address=10.142.65.2
