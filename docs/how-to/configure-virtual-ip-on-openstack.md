@@ -22,7 +22,9 @@ haproxy/4                  active       idle       18       10.142.65.219   80/t
   hacluster/6              waiting      idle                10.142.65.219           Resource: res_haproxy_b34f0e1_vip not yet configured
 ```
 
-Note down the IP address for each unit. In this example the IP address of the Haproxy units are: `10.142.65.173`, `10.142.65.60`, `10.142.65.229` and `10.142.65.219`. Then run `openstack port list` to get the ID of the corresponding openstack ports:
+Note the IP address for each unit. In this example the IP address of the HAProxy units are `10.142.65.173`, `10.142.65.60`, `10.142.65.229` and `10.142.65.219`. 
+
+Run `openstack port list` to get the ID of the corresponding OpenStack ports. The terminal will output something like the following:
 ```
 +--------------------------------------+------+-------------------+------------------------------------------------------------------------------+--------+
 | ID                                   | Name | MAC Address       | Fixed IP Addresses                                                           | Status |
