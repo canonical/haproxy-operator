@@ -6,7 +6,7 @@ openstack port create --fixed-ip subnet=0a3b2455-b6f9-47d5-a9aa-ce6857de9284,ip-
 ```
 
 ## Configure openstack ports
-Run `juju status` to get the IP address information for each Haproxy unit. You should see something similar to the output below:
+Run `juju status` to get the IP address information for each HAProxy unit. You should see something similar to the output below:
 ```
 haproxy/1                  active       idle       15       10.142.65.173   80/tcp  
   grafana-agent/9          active       idle                10.142.65.173           send-remote-write: off, tracing: off
