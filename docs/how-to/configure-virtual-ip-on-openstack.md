@@ -5,7 +5,7 @@ We need to do this to ensure that this IP will not get assigned to a new machine
 openstack port create --fixed-ip subnet=0a3b2455-b6f9-47d5-a9aa-ce6857de9284,ip-address=10.142.65.2 --no-security-group --network net_stg-haproxy vip
 ```
 
-## Configure openstack ports
+## Configure OpenStack ports
 Run `juju status` to get the IP address information for each HAProxy unit. You should see something similar to the output below:
 ```
 haproxy/1                  active       idle       15       10.142.65.173   80/tcp  
