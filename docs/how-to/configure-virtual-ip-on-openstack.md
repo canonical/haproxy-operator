@@ -49,7 +49,7 @@ openstack port set fa086c2f-f8c4-41c1-87e6-89c4751c2cd3 --allowed-address ip-add
 ```
 
 ## Test that the virtual IP address is working as intended
-Run `curl` to verify that you can reach the active Haproxy unit with the virtual IP address:
+Run `curl` to verify that you can reach the active HAProxy unit with the virtual IP address:
 ```
 curl 10.142.65.2
 ```
