@@ -2,7 +2,7 @@
 The process to get a virtual IP address for hacluster is different based the cloud on which the haproxy charm units are running. This document covers the process of creating a virtual IP address for a haproxy charm deployed on openstack.
 
 ## Create the openstack port for the virtual IP
-We need to do this to ensure that this IP will not get assigned to a new machine in the openstack subnet. 
+We need to do this to ensure that this IP will not get assigned to a new machine in the OpenStack subnet. 
 First, run `openstack subnet list` to find the subnet ID and the network ID on which the charm units are running. Then create the port using `openstack port create`, replacing `<subnet-id>` and `<network-id>` with values you got from running `openstack subnet list`:
 ```
 openstack port create --fixed-ip subnet=<subnet-id>,ip-address=10.142.65.2 --no-security-group --network <network-id> vip
