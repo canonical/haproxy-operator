@@ -8,8 +8,8 @@ First, run `openstack subnet list` to find the subnet ID and the network ID on w
 openstack port create --fixed-ip subnet=<subnet-id>,ip-address=10.142.65.2 --no-security-group --network <network-id> vip
 ```
 
-## Configure openstack ports
-Run `juju status` to get the IP address information for each Haproxy unit. You should see something similar to the output below:
+## Configure OpenStack ports
+Run `juju status` to get the IP address information for each HAProxy unit. You should see something similar to the output below:
 ```
 haproxy/1                  active       idle       15       10.142.65.173   80/tcp  
   grafana-agent/9          active       idle                10.142.65.173           send-remote-write: off, tracing: off
@@ -25,7 +25,9 @@ haproxy/4                  active       idle       18       10.142.65.219   80/t
   hacluster/6              waiting      idle                10.142.65.219           Resource: res_haproxy_b34f0e1_vip not yet configured
 ```
 
-Note down the IP address for each unit. In this example the IP address of the Haproxy units are: `10.142.65.173`, `10.142.65.60`, `10.142.65.229` and `10.142.65.219`. Then run `openstack port list` to get the ID of the corresponding openstack ports:
+Note the IP address for each unit. In this example the IP address of the HAProxy units are `10.142.65.173`, `10.142.65.60`, `10.142.65.229` and `10.142.65.219`. 
+
+Run `openstack port list` to get the ID of the corresponding OpenStack ports. The terminal will output something like the following:
 ```
 +--------------------------------------+------+-------------------+------------------------------------------------------------------------------+--------+
 | ID                                   | Name | MAC Address       | Fixed IP Addresses                                                           | Status |
@@ -41,7 +43,7 @@ Note down the IP address for each unit. In this example the IP address of the Ha
 +--------------------------------------+------+-------------------+------------------------------------------------------------------------------+--------+
 ```
 
-In this example, the openstack port IDs of the relevant units are `38861254-8991-4d1a-b686-050a016b2622`, `6885fbf7-8a3d-463b-9a85-5a74f88559c2`, `75ed7444-9fb6-42f9-bf33-237022b59255` and `fa086c2f-f8c4-41c1-87e6-89c4751c2cd3`. For each port, run `openstack port set --allow-address` to allow the virtual IP to forward traffic to the haproxy charm units:
+In this example, the OpenStack port IDs of the relevant units are `38861254-8991-4d1a-b686-050a016b2622`, `6885fbf7-8a3d-463b-9a85-5a74f88559c2`, `75ed7444-9fb6-42f9-bf33-237022b59255` and `fa086c2f-f8c4-41c1-87e6-89c4751c2cd3`. For each port, run `openstack port set --allow-address` to allow the virtual IP to forward traffic to the haproxy charm units:
 ```
 openstack port set 38861254-8991-4d1a-b686-050a016b2622 --allowed-address ip-address=10.142.65.2
 openstack port set 6885fbf7-8a3d-463b-9a85-5a74f88559c2 --allowed-address ip-address=10.142.65.2
@@ -50,7 +52,7 @@ openstack port set fa086c2f-f8c4-41c1-87e6-89c4751c2cd3 --allowed-address ip-add
 ```
 
 ## Test that the virtual IP address is working as intended
-Run `curl` to verify that you can reach the active Haproxy unit with the virtual IP address:
+Run `curl` to verify that you can reach the active HAProxy unit with the virtual IP address:
 ```
 curl 10.142.65.2
 ```
