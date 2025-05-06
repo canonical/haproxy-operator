@@ -1,5 +1,5 @@
 # How to configure a virtual IP on OpenStack
-The process to get a virtual IP address for hacluster is different based the cloud on which the haproxy charm units are running. This document covers the process of creating a virtual IP address for a haproxy charm deployed on openstack.
+The process to get a virtual IP address for hacluster is different based the cloud on which the haproxy charm units are running. This document covers the process of creating a virtual IP address for a haproxy charm deployed on OpenStack.
 
 ## Create the OpenStack port for the virtual IP
 We need to do this to ensure that this IP will not get assigned to a new machine in the OpenStack subnet. 
