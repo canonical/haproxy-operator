@@ -124,7 +124,7 @@ def peer_relation_fixture():
 
     Yield: The modeled haproxy-peers relation.
     """
-    yield scenario.PeerRelation(
+    return scenario.PeerRelation(
         endpoint="haproxy-peers",
         peers_data={},
     )
