@@ -1,7 +1,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Unit tests for the bind module."""
+"""Unit tests for the haproxy charm."""
 
 import logging
 
