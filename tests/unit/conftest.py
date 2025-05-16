@@ -3,11 +3,12 @@
 
 """Fixtures for haproxy-operator unit tests."""
 import typing
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
+import scenario
 from charms.tls_certificates_interface.v4.tls_certificates import Certificate, PrivateKey
-from ops.testing import Harness
+from ops.testing import Context, Harness
 
 from charm import HAProxyCharm
 
@@ -99,3 +100,46 @@ def ingress_requirer_application_data_fixture() -> dict[str, str]:
 def ingress_requirer_unit_data_fixture() -> dict[str, str]:
     """Mock ingress requirer unit data."""
     return {"host": '"testing.ingress"', "ip": '"10.0.0.1"'}
+
+
+# Scenario
+@pytest.fixture(name="context_with_install_mock")
+def context_with_install_mock_fixture():
+    """Context relation fixture.
+
+    Yield: The modeled haproxy-peers relation.
+    """
+    with patch("haproxy.HAProxyService.install") as install_mock:
+        yield (
+            Context(
+                charm_type=HAProxyCharm,
+            ),
+            install_mock,
+        )
+
+
+@pytest.fixture(name="peer_relation")
+def peer_relation_fixture():
+    """Peer relation fixture.
+
+    Yield: The modeled haproxy-peers relation.
+    """
+    return scenario.PeerRelation(
+        endpoint="haproxy-peers",
+        peers_data={},
+    )
+
+
+@pytest.fixture(name="base_state")
+def base_state_fixture(peer_relation):
+    """Base state fixture.
+
+    Args:
+        peer_relation: peer relation fixture
+
+    Yield: The modeled haproxy-peers relation.
+    """
+    input_state = {
+        "relations": [peer_relation],
+    }
+    yield input_state
