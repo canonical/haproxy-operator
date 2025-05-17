@@ -5,6 +5,11 @@ frontend ingress
     bind [::]:80 v4v6
     bind [::]:443 v4v6 ssl crt {{ haproxy_crt_dir }}
 
+    filter compression
+    compression algo gzip
+    compression type text/css text/html text/javascript application/javascript text/plain text/xml application/json
+    compression offload
+
     # Redirect HTTP to HTTPS
     http-request redirect scheme https unless { ssl_fc }
 
