@@ -39,8 +39,6 @@ backend {{ backend.backend_name }}
 
     option httpchk {% if backend.application_data.check.path %}GET {{ backend.application_data.check.path }}{% endif %}
 
-    http-check send hdr Host {{ backend.hostname_acls[0] }}
-
 {% if backend.application_data.rate_limit %}
     http-request track-sc0 src table  haproxy_peers/{{ backend.backend_name }}_rate_limit
     http-request {{ backend.application_data.rate_limit.policy.value }} if { sc_http_req_rate(0,haproxy_peers/{{ backend.backend_name }}_rate_limit) gt {{ backend.application_data.rate_limit.connections_per_minute }} }
