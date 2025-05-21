@@ -39,7 +39,9 @@ backend {{ backend.backend_name }}
 
     option httpchk {% if backend.application_data.check.path %}GET {{ backend.application_data.check.path }}{% endif %}
 
-    http-check send hdr Host {{ backend.hostname_acls[0] }}
+    # Our current modelling of http-check in the integration interface is not sufficient for applications like pollen which expects status codes other than 200.
+    # We leave "option httpchk" uncommented to still allow some flexibility while the lib is updated to allow configuring http-check.
+    # http-check send hdr Host {{ backend.hostname_acls[0] }}
 
 {% if backend.application_data.rate_limit %}
     http-request track-sc0 src table  haproxy_peers/{{ backend.backend_name }}_rate_limit
