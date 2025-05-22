@@ -167,7 +167,7 @@ class HAProxyCharm(ops.CharmBase):
         self.haproxy_service.install()
         self.unit.status = ops.MaintenanceStatus("Waiting for haproxy to be configured.")
 
-    @validate_config_and_tls(defer=True, block_on_tls_not_ready=True)
+    @validate_config_and_tls(defer=True)
     def _on_certificate_available(self, _: CertificateAvailableEvent) -> None:
         """Handle the TLS Certificate available event."""
         self._reconcile()
