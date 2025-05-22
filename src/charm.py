@@ -325,8 +325,7 @@ class HAProxyCharm(ops.CharmBase):
         """Validate if all the necessary preconditions are fulfilled.
 
         Returns:
-            tuple[bool, ProxyMode]: Whether the preconditions are fulfilled
-            and the resulting proxy mode.
+            ProxyMode: The resulting proxy mode.
         """
         is_ingress_related = bool(self._ingress_provider.relations)
         is_legacy_related = bool(self.reverseproxy_requirer.relations)
