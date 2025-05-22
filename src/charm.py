@@ -195,6 +195,8 @@ class HAProxyCharm(ops.CharmBase):
 
     def _reconcile(self) -> None:
         """Render the haproxy config and restart the service."""
+        self.haproxy_service.install()
+        self.unit.status = ops.MaintenanceStatus("Configuring haproxy.")
         proxy_mode = self._validate_state()
         if proxy_mode == ProxyMode.INVALID:
             # We don't raise any exception/set status here as it should already be handled
