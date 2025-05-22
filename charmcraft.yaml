@@ -15,6 +15,7 @@ parts:
       - pkg-config
       - libffi-dev
       - libssl-dev
+      - git
     build-snaps:
       - rustup
     override-build: |
@@ -37,7 +38,7 @@ description: |
   VMs and bare metal.
 summary: Fast and reliable load balancing reverse proxy.
 links:
-  documentation: https://discourse.charmhub.io/
+  documentation: https://discourse.charmhub.io/t/haproxy-documentation-overview/17216
   issues: https://github.com/canonical/haproxy-operator/issues
   source: https://github.com/canonical/haproxy-operator
   contact:
@@ -51,6 +52,8 @@ requires:
     limit: 1
   reverseproxy:
     interface: http
+  ha:
+    interface: hacluster
 
 provides:
   ingress:
@@ -59,20 +62,28 @@ provides:
     interface: cos_agent
   website:
     interface: http
+  haproxy-route:
+    interface: haproxy-route
 
+peers:
+  haproxy-peers:
+    interface: haproxy-peers
 
 config:
   options:
     external-hostname:
       default: ""
-      description: Hostname of haproxy.
       type: string
+      description: Hostname of haproxy.
     global-maxconn:
       default: 4096
       type: int
       description: |
           Sets the maximum per-process number of concurrent connections to
           <number>. Must be greater than 0.
+    vip:
+      type: string
+      description: Virtual IP address, used in active-passive ha mode.
 
 actions:
   get-certificate:

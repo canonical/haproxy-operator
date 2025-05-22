@@ -1,4 +1,4 @@
-# Copyright 2025 Canonical Ltd.
+# Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Charm library for managing TLS certificates (V4).
@@ -9,7 +9,7 @@ interface.
 Pre-requisites:
   - Juju >= 3.0
   - cryptography >= 43.0.0
-  - pydantic
+  - pydantic >= 2.0
 
 Learn more on how-to use the TLS Certificates interface library by reading the documentation:
 - https://charmhub.io/tls-certificates-interface/
@@ -28,11 +28,10 @@ from enum import Enum
 from typing import FrozenSet, List, MutableMapping, Optional, Tuple, Union
 
 from cryptography import x509
-from cryptography.hazmat._oid import ExtensionOID
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.x509.oid import NameOID
-from ops import BoundEvent, CharmBase, CharmEvents, SecretExpiredEvent
+from cryptography.x509.oid import ExtensionOID, NameOID
+from ops import BoundEvent, CharmBase, CharmEvents, Secret, SecretExpiredEvent, SecretRemoveEvent
 from ops.framework import EventBase, EventSource, Handle, Object
 from ops.jujuversion import JujuVersion
 from ops.model import (
@@ -52,9 +51,12 @@ LIBAPI = 4
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 15
 
-PYDEPS = ["cryptography", "pydantic"]
+PYDEPS = [
+    "cryptography>=43.0.0",
+    "pydantic>=2.0",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +173,7 @@ class _CertificateSigningRequest(BaseModel):
 class _ProviderApplicationData(_DatabagModel):
     """Provider application data model."""
 
-    certificates: List[_Certificate]
+    certificates: List[_Certificate] = []
 
 
 class _RequirerData(_DatabagModel):
@@ -180,16 +182,18 @@ class _RequirerData(_DatabagModel):
     The same model is used for the unit and application data.
     """
 
-    certificate_signing_requests: List[_CertificateSigningRequest]
+    certificate_signing_requests: List[_CertificateSigningRequest] = []
 
 
 class Mode(Enum):
     """Enum representing the mode of the certificate request.
 
     UNIT (default): Request a certificate for the unit.
-        Each unit will have its own private key and certificate.
+        Each unit will manage its private key,
+        certificate signing request and certificate.
     APP: Request a certificate for the application.
-        The private key and certificate will be shared by all units.
+        Only the leader unit will manage the private key, certificate signing request
+        and certificate.
     """
 
     UNIT = 1
@@ -210,6 +214,27 @@ class PrivateKey:
     def from_string(cls, private_key: str) -> "PrivateKey":
         """Create a PrivateKey object from a private key."""
         return cls(raw=private_key.strip())
+
+    def is_valid(self) -> bool:
+        """Validate that the private key is PEM-formatted, RSA, and at least 2048 bits."""
+        try:
+            key = serialization.load_pem_private_key(
+                self.raw.encode(),
+                password=None,
+            )
+
+            if not isinstance(key, rsa.RSAPrivateKey):
+                logger.warning("Private key is not an RSA key")
+                return False
+
+            if key.key_size < 2048:
+                logger.warning("RSA key size is less than 2048 bits")
+                return False
+
+            return True
+        except ValueError:
+            logger.warning("Invalid private key format")
+            return False
 
 
 @dataclass(frozen=True)
@@ -305,6 +330,37 @@ class Certificate:
             validity_start_time=validity_start_time,
         )
 
+    def matches_private_key(self, private_key: PrivateKey) -> bool:
+        """Check if this certificate matches a given private key.
+
+        Args:
+            private_key (PrivateKey): The private key to validate against.
+
+        Returns:
+            bool: True if the certificate matches the private key, False otherwise.
+        """
+        try:
+            cert_object = x509.load_pem_x509_certificate(self.raw.encode())
+            key_object = serialization.load_pem_private_key(
+                private_key.raw.encode(), password=None
+            )
+
+            cert_public_key = cert_object.public_key()
+            key_public_key = key_object.public_key()
+
+            if not isinstance(cert_public_key, rsa.RSAPublicKey):
+                logger.warning("Certificate does not use RSA public key")
+                return False
+
+            if not isinstance(key_public_key, rsa.RSAPublicKey):
+                logger.warning("Private key is not an RSA key")
+                return False
+
+            return cert_public_key.public_numbers() == key_public_key.public_numbers()
+        except Exception as e:
+            logger.warning("Failed to validate certificate and private key match: %s", e)
+            return False
+
 
 @dataclass(frozen=True)
 class CertificateSigningRequest:
@@ -321,6 +377,7 @@ class CertificateSigningRequest:
     country_name: Optional[str] = None
     state_or_province_name: Optional[str] = None
     locality_name: Optional[str] = None
+    has_unique_identifier: bool = False
 
     def __eq__(self, other: object) -> bool:
         """Check if two CertificateSigningRequest objects are equal."""
@@ -347,12 +404,20 @@ class CertificateSigningRequest:
         )
         locality_name = csr_object.subject.get_attributes_for_oid(NameOID.LOCALITY_NAME)
         organization_name = csr_object.subject.get_attributes_for_oid(NameOID.ORGANIZATION_NAME)
+        organizational_unit = csr_object.subject.get_attributes_for_oid(
+            NameOID.ORGANIZATIONAL_UNIT_NAME
+        )
         email_address = csr_object.subject.get_attributes_for_oid(NameOID.EMAIL_ADDRESS)
+        unique_identifier = csr_object.subject.get_attributes_for_oid(
+            NameOID.X500_UNIQUE_IDENTIFIER
+        )
         try:
             sans = csr_object.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
             sans_dns = frozenset(sans.get_values_for_type(x509.DNSName))
             sans_ip = frozenset([str(san) for san in sans.get_values_for_type(x509.IPAddress)])
-            sans_oid = frozenset([str(san) for san in sans.get_values_for_type(x509.RegisteredID)])
+            sans_oid = frozenset(
+                [san.dotted_string for san in sans.get_values_for_type(x509.RegisteredID)]
+            )
         except x509.ExtensionNotFound:
             sans = frozenset()
             sans_dns = frozenset()
@@ -367,10 +432,12 @@ class CertificateSigningRequest:
             else None,
             locality_name=str(locality_name[0].value) if locality_name else None,
             organization=str(organization_name[0].value) if organization_name else None,
+            organizational_unit=str(organizational_unit[0].value) if organizational_unit else None,
             email_address=str(email_address[0].value) if email_address else None,
             sans_dns=sans_dns,
             sans_ip=sans_ip,
             sans_oid=sans_oid,
+            has_unique_identifier=bool(unique_identifier),
         )
 
     def matches_private_key(self, key: PrivateKey) -> bool:
@@ -445,6 +512,7 @@ class CertificateRequestAttributes:
     state_or_province_name: Optional[str] = None
     locality_name: Optional[str] = None
     is_ca: bool = False
+    add_unique_id_to_subject_name: bool = True
 
     def is_valid(self) -> bool:
         """Check whether the certificate request is valid."""
@@ -476,6 +544,7 @@ class CertificateRequestAttributes:
             country_name=self.country_name,
             state_or_province_name=self.state_or_province_name,
             locality_name=self.locality_name,
+            add_unique_id_to_subject_name=self.add_unique_id_to_subject_name,
         )
 
     @classmethod
@@ -493,6 +562,7 @@ class CertificateRequestAttributes:
             state_or_province_name=csr.state_or_province_name,
             locality_name=csr.locality_name,
             is_ca=is_ca,
+            add_unique_id_to_subject_name=csr.has_unique_identifier,
         )
 
 
@@ -581,12 +651,14 @@ def generate_private_key(
     """Generate a private key with the RSA algorithm.
 
     Args:
-        key_size (int): Key size in bytes
+        key_size (int): Key size in bits, must be at least 2048 bits
         public_exponent: Public exponent.
 
     Returns:
         PrivateKey: Private Key
     """
+    if key_size < 2048:
+        raise ValueError("Key size must be at least 2048 bits for RSA security")
     private_key = rsa.generate_private_key(
         public_exponent=public_exponent,
         key_size=key_size,
@@ -728,14 +800,6 @@ def generate_ca(
     if locality_name:
         subject_name.append(x509.NameAttribute(x509.NameOID.LOCALITY_NAME, locality_name))
 
-    _sans: List[x509.GeneralName] = []
-    if sans_oid:
-        _sans.extend([x509.RegisteredID(x509.ObjectIdentifier(san)) for san in sans_oid])
-    if sans_ip:
-        _sans.extend([x509.IPAddress(ipaddress.ip_address(san)) for san in sans_ip])
-    if sans_dns:
-        _sans.extend([x509.DNSName(san) for san in sans_dns])
-
     subject_identifier_object = x509.SubjectKeyIdentifier.from_public_key(
         private_key_object.public_key()
     )
@@ -751,15 +815,15 @@ def generate_ca(
         encipher_only=False,
         decipher_only=False,
     )
-    cert = (
+
+    builder = (
         x509.CertificateBuilder()
         .subject_name(x509.Name(subject_name))
-        .issuer_name(x509.Name([x509.NameAttribute(x509.NameOID.COMMON_NAME, common_name)]))
+        .issuer_name(x509.Name(subject_name))
         .public_key(private_key_object.public_key())
         .serial_number(x509.random_serial_number())
         .not_valid_before(datetime.now(timezone.utc))
         .not_valid_after(datetime.now(timezone.utc) + validity)
-        .add_extension(x509.SubjectAlternativeName(set(_sans)), critical=False)
         .add_extension(x509.SubjectKeyIdentifier(digest=subject_identifier), critical=False)
         .add_extension(
             x509.AuthorityKeyIdentifier(
@@ -774,10 +838,39 @@ def generate_ca(
             x509.BasicConstraints(ca=True, path_length=None),
             critical=True,
         )
-        .sign(private_key_object, hashes.SHA256())  # type: ignore[arg-type]
     )
+    san_extension = _san_extension(
+        email_address=email_address,
+        sans_dns=sans_dns,
+        sans_ip=sans_ip,
+        sans_oid=sans_oid,
+    )
+    if san_extension:
+        builder = builder.add_extension(san_extension, critical=False)
+    cert = builder.sign(private_key_object, hashes.SHA256())  # type: ignore[arg-type]
     ca_cert_str = cert.public_bytes(serialization.Encoding.PEM).decode().strip()
     return Certificate.from_string(ca_cert_str)
+
+
+def _san_extension(
+    email_address: Optional[str] = None,
+    sans_dns: Optional[FrozenSet[str]] = frozenset(),
+    sans_ip: Optional[FrozenSet[str]] = frozenset(),
+    sans_oid: Optional[FrozenSet[str]] = frozenset(),
+) -> Optional[x509.SubjectAlternativeName]:
+    sans: List[x509.GeneralName] = []
+    if email_address:
+        # If an e-mail address was provided, it should always be in the SAN
+        sans.append(x509.RFC822Name(email_address))
+    if sans_dns:
+        sans.extend([x509.DNSName(san) for san in sans_dns])
+    if sans_ip:
+        sans.extend([x509.IPAddress(ipaddress.ip_address(san)) for san in sans_ip])
+    if sans_oid:
+        sans.extend([x509.RegisteredID(x509.ObjectIdentifier(san)) for san in sans_oid])
+    if not sans:
+        return None
+    return x509.SubjectAlternativeName(sans)
 
 
 def generate_certificate(
@@ -814,7 +907,7 @@ def generate_certificate(
         .not_valid_before(datetime.now(timezone.utc))
         .not_valid_after(datetime.now(timezone.utc) + validity)
     )
-    extensions = _get_certificate_request_extensions(
+    extensions = _generate_certificate_request_extensions(
         authority_key_identifier=ca_pem.extensions.get_extension_for_class(
             x509.SubjectKeyIdentifier
         ).value.key_identifier,
@@ -835,7 +928,7 @@ def generate_certificate(
     return Certificate.from_string(cert_bytes.decode().strip())
 
 
-def _get_certificate_request_extensions(
+def _generate_certificate_request_extensions(
     authority_key_identifier: bytes,
     csr: x509.CertificateSigningRequest,
     is_ca: bool,
@@ -871,32 +964,8 @@ def _get_certificate_request_extensions(
             value=x509.BasicConstraints(ca=is_ca, path_length=None),
         ),
     ]
-    sans: List[x509.GeneralName] = []
-    try:
-        loaded_san_ext = csr.extensions.get_extension_for_class(x509.SubjectAlternativeName)
-        sans.extend(
-            [x509.DNSName(name) for name in loaded_san_ext.value.get_values_for_type(x509.DNSName)]
-        )
-        sans.extend(
-            [x509.IPAddress(ip) for ip in loaded_san_ext.value.get_values_for_type(x509.IPAddress)]
-        )
-        sans.extend(
-            [
-                x509.RegisteredID(oid)
-                for oid in loaded_san_ext.value.get_values_for_type(x509.RegisteredID)
-            ]
-        )
-    except x509.ExtensionNotFound:
-        pass
-
-    if sans:
-        cert_extensions_list.append(
-            x509.Extension(
-                oid=ExtensionOID.SUBJECT_ALTERNATIVE_NAME,
-                critical=False,
-                value=x509.SubjectAlternativeName(sans),
-            )
-        )
+    if sans := _generate_subject_alternative_name_extension(csr):
+        cert_extensions_list.append(sans)
 
     if is_ca:
         cert_extensions_list.append(
@@ -929,6 +998,51 @@ def _get_certificate_request_extensions(
     return cert_extensions_list
 
 
+def _generate_subject_alternative_name_extension(
+    csr: x509.CertificateSigningRequest,
+) -> Optional[x509.Extension]:
+    sans: List[x509.GeneralName] = []
+    try:
+        loaded_san_ext = csr.extensions.get_extension_for_class(x509.SubjectAlternativeName)
+        sans.extend(
+            [x509.DNSName(name) for name in loaded_san_ext.value.get_values_for_type(x509.DNSName)]
+        )
+        sans.extend(
+            [x509.IPAddress(ip) for ip in loaded_san_ext.value.get_values_for_type(x509.IPAddress)]
+        )
+        sans.extend(
+            [
+                x509.RegisteredID(oid)
+                for oid in loaded_san_ext.value.get_values_for_type(x509.RegisteredID)
+            ]
+        )
+        sans.extend(
+            [
+                x509.RFC822Name(name)
+                for name in loaded_san_ext.value.get_values_for_type(x509.RFC822Name)
+            ]
+        )
+    except x509.ExtensionNotFound:
+        pass
+    # If email is present in the CSR Subject, make sure it is also in the SANS
+    # to conform to RFC 5280.
+    email = csr.subject.get_attributes_for_oid(NameOID.EMAIL_ADDRESS)
+    if email:
+        email_rfc822 = x509.RFC822Name(str(email[0].value))
+        if email_rfc822 not in sans:
+            sans.append(email_rfc822)
+
+    return (
+        x509.Extension(
+            oid=ExtensionOID.SUBJECT_ALTERNATIVE_NAME,
+            critical=False,
+            value=x509.SubjectAlternativeName(sans),
+        )
+        if sans
+        else None
+    )
+
+
 class CertificatesRequirerCharmEvents(CharmEvents):
     """List of events that the TLS Certificates requirer charm can leverage."""
 
@@ -947,6 +1061,7 @@ class TLSCertificatesRequiresV4(Object):
         certificate_requests: List[CertificateRequestAttributes],
         mode: Mode = Mode.UNIT,
         refresh_events: List[BoundEvent] = [],
+        private_key: Optional[PrivateKey] = None,
     ):
         """Create a new instance of the TLSCertificatesRequiresV4 class.
 
@@ -956,8 +1071,23 @@ class TLSCertificatesRequiresV4(Object):
             certificate_requests (List[CertificateRequestAttributes]):
                 A list with the attributes of the certificate requests.
             mode (Mode): Whether to use unit or app certificates mode. Default is Mode.UNIT.
+                In UNIT mode the requirer will place the csr in the unit relation data.
+                Each unit will manage its private key,
+                certificate signing request and certificate.
+                UNIT mode is for use cases where each unit has its own identity.
+                If you don't know which mode to use, you likely need UNIT.
+                In APP mode the leader unit will place the csr in the app relation databag.
+                APP mode is for use cases where the underlying application needs the certificate
+                for example using it as an intermediate CA to sign other certificates.
+                The certificate can only be accessed by the leader unit.
             refresh_events (List[BoundEvent]): A list of events to trigger a refresh of
               the certificates.
+            private_key (Optional[PrivateKey]): The private key to use for the certificates.
+                If provided, it will be used instead of generating a new one.
+                If the key is not valid an exception will be raised.
+                Using this parameter is discouraged,
+                having to pass around private keys manually can be a security concern.
+                Allowing the library to generate and manage the key is the more secure approach.
         """
         super().__init__(charm, relationship_name)
         if not JujuVersion.from_environ().has_secrets:
@@ -971,9 +1101,13 @@ class TLSCertificatesRequiresV4(Object):
         self.relationship_name = relationship_name
         self.certificate_requests = certificate_requests
         self.mode = mode
+        if private_key and not private_key.is_valid():
+            raise TLSCertificatesError("Invalid private key")
+        self._private_key = private_key
         self.framework.observe(charm.on[relationship_name].relation_created, self._configure)
         self.framework.observe(charm.on[relationship_name].relation_changed, self._configure)
         self.framework.observe(charm.on.secret_expired, self._on_secret_expired)
+        self.framework.observe(charm.on.secret_remove, self._on_secret_remove)
         for event in refresh_events:
             self.framework.observe(event, self._configure)
 
@@ -988,13 +1122,32 @@ class TLSCertificatesRequiresV4(Object):
         if not self._tls_relation_created():
             logger.debug("TLS relation not created yet.")
             return
-        self._generate_private_key()
+        self._ensure_private_key()
+        self._cleanup_certificate_requests()
         self._send_certificate_requests()
         self._find_available_certificates()
-        self._cleanup_certificate_requests()
 
-    def _mode_is_valid(self, mode) -> bool:
+    def _mode_is_valid(self, mode: Mode) -> bool:
         return mode in [Mode.UNIT, Mode.APP]
+
+    def _validate_secret_exists(self, secret: Secret) -> None:
+        secret.get_info()  # Will raise `SecretNotFoundError` if the secret does not exist
+
+    def _on_secret_remove(self, event: SecretRemoveEvent) -> None:
+        """Handle Secret Removed Event."""
+        try:
+            # Ensure the secret exists before trying to remove it, otherwise
+            # the unit could be stuck in an error state. See the docstring of
+            # `remove_revision` and the below issue for more information.
+            # https://github.com/juju/juju/issues/19036
+            self._validate_secret_exists(event.secret)
+            event.secret.remove_revision(event.revision)
+        except SecretNotFoundError:
+            logger.warning(
+                "No such secret %s, nothing to remove",
+                event.secret.label or event.secret.id,
+            )
+            return
 
     def _on_secret_expired(self, event: SecretExpiredEvent) -> None:
         """Handle Secret Expired Event.
@@ -1069,46 +1222,93 @@ class TLSCertificatesRequiresV4(Object):
         raise TLSCertificatesError("Invalid mode")
 
     @property
-    def private_key(self) -> PrivateKey | None:
+    def private_key(self) -> Optional[PrivateKey]:
         """Return the private key."""
+        if self._private_key:
+            return self._private_key
         if not self._private_key_generated():
             return None
         secret = self.charm.model.get_secret(label=self._get_private_key_secret_label())
         private_key = secret.get_content(refresh=True)["private-key"]
         return PrivateKey.from_string(private_key)
 
-    def _generate_private_key(self) -> None:
-        if self._private_key_generated():
+    def _ensure_private_key(self) -> None:
+        """Make sure there is a private key to be used.
+
+        It will make sure there is a private key passed by the charm using the private_key
+        parameter or generate a new one otherwise.
+        """
+        # Remove the generated private key
+        # if one has been passed by the charm using the private_key parameter
+        if self._private_key:
+            self._remove_private_key_secret()
             return
-        private_key = generate_private_key()
-        self.charm.unit.add_secret(
-            content={"private-key": str(private_key)},
-            label=self._get_private_key_secret_label(),
-        )
-        logger.info("Private key generated")
+        if self._private_key_generated():
+            logger.debug("Private key already generated")
+            return
+        self._generate_private_key()
 
     def regenerate_private_key(self) -> None:
         """Regenerate the private key.
 
         Generate a new private key, remove old certificate requests and send new ones.
+
+        Raises:
+            TLSCertificatesError: If the private key is passed by the charm using the
+                private_key parameter.
         """
+        if self._private_key:
+            raise TLSCertificatesError(
+                "Private key is passed by the charm through the private_key parameter, "
+                "this function can't be used"
+            )
         if not self._private_key_generated():
             logger.warning("No private key to regenerate")
             return
-        self._regenerate_private_key()
+        self._generate_private_key()
         self._cleanup_certificate_requests()
         self._send_certificate_requests()
 
-    def _regenerate_private_key(self) -> None:
-        secret = self.charm.model.get_secret(label=self._get_private_key_secret_label())
-        secret.set_content({"private-key": str(generate_private_key())})
+    def _generate_private_key(self) -> None:
+        """Generate a new private key and store it in a secret.
+
+        This is the case when the private key used is generated by the library.
+            and not passed by the charm using the private_key parameter.
+        """
+        self._store_private_key_in_secret(generate_private_key())
+        logger.info("Private key generated")
 
     def _private_key_generated(self) -> bool:
+        """Check if a private key is stored in a secret.
+
+        This is the case when the private key used is generated by the library.
+        This should not exist when the private key used
+            is passed by the charm using the private_key parameter.
+        """
         try:
-            self.charm.model.get_secret(label=self._get_private_key_secret_label())
-        except (SecretNotFoundError, KeyError):
+            secret = self.charm.model.get_secret(label=self._get_private_key_secret_label())
+            secret.get_content(refresh=True)
+            return True
+        except SecretNotFoundError:
             return False
-        return True
+
+    def _store_private_key_in_secret(self, private_key: PrivateKey) -> None:
+        try:
+            secret = self.charm.model.get_secret(label=self._get_private_key_secret_label())
+            secret.set_content({"private-key": str(private_key)})
+        except SecretNotFoundError:
+            self.charm.unit.add_secret(
+                content={"private-key": str(private_key)},
+                label=self._get_private_key_secret_label(),
+            )
+
+    def _remove_private_key_secret(self) -> None:
+        """Remove the private key secret."""
+        try:
+            secret = self.charm.model.get_secret(label=self._get_private_key_secret_label())
+            secret.remove_all_revisions()
+        except SecretNotFoundError:
+            logger.warning("Private key secret not found, nothing to remove")
 
     def _csr_matches_certificate_request(
         self, certificate_signing_request: CertificateSigningRequest, is_ca: bool
@@ -1238,7 +1438,7 @@ class TLSCertificatesRequiresV4(Object):
 
     def get_assigned_certificate(
         self, certificate_request: CertificateRequestAttributes
-    ) -> Tuple[ProviderCertificate | None, PrivateKey | None]:
+    ) -> Tuple[Optional[ProviderCertificate], Optional[PrivateKey]]:
         """Get the certificate that was assigned to the given certificate request."""
         for requirer_csr in self.get_csrs_from_requirer_relation_data():
             if certificate_request == CertificateRequestAttributes.from_csr(
@@ -1248,7 +1448,9 @@ class TLSCertificatesRequiresV4(Object):
                 return self._find_certificate_in_relation_data(requirer_csr), self.private_key
         return None, None
 
-    def get_assigned_certificates(self) -> Tuple[List[ProviderCertificate], PrivateKey | None]:
+    def get_assigned_certificates(
+        self,
+    ) -> Tuple[List[ProviderCertificate], Optional[PrivateKey]]:
         """Get a list of certificates that were assigned to this or app."""
         assigned_certificates = []
         for requirer_csr in self.get_csrs_from_requirer_relation_data():
@@ -1259,12 +1461,19 @@ class TLSCertificatesRequiresV4(Object):
     def _find_certificate_in_relation_data(
         self, csr: RequirerCertificateRequest
     ) -> Optional[ProviderCertificate]:
-        """Return the certificate that match the given CSR."""
+        """Return the certificate that matches the given CSR, validated against the private key."""
+        if not self.private_key:
+            return None
         for provider_certificate in self.get_provider_certificates():
             if (
                 provider_certificate.certificate_signing_request == csr.certificate_signing_request
                 and provider_certificate.certificate.is_ca == csr.is_ca
             ):
+                if not provider_certificate.certificate.matches_private_key(self.private_key):
+                    logger.warning(
+                        "Certificate does not match the private key. Ignoring invalid certificate."
+                    )
+                    continue
                 return provider_certificate
         return None
 
@@ -1308,7 +1517,7 @@ class TLSCertificatesRequiresV4(Object):
                             logger.debug(
                                 "Secret %s with correct certificate already exists", secret_label
                             )
-                            return
+                            continue
                         secret.set_content(
                             content={
                                 "certificate": str(provider_certificate.certificate),
@@ -1318,6 +1527,7 @@ class TLSCertificatesRequiresV4(Object):
                         secret.set_info(
                             expire=provider_certificate.certificate.expiry_time,
                         )
+                        secret.get_content(refresh=True)
                     except SecretNotFoundError:
                         logger.debug("Creating new secret with label %s", secret_label)
                         secret = self.charm.unit.add_secret(
@@ -1375,9 +1585,9 @@ class TLSCertificatesRequiresV4(Object):
 
     def _get_private_key_secret_label(self) -> str:
         if self.mode == Mode.UNIT:
-            return f"{LIBID}-private-key-{self._get_unit_number()}"
+            return f"{LIBID}-private-key-{self._get_unit_number()}-{self.relationship_name}"
         elif self.mode == Mode.APP:
-            return f"{LIBID}-private-key"
+            return f"{LIBID}-private-key-{self.relationship_name}"
         else:
             raise TLSCertificatesError("Invalid mode. Must be Mode.UNIT or Mode.APP.")
 

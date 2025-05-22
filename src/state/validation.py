@@ -8,17 +8,20 @@ import logging
 import typing
 
 import ops
+from charms.haproxy.v0.haproxy_route import HaproxyRouteInvalidRelationDataError
 
 from state.exception import CharmStateValidationBaseError
-from state.tls import TLSNotReadyError
+from state.tls import PrivateKeyNotGeneratedError, TLSNotReadyError
 
 logger = logging.getLogger(__name__)
 
 C = typing.TypeVar("C", bound=ops.CharmBase)
 
 
-def validate_config_and_tls(
-    defer: bool = False, block_on_tls_not_ready: bool = False
+# We ignore flake8 complexity warning here because
+# the decorator is complex by design as it needs to catch all exceptions
+def validate_config_and_tls(  # noqa: C901
+    defer: bool = False,
 ) -> typing.Callable[
     [typing.Callable[[C, typing.Any], None]], typing.Callable[[C, typing.Any], None]
 ]:
@@ -26,14 +29,13 @@ def validate_config_and_tls(
 
     Args:
         defer: whether to defer the event.
-        block_on_tls_not_ready: Whether to block the charm if TLS is not ready.
 
     Returns:
         the function decorator.
     """
 
     def decorator(
-        method: typing.Callable[[C, typing.Any], None]
+        method: typing.Callable[[C, typing.Any], None],
     ) -> typing.Callable[[C, typing.Any], None]:
         """Create a decorator that puts the charm in blocked state if the config is wrong.
 
@@ -58,7 +60,7 @@ def validate_config_and_tls(
             event: ops.EventBase
             try:
                 return method(instance, *args)
-            except CharmStateValidationBaseError as exc:
+            except (CharmStateValidationBaseError, HaproxyRouteInvalidRelationDataError) as exc:
                 if defer:
                     event, *_ = args
                     event.defer()
@@ -69,9 +71,15 @@ def validate_config_and_tls(
                 if defer:
                     event, *_ = args
                     event.defer()
-                if block_on_tls_not_ready:
-                    instance.unit.status = ops.BlockedStatus(str(exc))
+                instance.unit.status = ops.BlockedStatus(str(exc))
                 logger.exception("Not ready to handle TLS.")
+                return None
+            except PrivateKeyNotGeneratedError as exc:
+                if defer:
+                    event, *_ = args
+                    event.defer()
+                instance.unit.status = ops.WaitingStatus(str(exc))
+                logger.exception("Waiting for private key to be generated")
                 return None
 
         return wrapper

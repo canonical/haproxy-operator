@@ -1,0 +1,10 @@
+groups:
+  - name: haproxy_node_lost
+    rules:
+      - alert: HaproxyNodeLostError
+        expr: count_over_time({%%juju_topology%%} |~ `Node (?P<node>.*) is no longer a peer` [5m]) > 0
+        for: 0s
+        labels:
+            severity: critical
+        annotations:
+            summary: Node {{ $labels.node }} was lost
