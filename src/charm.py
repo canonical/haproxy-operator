@@ -125,9 +125,9 @@ class HAProxyCharm(ops.CharmBase):
 
         self.hacluster = HAServiceRequires(self, HACLUSTER_INTEGRATION)
         self.haproxy_route_provider = HaproxyRouteProvider(self)
-        self.framework.observe(self.on.install, self._on_install)
+        self.framework.observe(self.on.install, self._on_config_changed)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
-        self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
+        self.framework.observe(self.on.upgrade_charm, self._on_config_changed)
         self.framework.observe(self.on.get_certificate_action, self._on_get_certificate_action)
         self.framework.observe(
             self.certificates.on.certificate_available, self._on_certificate_available
@@ -152,20 +152,10 @@ class HAProxyCharm(ops.CharmBase):
             self.haproxy_route_provider.on.data_removed, self._configure_haproxy_route
         )
 
-    def _on_install(self, _: typing.Any) -> None:
-        """Install the haproxy package."""
-        self.haproxy_service.install()
-        self.unit.status = ops.MaintenanceStatus("Waiting for haproxy to be configured.")
-
     @validate_config_and_tls(defer=False)
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
         self._reconcile()
-
-    def _on_upgrade_charm(self, _: typing.Any) -> None:
-        """Handle the upgrade-charm event."""
-        self.haproxy_service.install()
-        self.unit.status = ops.MaintenanceStatus("Waiting for haproxy to be configured.")
 
     @validate_config_and_tls(defer=True)
     def _on_certificate_available(self, _: CertificateAvailableEvent) -> None:
