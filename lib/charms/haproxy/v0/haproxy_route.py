@@ -162,7 +162,6 @@ def value_contains_invalid_characters(value: Optional[str]) -> Optional[str]:
     Returns:
         str: The validated value.
     """
-    logger.info("validating value: %s", value)
     if value is None:
         return value
 
