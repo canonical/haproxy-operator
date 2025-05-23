@@ -146,6 +146,8 @@ LIBPATCH = 2
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
+HAPROXY_CONFIG_INVALID_CHARACTERS = "\n\t#\\'\"\r$ "
+TRANSLATION_TABLE = str.maketrans("", "", HAPROXY_CONFIG_INVALID_CHARACTERS)
 
 
 class DataValidationError(Exception):
@@ -525,6 +527,46 @@ class RequirerApplicationData(_DatabagModel):
             if rewrite.method == HaproxyRewriteMethod.SET_HEADER and not rewrite.method:
                 raise ValueError("header must be set if rewrite method is SET_HEADER.")
         return rewrites
+
+    @model_validator(mode="before")
+    @classmethod
+    def sanitize_relation_data(cls, data: Any) -> Any:
+        """Validate the parsed list of rewrite configurations.
+
+        Args:
+            data: Raw relation data.
+
+        Returns:
+            The sanitized relation data stripped of invalid characters.
+        """
+        logger.info("requirer application data %s", data)
+        return sanitize_data(data)
+
+
+def sanitize_data(data: Any) -> Any:
+    """Strip invalid characters from any str attribute of an object.
+
+    Args:
+        data: The object to sanitize.
+
+    Returns:
+        The sanitized object.
+    """
+    if hasattr(data, "__iter__"):
+        return [sanitize_data(item) for item in data]
+
+    if isinstance(data, dict):
+        for attr, value in data.items():
+            if isinstance(value, str):
+                data[attr] = value.translate(TRANSLATION_TABLE)
+                continue
+            if isinstance(value, dict):
+                data[attr] = sanitize_data(value)
+                continue
+            if hasattr(value, "__iter__"):
+                data[attr] = [sanitize_data(item) for item in value]
+                continue
+    return data
 
 
 class HaproxyRouteProviderAppData(_DatabagModel):
