@@ -267,6 +267,7 @@ class HAProxyCharm(ops.CharmBase):
                         )
                         if not relation:
                             logger.error("Relation does not exist, skipping.")
+                            break
                         self.haproxy_route_provider.publish_proxied_endpoints(
                             [
                                 f"https://{hostname}/{path}"
@@ -291,7 +292,7 @@ class HAProxyCharm(ops.CharmBase):
         Returns:
             typing.List[CertificateRequestAttributes]: List of certificate request attributes.
         """
-        external_hostname = self.config.get("external-hostname", None)
+        external_hostname = typing.cast(str, self.config.get("external-hostname", None))
         if not external_hostname:
             return []
         return [

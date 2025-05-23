@@ -16,7 +16,8 @@ def test_install(context_with_install_mock, base_state):
     act: run start
     assert: status is active
     """
-    context, install_mock = context_with_install_mock
+    context, (install_mock, reconcile_default_mock, *_) = context_with_install_mock
     state = ops.testing.State(**base_state)
     context.run(context.on.install(), state)
     install_mock.assert_called_once()
+    reconcile_default_mock.assert_called_once()
