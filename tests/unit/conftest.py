@@ -33,11 +33,14 @@ def systemd_mock_fixture(monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.fixture(scope="function", name="certificates_relation_data")
-def certificates_relation_data_fixture(mock_certificate: str) -> dict[str, str]:
+def certificates_relation_data_fixture(
+    mock_certificate_and_key: typing.Tuple[Certificate, PrivateKey],
+) -> dict[str, str]:
     """Mock tls_certificates relation data."""
+    cert, _ = mock_certificate_and_key
     return {
         f"csr-{TEST_EXTERNAL_HOSTNAME_CONFIG}": "whatever",
-        f"certificate-{TEST_EXTERNAL_HOSTNAME_CONFIG}": mock_certificate,
+        f"certificate-{TEST_EXTERNAL_HOSTNAME_CONFIG}": str(cert),
         f"ca-{TEST_EXTERNAL_HOSTNAME_CONFIG}": "whatever",
         f"chain-{TEST_EXTERNAL_HOSTNAME_CONFIG}": "whatever",
     }
@@ -67,23 +70,6 @@ def mock_certificate_fixture(
     return certificate, private_key
 
 
-# @pytest.fixture(scope="function", name="harness_with_mock_certificates_integration")
-# def harness_with_mock_certificates_integration_fixture(
-#     harness: Harness,
-#     certificates_relation_data: dict[str, str],
-# ) -> Harness:
-#     """Mock certificates integration."""
-#     harness.set_leader()
-#     harness.update_config({"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
-#     relation_id = harness.add_relation(
-#         "certificates", "self-signed-certificates", app_data=certificates_relation_data
-#     )
-#     harness.update_relation_data(
-#         relation_id, harness.model.app.name, {f"csr-{TEST_EXTERNAL_HOSTNAME_CONFIG}": "csr"}
-#     )
-#     return harness
-
-
 @pytest.fixture(scope="function", name="ingress_requirer_application_data")
 def ingress_requirer_application_data_fixture() -> dict[str, str]:
     """Mock ingress requirer application data."""
@@ -109,12 +95,16 @@ def context_with_install_mock_fixture():
 
     Yield: The modeled haproxy-peers relation.
     """
-    with patch("haproxy.HAProxyService.install") as install_mock:
+    with (
+        patch("haproxy.HAProxyService.install") as install_mock,
+        patch("haproxy.HAProxyService.reconcile_default") as reconcile_default_mock,
+        patch("haproxy.HAProxyService.reconcile_ingress") as reconcile_ingress_mock,
+    ):
         yield (
             Context(
                 charm_type=HAProxyCharm,
             ),
-            install_mock,
+            (install_mock, reconcile_default_mock, reconcile_ingress_mock),
         )
 
 
@@ -130,6 +120,33 @@ def peer_relation_fixture():
     )
 
 
+@pytest.fixture(name="ingress_integration")
+def ingress_integration_fixture(ingress_requirer_application_data, ingress_requirer_unit_data):
+    """Ingress integration fixture.
+
+    Returns: The modeled ingress integration.
+    """
+    return scenario.Relation(
+        endpoint="ingress",
+        remote_app_name="requirer",
+        remote_app_data=ingress_requirer_application_data,
+        remote_units_data={0: ingress_requirer_unit_data},
+    )
+
+
+@pytest.fixture(name="certificates_integration")
+def certificates_integration_fixture(certificates_relation_data):
+    """Certificates integration fixture.
+
+    Returns: The modeled ingress integration.
+    """
+    return scenario.Relation(
+        endpoint="certificates",
+        remote_app_name="provider",
+        remote_app_data=certificates_relation_data,
+    )
+
+
 @pytest.fixture(name="base_state")
 def base_state_fixture(peer_relation):
     """Base state fixture.
@@ -142,4 +159,24 @@ def base_state_fixture(peer_relation):
     input_state = {
         "relations": [peer_relation],
     }
-    yield input_state
+    return input_state
+
+
+@pytest.fixture(name="base_state_with_ingress")
+def base_state_with_ingress_fixture(peer_relation, ingress_integration, certificates_integration):
+    """Base state fixture with ingress integration.
+
+    Args:
+        peer_relation: peer relation fixture.
+        ingress_integration: ingress integration fixture.
+        certificates_integration: certificates integration fixture.
+
+    Yield: The modeled haproxy-peers relation.
+    """
+    input_state = {
+        "relations": [peer_relation, ingress_integration, certificates_integration],
+        "config": {
+            "external-hostname": "ingress.local",
+        },
+    }
+    return input_state
