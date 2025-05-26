@@ -3,7 +3,7 @@
 # See LICENSE file for licensing details.
 
 variable "model" {
-  description = "Reference to the k8s Juju model to deploy application to."
+  description = "Reference to the Juju model to deploy application to."
   type        = string
 }
 
