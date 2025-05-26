@@ -73,28 +73,3 @@ variable "hacluster_config" {
   type        = map(string)
   default     = {}
 }
-
-# grafana-agent
-variable "use_grafana_agent" {
-  description = "Whether to use cos-agent to forward metrics to the COS stack."
-  type        = bool
-  default     = false
-}
-
-variable "grafana_agent_charm_channel" {
-  description = "Channel of the cos-agent charm."
-  type        = string
-  default     = null
-}
-
-variable "grafana_agent_charm_revision" {
-  description = "Revision of the cos-agent charm."
-  type        = number
-  default     = null
-}
-
-variable "grafana_agent_config" {
-  description = "Grafana agent charm config."
-  type        = map(string)
-  default     = {}
-}
