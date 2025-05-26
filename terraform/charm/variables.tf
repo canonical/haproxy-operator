@@ -1,85 +1,100 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-variable "juju_model_name" {
-  description = "Name of the juju model."
-  type        = string
-}
-
-variable "haproxy_application_name" {
+variable "app_name" {
   description = "Application name of the deployed haproxy charm."
   type        = string
+  default     = "haproxy"
 }
 
-variable "haproxy_charm_channel" {
+variable "channel" {
   description = "Revision of the haproxy charm."
   type        = string
+  default     = "2.8/edge"
 }
 
-variable "haproxy_charm_revision" {
-  description = "Revision of the haproxy charm."
-  type        = number
-}
-
-variable "haproxy_charm_base" {
-  description = "Base of the haproxy charm."
-  type        = string
-}
-
-
-variable "haproxy_config" {
+variable "config" {
   description = "Haproxy charm config."
   type        = map(string)
+  default     = {}
 }
 
-variable "haproxy_units" {
+variable "constraints" {
+  description = "Name of the juju model."
+  type        = string
+  default     = "arch=amd64"
+}
+
+variable "model" {
+  description = "Name of the juju model."
+  type        = string
+  default     = null
+}
+
+variable "revision" {
+  description = "Revision of the haproxy charm."
+  type        = number
+  default     = null
+}
+
+variable "units" {
   description = "Number of haproxy units. If hacluster is enabled, it is recommended to use a value > 3 to ensure a quorum."
   type        = number
+  default     = 1
 }
 
-variable "haproxy_constraints" {
-  description = "Haproxy charm constraints."
+variable "base" {
+  description = "Base of the haproxy charm."
   type        = string
+  default     = "ubuntu@24.04"
 }
 
 # hacluster
 variable "use_hacluster" {
   description = "Whether to use hacluster for active/passive."
   type        = bool
+  default     = false
 }
 
 variable "hacluster_charm_revision" {
   description = "Revision of the hacluster charm."
   type        = number
+  default     = null
 }
 
 variable "hacluster_charm_channel" {
   description = "Channel of the hacluster charm."
   type        = string
+  default     = "2.4/edge"
 }
 
 variable "hacluster_config" {
   description = "Hacluster charm config."
   type        = map(string)
+  default     = {}
 }
 
 # grafana-agent
 variable "use_grafana_agent" {
   description = "Whether to use cos-agent to forward metrics to the COS stack."
   type        = bool
+  default     = false
 }
 
 variable "grafana_agent_charm_channel" {
   description = "Channel of the cos-agent charm."
   type        = string
+  default     = null
 }
 
 variable "grafana_agent_charm_revision" {
   description = "Revision of the cos-agent charm."
   type        = number
+  default     = null
 }
 
 variable "grafana_agent_config" {
   description = "Grafana agent charm config."
   type        = map(string)
+  default     = {}
 }

@@ -21,18 +21,16 @@ variable "haproxy" {
 
 variable "hacluster" {
   type = object({
-    enabled  = optional(bool, false)
     channel  = optional(string, "2.4/edge")
     config   = optional(map(string), {})
-    revision = optional(number)
+    revision = optional(number, null)
   })
 }
 
-variable "grafana-agent" {
+variable "grafana_agent" {
   type = object({
-    enabled  = optional(bool, false)
     channel  = optional(string, "latest/stable")
     config   = optional(map(string), {})
-    revision = optional(number)
+    revision = optional(number, null)
   })
 }

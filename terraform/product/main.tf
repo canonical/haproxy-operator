@@ -9,23 +9,47 @@ data "juju_model" "haproxy" {
 module "haproxy" {
   source = "../charm"
 
-  juju_model_name = data.juju_model.haproxy.name
+  model = data.juju_model.haproxy.name
 
-  haproxy_application_name = var.haproxy.app_name
-  haproxy_charm_channel    = var.haproxy.channel
-  haproxy_charm_revision   = var.haproxy.revision
-  haproxy_charm_base       = var.haproxy.base
-  haproxy_units            = var.haproxy.units
-  haproxy_constraints      = var.haproxy.constraints
-  haproxy_config           = var.haproxy.config
+  app_name    = var.haproxy.app_name
+  channel     = var.haproxy.channel
+  revision    = var.haproxy.revision
+  base        = var.haproxy.base
+  units       = var.haproxy.units
+  constraints = var.haproxy.constraints
+  config      = var.haproxy.config
 
-  use_hacluster            = var.hacluster.enabled
+  use_hacluster            = true
   hacluster_charm_channel  = var.hacluster.channel
   hacluster_charm_revision = var.hacluster.revision
   hacluster_config         = var.hacluster.config
+}
 
-  use_grafana_agent            = true
-  grafana_agent_charm_channel  = var.grafana-agent.channel
-  grafana_agent_charm_revision = var.grafana-agent.revision
-  grafana_agent_config         = var.grafana-agent.config
+resource "juju_application" "grafana_agent" {
+  name  = "grafana-agent"
+  model = data.juju_model.haproxy.name
+  units = var.haproxy.units
+
+  charm {
+    name     = "grafana-agent"
+    revision = var.grafana_agent.revision
+    channel  = var.grafana_agent.channel
+    base     = var.haproxy.base
+  }
+
+  config = var.grafana_agent.config
+}
+
+resource "juju_integration" "grafana_agent" {
+  model = data.juju_model.haproxy.name
+
+  application {
+    name     = juju_application.haproxy.name
+    endpoint = "cos-agent"
+  }
+
+  application {
+    name     = juju_application.grafana_agent.name
+    endpoint = "cos-agent"
+  }
 }
