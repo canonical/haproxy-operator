@@ -56,6 +56,12 @@ variable "use_hacluster" {
   default     = false
 }
 
+variable "hacluster_app_name" {
+  description = "Application name of the hacluster charm."
+  type        = string
+  default     = "hacluster"
+}
+
 variable "hacluster_charm_revision" {
   description = "Revision of the hacluster charm."
   type        = number

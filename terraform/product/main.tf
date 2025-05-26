@@ -45,7 +45,7 @@ resource "juju_integration" "grafana_agent" {
 
   application {
     name     = module.haproxy.app_name
-    endpoint = "cos-agent"
+    endpoint = module.haproxy.provides.cos_agent
   }
 
   application {

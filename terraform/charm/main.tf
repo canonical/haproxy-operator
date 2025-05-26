@@ -32,7 +32,7 @@ resource "juju_application" "haproxy" {
 
 resource "juju_application" "hacluster" {
   count = var.use_hacluster ? 1 : 0
-  name  = "hacluster"
+  name  = var.hacluster_app_name
   model = var.model
   units = var.units
 
