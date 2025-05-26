@@ -160,13 +160,13 @@ def value_contains_invalid_characters(value: Optional[str]) -> Optional[str]:
         ValueError: When value contains invalid characters.
 
     Returns:
-        str: The validated value.
+        The validated value.
     """
     if value is None:
         return value
 
-    if [c for c in value if c in HAPROXY_CONFIG_INVALID_CHARACTERS]:
-        raise ValueError("Relation data contains invalid character(s)")
+    if [char for char in value if char in HAPROXY_CONFIG_INVALID_CHARACTERS]:
+        raise ValueError(f"Relation data contains invalid character(s) {value}")
     return value
 
 
