@@ -197,7 +197,7 @@ class HAProxyService:
         Raises:
             HaproxyValidateConfigError: When validation of the generated HAProxy config failed.
         """
-        validate_config_command = ["haproxy", "-f", str(HAPROXY_CONFIG), "-c"]
+        validate_config_command = ["/usr/sbin/haproxy", "-f", str(HAPROXY_CONFIG), "-c"]
         try:
             subprocess.run(validate_config_command, capture_output=True, check=True)
         except subprocess.CalledProcessError as exc:
