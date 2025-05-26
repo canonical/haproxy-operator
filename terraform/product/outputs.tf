@@ -8,17 +8,17 @@ output "grafana_agent" {
 
 output "provides" {
   value = {
-    reverseproxy  = "reverseproxy"
-    ingress       = "ingress"
-    haproxy_route = "haproxy_route"
+    reverseproxy     = "reverseproxy"
+    ingress          = "ingress"
+    haproxy_route    = "haproxy_route"
     logging_provider = "logging-provider"
   }
 }
 
 output "requires" {
   value = {
-    metrics_endpoint  = "metrics-endpoint"
-    send_remote_write = "send-remote-write"
+    metrics_endpoint            = "metrics-endpoint"
+    send_remote_write           = "send-remote-write"
     grafana_dashboards_consumer = "grafana-dashboards-consumer"
   }
 }
