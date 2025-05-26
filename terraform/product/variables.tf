@@ -17,6 +17,7 @@ variable "haproxy" {
     base        = optional(string, "ubuntu@24.04")
     units       = optional(number, 1)
   })
+  default = {}
 }
 
 variable "hacluster" {
@@ -25,6 +26,7 @@ variable "hacluster" {
     config   = optional(map(string), {})
     revision = optional(number, null)
   })
+  default = {}
 }
 
 variable "grafana_agent" {
@@ -33,4 +35,5 @@ variable "grafana_agent" {
     config   = optional(map(string), {})
     revision = optional(number, null)
   })
+  default = {}
 }
