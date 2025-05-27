@@ -10,6 +10,7 @@ import typing
 import ops
 from charms.haproxy.v0.haproxy_route import HaproxyRouteInvalidRelationDataError
 
+from haproxy import HaproxyValidateConfigError
 from state.exception import CharmStateValidationBaseError
 from state.tls import PrivateKeyNotGeneratedError, TLSNotReadyError
 
@@ -80,6 +81,20 @@ def validate_config_and_tls(  # noqa: C901
                     event.defer()
                 instance.unit.status = ops.WaitingStatus(str(exc))
                 logger.exception("Waiting for private key to be generated")
+                return None
+            except HaproxyValidateConfigError as exc:
+                if defer:
+                    event, *_ = args
+                    event.defer()
+                instance.unit.status = ops.WaitingStatus(str(exc))
+                logger.exception(
+                    (
+                        "Validation of the HAproxy config failed."
+                        "It is likely that some information are missing"
+                        "waiting to reconcile: %s."
+                    ),
+                    str(exc),
+                )
                 return None
 
         return wrapper
