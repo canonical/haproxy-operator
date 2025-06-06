@@ -199,7 +199,7 @@ class HAProxyService:
         """
         validate_config_command = ["/usr/sbin/haproxy", "-f", str(HAPROXY_CONFIG), "-c"]
         try:
-            subprocess.run(validate_config_command, capture_output=True, check=True)
+            subprocess.run(validate_config_command, shell=True, capture_output=True, check=True)
         except subprocess.CalledProcessError as exc:
             logger.error(
                 "Failed validation the HAProxy config: %s",
