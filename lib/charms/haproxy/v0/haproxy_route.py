@@ -143,7 +143,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 3
+LIBPATCH = 5
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -292,6 +292,7 @@ class ServerHealthCheck(BaseModel):
         rise: Number of consecutive successful health checks required for up.
         fall: Number of consecutive failed health checks required for DOWN.
         path: List of URL paths to use for HTTP health checks.
+        port: Customize port value for http-check.
     """
 
     interval: int = Field(
@@ -306,6 +307,7 @@ class ServerHealthCheck(BaseModel):
     path: Annotated[Optional[str], BeforeValidator(value_contains_invalid_characters)] = Field(
         description="The health check path.", default=None
     )
+    port: Optional[int] = Field(description="The health check port.", default=None)
 
 
 # tarpit is not yet implemented
@@ -852,6 +854,7 @@ class HaproxyRouteRequirer(Object):
         check_rise: Optional[int] = None,
         check_fall: Optional[int] = None,
         check_path: Optional[str] = None,
+        check_port: Optional[int] = None,
         path_rewrite_expressions: Optional[list[str]] = None,
         query_rewrite_expressions: Optional[list[str]] = None,
         header_rewrite_expressions: Optional[list[tuple[str, str]]] = None,
@@ -884,6 +887,7 @@ class HaproxyRouteRequirer(Object):
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
             check_path: The path to use for server health checks.
+            check_port: The port to use for http-check.
             path_rewrite_expressions: List of regex expressions for path rewrites.
             query_rewrite_expressions: List of regex expressions for query rewrites.
             header_rewrite_expressions: List of tuples containing header name
@@ -921,6 +925,7 @@ class HaproxyRouteRequirer(Object):
             check_rise,
             check_fall,
             check_path,
+            check_port,
             path_rewrite_expressions,
             query_rewrite_expressions,
             header_rewrite_expressions,
@@ -971,6 +976,7 @@ class HaproxyRouteRequirer(Object):
         check_rise: Optional[int] = None,
         check_fall: Optional[int] = None,
         check_path: Optional[str] = None,
+        check_port: Optional[int] = None,
         path_rewrite_expressions: Optional[list[str]] = None,
         query_rewrite_expressions: Optional[list[str]] = None,
         header_rewrite_expressions: Optional[list[tuple[str, str]]] = None,
@@ -1000,6 +1006,7 @@ class HaproxyRouteRequirer(Object):
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
             check_path: The path to use for server health checks.
+            check_port: The port to use for http-check.
             path_rewrite_expressions: List of regex expressions for path rewrites.
             query_rewrite_expressions: List of regex expressions for query rewrites.
             header_rewrite_expressions: List of tuples containing header name
@@ -1028,6 +1035,7 @@ class HaproxyRouteRequirer(Object):
             check_rise,
             check_fall,
             check_path,
+            check_port,
             path_rewrite_expressions,
             query_rewrite_expressions,
             header_rewrite_expressions,
@@ -1059,6 +1067,7 @@ class HaproxyRouteRequirer(Object):
         check_rise: Optional[int] = None,
         check_fall: Optional[int] = None,
         check_path: Optional[str] = None,
+        check_port: Optional[int] = None,
         path_rewrite_expressions: Optional[list[str]] = None,
         query_rewrite_expressions: Optional[list[str]] = None,
         header_rewrite_expressions: Optional[list[tuple[str, str]]] = None,
@@ -1088,6 +1097,7 @@ class HaproxyRouteRequirer(Object):
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
             check_path: The path to use for server health checks.
+            check_port: The port to use for http-check.
             path_rewrite_expressions: List of regex expressions for path rewrites.
             query_rewrite_expressions: List of regex expressions for query rewrites.
             header_rewrite_expressions: List of tuples containing header name and
@@ -1154,7 +1164,7 @@ class HaproxyRouteRequirer(Object):
         }
 
         if check := self._generate_server_healthcheck_configuration(
-            check_interval, check_rise, check_fall, check_path
+            check_interval, check_rise, check_fall, check_path, check_port
         ):
             application_data["check"] = check
 
@@ -1175,6 +1185,7 @@ class HaproxyRouteRequirer(Object):
         rise: Optional[int],
         fall: Optional[int],
         path: Optional[str],
+        port: Optional[int],
     ) -> dict[str, int | Optional[str]]:
         """Generate configuration for server health checks.
 
@@ -1182,7 +1193,8 @@ class HaproxyRouteRequirer(Object):
             interval: Time between health checks in seconds.
             rise: Number of successful checks before marking server as up.
             fall: Number of failed checks before marking server as down.
-            path: the path to use for health checks.
+            path: The path to use for health checks.
+            port: The port to use for http-check.
 
         Returns:
             dict[str, int | Optional[str]]: Health check configuration dictionary.
@@ -1194,6 +1206,7 @@ class HaproxyRouteRequirer(Object):
                 "rise": rise,
                 "fall": fall,
                 "path": path,
+                "port": port,
             }
         return server_healthcheck_configuration
 
