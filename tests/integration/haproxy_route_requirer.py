@@ -44,6 +44,7 @@ class AnyCharm(AnyCharmBase):
             check_rise=3,
             check_fall=3,
             check_path="/ok",
+            check_port=80,
             path_rewrite_expressions=["/ok"],
             deny_paths=["/private"],
         )
