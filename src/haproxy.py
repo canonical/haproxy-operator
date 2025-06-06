@@ -6,7 +6,10 @@
 import logging
 import os
 import pwd
-import subprocess
+
+# We silence this rule because subprocess call is only for validating the haproxy config
+# and no user input is parsed
+import subprocess  # nosec B404
 from pathlib import Path
 
 from charms.operator_libs_linux.v0 import apt
