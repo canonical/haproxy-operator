@@ -14,7 +14,7 @@ async def test_ha(application: Application, hacluster: Application):
     act: request chrony_exporter metrics endpoint.
     assert: confirm that metrics are scraped.
     """
-    await hacluster.set_config({"cluster_count": 1, "no_quorum_policy": "ignore"})
+    await hacluster.set_config({"cluster_count": "1", "no_quorum_policy": "ignore"})
     await application.model.wait_for_idle(
         apps=[application.name],
         idle_period=30,
