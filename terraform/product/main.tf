@@ -28,7 +28,7 @@ module "haproxy" {
 resource "juju_application" "grafana_agent" {
   name  = "grafana-agent"
   model = data.juju_model.haproxy.name
-  units = var.haproxy.units
+  units = 1
 
   charm {
     name     = "grafana-agent"
