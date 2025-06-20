@@ -994,6 +994,7 @@ class HaproxyRouteRequirer(Object):
         connect_timeout: int = 60,
         queue_timeout: int = 60,
         server_maxconn: Optional[int] = None,
+        unit_address: Optional[str] = None,
     ) -> None:
         """Update haproxy-route requirements data in the relation.
 
@@ -1025,7 +1026,9 @@ class HaproxyRouteRequirer(Object):
             connect_timeout: Timeout for client requests to haproxy in seconds.
             queue_timeout: Timeout for requests waiting in queue in seconds.
             server_maxconn: Maximum connections per server.
+            unit_address: IP address of the unit (if not provided, will use binding address).
         """
+        self._unit_address = unit_address
         self._application_data = self._generate_application_data(
             service,
             ports,
