@@ -16,7 +16,7 @@ from state.config import CharmConfig
 from state.haproxy_route import HaproxyRouteRequirersInformation
 from state.ingress import IngressRequirersInformation
 
-APT_PACKAGE_VERSION = "2.8.5-1ubuntu3"
+APT_PACKAGE_VERSION = "2.8.5-1ubuntu3.3"
 APT_PACKAGE_NAME = "haproxy"
 HAPROXY_CONFIG_DIR = Path("/etc/haproxy")
 HAPROXY_CONFIG = Path(HAPROXY_CONFIG_DIR / "haproxy.cfg")
@@ -65,8 +65,9 @@ class HAProxyService:
         Raises:
             RuntimeError: If the service is not running after installation.
         """
-        apt.update()
-        apt.add_package(package_names=APT_PACKAGE_NAME, version=APT_PACKAGE_VERSION)
+        apt.add_package(
+            package_names=APT_PACKAGE_NAME, version=APT_PACKAGE_VERSION, update_cache=True
+        )
 
         render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
         self._reload_haproxy_service()
