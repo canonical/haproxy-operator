@@ -1,3 +1,4 @@
-*       @Thanhphan1147  @amandahla  @arturo-seijas
-requirements.txt	@canonical/is-charms
-/docs/ @erinecon
+# Ignore changelog from codeowner requests
+docs/changelog.md
+
+docs/*	@erinecon
