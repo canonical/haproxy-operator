@@ -7,6 +7,7 @@ import logging
 import os
 import pwd
 from pathlib import Path
+from subprocess import CalledProcessError, run  # nosec
 
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import systemd
@@ -16,7 +17,7 @@ from state.config import CharmConfig
 from state.haproxy_route import HaproxyRouteRequirersInformation
 from state.ingress import IngressRequirersInformation
 
-APT_PACKAGE_VERSION = "2.8.5-1ubuntu3"
+APT_PACKAGE_VERSION = "2.8.5-1ubuntu3.3"
 APT_PACKAGE_NAME = "haproxy"
 HAPROXY_CONFIG_DIR = Path("/etc/haproxy")
 HAPROXY_CONFIG = Path(HAPROXY_CONFIG_DIR / "haproxy.cfg")
@@ -48,6 +49,14 @@ HAPROXY_CERTS_DIR = Path("/var/lib/haproxy/certs")
 logger = logging.getLogger()
 
 
+class HaproxyPackageVersionPinError(Exception):
+    """Error when pinning the version of the haproxy package."""
+
+
+class HaproxyServiceNotActiveError(Exception):
+    """Exception raised when both the reverseproxy and ingress relation are established."""
+
+
 class HaproxyServiceReloadError(Exception):
     """Error when reloading the haproxy service."""
 
@@ -63,16 +72,18 @@ class HAProxyService:
         """Install the haproxy apt package.
 
         Raises:
-            RuntimeError: If the service is not running after installation.
+            HaproxyServiceNotActiveError: If the service is not running after installation.
         """
-        apt.update()
-        apt.add_package(package_names=APT_PACKAGE_NAME, version=APT_PACKAGE_VERSION)
+        apt.add_package(
+            package_names=APT_PACKAGE_NAME, version=APT_PACKAGE_VERSION, update_cache=True
+        )
+        pin_haproxy_package_version()
 
         render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
         self._reload_haproxy_service()
 
         if not self.is_active():
-            raise RuntimeError("HAProxy service is not running.")
+            raise HaproxyServiceNotActiveError("HAProxy service is not running.")
 
     def is_active(self) -> bool:
         """Indicate if the haproxy service is active.
@@ -221,3 +232,17 @@ def file_exists(path: Path) -> bool:
         bool: True if the file exists.
     """
     return path.exists()
+
+
+def pin_haproxy_package_version() -> None:
+    """Pin the haproxy package version.
+
+    Raises:
+        HaproxyPackageVersionPinError: When pinning the haproxy package version failed.
+    """
+    try:
+        # We ignore security warning here as we're not parsing inputs
+        run(["/usr/bin/apt-mark", "hold", "haproxy"], check=True)  # nosec
+    except CalledProcessError as exc:
+        logger.error("Failed calling apt-mark hold haproxy: %s", exc.stderr)
+        raise HaproxyPackageVersionPinError("Failed pinning the haproxy package version") from exc
