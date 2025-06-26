@@ -9,15 +9,13 @@ frontend haproxy
 
 {% for backend in backends %}
 {% if backend.path_acl_required %}
-    acl acl_path_{{ backend.backend_name }} path_beg -i {% for path in backend.application_data.paths %}{{ path }} {% endfor %}
+    acl acl_path_{{ backend.backend_name }} path_beg -i {% for path in backend.application_data.paths %}{{ path }} {% endfor +%}
 {% endif %}
-    acl acl_host_{{ backend.backend_name }} req.hdr(Host) -m str {% for hostname in backend.hostname_acls%}{{hostname}} {% endfor %}
-
+    acl acl_host_{{ backend.backend_name }} req.hdr(Host) -m str {% for hostname in backend.hostname_acls%}{{hostname}} {% endfor +%}
 {% if backend.deny_path_acl_required %}
-    acl acl_deny_path_{{ backend.backend_name }} path_beg -i {% for path in backend.application_data.deny_paths %}{{ path }} {% endfor %}
+    acl acl_deny_path_{{ backend.backend_name }} path_beg -i {% for path in backend.application_data.deny_paths %}{{ path }} {% endfor +%}
 {% endif %}
-
-    use_backend {{ backend.backend_name }} if {% if backend.path_acl_required %}acl_path_{{ backend.backend_name }}{% endif %} acl_host_{{ backend.backend_name }} {% if backend.deny_path_acl_required %}!acl_deny_path_{{ backend.backend_name }}{% endif %}
+    use_backend {{ backend.backend_name }} if {% if backend.path_acl_required %}acl_path_{{ backend.backend_name }}{% endif %} acl_host_{{ backend.backend_name }} {% if backend.deny_path_acl_required %}!acl_deny_path_{{ backend.backend_name }}{% endif +%}
 {% endfor %}
 
     default_backend default
@@ -37,34 +35,29 @@ backend {{ backend.backend_name }}
     timeout connect {{ backend.application_data.timeout.connect }}
     timeout queue {{ backend.application_data.timeout.queue }}
 
-    option httpchk {% if backend.application_data.check.path %}GET {{ backend.application_data.check.path }}
-    {% endif %}
-
-    {% if backend.application_data.check.port %}http-check connect port {{ backend.application_data.check.port }}
-    {% endif %}
-
+    option httpchk {% if backend.application_data.check.path %}GET {{ backend.application_data.check.path }}{% endif +%}
+{% if backend.application_data.check.port %}
+    http-check connect port {{ backend.application_data.check.port }}
+{% endif %}
     http-check send hdr Host {{ backend.hostname_acls[0] }}
 {% if backend.application_data.rate_limit %}
     http-request track-sc0 src table  haproxy_peers/{{ backend.backend_name }}_rate_limit
     http-request {{ backend.application_data.rate_limit.policy.value }} if { sc_http_req_rate(0,haproxy_peers/{{ backend.backend_name }}_rate_limit) gt {{ backend.application_data.rate_limit.connections_per_minute }} }
 {% endif %}
-
 {% if backend.application_data.bandwidth_limit.download %}
+
     filter bwlim-out download default-limit {{ backend.application_data.bandwidth_limit.download }} default-period 1s
     http-response set-bandwidth-limit download
 {% endif %}
-
 {% if backend.application_data.bandwidth_limit.upload %}
     filter bwlim-in upload default-limit {{ backend.application_data.bandwidth_limit.upload }} default-period 1s
     http-request set-bandwidth-limit upload
 {% endif %}
-
 {% for rewrite_configuration in backend.rewrite_configurations %}
     http-request {{ rewrite_configuration }}
 {% endfor %}
 {% for server in backend.servers %}
     server {{ server.server_name }} {{ server.address }}:{{ server.port }} check inter {{ server.check.interval }}s rise {{ server.check.rise }} fall {{ server.check.fall }}
 {% endfor %}
-
 {% endfor %}
 {% endblock %}
