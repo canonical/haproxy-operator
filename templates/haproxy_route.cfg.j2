@@ -59,5 +59,6 @@ backend {{ backend.backend_name }}
 {% for server in backend.servers %}
     server {{ server.server_name }} {{ server.address }}:{{ server.port }} check inter {{ server.check.interval }}s rise {{ server.check.rise }} fall {{ server.check.fall }}
 {% endfor %}
+
 {% endfor %}
 {% endblock %}
