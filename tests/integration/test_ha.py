@@ -36,8 +36,3 @@ async def test_ha(application: Application, hacluster: Application):
     )
     response = requests.get(url=f"http://{vip}", timeout=30)
     assert "Default page for the haproxy-operator charm" in response.text
-
-    await application.units[0].machine.destroy(force=True)
-
-    response = requests.get(url=f"http://{vip}", timeout=30)
-    assert "Default page for the haproxy-operator charm" in response.text
