@@ -115,7 +115,7 @@ class SomeCharm(CharmBase):
 import json
 import logging
 from enum import Enum
-from typing import Any, MutableMapping, Optional, cast
+from typing import Annotated, Any, MutableMapping, Optional, cast
 
 from ops import CharmBase, ModelError, RelationBrokenEvent
 from ops.charm import CharmEvents
@@ -124,6 +124,7 @@ from ops.model import Relation
 from pydantic import (
     AnyHttpUrl,
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     Field,
     IPvAnyAddress,
@@ -142,10 +143,31 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 4
+LIBPATCH = 5
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
+HAPROXY_CONFIG_INVALID_CHARACTERS = "\n\t#\\'\"\r$ "
+
+
+def value_contains_invalid_characters(value: Optional[str]) -> Optional[str]:
+    """Validate if value contains invalid haproxy config characters.
+
+    Args:
+        value: The value to validate.
+
+    Raises:
+        ValueError: When value contains invalid characters.
+
+    Returns:
+        The validated value.
+    """
+    if value is None:
+        return value
+
+    if [char for char in value if char in HAPROXY_CONFIG_INVALID_CHARACTERS]:
+        raise ValueError(f"Relation data contains invalid character(s) {value}")
+    return value
 
 
 class DataValidationError(Exception):
@@ -207,7 +229,7 @@ class _DatabagModel(BaseModel):
             return cls.model_validate_json(json.dumps(data))
         except ValidationError as e:
             msg = f"failed to validate databag: {databag}"
-            logger.error(msg, exc_info=True)
+            logger.error(str(e), exc_info=True)
             raise DataValidationError(msg) from e
 
     @classmethod
@@ -270,6 +292,7 @@ class ServerHealthCheck(BaseModel):
         rise: Number of consecutive successful health checks required for up.
         fall: Number of consecutive failed health checks required for DOWN.
         path: List of URL paths to use for HTTP health checks.
+        port: Customize port value for http-check.
     """
 
     interval: int = Field(
@@ -281,7 +304,10 @@ class ServerHealthCheck(BaseModel):
     fall: int = Field(
         description="How many failed health checks before server is considered down.", default=3
     )
-    path: Optional[str] = Field(description="The health check path.", default=None)
+    path: Annotated[Optional[str], BeforeValidator(value_contains_invalid_characters)] = Field(
+        description="The health check path.", default=None
+    )
+    port: Optional[int] = Field(description="The health check port.", default=None)
 
 
 # tarpit is not yet implemented
@@ -342,7 +368,7 @@ class LoadBalancingConfiguration(BaseModel):
         description="Configure the load balancing algorithm for the service.",
         default=LoadBalancingAlgorithm.LEASTCONN,
     )
-    cookie: Optional[str] = Field(
+    cookie: Annotated[Optional[str], BeforeValidator(value_contains_invalid_characters)] = Field(
         description="Only used when algorithm is COOKIE. Define the cookie to load balance on.",
         default=None,
     )
@@ -427,8 +453,12 @@ class RewriteConfiguration(BaseModel):
     method: HaproxyRewriteMethod = Field(
         description="Which rewrite method to apply.One of set-path, set-query, set-header."
     )
-    expression: str = Field(description="Regular expression to use with the rewrite method.")
-    header: Optional[str] = Field(description="The name of the header to rewrite.", default=None)
+    expression: Annotated[str, BeforeValidator(value_contains_invalid_characters)] = Field(
+        description="Regular expression to use with the rewrite method."
+    )
+    header: Annotated[Optional[str], BeforeValidator(value_contains_invalid_characters)] = Field(
+        description="The name of the header to rewrite.", default=None
+    )
 
 
 class RequirerApplicationData(_DatabagModel):
@@ -451,7 +481,9 @@ class RequirerApplicationData(_DatabagModel):
         server_maxconn: Optional maximum number of connections per server.
     """
 
-    service: str = Field(description="The name of the service.")
+    service: Annotated[str, BeforeValidator(value_contains_invalid_characters)] = Field(
+        description="The name of the service."
+    )
     ports: list[int] = Field(description="The list of ports listening for this service.")
     paths: list[str] = Field(description="The list of paths to route to this service.", default=[])
     subdomains: list[str] = Field(
@@ -525,6 +557,21 @@ class RequirerApplicationData(_DatabagModel):
             if rewrite.method == HaproxyRewriteMethod.SET_HEADER and not rewrite.method:
                 raise ValueError("header must be set if rewrite method is SET_HEADER.")
         return rewrites
+
+    @field_validator("paths", "subdomains", mode="before")
+    @classmethod
+    def validate_invalid_characters(cls, values: list[str]) -> list[str]:
+        """Validate if each item in a list of values contains invalid haproxy config characters.
+
+        Args:
+            values: List of values to validate.
+
+        Returns:
+            The validated list of values
+        """
+        for value in values:
+            value_contains_invalid_characters(value)
+        return values
 
 
 class HaproxyRouteProviderAppData(_DatabagModel):
@@ -807,6 +854,7 @@ class HaproxyRouteRequirer(Object):
         check_rise: Optional[int] = None,
         check_fall: Optional[int] = None,
         check_path: Optional[str] = None,
+        check_port: Optional[int] = None,
         path_rewrite_expressions: Optional[list[str]] = None,
         query_rewrite_expressions: Optional[list[str]] = None,
         header_rewrite_expressions: Optional[list[tuple[str, str]]] = None,
@@ -839,6 +887,7 @@ class HaproxyRouteRequirer(Object):
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
             check_path: The path to use for server health checks.
+            check_port: The port to use for http-check.
             path_rewrite_expressions: List of regex expressions for path rewrites.
             query_rewrite_expressions: List of regex expressions for query rewrites.
             header_rewrite_expressions: List of tuples containing header name
@@ -876,6 +925,7 @@ class HaproxyRouteRequirer(Object):
             check_rise,
             check_fall,
             check_path,
+            check_port,
             path_rewrite_expressions,
             query_rewrite_expressions,
             header_rewrite_expressions,
@@ -926,6 +976,7 @@ class HaproxyRouteRequirer(Object):
         check_rise: Optional[int] = None,
         check_fall: Optional[int] = None,
         check_path: Optional[str] = None,
+        check_port: Optional[int] = None,
         path_rewrite_expressions: Optional[list[str]] = None,
         query_rewrite_expressions: Optional[list[str]] = None,
         header_rewrite_expressions: Optional[list[tuple[str, str]]] = None,
@@ -956,6 +1007,7 @@ class HaproxyRouteRequirer(Object):
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
             check_path: The path to use for server health checks.
+            check_port: The port to use for http-check.
             path_rewrite_expressions: List of regex expressions for path rewrites.
             query_rewrite_expressions: List of regex expressions for query rewrites.
             header_rewrite_expressions: List of tuples containing header name
@@ -976,6 +1028,7 @@ class HaproxyRouteRequirer(Object):
             server_maxconn: Maximum connections per server.
             unit_address: IP address of the unit (if not provided, will use binding address).
         """
+        self._unit_address = unit_address
         self._application_data = self._generate_application_data(
             service,
             ports,
@@ -985,6 +1038,7 @@ class HaproxyRouteRequirer(Object):
             check_rise,
             check_fall,
             check_path,
+            check_port,
             path_rewrite_expressions,
             query_rewrite_expressions,
             header_rewrite_expressions,
@@ -1018,6 +1072,7 @@ class HaproxyRouteRequirer(Object):
         check_rise: Optional[int] = None,
         check_fall: Optional[int] = None,
         check_path: Optional[str] = None,
+        check_port: Optional[int] = None,
         path_rewrite_expressions: Optional[list[str]] = None,
         query_rewrite_expressions: Optional[list[str]] = None,
         header_rewrite_expressions: Optional[list[tuple[str, str]]] = None,
@@ -1047,6 +1102,7 @@ class HaproxyRouteRequirer(Object):
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
             check_path: The path to use for server health checks.
+            check_port: The port to use for http-check.
             path_rewrite_expressions: List of regex expressions for path rewrites.
             query_rewrite_expressions: List of regex expressions for query rewrites.
             header_rewrite_expressions: List of tuples containing header name and
@@ -1113,7 +1169,7 @@ class HaproxyRouteRequirer(Object):
         }
 
         if check := self._generate_server_healthcheck_configuration(
-            check_interval, check_rise, check_fall, check_path
+            check_interval, check_rise, check_fall, check_path, check_port
         ):
             application_data["check"] = check
 
@@ -1134,6 +1190,7 @@ class HaproxyRouteRequirer(Object):
         rise: Optional[int],
         fall: Optional[int],
         path: Optional[str],
+        port: Optional[int],
     ) -> dict[str, int | Optional[str]]:
         """Generate configuration for server health checks.
 
@@ -1141,7 +1198,8 @@ class HaproxyRouteRequirer(Object):
             interval: Time between health checks in seconds.
             rise: Number of successful checks before marking server as up.
             fall: Number of failed checks before marking server as down.
-            path: the path to use for health checks.
+            path: The path to use for health checks.
+            port: The port to use for http-check.
 
         Returns:
             dict[str, int | Optional[str]]: Health check configuration dictionary.
@@ -1153,6 +1211,7 @@ class HaproxyRouteRequirer(Object):
                 "rise": rise,
                 "fall": fall,
                 "path": path,
+                "port": port,
             }
         return server_healthcheck_configuration
 

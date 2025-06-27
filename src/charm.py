@@ -125,8 +125,9 @@ class HAProxyCharm(ops.CharmBase):
 
         self.hacluster = HAServiceRequires(self, HACLUSTER_INTEGRATION)
         self.haproxy_route_provider = HaproxyRouteProvider(self)
-        self.framework.observe(self.on.install, self._on_install)
+        self.framework.observe(self.on.install, self._on_config_changed)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on.upgrade_charm, self._on_config_changed)
         self.framework.observe(self.on.get_certificate_action, self._on_get_certificate_action)
         self.framework.observe(
             self.certificates.on.certificate_available, self._on_certificate_available
@@ -150,11 +151,6 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(
             self.haproxy_route_provider.on.data_removed, self._configure_haproxy_route
         )
-
-    def _on_install(self, _: typing.Any) -> None:
-        """Install the haproxy package."""
-        self.haproxy_service.install()
-        self.unit.status = ops.MaintenanceStatus("Waiting for haproxy to be configured.")
 
     @validate_config_and_tls(defer=False)
     def _on_config_changed(self, _: typing.Any) -> None:
@@ -199,6 +195,8 @@ class HAProxyCharm(ops.CharmBase):
 
     def _reconcile(self) -> None:
         """Render the haproxy config and restart the service."""
+        self.haproxy_service.install()
+        self.unit.status = ops.MaintenanceStatus("Configuring haproxy.")
         proxy_mode = self._validate_state()
         if proxy_mode == ProxyMode.INVALID:
             # We don't raise any exception/set status here as it should already be handled
@@ -269,6 +267,7 @@ class HAProxyCharm(ops.CharmBase):
                         )
                         if not relation:
                             logger.error("Relation does not exist, skipping.")
+                            break
                         self.haproxy_route_provider.publish_proxied_endpoints(
                             [
                                 f"https://{hostname}/{path}"
@@ -293,7 +292,7 @@ class HAProxyCharm(ops.CharmBase):
         Returns:
             typing.List[CertificateRequestAttributes]: List of certificate request attributes.
         """
-        external_hostname = self.config.get("external-hostname", None)
+        external_hostname = typing.cast(str, self.config.get("external-hostname", None))
         if not external_hostname:
             return []
         return [
@@ -327,8 +326,7 @@ class HAProxyCharm(ops.CharmBase):
         """Validate if all the necessary preconditions are fulfilled.
 
         Returns:
-            tuple[bool, ProxyMode]: Whether the preconditions are fulfilled
-            and the resulting proxy mode.
+            ProxyMode: The resulting proxy mode.
         """
         is_ingress_related = bool(self._ingress_provider.relations)
         is_legacy_related = bool(self.reverseproxy_requirer.relations)

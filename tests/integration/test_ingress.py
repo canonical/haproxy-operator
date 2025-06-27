@@ -27,7 +27,7 @@ async def test_ingress_integration(
     application = configured_application_with_tls
     unit_ip_address = await get_unit_ip_address(application)
     await application.model.add_relation(
-        f"{application.name}:ingress", any_charm_ingress_requirer.name
+        f"{application.name}:ingress", f"{any_charm_ingress_requirer.name}:ingress"
     )
     await application.model.wait_for_idle(
         apps=[application.name],
