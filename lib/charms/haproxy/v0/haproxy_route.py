@@ -143,7 +143,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 5
+LIBPATCH = 6
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -1057,8 +1057,6 @@ class HaproxyRouteRequirer(Object):
             queue_timeout,
             server_maxconn,
         )
-        self._unit_address = unit_address
-
         self.update_relation_data()
 
     # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
