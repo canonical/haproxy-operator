@@ -1,7 +1,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""HAproxy ingress charm state component."""
+"""HAproxy route charm state component."""
 
 import logging
 from functools import cached_property
