@@ -31,7 +31,7 @@ resource "juju_application" "hacluster" {
   count = var.use_hacluster ? 1 : 0
   name  = var.hacluster_app_name
   model = var.model
-  units = var.units
+  units = 1
 
   charm {
     name     = "hacluster"

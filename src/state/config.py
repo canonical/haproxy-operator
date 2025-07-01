@@ -9,7 +9,7 @@ import typing
 
 # bandit flags import subprocess as a low security issue
 # We disable it here as it's simply a heads-up for potential issues
-from subprocess import STDOUT, CalledProcessError, check_output  # nosec B404
+from subprocess import STDOUT, CalledProcessError, check_output  # nosec
 
 import ops
 from pydantic import Field, ValidationError, field_validator
