@@ -67,6 +67,13 @@ def mock_certificate_fixture(
         ),
         MagicMock(return_value=(provider_cert_mock, private_key)),
     )
+    monkeypatch.setattr(
+        (
+            "charms.tls_certificates_interface.v4.tls_certificates"
+            ".TLSCertificatesRequiresV4.get_assigned_certificates"
+        ),
+        MagicMock(return_value=([provider_cert_mock], private_key)),
+    )
     return certificate, private_key
 
 
@@ -99,6 +106,7 @@ def context_with_install_mock_fixture():
         patch("haproxy.HAProxyService.install") as install_mock,
         patch("haproxy.HAProxyService.reconcile_default") as reconcile_default_mock,
         patch("haproxy.HAProxyService.reconcile_ingress") as reconcile_ingress_mock,
+        patch("tls_relation.TLSRelationService.write_certificate_to_unit"),
     ):
         yield (
             Context(

@@ -77,21 +77,12 @@ class HAProxyService:
     """HAProxy service class."""
 
     def install(self) -> None:
-        """Install the haproxy apt package.
-
-        Raises:
-            HaproxyServiceNotActiveError: If the service is not running after installation.
-        """
+        """Install the haproxy apt package."""
         apt.add_package(
             package_names=APT_PACKAGE_NAME, version=APT_PACKAGE_VERSION, update_cache=True
         )
         pin_haproxy_package_version()
-
         render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
-        self._reload_haproxy_service()
-
-        if not self.is_active():
-            raise HaproxyServiceNotActiveError("HAProxy service is not running.")
 
     def is_active(self) -> bool:
         """Indicate if the haproxy service is active.
@@ -198,12 +189,16 @@ class HAProxyService:
         """Reload the haproxy service.
 
         Raises:
-            HaproxyServiceReloadError: when the haproxy service fails to reload.
+            HaproxyServiceReloadError: When the haproxy service fails to reload.
+            HaproxyServiceNotActiveError: When the haproxy service is not active after reload.
         """
         try:
             systemd.service_reload(HAPROXY_SERVICE)
         except systemd.SystemdError as exc:
             raise HaproxyServiceReloadError("Failed reloading the haproxy service.") from exc
+
+        if not self.is_active():
+            raise HaproxyServiceNotActiveError("HAProxy service is not running.")
 
     def _validate_haproxy_config(self) -> None:
         """Validate the generated HAProxy config.
