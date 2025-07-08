@@ -36,7 +36,7 @@ def mock_relation_data_fixture():
     return {
         "service": "test-service",
         "ports": [8080],
-        "hosts": ["10.0.0.1"],
+        "hosts": ["10.0.0.1", "10.0.0.2"],
         "paths": ["/api"],
         "subdomains": ["api"],
         "load_balancing": {"algorithm": "leastconn"},
@@ -193,7 +193,7 @@ def test_load_requirer_application_data(mock_relation_data):
 
     assert data.service == "test-service"
     assert data.ports == [8080]
-    assert data.hosts == [IPv4Address("10.0.0.1")]
+    assert data.hosts == [IPv4Address("10.0.0.1"), IPv4Address("10.0.0.2")]
     assert data.paths == ["/api"]
     assert data.subdomains == ["api"]
     assert data.check.interval == 60
