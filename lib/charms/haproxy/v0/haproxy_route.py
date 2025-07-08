@@ -887,6 +887,7 @@ class HaproxyRouteRequirer(Object):
             relation_name: The name of the relation to bind to.
             service: The name of the service to route traffic to.
             ports: List of ports the service is listening on.
+            hosts: List of backend server addresses. Currently only support IP addresses.
             paths: List of URL paths to route to this service.
             subdomains: List of subdomains to route to this service.
             check_interval: Interval between health checks in seconds.
@@ -1009,6 +1010,7 @@ class HaproxyRouteRequirer(Object):
         Args:
             service: The name of the service to route traffic to.
             ports: List of ports the service is listening on.
+            hosts: List of backend server addresses. Currently only support IP addresses.
             paths: List of URL paths to route to this service.
             subdomains: List of subdomains to route to this service.
             check_interval: Interval between health checks in seconds.
@@ -1104,6 +1106,7 @@ class HaproxyRouteRequirer(Object):
         Args:
             service: The name of the service to route traffic to.
             ports: List of ports the service is listening on.
+            hosts: List of backend server addresses. Currently only support IP addresses.
             paths: List of URL paths to route to this service.
             subdomains: List of subdomains to route to this service.
             check_interval: Interval between health checks in seconds.
