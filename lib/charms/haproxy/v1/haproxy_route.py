@@ -7,7 +7,7 @@ To get started using the library, you just need to fetch the library using `char
 
 ```shell
 cd some-charm
-charmcraft fetch-lib charms.haproxy.v0.haproxy_route
+charmcraft fetch-lib charms.haproxy.v1.haproxy_route
 ```
 
 In the `metadata.yaml` of the charm, add the following:
@@ -22,7 +22,7 @@ requires:
 Then, to initialise the library:
 
 ```python
-from charms.haproxy.v0.haproxy_route import HaproxyRouteRequirer
+from charms.haproxy.v1.haproxy_route import HaproxyRouteRequirer
 
 class SomeCharm(CharmBase):
   def __init__(self, *args):
@@ -99,7 +99,7 @@ Note that this interface supports relating to multiple endpoints.
 
 Then, to initialise the library:
 ```python
-from charms.haproxy.v0.haproxy_route import HaproxyRouteRequirer
+from charms.haproxy.v1.haproxy_route import HaproxyRouteRequirer
 
 class SomeCharm(CharmBase):
     self.haproxy_route_provider = HaproxyRouteProvider(self)

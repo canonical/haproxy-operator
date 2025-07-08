@@ -4,7 +4,7 @@
 """Unit tests for haproxy-route relation."""
 
 import pytest
-from charms.haproxy.v0.haproxy_route import (
+from charms.haproxy.v1.haproxy_route import (
     LoadBalancingAlgorithm,
     RequirerApplicationData,
     RequirerUnitData,
