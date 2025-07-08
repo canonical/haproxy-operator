@@ -3,8 +3,6 @@
 
 """Unit tests for haproxy-route relation."""
 
-from unittest.mock import MagicMock
-
 import pytest
 from charms.haproxy.v0.haproxy_route import (
     LoadBalancingAlgorithm,
@@ -101,10 +99,8 @@ def test_haproxy_route_from_provider(
     )
 
     harness.begin()
-    tls_information = MagicMock()
-    tls_information.external_hostname = MOCK_EXTERNAL_HOSTNAME
     haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
-        harness.charm.haproxy_route_provider, tls_information, haproxy_peer_units_address
+        harness.charm.haproxy_route_provider, MOCK_EXTERNAL_HOSTNAME, haproxy_peer_units_address
     )
 
     assert len(haproxy_route_information.backends) == 2
@@ -157,12 +153,12 @@ def test_haproxy_route_from_provider_duplicate_backend_names(
     harness.update_relation_data(
         extra_relation_id, "extra-requirer-charm/0", generate_unit_data("10.0.0.3")
     )
-    tls_information = MagicMock()
-    tls_information.external_hostname = MOCK_EXTERNAL_HOSTNAME
 
     harness.begin()
     # Act & Assert
     with pytest.raises(HaproxyRouteIntegrationDataValidationError):
         HaproxyRouteRequirersInformation.from_provider(
-            harness.charm.haproxy_route_provider, tls_information, peers=[]
+            haproxy_route=harness.charm.haproxy_route_provider,
+            external_hostname=MOCK_EXTERNAL_HOSTNAME,
+            peers=[],
         )

@@ -53,16 +53,13 @@ class TLSRelationService:
         """
         if len(self.certificates.certificate_requests) == 0:
             return None
-        provider_certificate, _ = self.certificates.get_assigned_certificate(
-            certificate_request=self.certificates.certificate_requests[0]
-        )
-        if not provider_certificate:
-            return None
-        if not provider_certificate.certificate:
-            return None
-        if provider_certificate.certificate.common_name != hostname:
-            return None
-        return provider_certificate
+
+        provider_certificates, _ = self.certificates.get_assigned_certificates()
+        for provider_cert in provider_certificates:
+            if provider_cert.certificate and provider_cert.certificate.common_name == hostname:
+                return provider_cert
+
+        return None
 
     def certificate_available(self, tls_information: TLSInformation) -> None:
         """Handle TLS Certificate available event.

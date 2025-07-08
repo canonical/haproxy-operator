@@ -25,7 +25,7 @@ from charms.traefik_k8s.v2.ingress import (
     IngressPerAppDataRemovedEvent,
     IngressPerAppProvider,
 )
-from interface_hacluster.ops_ha_interface import HAServiceReadyEvent, HAServiceRequires
+from interface_hacluster.ops_ha_interface import HAServiceRequires
 from ops.charm import ActionEvent
 from ops.model import Port
 
@@ -39,9 +39,13 @@ from http_interface import (
 from state.config import CharmConfig
 from state.exception import CharmStateValidationBaseError
 from state.ha import HACLUSTER_INTEGRATION, HAPROXY_PEER_INTEGRATION, HAInformation
-from state.haproxy_route import HAPROXY_ROUTE_RELATION, HaproxyRouteRequirersInformation
+from state.haproxy_route import (
+    HAPROXY_ROUTE_RELATION,
+    HaproxyRouteIntegrationDataValidationError,
+    HaproxyRouteRequirersInformation,
+)
 from state.ingress import IngressRequirersInformation
-from state.tls import TLSInformation
+from state.tls import TLSInformation, TLSNotReadyError
 from state.validation import validate_config_and_tls
 from tls_relation import TLSRelationService
 
@@ -102,17 +106,22 @@ class HAProxyCharm(ops.CharmBase):
         # Order is important here as we want _ensure_tls to check if the hostname is configured
         self.framework.observe(self.on[TLS_CERT_RELATION].relation_created, self._ensure_tls)
         self.framework.observe(self.on[TLS_CERT_RELATION].relation_changed, self._ensure_tls)
+        self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
+        self.reverseproxy_requirer = HTTPRequirer(self, REVERSE_PROXY_RELATION)
+        self.haproxy_route_provider = HaproxyRouteProvider(self)
         self.certificates = TLSCertificatesRequiresV4(
             charm=self,
             relationship_name=TLS_CERT_RELATION,
             certificate_requests=self._get_certificate_requests(),
-            refresh_events=[self.on.config_changed],
+            refresh_events=[
+                self.on.config_changed,
+                self.haproxy_route_provider.on.data_available,
+                self.haproxy_route_provider.on.data_removed,
+            ],
             mode=Mode.UNIT,
         )
 
         self._tls = TLSRelationService(self.model, self.certificates)
-        self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
-        self.reverseproxy_requirer = HTTPRequirer(self, REVERSE_PROXY_RELATION)
         self.website_requirer = HTTPProvider(self, WEBSITE_RELATION)
 
         self._grafana_agent = COSAgentProvider(
@@ -124,10 +133,9 @@ class HAProxyCharm(ops.CharmBase):
         )
 
         self.hacluster = HAServiceRequires(self, HACLUSTER_INTEGRATION)
-        self.haproxy_route_provider = HaproxyRouteProvider(self)
-        self.framework.observe(self.on.install, self._on_config_changed)
+        self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
-        self.framework.observe(self.on.upgrade_charm, self._on_config_changed)
+        self.framework.observe(self.on.upgrade_charm, self._on_install)
         self.framework.observe(self.on.get_certificate_action, self._on_get_certificate_action)
         self.framework.observe(
             self.certificates.on.certificate_available, self._on_certificate_available
@@ -144,13 +152,19 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(
             self._ingress_provider.on.data_removed, self._on_ingress_data_removed
         )
-        self.framework.observe(self.hacluster.on.ha_ready, self._on_ha_ready)
+        self.framework.observe(self.hacluster.on.ha_ready, self._on_config_changed)
         self.framework.observe(
-            self.haproxy_route_provider.on.data_available, self._configure_haproxy_route
+            self.haproxy_route_provider.on.data_available, self._on_config_changed
         )
         self.framework.observe(
-            self.haproxy_route_provider.on.data_removed, self._configure_haproxy_route
+            self.haproxy_route_provider.on.data_removed, self._on_config_changed
         )
+
+    @validate_config_and_tls(defer=False)
+    def _on_install(self, _: typing.Any) -> None:
+        """Install the haproxy service and reconcile."""
+        self.haproxy_service.install()
+        self._reconcile()
 
     @validate_config_and_tls(defer=False)
     def _on_config_changed(self, _: typing.Any) -> None:
@@ -195,7 +209,6 @@ class HAProxyCharm(ops.CharmBase):
 
     def _reconcile(self) -> None:
         """Render the haproxy config and restart the service."""
-        self.haproxy_service.install()
         self.unit.status = ops.MaintenanceStatus("Configuring haproxy.")
         proxy_mode = self._validate_state()
         if proxy_mode == ProxyMode.INVALID:
@@ -252,7 +265,7 @@ class HAProxyCharm(ops.CharmBase):
                 haproxy_route_requirers_information = (
                     HaproxyRouteRequirersInformation.from_provider(
                         self.haproxy_route_provider,
-                        tls_information,
+                        tls_information.external_hostname,
                         self._get_peer_units_address(),
                     )
                 )
@@ -295,6 +308,34 @@ class HAProxyCharm(ops.CharmBase):
         external_hostname = typing.cast(str, self.config.get("external-hostname", None))
         if not external_hostname:
             return []
+
+        if self.haproxy_route_provider.relations and not (
+            self.reverseproxy_requirer.relations or self._ingress_provider.relations
+        ):
+            try:
+                haproxy_route_requirer_information = (
+                    HaproxyRouteRequirersInformation.from_provider(
+                        self.haproxy_route_provider,
+                        external_hostname,
+                        self._get_peer_units_address(),
+                    )
+                )
+                return [
+                    CertificateRequestAttributes(
+                        common_name=hostname_acl, sans_dns=frozenset([hostname_acl])
+                    )
+                    for backend in haproxy_route_requirer_information.backends
+                    for hostname_acl in backend.hostname_acls
+                ]
+            except (HaproxyRouteIntegrationDataValidationError, TLSNotReadyError):
+                logger.exception(
+                    "haproxy-route information not ready, skipping certificate request."
+                )
+                return [
+                    CertificateRequestAttributes(
+                        common_name=external_hostname, sans_dns=frozenset([external_hostname])
+                    )
+                ]
         return [
             CertificateRequestAttributes(
                 common_name=external_hostname, sans_dns=frozenset([external_hostname])
@@ -352,11 +393,6 @@ class HAProxyCharm(ops.CharmBase):
 
         return ProxyMode.NOPROXY
 
-    @validate_config_and_tls(defer=False)
-    def _on_ha_ready(self, _: HAServiceReadyEvent) -> None:
-        """Handle the ha-ready event."""
-        self._reconcile()
-
     def _reconcile_ha(self, ha_information: HAInformation) -> None:
         """Update ha configuration.
 
@@ -382,14 +418,6 @@ class HAProxyCharm(ops.CharmBase):
         self.hacluster.add_systemd_service(f"{self.app.name}-{HAPROXY_SERVICE}", HAPROXY_SERVICE)
         self.hacluster.bind_resources()
         peer_relation.data[self.unit].update({"vip": str(ha_information.vip)})
-
-    @validate_config_and_tls(defer=False)
-    def _configure_haproxy_route(self, _: HAServiceReadyEvent) -> None:
-        """Handle the ha-ready event."""
-        data = self.haproxy_route_provider.get_data(self.haproxy_route_provider.relations)
-        # This is temporary as the logic to generate the haproxy config will be added later.
-        logger.debug("Aggregated requirer data: %s", data)
-        self._reconcile()
 
     @validate_config_and_tls(defer=True)
     def _ensure_tls(self, _: ops.EventBase) -> None:
