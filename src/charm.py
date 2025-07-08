@@ -339,7 +339,7 @@ class HAProxyCharm(ops.CharmBase):
                     for hostname_acl in backend.hostname_acls
                 ]
             except (HaproxyRouteIntegrationDataValidationError, TLSNotReadyError):
-                # We are handling errors here and not re-raising/setting charm status as 
+                # We are handling errors here and not re-raising/setting charm status as
                 # this method is called during charm initialization
                 logger.exception(
                     "haproxy-route information not ready, skipping certificate request."
