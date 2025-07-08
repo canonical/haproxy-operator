@@ -331,11 +331,6 @@ class HAProxyCharm(ops.CharmBase):
                 logger.exception(
                     "haproxy-route information not ready, skipping certificate request."
                 )
-                return [
-                    CertificateRequestAttributes(
-                        common_name=external_hostname, sans_dns=frozenset([external_hostname])
-                    )
-                ]
         return [
             CertificateRequestAttributes(
                 common_name=external_hostname, sans_dns=frozenset([external_hostname])
