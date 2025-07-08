@@ -309,9 +309,16 @@ class HAProxyCharm(ops.CharmBase):
         if not external_hostname:
             return []
 
-        if self.haproxy_route_provider.relations and not (
-            self.reverseproxy_requirer.relations or self._ingress_provider.relations
+        if (
+            bool(self.haproxy_route_provider.relations)
+            + bool(self.reverseproxy_requirer.relations)
+            + bool(self._ingress_provider.relations)
+            > 1
         ):
+            # The charm is in an invalid state, we don't request for certificates here
+            return []
+
+        if self.haproxy_route_provider.relations:
             try:
                 haproxy_route_requirer_information = (
                     HaproxyRouteRequirersInformation.from_provider(
