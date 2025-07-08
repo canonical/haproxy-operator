@@ -106,6 +106,8 @@ class HAProxyCharm(ops.CharmBase):
         # Order is important here as we want _ensure_tls to check if the hostname is configured
         self.framework.observe(self.on[TLS_CERT_RELATION].relation_created, self._ensure_tls)
         self.framework.observe(self.on[TLS_CERT_RELATION].relation_changed, self._ensure_tls)
+        # Relation handlers are initialized before self.certificates as we need them when calling
+        # self._get_certificate_requests()
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
         self.reverseproxy_requirer = HTTPRequirer(self, REVERSE_PROXY_RELATION)
         self.haproxy_route_provider = HaproxyRouteProvider(self)
@@ -309,6 +311,8 @@ class HAProxyCharm(ops.CharmBase):
         if not external_hostname:
             return []
 
+        # This is the same logic as in self._validate_state, but we don't reuse that method
+        # as we want to avoid setting charm status during initialization
         if (
             bool(self.haproxy_route_provider.relations)
             + bool(self.reverseproxy_requirer.relations)
@@ -335,9 +339,13 @@ class HAProxyCharm(ops.CharmBase):
                     for hostname_acl in backend.hostname_acls
                 ]
             except (HaproxyRouteIntegrationDataValidationError, TLSNotReadyError):
+                # We are handling errors here and not re-raising/setting charm status as this method
+                # is called during charm initialization
                 logger.exception(
                     "haproxy-route information not ready, skipping certificate request."
                 )
+                return []
+
         return [
             CertificateRequestAttributes(
                 common_name=external_hostname, sans_dns=frozenset([external_hostname])
