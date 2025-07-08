@@ -33,7 +33,7 @@ jobs:
               "any_charm.py": pathlib.Path(f"{workspace}/tests/integration/haproxy_route_requirer.py").read_text(
                 encoding="utf-8"
               ),
-              "haproxy_route.py": pathlib.Path(f"{workspace}/lib/charms/haproxy/v0/haproxy_route.py").read_text(
+              "haproxy_route.py": pathlib.Path(f"{workspace}/lib/charms/haproxy/v1/haproxy_route.py").read_text(
                 encoding="utf-8"
               ),
               "apt.py": pathlib.Path(f"{workspace}/lib/charms/operator_libs_linux/v0/apt.py").read_text(encoding="utf-8"),
