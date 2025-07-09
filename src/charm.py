@@ -61,6 +61,10 @@ class HaproxyUnitAddressNotAvailableError(CharmStateValidationBaseError):
     """Exception raised when ingress integration is not established."""
 
 
+class HaproxyTooManyIntegrationsError(CharmStateValidationBaseError):
+    """Exception raised when haproxy is in an invalid state with too many integrations."""
+
+
 class ProxyMode(StrEnum):
     """StrEnum of possible http_route types.
 
@@ -311,19 +315,10 @@ class HAProxyCharm(ops.CharmBase):
         if not external_hostname:
             return []
 
-        # This is the same logic as in self._validate_state, but we don't reuse that method
-        # as we want to avoid setting charm status during initialization
-        if (
-            bool(self.haproxy_route_provider.relations)
-            + bool(self.reverseproxy_requirer.relations)
-            + bool(self._ingress_provider.relations)
-            > 1
-        ):
-            # The charm is in an invalid state, we don't request for certificates here
-            return []
+        try:
+            proxy_mode = self._validate_state()
 
-        if self.haproxy_route_provider.relations:
-            try:
+            if proxy_mode == ProxyMode.HAPROXY_ROUTE:
                 haproxy_route_requirer_information = (
                     HaproxyRouteRequirersInformation.from_provider(
                         self.haproxy_route_provider,
@@ -338,13 +333,15 @@ class HAProxyCharm(ops.CharmBase):
                     for backend in haproxy_route_requirer_information.backends
                     for hostname_acl in backend.hostname_acls
                 ]
-            except (HaproxyRouteIntegrationDataValidationError, TLSNotReadyError):
-                # We are handling errors here and not re-raising/setting charm status as
-                # this method is called during charm initialization
-                logger.exception(
-                    "haproxy-route information not ready, skipping certificate request."
-                )
-                return []
+        except (
+            HaproxyRouteIntegrationDataValidationError,
+            TLSNotReadyError,
+            CharmStateValidationBaseError,
+        ):
+            # We are handling errors here and not re-raising/setting charm status as
+            # this method is called during charm initialization
+            logger.exception("haproxy-route information not ready, skipping certificate request.")
+            return []
 
         return [
             CertificateRequestAttributes(
@@ -376,6 +373,10 @@ class HAProxyCharm(ops.CharmBase):
     def _validate_state(self) -> ProxyMode:
         """Validate if all the necessary preconditions are fulfilled.
 
+        Raises:
+            HaproxyTooManyIntegrationsError: when there are too many integrations and
+            haproxy is in an invalid state.
+
         Returns:
             ProxyMode: The resulting proxy mode.
         """
@@ -389,8 +390,7 @@ class HAProxyCharm(ops.CharmBase):
                 "can be active at a time."
             )
             logger.error(msg)
-            self.unit.status = ops.BlockedStatus(msg)
-            return ProxyMode.INVALID
+            raise HaproxyTooManyIntegrationsError(msg)
 
         if is_ingress_related:
             return ProxyMode.INGRESS
