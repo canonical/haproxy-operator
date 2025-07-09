@@ -20,6 +20,8 @@ from pydantic import IPvAnyAddress, model_validator
 from pydantic.dataclasses import dataclass
 from typing_extensions import Self
 
+from state.tls import TLSInformation
+
 from .exception import CharmStateValidationBaseError
 
 HAPROXY_ROUTE_RELATION = "haproxy-route"
@@ -181,13 +183,13 @@ class HaproxyRouteRequirersInformation:
 
     @classmethod
     def from_provider(
-        cls, haproxy_route: HaproxyRouteProvider, external_hostname: str, peers: list[str]
+        cls, haproxy_route: HaproxyRouteProvider, tls_information: TLSInformation, peers: list[str]
     ) -> "HaproxyRouteRequirersInformation":
         """Initialize the HaproxyRouteRequirersInformation state component.
 
         Args:
             haproxy_route: The haproxy-route provider class.
-            external_hostname: The charm's configured hostname.
+            tls_information: The charm's TLS information state component.
             peers: List of IP address of haproxy peer units.
 
         Raises:
@@ -216,7 +218,7 @@ class HaproxyRouteRequirersInformation:
                     relation_id=requirer.relation_id,
                     application_data=requirer.application_data,
                     servers=get_servers_definition_from_requirer_data(requirer),
-                    external_hostname=external_hostname,
+                    external_hostname=tls_information.external_hostname,
                 )
                 backends.append(backend)
 
