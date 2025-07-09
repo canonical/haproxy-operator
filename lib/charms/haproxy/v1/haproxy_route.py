@@ -7,7 +7,7 @@ To get started using the library, you just need to fetch the library using `char
 
 ```shell
 cd some-charm
-charmcraft fetch-lib charms.haproxy.v0.haproxy_route
+charmcraft fetch-lib charms.haproxy.v1.haproxy_route
 ```
 
 In the `metadata.yaml` of the charm, add the following:
@@ -22,7 +22,7 @@ requires:
 Then, to initialise the library:
 
 ```python
-from charms.haproxy.v0.haproxy_route import HaproxyRouteRequirer
+from charms.haproxy.v1.haproxy_route import HaproxyRouteRequirer
 
 class SomeCharm(CharmBase):
   def __init__(self, *args):
@@ -99,7 +99,7 @@ Note that this interface supports relating to multiple endpoints.
 
 Then, to initialise the library:
 ```python
-from charms.haproxy.v0.haproxy_route import HaproxyRouteRequirer
+from charms.haproxy.v1.haproxy_route import HaproxyRouteRequirer
 
 class SomeCharm(CharmBase):
     self.haproxy_route_provider = HaproxyRouteProvider(self)
@@ -139,11 +139,11 @@ from typing_extensions import Self
 LIBID = "08b6347482f6455486b5f5bb4dc4e6cf"
 
 # Increment this major API version when introducing breaking changes
-LIBAPI = 0
+LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 6
+LIBPATCH = 0
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -467,6 +467,7 @@ class RequirerApplicationData(_DatabagModel):
     Attributes:
         service: Name of the service requesting HAProxy routing.
         ports: List of port numbers on which the service is listening.
+        hosts: List of backend server addresses.
         paths: List of URL paths to route to this service. Defaults to an empty list.
         subdomains: List of subdomains to route to this service. Defaults to an empty list.
         rewrites: List of RewriteConfiguration objects defining path, query, or header
@@ -485,6 +486,10 @@ class RequirerApplicationData(_DatabagModel):
         description="The name of the service."
     )
     ports: list[int] = Field(description="The list of ports listening for this service.")
+    hosts: list[IPvAnyAddress] = Field(
+        description="The list of backend server addresses. Currently only support IP addresses.",
+        default=[],
+    )
     paths: list[str] = Field(description="The list of paths to route to this service.", default=[])
     subdomains: list[str] = Field(
         description="The list of subdomains to route to this service.", default=[]
@@ -848,6 +853,7 @@ class HaproxyRouteRequirer(Object):
         relation_name: str,
         service: Optional[str] = None,
         ports: Optional[list[int]] = None,
+        hosts: Optional[list[str]] = None,
         paths: Optional[list[str]] = None,
         subdomains: Optional[list[str]] = None,
         check_interval: Optional[int] = None,
@@ -881,6 +887,7 @@ class HaproxyRouteRequirer(Object):
             relation_name: The name of the relation to bind to.
             service: The name of the service to route traffic to.
             ports: List of ports the service is listening on.
+            hosts: List of backend server addresses. Currently only support IP addresses.
             paths: List of URL paths to route to this service.
             subdomains: List of subdomains to route to this service.
             check_interval: Interval between health checks in seconds.
@@ -919,6 +926,7 @@ class HaproxyRouteRequirer(Object):
         self._application_data = self._generate_application_data(
             service,
             ports,
+            hosts,
             paths,
             subdomains,
             check_interval,
@@ -970,6 +978,7 @@ class HaproxyRouteRequirer(Object):
         self,
         service: str,
         ports: list[int],
+        hosts: Optional[list[str]] = None,
         paths: Optional[list[str]] = None,
         subdomains: Optional[list[str]] = None,
         check_interval: Optional[int] = None,
@@ -1001,6 +1010,7 @@ class HaproxyRouteRequirer(Object):
         Args:
             service: The name of the service to route traffic to.
             ports: List of ports the service is listening on.
+            hosts: List of backend server addresses. Currently only support IP addresses.
             paths: List of URL paths to route to this service.
             subdomains: List of subdomains to route to this service.
             check_interval: Interval between health checks in seconds.
@@ -1032,6 +1042,7 @@ class HaproxyRouteRequirer(Object):
         self._application_data = self._generate_application_data(
             service,
             ports,
+            hosts,
             paths,
             subdomains,
             check_interval,
@@ -1064,6 +1075,7 @@ class HaproxyRouteRequirer(Object):
         self,
         service: Optional[str] = None,
         ports: Optional[list[int]] = None,
+        hosts: Optional[list[str]] = None,
         paths: Optional[list[str]] = None,
         subdomains: Optional[list[str]] = None,
         check_interval: Optional[int] = None,
@@ -1094,6 +1106,7 @@ class HaproxyRouteRequirer(Object):
         Args:
             service: The name of the service to route traffic to.
             ports: List of ports the service is listening on.
+            hosts: List of backend server addresses. Currently only support IP addresses.
             paths: List of URL paths to route to this service.
             subdomains: List of subdomains to route to this service.
             check_interval: Interval between health checks in seconds.
@@ -1126,6 +1139,8 @@ class HaproxyRouteRequirer(Object):
         # Apply default value to list parameters to avoid problems with mutable default args.
         if not ports:
             ports = []
+        if not hosts:
+            hosts = []
         if not paths:
             paths = []
         if not subdomains:
@@ -1142,6 +1157,7 @@ class HaproxyRouteRequirer(Object):
         application_data: dict[str, Any] = {
             "service": service,
             "ports": ports,
+            "hosts": hosts,
             "paths": paths,
             "subdomains": subdomains,
             "load_balancing": {

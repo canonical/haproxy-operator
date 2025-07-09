@@ -5,12 +5,13 @@
 
 import json
 import logging
+from ipaddress import IPv4Address
 from typing import Any
 from unittest.mock import MagicMock
 
 import ops
 import pytest
-from charms.haproxy.v0.haproxy_route import (
+from charms.haproxy.v1.haproxy_route import (
     DataValidationError,
     HaproxyRouteProviderAppData,
     HaproxyRouteRequirer,
@@ -35,6 +36,7 @@ def mock_relation_data_fixture():
     return {
         "service": "test-service",
         "ports": [8080],
+        "hosts": ["10.0.0.1", "10.0.0.2"],
         "paths": ["/api"],
         "subdomains": ["api"],
         "load_balancing": {"algorithm": "leastconn"},
@@ -63,6 +65,7 @@ def test_requirer_application_data_validation():
     data = RequirerApplicationData(
         service="test-service",
         ports=[8080],
+        hosts=["10.0.0.1"],
         paths=["/api"],
         subdomains=["api"],
         check=ServerHealthCheck(path="/health"),
@@ -71,6 +74,7 @@ def test_requirer_application_data_validation():
 
     assert data.service == "test-service"
     assert data.ports == [8080]
+    assert data.hosts == [IPv4Address("10.0.0.1")]
     assert data.paths == ["/api"]
     assert data.subdomains == ["api"]
     assert data.check.path == "/health"  # pylint: disable=no-member
@@ -89,6 +93,20 @@ def test_requirer_application_data_cookie_validation():
             service="test-service",
             ports=[8080],
             load_balancing={"algorithm": LoadBalancingAlgorithm.COOKIE},
+        )
+
+
+def test_requirer_application_data_invalid_hosts():
+    """
+    arrange: Create a RequirerApplicationData model with hosts having invalid ip addresses.
+    act: Validate the model.
+    assert: Validation raises an error.
+    """
+    with pytest.raises(ValidationError):
+        RequirerApplicationData(
+            service="test-service",
+            ports=[8080],
+            hosts=["invalid"],
         )
 
 
@@ -175,6 +193,7 @@ def test_load_requirer_application_data(mock_relation_data):
 
     assert data.service == "test-service"
     assert data.ports == [8080]
+    assert data.hosts == [IPv4Address("10.0.0.1"), IPv4Address("10.0.0.2")]
     assert data.paths == ["/api"]
     assert data.subdomains == ["api"]
     assert data.check.interval == 60
@@ -192,6 +211,7 @@ def test_dump_requirer_application_data():
     data = RequirerApplicationData(
         service="test-service",
         ports=[8080],
+        hosts=["10.0.0.1"],
         paths=["/api"],
         subdomains=["api"],
         check=ServerHealthCheck(path="/health"),
@@ -203,6 +223,7 @@ def test_dump_requirer_application_data():
     assert "service" in databag
     assert json.loads(databag["service"]) == "test-service"
     assert json.loads(databag["ports"]) == [8080]
+    assert json.loads(databag["hosts"]) == ["10.0.0.1"]
     assert json.loads(databag["paths"]) == ["/api"]
     assert json.loads(databag["subdomains"]) == ["api"]
     assert json.loads(databag["check"])["path"] == "/health"

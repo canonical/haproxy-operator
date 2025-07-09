@@ -4,7 +4,7 @@
 """Unit tests for haproxy-route relation."""
 
 import pytest
-from charms.haproxy.v0.haproxy_route import (
+from charms.haproxy.v1.haproxy_route import (
     LoadBalancingAlgorithm,
     RequirerApplicationData,
     RequirerUnitData,
@@ -40,6 +40,7 @@ def extra_requirer_application_data_fixture():
     return RequirerApplicationData(
         service="test-service-extra",
         ports=[9000],
+        hosts=["10.0.0.1", "10.0.0.2"],
         paths=[],
         subdomains=["extra"],
         check=ServerHealthCheck(path="/extra"),
@@ -117,7 +118,7 @@ def test_haproxy_route_from_provider(
     assert extra_backend.relation_id == extra_relation_id
     assert extra_backend.external_hostname == MOCK_EXTERNAL_HOSTNAME
     assert extra_backend.backend_name == "test-service-extra"
-    assert len(extra_backend.servers) == 1
+    assert len(extra_backend.servers) == 2
     assert extra_backend.hostname_acls == [f"extra.{MOCK_EXTERNAL_HOSTNAME}"]
     assert extra_backend.path_acl_required is False
 

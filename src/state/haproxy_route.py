@@ -7,7 +7,7 @@ import logging
 from functools import cached_property
 from typing import Optional, cast
 
-from charms.haproxy.v0.haproxy_route import (
+from charms.haproxy.v1.haproxy_route import (
     DataValidationError,
     HaproxyRewriteMethod,
     HaproxyRouteProvider,
@@ -275,12 +275,17 @@ def get_servers_definition_from_requirer_data(
         list[HAProxyRouteServer]: List of server definitions.
     """
     servers: list[HAProxyRouteServer] = []
-    for i, unit_data in enumerate(requirer.units_data):
+    server_addresses: list[IPvAnyAddress] = (
+        requirer.application_data.hosts
+        if requirer.application_data.hosts
+        else [unit_data.address for unit_data in requirer.units_data]
+    )
+    for i, server_address in enumerate(server_addresses):
         for port in requirer.application_data.ports:
             servers.append(
                 HAProxyRouteServer(
                     server_name=f"{requirer.application_data.service}_{port}_{i}",
-                    address=unit_data.address,
+                    address=server_address,
                     port=port,
                     check=requirer.application_data.check,
                     maxconn=requirer.application_data.server_maxconn,
