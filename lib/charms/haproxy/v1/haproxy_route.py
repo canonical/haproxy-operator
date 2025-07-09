@@ -467,7 +467,7 @@ class RequirerApplicationData(_DatabagModel):
     Attributes:
         service: Name of the service requesting HAProxy routing.
         ports: List of port numbers on which the service is listening.
-        hosts: List of backend server addresses. Currently only support IP addresses.
+        hosts: List of backend server addresses.
         paths: List of URL paths to route to this service. Defaults to an empty list.
         subdomains: List of subdomains to route to this service. Defaults to an empty list.
         rewrites: List of RewriteConfiguration objects defining path, query, or header
