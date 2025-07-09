@@ -24,6 +24,7 @@ def context_with_install_mock_fixture():
     with (
         patch("haproxy.HAProxyService.reconcile_haproxy_route") as reconcile_mock,
         patch("tls_relation.TLSRelationService.write_certificate_to_unit"),
+        patch("haproxy.HAProxyService.install"),
     ):
         yield (
             Context(
