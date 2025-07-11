@@ -143,7 +143,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 0
+LIBPATCH = 1
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -168,6 +168,9 @@ def value_contains_invalid_characters(value: Optional[str]) -> Optional[str]:
     if [char for char in value if char in HAPROXY_CONFIG_INVALID_CHARACTERS]:
         raise ValueError(f"Relation data contains invalid character(s) {value}")
     return value
+
+
+VALIDATED_CONFIG_STR = Annotated[str, BeforeValidator(value_contains_invalid_characters)]
 
 
 class DataValidationError(Exception):
@@ -304,7 +307,7 @@ class ServerHealthCheck(BaseModel):
     fall: int = Field(
         description="How many failed health checks before server is considered down.", default=3
     )
-    path: Annotated[Optional[str], BeforeValidator(value_contains_invalid_characters)] = Field(
+    path: Optional[VALIDATED_CONFIG_STR] = Field(
         description="The health check path.", default=None
     )
     port: Optional[int] = Field(description="The health check port.", default=None)
@@ -368,7 +371,7 @@ class LoadBalancingConfiguration(BaseModel):
         description="Configure the load balancing algorithm for the service.",
         default=LoadBalancingAlgorithm.LEASTCONN,
     )
-    cookie: Annotated[Optional[str], BeforeValidator(value_contains_invalid_characters)] = Field(
+    cookie: Optional[VALIDATED_CONFIG_STR] = Field(
         description="Only used when algorithm is COOKIE. Define the cookie to load balance on.",
         default=None,
     )
@@ -453,10 +456,10 @@ class RewriteConfiguration(BaseModel):
     method: HaproxyRewriteMethod = Field(
         description="Which rewrite method to apply.One of set-path, set-query, set-header."
     )
-    expression: Annotated[str, BeforeValidator(value_contains_invalid_characters)] = Field(
+    expression: VALIDATED_CONFIG_STR = Field(
         description="Regular expression to use with the rewrite method."
     )
-    header: Annotated[Optional[str], BeforeValidator(value_contains_invalid_characters)] = Field(
+    header: Optional[VALIDATED_CONFIG_STR] = Field(
         description="The name of the header to rewrite.", default=None
     )
 
@@ -469,7 +472,8 @@ class RequirerApplicationData(_DatabagModel):
         ports: List of port numbers on which the service is listening.
         hosts: List of backend server addresses.
         paths: List of URL paths to route to this service. Defaults to an empty list.
-        subdomains: List of subdomains to route to this service. Defaults to an empty list.
+        hostname: Optional: The hostname of this service.
+        additional_hostnames: List of additional hostnames of this service. Defaults to an empty list.
         rewrites: List of RewriteConfiguration objects defining path, query, or header
             rewrite rules.
         check: ServerHealthCheck configuration for monitoring backend health.
@@ -482,17 +486,20 @@ class RequirerApplicationData(_DatabagModel):
         server_maxconn: Optional maximum number of connections per server.
     """
 
-    service: Annotated[str, BeforeValidator(value_contains_invalid_characters)] = Field(
-        description="The name of the service."
-    )
+    service: VALIDATED_CONFIG_STR = Field(description="The name of the service.")
     ports: list[int] = Field(description="The list of ports listening for this service.")
     hosts: list[IPvAnyAddress] = Field(
         description="The list of backend server addresses. Currently only support IP addresses.",
         default=[],
     )
-    paths: list[str] = Field(description="The list of paths to route to this service.", default=[])
-    subdomains: list[str] = Field(
-        description="The list of subdomains to route to this service.", default=[]
+    paths: list[VALIDATED_CONFIG_STR] = Field(
+        description="The list of paths to route to this service.", default=[]
+    )
+    hostname: Optional[VALIDATED_CONFIG_STR] = Field(
+        description="Hostname of this service.", default=None
+    )
+    additional_hostnames: list[VALIDATED_CONFIG_STR] = Field(
+        description="The list of additional hostnames of this service.", default=[]
     )
     rewrites: list[RewriteConfiguration] = Field(
         description="The list of path rewrite rules.", default=[]
@@ -513,7 +520,7 @@ class RequirerApplicationData(_DatabagModel):
     retry: Optional[Retry] = Field(
         description="Configure retry for incoming requests.", default=None
     )
-    deny_paths: list[str] = Field(
+    deny_paths: list[VALIDATED_CONFIG_STR] = Field(
         description="Configure path that should not be routed to the backend", default=[]
     )
     timeout: TimeoutConfiguration = Field(
@@ -855,7 +862,8 @@ class HaproxyRouteRequirer(Object):
         ports: Optional[list[int]] = None,
         hosts: Optional[list[str]] = None,
         paths: Optional[list[str]] = None,
-        subdomains: Optional[list[str]] = None,
+        hostname: Optional[str] = None,
+        additional_hostnames: Optional[list[str]] = None,
         check_interval: Optional[int] = None,
         check_rise: Optional[int] = None,
         check_fall: Optional[int] = None,
@@ -889,7 +897,8 @@ class HaproxyRouteRequirer(Object):
             ports: List of ports the service is listening on.
             hosts: List of backend server addresses. Currently only support IP addresses.
             paths: List of URL paths to route to this service.
-            subdomains: List of subdomains to route to this service.
+            hostname: Hostname of this service.
+            additional_hostnames: Additional hostnames of this service.
             check_interval: Interval between health checks in seconds.
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
@@ -928,7 +937,8 @@ class HaproxyRouteRequirer(Object):
             ports,
             hosts,
             paths,
-            subdomains,
+            hostname,
+            additional_hostnames,
             check_interval,
             check_rise,
             check_fall,
@@ -980,7 +990,8 @@ class HaproxyRouteRequirer(Object):
         ports: list[int],
         hosts: Optional[list[str]] = None,
         paths: Optional[list[str]] = None,
-        subdomains: Optional[list[str]] = None,
+        hostname: Optional[str] = None,
+        additional_hostnames: Optional[list[str]] = None,
         check_interval: Optional[int] = None,
         check_rise: Optional[int] = None,
         check_fall: Optional[int] = None,
@@ -1012,7 +1023,8 @@ class HaproxyRouteRequirer(Object):
             ports: List of ports the service is listening on.
             hosts: List of backend server addresses. Currently only support IP addresses.
             paths: List of URL paths to route to this service.
-            subdomains: List of subdomains to route to this service.
+            hostname: Hostname of this service.
+            additional_hostnames: Additional hostnames of this service.
             check_interval: Interval between health checks in seconds.
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
@@ -1044,7 +1056,8 @@ class HaproxyRouteRequirer(Object):
             ports,
             hosts,
             paths,
-            subdomains,
+            hostname,
+            additional_hostnames,
             check_interval,
             check_rise,
             check_fall,
@@ -1077,7 +1090,8 @@ class HaproxyRouteRequirer(Object):
         ports: Optional[list[int]] = None,
         hosts: Optional[list[str]] = None,
         paths: Optional[list[str]] = None,
-        subdomains: Optional[list[str]] = None,
+        hostname: Optional[str] = None,
+        additional_hostnames: Optional[list[str]] = None,
         check_interval: Optional[int] = None,
         check_rise: Optional[int] = None,
         check_fall: Optional[int] = None,
@@ -1108,7 +1122,8 @@ class HaproxyRouteRequirer(Object):
             ports: List of ports the service is listening on.
             hosts: List of backend server addresses. Currently only support IP addresses.
             paths: List of URL paths to route to this service.
-            subdomains: List of subdomains to route to this service.
+            hostname: Hostname of this service.
+            additional_hostnames: Additional hostnames of this service.
             check_interval: Interval between health checks in seconds.
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
@@ -1143,8 +1158,8 @@ class HaproxyRouteRequirer(Object):
             hosts = []
         if not paths:
             paths = []
-        if not subdomains:
-            subdomains = []
+        if not additional_hostnames:
+            additional_hostnames = []
         if not path_rewrite_expressions:
             path_rewrite_expressions = []
         if not query_rewrite_expressions:
@@ -1159,7 +1174,8 @@ class HaproxyRouteRequirer(Object):
             "ports": ports,
             "hosts": hosts,
             "paths": paths,
-            "subdomains": subdomains,
+            "hostname": hostname,
+            "additional_hostnames": additional_hostnames,
             "load_balancing": {
                 "algorithm": load_balancing_algorithm,
                 "cookie": load_balancing_cookie,
