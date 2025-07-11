@@ -34,7 +34,8 @@ class SomeCharm(CharmBase):
         address=<required>,
         port=<required>,
         paths=<optional>,
-        subdomains=<optional>,
+        hostname=<optional>,
+        additional_hostnames=<optional>,
         path_rewrite_expressions=<optional>, list of path rewrite expressions,
         query_rewrite_expressions=<optional>, list of query rewrite expressions,
         header_rewrites=<optional>, map of {<header_name>: <list of rewrite_expressions>,
@@ -170,7 +171,7 @@ def value_contains_invalid_characters(value: Optional[str]) -> Optional[str]:
     return value
 
 
-VALIDATED_CONFIG_STR = Annotated[str, BeforeValidator(value_contains_invalid_characters)]
+VALIDSTR = Annotated[str, BeforeValidator(value_contains_invalid_characters)]
 
 
 class DataValidationError(Exception):
@@ -307,9 +308,7 @@ class ServerHealthCheck(BaseModel):
     fall: int = Field(
         description="How many failed health checks before server is considered down.", default=3
     )
-    path: Optional[VALIDATED_CONFIG_STR] = Field(
-        description="The health check path.", default=None
-    )
+    path: Optional[VALIDSTR] = Field(description="The health check path.", default=None)
     port: Optional[int] = Field(description="The health check port.", default=None)
 
 
@@ -371,7 +370,7 @@ class LoadBalancingConfiguration(BaseModel):
         description="Configure the load balancing algorithm for the service.",
         default=LoadBalancingAlgorithm.LEASTCONN,
     )
-    cookie: Optional[VALIDATED_CONFIG_STR] = Field(
+    cookie: Optional[VALIDSTR] = Field(
         description="Only used when algorithm is COOKIE. Define the cookie to load balance on.",
         default=None,
     )
@@ -456,10 +455,8 @@ class RewriteConfiguration(BaseModel):
     method: HaproxyRewriteMethod = Field(
         description="Which rewrite method to apply.One of set-path, set-query, set-header."
     )
-    expression: VALIDATED_CONFIG_STR = Field(
-        description="Regular expression to use with the rewrite method."
-    )
-    header: Optional[VALIDATED_CONFIG_STR] = Field(
+    expression: VALIDSTR = Field(description="Regular expression to use with the rewrite method.")
+    header: Optional[VALIDSTR] = Field(
         description="The name of the header to rewrite.", default=None
     )
 
@@ -473,7 +470,8 @@ class RequirerApplicationData(_DatabagModel):
         hosts: List of backend server addresses.
         paths: List of URL paths to route to this service. Defaults to an empty list.
         hostname: Optional: The hostname of this service.
-        additional_hostnames: List of additional hostnames of this service. Defaults to an empty list.
+        additional_hostnames: List of additional hostnames of this service.
+            Defaults to an empty list.
         rewrites: List of RewriteConfiguration objects defining path, query, or header
             rewrite rules.
         check: ServerHealthCheck configuration for monitoring backend health.
@@ -486,19 +484,17 @@ class RequirerApplicationData(_DatabagModel):
         server_maxconn: Optional maximum number of connections per server.
     """
 
-    service: VALIDATED_CONFIG_STR = Field(description="The name of the service.")
+    service: VALIDSTR = Field(description="The name of the service.")
     ports: list[int] = Field(description="The list of ports listening for this service.")
     hosts: list[IPvAnyAddress] = Field(
         description="The list of backend server addresses. Currently only support IP addresses.",
         default=[],
     )
-    paths: list[VALIDATED_CONFIG_STR] = Field(
+    paths: list[VALIDSTR] = Field(
         description="The list of paths to route to this service.", default=[]
     )
-    hostname: Optional[VALIDATED_CONFIG_STR] = Field(
-        description="Hostname of this service.", default=None
-    )
-    additional_hostnames: list[VALIDATED_CONFIG_STR] = Field(
+    hostname: Optional[VALIDSTR] = Field(description="Hostname of this service.", default=None)
+    additional_hostnames: list[VALIDSTR] = Field(
         description="The list of additional hostnames of this service.", default=[]
     )
     rewrites: list[RewriteConfiguration] = Field(
@@ -520,7 +516,7 @@ class RequirerApplicationData(_DatabagModel):
     retry: Optional[Retry] = Field(
         description="Configure retry for incoming requests.", default=None
     )
-    deny_paths: list[VALIDATED_CONFIG_STR] = Field(
+    deny_paths: list[VALIDSTR] = Field(
         description="Configure path that should not be routed to the backend", default=[]
     )
     timeout: TimeoutConfiguration = Field(
@@ -570,21 +566,6 @@ class RequirerApplicationData(_DatabagModel):
                 raise ValueError("header must be set if rewrite method is SET_HEADER.")
         return rewrites
 
-    @field_validator("paths", "subdomains", mode="before")
-    @classmethod
-    def validate_invalid_characters(cls, values: list[str]) -> list[str]:
-        """Validate if each item in a list of values contains invalid haproxy config characters.
-
-        Args:
-            values: List of values to validate.
-
-        Returns:
-            The validated list of values
-        """
-        for value in values:
-            value_contains_invalid_characters(value)
-        return values
-
 
 class HaproxyRouteProviderAppData(_DatabagModel):
     """haproxy-route provider databag schema.
@@ -627,9 +608,11 @@ class HaproxyRouteRequirersData:
 
     Attributes:
         requirers_data: List of requirer data.
+        relation_ids_with_invalid_data: List of relation ids that contains invalid data.
     """
 
     requirers_data: list[HaproxyRouteRequirerData]
+    relation_ids_with_invalid_data: list[int]
 
     @model_validator(mode="after")
     def check_services_unique(self) -> Self:
@@ -745,6 +728,7 @@ class HaproxyRouteProvider(Object):
             HaproxyRouteRequirersData: Validated data from all haproxy-route requirers.
         """
         requirers_data: list[HaproxyRouteRequirerData] = []
+        relation_ids_with_invalid_data: list[int] = []
         for relation in relations:
             try:
                 application_data = self._get_requirer_application_data(relation)
@@ -765,8 +749,12 @@ class HaproxyRouteProvider(Object):
                     raise HaproxyRouteInvalidRelationDataError(
                         f"haproxy-route data validation failed for relation: {relation}"
                     ) from exc
+                relation_ids_with_invalid_data.append(relation.id)
                 continue
-        return HaproxyRouteRequirersData(requirers_data=requirers_data)
+        return HaproxyRouteRequirersData(
+            requirers_data=requirers_data,
+            relation_ids_with_invalid_data=relation_ids_with_invalid_data,
+        )
 
     def _get_requirer_units_data(self, relation: Relation) -> list[RequirerUnitData]:
         """Fetch and validate the requirer's units data.

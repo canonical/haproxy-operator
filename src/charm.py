@@ -295,6 +295,13 @@ class HAProxyCharm(ops.CharmBase):
                             ],
                             relation,
                         )
+                    for (
+                        relation_id
+                    ) in haproxy_route_requirers_information.relation_ids_with_invalid_data:
+                        if relation := self.model.get_relation(
+                            HAPROXY_ROUTE_RELATION, relation_id
+                        ):
+                            self.haproxy_route_provider.publish_proxied_endpoints([], relation)
             case _:
                 if self.model.get_relation(TLS_CERT_RELATION):
                     # Reconcile certificates in case the certificates relation is present
