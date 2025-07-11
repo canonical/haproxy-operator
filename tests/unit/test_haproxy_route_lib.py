@@ -38,7 +38,7 @@ def mock_relation_data_fixture():
         "ports": [8080],
         "hosts": ["10.0.0.1", "10.0.0.2"],
         "paths": ["/api"],
-        "subdomains": ["api"],
+        "hostname": "api.haproxy.internal",
         "load_balancing": {"algorithm": "leastconn"},
         "check": {"interval": 60, "rise": 2, "fall": 3, "path": "/health"},
     }
@@ -67,7 +67,7 @@ def test_requirer_application_data_validation():
         ports=[8080],
         hosts=["10.0.0.1"],
         paths=["/api"],
-        subdomains=["api"],
+        hostname="api.haproxy.internal",
         check=ServerHealthCheck(path="/health"),
         load_balancing={"algorithm": LoadBalancingAlgorithm.LEASTCONN},
     )
@@ -76,7 +76,7 @@ def test_requirer_application_data_validation():
     assert data.ports == [8080]
     assert data.hosts == [IPv4Address("10.0.0.1")]
     assert data.paths == ["/api"]
-    assert data.subdomains == ["api"]
+    assert data.hostname == "api.haproxy.internal"
     assert data.check.path == "/health"  # pylint: disable=no-member
     # pylint: disable=no-member
     assert data.load_balancing.algorithm == LoadBalancingAlgorithm.LEASTCONN
@@ -179,7 +179,9 @@ def test_requirers_data_duplicate_services():
     )
 
     with pytest.raises(DataValidationError):
-        HaproxyRouteRequirersData(requirers_data=[requirer_data1, requirer_data2])
+        HaproxyRouteRequirersData(
+            requirers_data=[requirer_data1, requirer_data2], relation_ids_with_invalid_data=[]
+        )
 
 
 def test_load_requirer_application_data(mock_relation_data):
@@ -195,7 +197,7 @@ def test_load_requirer_application_data(mock_relation_data):
     assert data.ports == [8080]
     assert data.hosts == [IPv4Address("10.0.0.1"), IPv4Address("10.0.0.2")]
     assert data.paths == ["/api"]
-    assert data.subdomains == ["api"]
+    assert data.hostname == "api.haproxy.internal"
     assert data.check.interval == 60
     assert data.check.rise == 2
     assert data.check.fall == 3
@@ -213,7 +215,7 @@ def test_dump_requirer_application_data():
         ports=[8080],
         hosts=["10.0.0.1"],
         paths=["/api"],
-        subdomains=["api"],
+        hostname="api.haproxy.internal",
         check=ServerHealthCheck(path="/health"),
     )
 
@@ -225,7 +227,7 @@ def test_dump_requirer_application_data():
     assert json.loads(databag["ports"]) == [8080]
     assert json.loads(databag["hosts"]) == ["10.0.0.1"]
     assert json.loads(databag["paths"]) == ["/api"]
-    assert json.loads(databag["subdomains"]) == ["api"]
+    assert json.loads(databag["hostname"]) == "api.haproxy.internal"
     assert json.loads(databag["check"])["path"] == "/health"
 
 
@@ -284,7 +286,7 @@ def test_provide_haproxy_route_requirements(mock_relation_data):
         service=mock_relation_data["service"],
         ports=mock_relation_data["ports"],
         paths=mock_relation_data["paths"],
-        subdomains=mock_relation_data["subdomains"],
+        hostname=mock_relation_data["hostname"],
         unit_address="10.0.1.0",
     )
 
@@ -308,7 +310,7 @@ def test_update_relation_data_non_leader(mock_relation_data):
         service=mock_relation_data["service"],
         ports=mock_relation_data["ports"],
         paths=mock_relation_data["paths"],
-        subdomains=mock_relation_data["subdomains"],
+        hostname=mock_relation_data["hostname"],
         unit_address="10.0.1.0",
     )
 

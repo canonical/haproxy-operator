@@ -37,7 +37,8 @@ class AnyCharm(AnyCharmBase):
         self._haproxy_route.provide_haproxy_route_requirements(
             service="any",
             ports=[80],
-            subdomains=["ok", "ok2"],
+            hostname="ok.haproxy.internal",
+            additional_hostnames=["ok2.haproxy.internal"],
             rate_limit_connections_per_minute=1,
             rate_limit_policy=RateLimitPolicy.DENY,
             check_interval=600,
