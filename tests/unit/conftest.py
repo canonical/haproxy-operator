@@ -88,6 +88,17 @@ def ingress_requirer_unit_data_fixture() -> dict[str, str]:
     return {"host": '"testing.ingress"', "ip": '"10.0.0.1"'}
 
 
+@pytest.fixture(scope="function", name="ingress_per_unit_requirer_data")
+def ingress_per_unit_requirer_data_fixture() -> dict[str, str]:
+    """Mock ingress per unit requirer data."""
+    return {
+        "model": '"testing"',
+        "name": "ingress-requirer/0",
+        "host": '"ingress-requirer-0.ingress-requirer-endpoints.testing.svc.cluster.local"',
+        "port": "8080",
+    }
+
+
 # Scenario
 @pytest.fixture(name="context_with_install_mock")
 def context_with_install_mock_fixture():
@@ -99,12 +110,20 @@ def context_with_install_mock_fixture():
         patch("haproxy.HAProxyService.install") as install_mock,
         patch("haproxy.HAProxyService.reconcile_default") as reconcile_default_mock,
         patch("haproxy.HAProxyService.reconcile_ingress") as reconcile_ingress_mock,
+        patch(
+            "haproxy.HAProxyService.reconcile_ingress_per_unit"
+        ) as reconcile_ingress_per_unit_mock,
     ):
         yield (
             Context(
                 charm_type=HAProxyCharm,
             ),
-            (install_mock, reconcile_default_mock, reconcile_ingress_mock),
+            (
+                install_mock,
+                reconcile_default_mock,
+                reconcile_ingress_mock,
+                reconcile_ingress_per_unit_mock,
+            ),
         )
 
 
@@ -117,6 +136,19 @@ def peer_relation_fixture():
     return scenario.PeerRelation(
         endpoint="haproxy-peers",
         peers_data={},
+    )
+
+
+@pytest.fixture(name="ingress_per_unit_integration")
+def ingress_per_unit_integration_fixture(ingress_per_unit_requirer_data):
+    """Ingress integration fixture.
+
+    Returns: The modeled ingress integration.
+    """
+    return scenario.Relation(
+        endpoint="ingress-per-unit",
+        remote_app_name="requirer",
+        remote_units_data={0: ingress_per_unit_requirer_data},
     )
 
 
@@ -175,6 +207,28 @@ def base_state_with_ingress_fixture(peer_relation, ingress_integration, certific
     """
     input_state = {
         "relations": [peer_relation, ingress_integration, certificates_integration],
+        "config": {
+            "external-hostname": "ingress.local",
+        },
+    }
+    return input_state
+
+
+@pytest.fixture(name="base_state_with_ingress_per_unit")
+def base_state_with_ingress_per_unit_fixture(
+    peer_relation, ingress_per_unit_integration, certificates_integration
+):
+    """Base state fixture with ingress per unit integration.
+
+    Args:
+        peer_relation: peer relation fixture.
+        ingress_per_unit_integration: ingress per unit integration fixture.
+        certificates_integration: certificates integration fixture.
+
+    Yield: The modeled haproxy-peers relation.
+    """
+    input_state = {
+        "relations": [peer_relation, ingress_per_unit_integration, certificates_integration],
         "config": {
             "external-hostname": "ingress.local",
         },

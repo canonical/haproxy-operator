@@ -76,7 +76,7 @@ class CharmConfig:
         """Create a CharmConfig class from a charm instance.
 
         Args:
-            charm: The gateway-api-integrator charm.
+            charm: The haproxy charm.
 
         Raises:
             InvalidCharmConfigError: When the charm's config is invalid.
