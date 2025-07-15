@@ -104,6 +104,7 @@ def ingress_per_unit_requirer_data_fixture() -> dict[str, str]:
         "name": "ingress-requirer/0",
         "host": '"ingress-requirer-0.ingress-requirer-endpoints.testing.svc.cluster.local"',
         "port": "8080",
+        "strip-prefix": "true",
     }
 
 

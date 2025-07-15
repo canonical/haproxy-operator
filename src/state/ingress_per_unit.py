@@ -29,12 +29,14 @@ class HAProxyBackend:
         backend_path: The path prefix for the requirer unit.
         hostname_or_ip: The host or ip address of the requirer unit.
         port: The port that the requirer unit wishes to be exposed.
+        strip_prefix: Whether to strip the prefix from the ingress url.
     """
 
     backend_name: str
     backend_path: str
     hostname_or_ip: str
     port: int
+    strip_prefix: bool
 
 
 @dataclasses.dataclass(frozen=True)
@@ -78,6 +80,7 @@ class IngressPerUnitRequirersInformation:
                             backend_path=backend_path,
                             hostname_or_ip=integration_data["host"],
                             port=integration_data["port"],
+                            strip_prefix=integration_data["strip-prefix"],
                         )
                     )
                 except DataValidationError as exc:

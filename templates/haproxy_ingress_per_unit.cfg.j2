@@ -23,6 +23,9 @@ frontend ingress_per_unit
 
 {% for backend in ingress_per_unit_requirers_information.backends %}
 backend {{ backend.backend_name }}
+{% if backend.strip_prefix %}
+    http-request replace-path /{{ backend.backend_name }}(/)?(.*) /\2
+{% endif %}
     server unit {{ backend.hostname_or_ip }}:{{ backend.port }} check
 {% endfor %}
 {% endblock %}
