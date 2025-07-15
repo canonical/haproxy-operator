@@ -121,6 +121,7 @@ class HAProxyCharm(ops.CharmBase):
         # Relation handlers are initialized before self.certificates as we need them when calling
         # self._get_certificate_requests()
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
+        self._ingress_per_unit_provider = IngressPerUnitProvider(charm=self)
         self.reverseproxy_requirer = HTTPRequirer(self, REVERSE_PROXY_RELATION)
         self.haproxy_route_provider = HaproxyRouteProvider(self)
         self.certificates = TLSCertificatesRequiresV4(
@@ -136,9 +137,6 @@ class HAProxyCharm(ops.CharmBase):
         )
 
         self._tls = TLSRelationService(self.model, self.certificates)
-        self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
-        self._ingress_per_unit_provider = IngressPerUnitProvider(charm=self)
-        self.reverseproxy_requirer = HTTPRequirer(self, REVERSE_PROXY_RELATION)
         self.website_requirer = HTTPProvider(self, WEBSITE_RELATION)
 
         self._grafana_agent = COSAgentProvider(
@@ -370,15 +368,14 @@ class HAProxyCharm(ops.CharmBase):
         """
         self._reconcile()
         if self.unit.is_leader():
+            tls_information = TLSInformation.from_charm(self, self.certificates)
             if event is IngressPerAppDataProvidedEvent:
-                tls_information = TLSInformation.from_charm(self, self.certificates)
                 integration_data = self._ingress_provider.get_data(event.relation)
                 path_prefix = f"{integration_data.app.model}-{integration_data.app.name}"
                 self._ingress_provider.publish_url(
                     event.relation, f"https://{tls_information.external_hostname}/{path_prefix}/"
                 )
             elif event is IngressDataReadyEvent:
-                tls_information = TLSInformation.from_charm(self, self.certificates)
                 integration_data = self._ingress_per_unit_provider.get_data(
                     event.relation, event.unit
                 )
@@ -386,7 +383,7 @@ class HAProxyCharm(ops.CharmBase):
                 self._ingress_per_unit_provider.publish_url(
                     event.relation,
                     event.unit,
-                    f"https://{tls_information.external_hostname}/{path_prefix}/",
+                    f"https://{tls_information.external_hostname}/{path_prefix}",
                 )
 
     @validate_config_and_tls(defer=False)
