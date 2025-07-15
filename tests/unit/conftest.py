@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import scenario
+from charms.haproxy.v1.haproxy_route import RequirerApplicationData
 from charms.tls_certificates_interface.v4.tls_certificates import Certificate, PrivateKey
 from ops.testing import Context, Harness
 
@@ -67,6 +68,13 @@ def mock_certificate_fixture(
         ),
         MagicMock(return_value=(provider_cert_mock, private_key)),
     )
+    monkeypatch.setattr(
+        (
+            "charms.tls_certificates_interface.v4.tls_certificates"
+            ".TLSCertificatesRequiresV4.get_assigned_certificates"
+        ),
+        MagicMock(return_value=([provider_cert_mock], private_key)),
+    )
     return certificate, private_key
 
 
@@ -110,6 +118,7 @@ def context_with_install_mock_fixture():
         patch("haproxy.HAProxyService.install") as install_mock,
         patch("haproxy.HAProxyService.reconcile_default") as reconcile_default_mock,
         patch("haproxy.HAProxyService.reconcile_ingress") as reconcile_ingress_mock,
+        patch("tls_relation.TLSRelationService.write_certificate_to_unit"),
         patch(
             "haproxy.HAProxyService.reconcile_ingress_per_unit"
         ) as reconcile_ingress_per_unit_mock,
@@ -209,6 +218,46 @@ def base_state_with_ingress_fixture(peer_relation, ingress_integration, certific
         "relations": [peer_relation, ingress_integration, certificates_integration],
         "config": {
             "external-hostname": "ingress.local",
+        },
+    }
+    return input_state
+
+
+@pytest.fixture(name="haproxy_route_requirer_application_data_with_hosts")
+def haproxy_route_requirer_application_data_with_hosts_fixture():
+    """haproxy-route requirer application data with hosts attribute set."""
+    return RequirerApplicationData(
+        service="test-service",
+        ports=[8080, 8443],
+        hosts=["10.0.0.1", "10.0.0.2"],
+    ).dump()
+
+
+@pytest.fixture(name="base_state_haproxy_route")
+def base_state_haproxy_route_fixture(
+    peer_relation, certificates_integration, haproxy_route_requirer_application_data_with_hosts
+):
+    """Base state fixture with haproxy-route integration.
+
+    Args:
+        peer_relation: peer relation fixture.
+        certificates_integration: certificates integration fixture.
+        haproxy_route_requirer_application_data_with_hosts: Requirer application data.
+
+    Yield: The modeled haproxy-peers relation.
+    """
+    input_state = {
+        "relations": [
+            peer_relation,
+            certificates_integration,
+            scenario.Relation(
+                endpoint="haproxy-route",
+                remote_app_name="requirer",
+                remote_app_data=haproxy_route_requirer_application_data_with_hosts,
+            ),
+        ],
+        "config": {
+            "external-hostname": "haproxy.internal",
         },
     }
     return input_state

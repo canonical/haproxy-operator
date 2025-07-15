@@ -8,7 +8,7 @@ import logging
 import typing
 
 import ops
-from charms.haproxy.v0.haproxy_route import HaproxyRouteInvalidRelationDataError
+from charms.haproxy.v1.haproxy_route import HaproxyRouteInvalidRelationDataError
 
 from haproxy import HaproxyValidateConfigError
 from state.exception import CharmStateValidationBaseError

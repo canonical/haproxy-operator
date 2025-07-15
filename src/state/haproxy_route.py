@@ -7,7 +7,7 @@ import logging
 from functools import cached_property
 from typing import Optional, cast
 
-from charms.haproxy.v0.haproxy_route import (
+from charms.haproxy.v1.haproxy_route import (
     DataValidationError,
     HaproxyRewriteMethod,
     HaproxyRouteProvider,
@@ -19,8 +19,6 @@ from charms.haproxy.v0.haproxy_route import (
 from pydantic import IPvAnyAddress, model_validator
 from pydantic.dataclasses import dataclass
 from typing_extensions import Self
-
-from state.tls import TLSInformation
 
 from .exception import CharmStateValidationBaseError
 
@@ -183,13 +181,13 @@ class HaproxyRouteRequirersInformation:
 
     @classmethod
     def from_provider(
-        cls, haproxy_route: HaproxyRouteProvider, tls_information: TLSInformation, peers: list[str]
+        cls, haproxy_route: HaproxyRouteProvider, external_hostname: str, peers: list[str]
     ) -> "HaproxyRouteRequirersInformation":
         """Initialize the HaproxyRouteRequirersInformation state component.
 
         Args:
             haproxy_route: The haproxy-route provider class.
-            tls_information: The charm's TLS information state component.
+            external_hostname: The charm's configured hostname.
             peers: List of IP address of haproxy peer units.
 
         Raises:
@@ -218,7 +216,7 @@ class HaproxyRouteRequirersInformation:
                     relation_id=requirer.relation_id,
                     application_data=requirer.application_data,
                     servers=get_servers_definition_from_requirer_data(requirer),
-                    external_hostname=tls_information.external_hostname,
+                    external_hostname=external_hostname,
                 )
                 backends.append(backend)
 
@@ -277,12 +275,17 @@ def get_servers_definition_from_requirer_data(
         list[HAProxyRouteServer]: List of server definitions.
     """
     servers: list[HAProxyRouteServer] = []
-    for i, unit_data in enumerate(requirer.units_data):
+    server_addresses: list[IPvAnyAddress] = (
+        requirer.application_data.hosts
+        if requirer.application_data.hosts
+        else [unit_data.address for unit_data in requirer.units_data]
+    )
+    for i, server_address in enumerate(server_addresses):
         for port in requirer.application_data.ports:
             servers.append(
                 HAProxyRouteServer(
                     server_name=f"{requirer.application_data.service}_{port}_{i}",
-                    address=unit_data.address,
+                    address=server_address,
                     port=port,
                     check=requirer.application_data.check,
                     maxconn=requirer.application_data.server_maxconn,
