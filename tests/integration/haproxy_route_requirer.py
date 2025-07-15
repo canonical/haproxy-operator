@@ -49,3 +49,15 @@ class AnyCharm(AnyCharmBase):
             path_rewrite_expressions=["/ok"],
             deny_paths=["/private"],
         )
+
+    def update_relation_no_hostname(self):
+        """Update relation details for haproxy-route."""
+        self._haproxy_route.provide_haproxy_route_requirements(
+            service="any2",
+            ports=[80],
+            check_interval=600,
+            check_rise=3,
+            check_fall=3,
+            check_path="/",
+            check_port=80,
+        )
