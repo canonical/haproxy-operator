@@ -38,7 +38,7 @@ description: |
   VMs and bare metal.
 summary: Fast and reliable load balancing reverse proxy.
 links:
-  documentation: https://discourse.charmhub.io/
+  documentation: https://discourse.charmhub.io/t/haproxy-documentation-overview/17216
   issues: https://github.com/canonical/haproxy-operator/issues
   source: https://github.com/canonical/haproxy-operator
   contact:
