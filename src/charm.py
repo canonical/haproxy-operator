@@ -369,13 +369,13 @@ class HAProxyCharm(ops.CharmBase):
         self._reconcile()
         if self.unit.is_leader():
             tls_information = TLSInformation.from_charm(self, self.certificates)
-            if event is IngressPerAppDataProvidedEvent:
+            if isinstance(event, IngressPerAppDataProvidedEvent):
                 integration_data = self._ingress_provider.get_data(event.relation)
                 path_prefix = f"{integration_data.app.model}-{integration_data.app.name}"
                 self._ingress_provider.publish_url(
                     event.relation, f"https://{tls_information.external_hostname}/{path_prefix}/"
                 )
-            elif event is IngressDataReadyEvent:
+            elif isinstance(event, IngressDataReadyEvent):
                 integration_data = self._ingress_per_unit_provider.get_data(
                     event.relation, event.unit
                 )
