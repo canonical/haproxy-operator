@@ -28,6 +28,12 @@ from pydantic import ValidationError
 logger = logging.getLogger()
 MOCK_RELATION_NAME = "haproxy-route"
 MOCK_ADDRESS = "10.0.0.1"
+MOCK_REQUIRER_CHARM_META = """
+name: requirer
+requires:
+  haproxy-route:
+    interface: haproxy-route
+"""
 
 
 @pytest.fixture(name="mock_relation_data")
@@ -54,6 +60,12 @@ def mock_unit_data_fixture():
 def mock_provider_app_data_fixture():
     """Create mock unit data."""
     return HaproxyRouteProviderAppData(endpoints=["https://backend.haproxy.internal/path"]).dump()
+
+
+@pytest.fixture(name="mock_requirer_charm")
+def mock_requirer_charm_fixture():
+    """Create mock unit data."""
+    return Harness(ops.CharmBase, meta=MOCK_REQUIRER_CHARM_META)
 
 
 def test_requirer_application_data_validation():
@@ -317,8 +329,9 @@ def test_update_relation_data_non_leader(mock_relation_data):
     relation_data_mock.update.assert_called_once()
 
 
-def test_get_proxied_endpoints(harness: Harness, mock_provider_app_data):
+def test_get_proxied_endpoints(mock_requirer_charm: Harness, mock_provider_app_data):
     """Test that get_proxied_endpoints returns the endpoints correctly."""
+    harness = mock_requirer_charm
     harness.add_relation("haproxy-route", "provider-app", app_data=mock_provider_app_data)
     harness.begin()
     requirer = HaproxyRouteRequirer(charm=harness.charm, relation_name=MOCK_RELATION_NAME)
@@ -328,8 +341,9 @@ def test_get_proxied_endpoints(harness: Harness, mock_provider_app_data):
     assert str(endpoints[0]) == json.loads(mock_provider_app_data["endpoints"])[0]
 
 
-def test_get_proxied_endpoints_empty_data(harness: Harness):
+def test_get_proxied_endpoints_empty_data(mock_requirer_charm: Harness):
     """Test that get_proxied_endpoints returns empty list when no data."""
+    harness = mock_requirer_charm
     harness.add_relation("haproxy-route", "provider-app")
     harness.begin()
     requirer = HaproxyRouteRequirer(charm=harness.charm, relation_name=MOCK_RELATION_NAME)
@@ -338,8 +352,9 @@ def test_get_proxied_endpoints_empty_data(harness: Harness):
     assert endpoints == []
 
 
-def test_get_proxied_endpoints_invalid_data(harness: Harness):
+def test_get_proxied_endpoints_invalid_data(mock_requirer_charm: Harness):
     """Test that get_proxied_endpoints handles invalid data gracefully."""
+    harness = mock_requirer_charm
     harness.add_relation(
         "haproxy-route",
         "provider-app",
@@ -352,8 +367,9 @@ def test_get_proxied_endpoints_invalid_data(harness: Harness):
     assert endpoints == []
 
 
-def test_prepare_unit_data_no_address(harness: Harness):
+def test_prepare_unit_data_no_address(mock_requirer_charm: Harness):
     """Test that DataValidationError is raised when no address is available."""
+    harness = mock_requirer_charm
     harness.begin()
     requirer = HaproxyRouteRequirer(charm=harness.charm, relation_name=MOCK_RELATION_NAME)
 

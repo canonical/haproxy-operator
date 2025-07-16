@@ -3,11 +3,12 @@
 
 """Fixtures for haproxy-operator unit tests."""
 import typing
+from ipaddress import IPv4Address
 from unittest.mock import MagicMock, patch
 
 import pytest
 import scenario
-from charms.haproxy.v1.haproxy_route import RequirerApplicationData
+from charms.haproxy.v1.haproxy_route import RequirerApplicationData, RequirerUnitData
 from charms.tls_certificates_interface.v4.tls_certificates import Certificate, PrivateKey
 from ops.testing import Context, Harness
 
@@ -17,8 +18,9 @@ TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 
 
 @pytest.fixture(scope="function", name="harness")
-def harness_fixture():
+def harness_fixture(monkeypatch: pytest.MonkeyPatch):
     """Enable ops test framework harness."""
+    monkeypatch.setattr(HAProxyCharm, "_get_unit_address", MagicMock(return_value="10.0.0.1"))
     harness = Harness(HAProxyCharm)
     yield harness
     harness.cleanup()
@@ -198,6 +200,7 @@ def haproxy_route_requirer_application_data_with_hosts_fixture():
         service="test-service",
         ports=[8080, 8443],
         hosts=["10.0.0.1", "10.0.0.2"],
+        hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
     ).dump()
 
 
@@ -222,6 +225,7 @@ def base_state_haproxy_route_fixture(
                 endpoint="haproxy-route",
                 remote_app_name="requirer",
                 remote_app_data=haproxy_route_requirer_application_data_with_hosts,
+                remote_units_data={0: RequirerUnitData(address=IPv4Address("10.0.0.1")).dump()},
             ),
         ],
         "config": {
