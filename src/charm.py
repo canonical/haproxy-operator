@@ -422,8 +422,8 @@ class HAProxyCharm(ops.CharmBase):
             > 1
         ):
             msg = (
-                "Only one integration out of 'ingress', 'reverseproxy' or 'haproxy-route' "
-                "can be active at a time."
+                "Only one integration out of 'ingress', 'ingress-per-unit', "
+                "'reverseproxy' or 'haproxy-route' can be active at a time."
             )
             logger.error(msg)
             raise HaproxyTooManyIntegrationsError(msg)

@@ -50,8 +50,6 @@ async def test_ingress_per_unit_integration(
         else:
             backend_url = f"http://{unit_ip}{path_suffix}"
 
-        print(backend_url)
-
         session = Session()
         session.mount("https://", DNSResolverHTTPSAdapter(parsed_url.netloc, str(unit_ip)))
 
