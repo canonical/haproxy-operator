@@ -6,6 +6,7 @@
 import json
 from urllib.parse import ParseResult, urlparse
 
+import yaml
 from juju.application import Application
 from pytest_operator.plugin import OpsTest
 from requests.adapters import DEFAULT_POOLBLOCK, DEFAULT_POOLSIZE, DEFAULT_RETRIES, HTTPAdapter
@@ -90,3 +91,26 @@ async def get_ingress_url_for_application(
         unit_information["relation-info"][0]["application-data"]["ingress"]
     )
     return urlparse(ingress_integration_data["url"])
+
+
+async def get_ingress_per_unit_urls_for_application(
+    ingress_per_unit_requirer_application: Application, ops_test: OpsTest
+) -> list[ParseResult]:
+    """Get the list of ingress urls per unit from the requirer's unit data.
+
+    Args:
+        ingress_per_unit_requirer_application: Requirer application.
+        ops_test: OpsTest framework to run juju show-unit.
+
+    Returns:
+        list: The parsed ingress urls per unit.
+    """
+    unit_name = ingress_per_unit_requirer_application.units[0].name
+    _, stdout, _ = await ops_test.juju("show-unit", unit_name, "--format", "json")
+    unit_information = json.loads(stdout)[unit_name]
+    for rel in unit_information["relation-info"]:
+        if rel["related-endpoint"] == "ingress-per-unit":
+            ingress_per_unit_data = rel["application-data"].get("ingress")
+            break
+    parsed_yaml = yaml.safe_load(ingress_per_unit_data)
+    return [urlparse(data["url"]) for _, data in parsed_yaml.items()]

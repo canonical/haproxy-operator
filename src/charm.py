@@ -376,15 +376,21 @@ class HAProxyCharm(ops.CharmBase):
                     event.relation, f"https://{tls_information.external_hostname}/{path_prefix}/"
                 )
             elif isinstance(event, IngressDataReadyEvent):
-                integration_data = self._ingress_per_unit_provider.get_data(
-                    event.relation, event.unit
-                )
-                path_prefix = f"{integration_data['model']}-{integration_data['name']}"
-                self._ingress_per_unit_provider.publish_url(
-                    event.relation,
-                    event.unit,
-                    f"https://{tls_information.external_hostname}/{path_prefix}",
-                )
+                for relation in self._ingress_per_unit_provider.relations:
+                    for unit in relation.units:
+                        if not self._ingress_per_unit_provider.is_unit_ready(relation, unit):
+                            logger.warning(
+                                "Unit %s is not ready for ingress-per-unit relation, skipping.",
+                                unit.name,
+                            )
+                            continue
+                        integration_data = self._ingress_per_unit_provider.get_data(relation, unit)
+                        path_prefix = f"{integration_data['model']}-{integration_data['name']}"
+                        self._ingress_per_unit_provider.publish_url(
+                            relation,
+                            integration_data["name"],
+                            f"https://{tls_information.external_hostname}/{path_prefix}",
+                        )
 
     @validate_config_and_tls(defer=False)
     def _on_ingress_data_removed(
