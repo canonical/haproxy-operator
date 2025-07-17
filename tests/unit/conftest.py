@@ -133,7 +133,6 @@ def context_with_install_mock_fixture():
                 install_mock,
                 reconcile_default_mock,
                 reconcile_ingress_mock,
-                reconcile_ingress_per_unit_mock,
             ),
         )
 
