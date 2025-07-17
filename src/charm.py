@@ -242,11 +242,11 @@ class HAProxyCharm(ops.CharmBase):
         self._reconcile_ha(ha_information)
 
         config = CharmConfig.from_charm(self)
-
         match proxy_mode:
             case ProxyMode.INGRESS:
                 tls_information = TLSInformation.from_charm(self, self.certificates)
                 self._tls.certificate_available(tls_information)
+
                 ingress_requirers_information = IngressRequirersInformation.from_provider(
                     self._ingress_provider
                 )
@@ -274,6 +274,7 @@ class HAProxyCharm(ops.CharmBase):
                     # Reconcile certificates in case the certificates relation is present
                     tls_information = TLSInformation.from_charm(self, self.certificates)
                     self._tls.certificate_available(tls_information)
+
                 legacy_invalid_requested_port: list[str] = []
                 required_ports: set[Port] = set()
                 for service in self.reverseproxy_requirer.get_services_definition().values():
@@ -297,6 +298,7 @@ class HAProxyCharm(ops.CharmBase):
             case ProxyMode.HAPROXY_ROUTE:
                 tls_information = TLSInformation.from_charm(self, self.certificates)
                 self._tls.certificate_available(tls_information)
+
                 haproxy_route_requirers_information = (
                     HaproxyRouteRequirersInformation.from_provider(
                         self.haproxy_route_provider,
@@ -341,6 +343,7 @@ class HAProxyCharm(ops.CharmBase):
                     # Reconcile certificates in case the certificates relation is present
                     tls_information = TLSInformation.from_charm(self, self.certificates)
                     self._tls.certificate_available(tls_information)
+
                 self.unit.set_ports(80)
                 self.haproxy_service.reconcile_default(config)
         self.unit.status = ops.ActiveStatus()

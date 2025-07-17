@@ -113,30 +113,6 @@ class HAProxyService:
         self._validate_haproxy_config()
         self._reload_haproxy_service()
 
-    def reconcile_ingress_per_unit(
-        self,
-        config: CharmConfig,
-        ingress_per_unit_requirers_information: IngressPerUnitRequirersInformation,
-        external_hostname: str,
-    ) -> None:
-        """Render the haproxy config for ingress per unit proxying and reload the service.
-
-        Args:
-            config: The charm's config.
-            ingress_per_unit_requirers_information: Parsed information about ingress per
-                unit requirers.
-            external_hostname: Configured external-hostname for TLS.
-        """
-        template_context = {
-            "config_global_max_connection": config.global_max_connection,
-            "ingress_per_unit_requirers_information": ingress_per_unit_requirers_information,
-            "config_external_hostname": external_hostname,
-            "haproxy_crt_dir": HAPROXY_CERTS_DIR,
-        }
-        self._render_haproxy_config(HAPROXY_INGRESS_PER_UNIT_CONFIG_TEMPLATE, template_context)
-        self._validate_haproxy_config()
-        self._reload_haproxy_service()
-
     def reconcile_ingress(
         self,
         config: CharmConfig,
