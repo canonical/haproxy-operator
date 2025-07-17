@@ -17,7 +17,7 @@ def test_ingress(context_with_install_mock, base_state_with_ingress):
     act: trigger config changed hook
     assert: reconcile ingress is called once
     """
-    context, (_, _, reconcile_ingress_mock, _) = context_with_install_mock
+    context, (*_, reconcile_ingress_mock) = context_with_install_mock
     state = ops.testing.State(**base_state_with_ingress)
     context.run(context.on.config_changed(), state)
     reconcile_ingress_mock.assert_called_once()

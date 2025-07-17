@@ -120,9 +120,6 @@ def context_with_install_mock_fixture():
         patch("haproxy.HAProxyService.reconcile_default") as reconcile_default_mock,
         patch("haproxy.HAProxyService.reconcile_ingress") as reconcile_ingress_mock,
         patch("tls_relation.TLSRelationService.write_certificate_to_unit"),
-        patch(
-            "haproxy.HAProxyService.reconcile_ingress_per_unit"
-        ) as reconcile_ingress_per_unit_mock,
     ):
         yield (
             Context(
@@ -132,7 +129,6 @@ def context_with_install_mock_fixture():
                 install_mock,
                 reconcile_default_mock,
                 reconcile_ingress_mock,
-                reconcile_ingress_per_unit_mock,
             ),
         )
 

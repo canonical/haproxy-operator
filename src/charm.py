@@ -381,11 +381,7 @@ class HAProxyCharm(ops.CharmBase):
 
     @validate_config_and_tls(defer=False)
     def _on_ingress_per_unit_data_provided(self, _: IngressDataReadyEvent) -> None:
-        """Handle the data-provided event for ingress-per-unit.
-
-        Args:
-            event: Juju event.
-        """
+        """Handle the data-provided event for ingress-per-unit."""
         self._reconcile()
         if self.unit.is_leader():
             tls_information = TLSInformation.from_charm(self, self.certificates)

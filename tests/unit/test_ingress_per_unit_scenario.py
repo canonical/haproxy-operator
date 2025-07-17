@@ -15,12 +15,12 @@ def test_ingress_per_unit_success(context_with_install_mock, base_state_with_ing
     """
     arrange: prepare some state with ingress per unit relation
     act: trigger config changed hook
-    assert: reconcile_ingress_per_unit is called once
+    assert: reconcile_ingress is called once
     """
-    context, (*_, reconcile_ingress_per_unit_mock) = context_with_install_mock
+    context, (*_, reconcile_ingress_mock) = context_with_install_mock
     state = ops.testing.State(**base_state_with_ingress_per_unit)
     context.run(context.on.config_changed(), state)
-    reconcile_ingress_per_unit_mock.assert_called_once()
+    reconcile_ingress_mock.assert_called_once()
 
 
 def test_ingress_per_unit_data_validation_error(

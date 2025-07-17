@@ -75,7 +75,7 @@ class HaproxyValidateConfigError(Exception):
     """Error when validation of the generated haproxy config failed."""
 
 
-class InvalidRequirerInformation(Exception):
+class InvalidRequirerInformationError(Exception):
     """Exception raised when the requirer information is invalid."""
 
 
@@ -128,6 +128,10 @@ class HAProxyService:
             ingress_requirers_information: Parsed information about ingress or ingress
                 per unit requirers.
             external_hostname: Configured external-hostname for TLS.
+
+        Raises:
+            InvalidRequirerInformationError: If the provided information is not of the expected
+                type.
         """
         template_context = {
             "config_global_max_connection": config.global_max_connection,
@@ -140,7 +144,7 @@ class HAProxyService:
         elif isinstance(ingress_requirers_information, IngressPerUnitRequirersInformation):
             self._render_haproxy_config(HAPROXY_INGRESS_PER_UNIT_CONFIG_TEMPLATE, template_context)
         else:
-            raise InvalidRequirerInformation(
+            raise InvalidRequirerInformationError(
                 "Expected ingress requirer or ingress per unit requirer "
                 f"but received {ingress_requirers_information} instead."
             )
