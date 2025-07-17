@@ -31,7 +31,7 @@ async def test_ingress_per_unit_integration(
         f"{requirer_app.name}:require-ingress-per-unit",
     )
     await configured_application_with_tls.model.wait_for_idle(
-        apps=[configured_application_with_tls.name],
+        apps=[configured_application_with_tls.name, requirer_app.name],
         idle_period=30,
         status="active",
     )
