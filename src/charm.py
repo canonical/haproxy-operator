@@ -161,9 +161,19 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(
             self.reverseproxy_requirer.on.http_backend_removed, self._on_http_backend_removed
         )
-        for ingress in (self._ingress_provider, self._ingress_per_unit_provider):
-            self.framework.observe(ingress.on.data_provided, self._on_ingress_data_provided)
-            self.framework.observe(ingress.on.data_removed, self._on_ingress_data_removed)
+        self.framework.observe(
+            self._ingress_provider.on.data_provided, self._on_ingress_data_provided
+        )
+        self.framework.observe(
+            self._ingress_provider.on.data_removed, self._on_ingress_data_removed
+        )
+        self.framework.observe(
+            self._ingress_per_unit_provider.on.data_provided,
+            self._on_ingress_per_unit_data_provided,
+        )
+        self.framework.observe(
+            self._ingress_per_unit_provider.on.data_removed, self._on_ingress_data_removed
+        )
         self.framework.observe(self.hacluster.on.ha_ready, self._on_config_changed)
         self.framework.observe(
             self.haproxy_route_provider.on.data_available, self._on_config_changed
@@ -232,11 +242,11 @@ class HAProxyCharm(ops.CharmBase):
         self._reconcile_ha(ha_information)
 
         config = CharmConfig.from_charm(self)
-
         match proxy_mode:
             case ProxyMode.INGRESS:
                 tls_information = TLSInformation.from_charm(self, self.certificates)
                 self._tls.certificate_available(tls_information)
+
                 ingress_requirers_information = IngressRequirersInformation.from_provider(
                     self._ingress_provider
                 )
@@ -253,7 +263,7 @@ class HAProxyCharm(ops.CharmBase):
                     )
                 )
                 self.unit.set_ports(80, 443)
-                self.haproxy_service.reconcile_ingress_per_unit(
+                self.haproxy_service.reconcile_ingress(
                     config,
                     ingress_per_unit_requirers_information,
                     tls_information.external_hostname,
@@ -263,6 +273,7 @@ class HAProxyCharm(ops.CharmBase):
                     # Reconcile certificates in case the certificates relation is present
                     tls_information = TLSInformation.from_charm(self, self.certificates)
                     self._tls.certificate_available(tls_information)
+
                 legacy_invalid_requested_port: list[str] = []
                 required_ports: set[Port] = set()
                 for service in self.reverseproxy_requirer.get_services_definition().values():
@@ -286,6 +297,7 @@ class HAProxyCharm(ops.CharmBase):
             case ProxyMode.HAPROXY_ROUTE:
                 tls_information = TLSInformation.from_charm(self, self.certificates)
                 self._tls.certificate_available(tls_information)
+
                 haproxy_route_requirers_information = (
                     HaproxyRouteRequirersInformation.from_provider(
                         self.haproxy_route_provider,
@@ -318,6 +330,7 @@ class HAProxyCharm(ops.CharmBase):
                     # Reconcile certificates in case the certificates relation is present
                     tls_information = TLSInformation.from_charm(self, self.certificates)
                     self._tls.certificate_available(tls_information)
+
                 self.unit.set_ports(80)
                 self.haproxy_service.reconcile_default(config)
         self.unit.status = ops.ActiveStatus()
@@ -366,10 +379,34 @@ class HAProxyCharm(ops.CharmBase):
             )
         ]
 
+    @validate_config_and_tls(defer=False)
+    def _on_ingress_per_unit_data_provided(self, _: IngressDataReadyEvent) -> None:
+        """Handle the data-provided event for ingress-per-unit.
+
+        Args:
+            event: Juju event.
+        """
+        self._reconcile()
+        if self.unit.is_leader():
+            tls_information = TLSInformation.from_charm(self, self.certificates)
+            for relation in self._ingress_per_unit_provider.relations:
+                for unit in relation.units:
+                    if not self._ingress_per_unit_provider.is_unit_ready(relation, unit):
+                        logger.warning(
+                            "Unit %s is not ready for ingress-per-unit relation, skipping.",
+                            unit.name,
+                        )
+                        continue
+                    integration_data = self._ingress_per_unit_provider.get_data(relation, unit)
+                    path_prefix = f"{integration_data['model']}-{integration_data['name']}"
+                    self._ingress_per_unit_provider.publish_url(
+                        relation,
+                        integration_data["name"],
+                        f"https://{tls_information.external_hostname}/{path_prefix}",
+                    )
+
     @validate_config_and_tls(defer=True)
-    def _on_ingress_data_provided(
-        self, event: IngressPerAppDataProvidedEvent | IngressDataReadyEvent
-    ) -> None:
+    def _on_ingress_data_provided(self, event: IngressPerAppDataProvidedEvent) -> None:
         """Handle the data-provided event.
 
         Args:
@@ -378,28 +415,11 @@ class HAProxyCharm(ops.CharmBase):
         self._reconcile()
         if self.unit.is_leader():
             tls_information = TLSInformation.from_charm(self, self.certificates)
-            if isinstance(event, IngressPerAppDataProvidedEvent):
-                integration_data = self._ingress_provider.get_data(event.relation)
-                path_prefix = f"{integration_data.app.model}-{integration_data.app.name}"
-                self._ingress_provider.publish_url(
-                    event.relation, f"https://{tls_information.external_hostname}/{path_prefix}/"
-                )
-            elif isinstance(event, IngressDataReadyEvent):
-                for relation in self._ingress_per_unit_provider.relations:
-                    for unit in relation.units:
-                        if not self._ingress_per_unit_provider.is_unit_ready(relation, unit):
-                            logger.warning(
-                                "Unit %s is not ready for ingress-per-unit relation, skipping.",
-                                unit.name,
-                            )
-                            continue
-                        integration_data = self._ingress_per_unit_provider.get_data(relation, unit)
-                        path_prefix = f"{integration_data['model']}-{integration_data['name']}"
-                        self._ingress_per_unit_provider.publish_url(
-                            relation,
-                            integration_data["name"],
-                            f"https://{tls_information.external_hostname}/{path_prefix}",
-                        )
+            integration_data = self._ingress_provider.get_data(event.relation)
+            path_prefix = f"{integration_data.app.model}-{integration_data.app.name}"
+            self._ingress_provider.publish_url(
+                event.relation, f"https://{tls_information.external_hostname}/{path_prefix}/"
+            )
 
     @validate_config_and_tls(defer=False)
     def _on_ingress_data_removed(

@@ -15,13 +15,13 @@ frontend ingress_per_unit
 
     # generate path ACLs for ingress
     acl host_{{ config_external_hostname }} hdr(host) -i {{ config_external_hostname }}
-{% for backend in ingress_per_unit_requirers_information.backends %}
+{% for backend in ingress_requirers_information.backends %}
     acl path_{{ backend.backend_name }} path -i -m beg /{{ backend.backend_path }}
     use_backend {{ backend.backend_name }} if path_{{ backend.backend_name }} host_{{ config_external_hostname }}
     default_backend default
 {% endfor %}
 
-{% for backend in ingress_per_unit_requirers_information.backends %}
+{% for backend in ingress_requirers_information.backends %}
 backend {{ backend.backend_name }}
 {% if backend.strip_prefix %}
     http-request replace-path /{{ backend.backend_path }}(/)?(.*) /\2
