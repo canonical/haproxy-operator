@@ -10,6 +10,7 @@ import os.path
 import pathlib
 import textwrap
 import typing
+from pathlib import Path
 
 import pytest
 import pytest_asyncio
@@ -25,6 +26,8 @@ GATEWAY_CLASS_CONFIG = "cilium"
 HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/haproxy_route_requirer.py"
 HAPROXY_ROUTE_LIB_SRC = "lib/charms/haproxy/v1/haproxy_route.py"
 APT_LIB_SRC = "lib/charms/operator_libs_linux/v0/apt.py"
+ANY_CHARM_INGRESS_PER_UNIT_REQUIRER = "ingress-per-unit-requirer-any"
+ANY_CHARM_INGRESS_PER_UNIT_REQUIRER_SRC = "tests/integration/ingress_per_unit_requirer.py"
 
 
 @pytest_asyncio.fixture(scope="module", name="model")
@@ -47,9 +50,14 @@ async def charm_fixture(pytestconfig: pytest.Config) -> str:
 
 @pytest_asyncio.fixture(scope="module", name="application")
 async def application_fixture(
-    charm: str, model: Model
+    pytestconfig: pytest.Config, charm: str, model: Model
 ) -> typing.AsyncGenerator[Application, None]:
     """Deploy the charm."""
+    app_name = "haproxy"
+    if pytestconfig.getoption("--no-deploy") and app_name in model.applications:
+        logger.warning("Using existing application: %s", app_name)
+        yield model.applications[app_name]
+        return
     # Deploy the charm and wait for active/idle status
     application = await model.deploy(f"./{charm}", trust=True)
     await model.wait_for_idle(
@@ -62,9 +70,14 @@ async def application_fixture(
 
 @pytest_asyncio.fixture(scope="module", name="certificate_provider_application")
 async def certificate_provider_application_fixture(
+    pytestconfig: pytest.Config,
     model: Model,
 ) -> Application:
     """Deploy self-signed-certificates."""
+    app_name = "self-signed-certificates"
+    if pytestconfig.getoption("--no-deploy") and app_name in model.applications:
+        logger.warning("Using existing application: %s", app_name)
+        return model.applications[app_name]
     application = await model.deploy("self-signed-certificates", channel="1/edge")
     await model.wait_for_idle(apps=[application.name], status="active")
     return application
@@ -286,12 +299,7 @@ async def any_charm_ingress_requirer_name_fixture() -> str:
 
 @pytest_asyncio.fixture(scope="module", name="any_charm_src_ingress_requirer")
 async def any_charm_src_ingress_requirer_fixture() -> dict[str, str]:
-    """
-    assert: None
-    action: Build and deploy nginx-ingress-integrator charm, also deploy and relate an any-charm
-        application with ingress relation for test purposes.
-    assert: HTTP request should be forwarded to the application.
-    """
+    """Any charm ingress requirer source code fixture."""
     any_charm_py = textwrap.dedent(
         """\
     import pathlib
@@ -330,11 +338,19 @@ async def any_charm_src_ingress_requirer_fixture() -> dict[str, str]:
 
 @pytest_asyncio.fixture(scope="function", name="any_charm_ingress_requirer")
 async def any_charm_ingress_requirer_fixture(
+    pytestconfig: pytest.Config,
     model: Model,
     any_charm_src_ingress_requirer: dict[str, str],
     any_charm_ingress_requirer_name: str,
 ) -> typing.AsyncGenerator[Application, None]:
     """Deploy any-charm and configure it to serve as a requirer for the http interface."""
+    if (
+        pytestconfig.getoption("--no-deploy")
+        and any_charm_ingress_requirer_name in model.applications
+    ):
+        logger.warning("Using existing application: %s", any_charm_ingress_requirer_name)
+        yield model.applications[any_charm_ingress_requirer_name]
+        return
     application = await model.deploy(
         "any-charm",
         application_name=any_charm_ingress_requirer_name,
@@ -350,11 +366,49 @@ async def any_charm_ingress_requirer_fixture(
     yield application
 
 
+@pytest_asyncio.fixture(scope="function", name="any_charm_ingress_per_unit_requirer")
+async def any_charm_ingress_per_unit_requirer_fixture(
+    pytestconfig: pytest.Config,
+    model: Model,
+) -> typing.AsyncGenerator[Application, None]:
+    """Deploy any-charm and configure it to serve as a requirer for the ingress-per-unit
+    interface.
+    """
+    if (
+        pytestconfig.getoption("--no-deploy")
+        and ANY_CHARM_INGRESS_PER_UNIT_REQUIRER in model.applications
+    ):
+        logger.warning("Using existing application: %s", ANY_CHARM_INGRESS_PER_UNIT_REQUIRER)
+        yield model.applications[ANY_CHARM_INGRESS_PER_UNIT_REQUIRER]
+        return
+    any_charm_src_overwrite = {
+        "any_charm.py": Path(ANY_CHARM_INGRESS_PER_UNIT_REQUIRER_SRC).read_text(encoding="utf-8"),
+        "ingress_per_unit.py": pathlib.Path(
+            "lib/charms/traefik_k8s/v1/ingress_per_unit.py"
+        ).read_text(encoding="utf-8"),
+        "apt.py": pathlib.Path("lib/charms/operator_libs_linux/v0/apt.py").read_text(
+            encoding="utf-8"
+        ),
+    }
+    application = await model.deploy(
+        "any-charm",
+        application_name=ANY_CHARM_INGRESS_PER_UNIT_REQUIRER,
+        channel="beta",
+        config={
+            "src-overwrite": json.dumps(any_charm_src_overwrite),
+            "python-packages": "pydantic<2.0",
+        },
+        num_units=2,
+    )
+    await model.wait_for_idle(apps=[application.name], status="active")
+    yield application
+
+
 @pytest_asyncio.fixture(scope="function", name="any_charm_requirer")
 async def any_charm_requirer_fixture(
     model: Model, any_charm_src: dict[str, str]
 ) -> typing.AsyncGenerator[Application, None]:
-    """Deploy any-charm and configure it to serve as a requirer for the http interface."""
+    """Deploy any-charm and configure it to serve as a requirer for the reverseproxy relation."""
     application = await model.deploy(
         "any-charm",
         application_name="requirer",
@@ -369,7 +423,7 @@ async def any_charm_requirer_fixture(
 async def reverseproxy_requirer_fixture(
     model: Model,
 ) -> typing.AsyncGenerator[Application, None]:
-    """Deploy any-charm and configure it to serve as a requirer for the http interface."""
+    """Deploy any-charm and configure it to serve as a requirer for the website relation."""
     application = await model.deploy(
         "haproxy",
         application_name="reverseproxy-requirer",
@@ -393,7 +447,7 @@ async def hacluster_fixture(
 
 @pytest_asyncio.fixture(scope="function", name="haproxy_route_requirer")
 async def haproxy_route_requirer_fixture(model: Model) -> typing.AsyncGenerator[Application, None]:
-    """Deploy any-charm and configure it to serve as a requirer for the http interface."""
+    """Deploy any-charm and configure it to serve as a requirer for the haproxy-route interface."""
     application = await model.deploy(
         "any-charm",
         channel="beta",
