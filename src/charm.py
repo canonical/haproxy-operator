@@ -229,7 +229,7 @@ class HAProxyCharm(ops.CharmBase):
         """Handle data_removed event for reverseproxy integration."""
         self._reconcile()
 
-    def _reconcile(self) -> None:
+    def _reconcile(self) -> None:  # pylint: disable=too-many-locals, too-many-statements
         """Render the haproxy config and restart the service."""
         self.unit.status = ops.MaintenanceStatus("Configuring haproxy.")
         proxy_mode = self._validate_state()
@@ -269,7 +269,7 @@ class HAProxyCharm(ops.CharmBase):
                 self.haproxy_service.reconcile_ingress(
                     config,
                     ingress_per_unit_requirers_information,
-                    tls_information.external_hostname,
+                    tls_information.hostnames[0],
                 )
             case ProxyMode.LEGACY:
                 if self.model.get_relation(TLS_CERT_RELATION):
@@ -417,7 +417,7 @@ class HAProxyCharm(ops.CharmBase):
                     self._ingress_per_unit_provider.publish_url(
                         relation,
                         integration_data["name"],
-                        f"https://{tls_information.external_hostname}/{path_prefix}",
+                        f"https://{tls_information.hostnames[0]}/{path_prefix}",
                     )
 
     @validate_config_and_tls(defer=True)
