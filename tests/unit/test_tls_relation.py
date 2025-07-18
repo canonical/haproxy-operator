@@ -87,7 +87,7 @@ def test_certificate_available(
     )
 
     tls_information = TLSInformation(
-        external_hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
+        hostnames=[TEST_EXTERNAL_HOSTNAME_CONFIG],
         tls_cert_and_ca_chain={
             TEST_EXTERNAL_HOSTNAME_CONFIG: (mock_certificate, [mock_certificate])
         },

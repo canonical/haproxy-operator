@@ -204,7 +204,7 @@ class HAProxyCharm(ops.CharmBase):
         Args:
             event: Juju event
         """
-        TLSInformation.validate(self)
+        TLSInformation.validate(self, self.certificates)
 
         hostname = event.params["hostname"]
         if provider_cert := self._tls.get_provider_cert_with_hostname(hostname):
@@ -251,8 +251,11 @@ class HAProxyCharm(ops.CharmBase):
                     self._ingress_provider
                 )
                 self.unit.set_ports(80, 443)
+                # In ingress mode it's expected for tls_information.hostnames
+                # to only contains the `external-hostname` charm config.
+                # Validation of tls_information will fail otherwise.
                 self.haproxy_service.reconcile_ingress(
-                    config, ingress_requirers_information, tls_information.external_hostname
+                    config, ingress_requirers_information, tls_information.hostnames[0]
                 )
             case ProxyMode.INGRESS_PER_UNIT:
                 tls_information = TLSInformation.from_charm(self, self.certificates)
@@ -301,7 +304,9 @@ class HAProxyCharm(ops.CharmBase):
                 haproxy_route_requirers_information = (
                     HaproxyRouteRequirersInformation.from_provider(
                         self.haproxy_route_provider,
-                        tls_information.external_hostname,
+                        typing.cast(
+                            typing.Optional[str], self.model.config.get("external-hostname")
+                        ),
                         self._get_peer_units_address(),
                     )
                 )
@@ -317,14 +322,24 @@ class HAProxyCharm(ops.CharmBase):
                         if not relation:
                             logger.error("Relation does not exist, skipping.")
                             break
+                        paths = (
+                            backend.application_data.paths if backend.path_acl_required else [""]
+                        )
                         self.haproxy_route_provider.publish_proxied_endpoints(
                             [
                                 f"https://{hostname}/{path}"
                                 for hostname in backend.hostname_acls
-                                for path in backend.application_data.paths
+                                for path in paths
                             ],
                             relation,
                         )
+                    for (
+                        relation_id
+                    ) in haproxy_route_requirers_information.relation_ids_with_invalid_data:
+                        if relation := self.model.get_relation(
+                            HAPROXY_ROUTE_RELATION, relation_id
+                        ):
+                            self.haproxy_route_provider.publish_proxied_endpoints([], relation)
             case _:
                 if self.model.get_relation(TLS_CERT_RELATION):
                     # Reconcile certificates in case the certificates relation is present
@@ -342,8 +357,6 @@ class HAProxyCharm(ops.CharmBase):
             typing.List[CertificateRequestAttributes]: List of certificate request attributes.
         """
         external_hostname = typing.cast(str, self.config.get("external-hostname", None))
-        if not external_hostname:
-            return []
 
         try:
             proxy_mode = self._validate_state()
@@ -367,10 +380,16 @@ class HAProxyCharm(ops.CharmBase):
             HaproxyRouteIntegrationDataValidationError,
             TLSNotReadyError,
             CharmStateValidationBaseError,
+            HaproxyRouteIntegrationDataValidationError,
         ):
             # We are handling errors here and not re-raising/setting charm status as
             # this method is called during charm initialization
             logger.exception("haproxy-route information not ready, skipping certificate request.")
+            return []
+
+        # If we're not in haproxy-route mode, then external-hostname
+        # is used for CSRs
+        if not external_hostname:
             return []
 
         return [
@@ -414,7 +433,7 @@ class HAProxyCharm(ops.CharmBase):
             integration_data = self._ingress_provider.get_data(event.relation)
             path_prefix = f"{integration_data.app.model}-{integration_data.app.name}"
             self._ingress_provider.publish_url(
-                event.relation, f"https://{tls_information.external_hostname}/{path_prefix}/"
+                event.relation, f"https://{tls_information.hostnames[0]}/{path_prefix}/"
             )
 
     @validate_config_and_tls(defer=False)
@@ -496,7 +515,7 @@ class HAProxyCharm(ops.CharmBase):
     @validate_config_and_tls(defer=True)
     def _ensure_tls(self, _: ops.EventBase) -> None:
         """Ensure that the charm is ready to handle TLS-related events."""
-        TLSInformation.validate(self)
+        TLSInformation.validate(self, self.certificates)
 
     def _get_peer_units_address(self) -> list[str]:
         """Get address of peer units.
