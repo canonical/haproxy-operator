@@ -3,8 +3,6 @@
 
 """Integration test for actions."""
 
-import ipaddress
-
 import pytest
 from juju.application import Application
 from requests import Session
