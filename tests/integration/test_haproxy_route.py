@@ -40,20 +40,18 @@ async def test_haproxy_route_integration(
 
     unit_ip_address = await get_unit_ip_address(application)
     session = Session()
-    session.mount(
-        "https://",
-        DNSResolverHTTPSAdapter(HAPROXY_ROUTE_REQUIRER_HOSTNAME, str(unit_ip_address)),
-    )
-
-    request_url = f"http://{str(unit_ip_address)}"
-    if isinstance(unit_ip_address, ipaddress.IPv6Address):
-        request_url = f"http://[{str(unit_ip_address)}]"
-
-    response = session.get(
-        request_url,
-        headers={"Host": HAPROXY_ROUTE_REQUIRER_HOSTNAME},
-        verify=False,  # nosec - calling charm ingress URL
-        timeout=30,
-    )
-    assert response.status_code == 200
-    assert "ok!" in response.text
+    for subdomain in ["ok", "ok2", "ok3"]:
+        url = f"https://{subdomain}.{TEST_EXTERNAL_HOSTNAME_CONFIG}"
+        session.mount(
+            url,
+            DNSResolverHTTPSAdapter(
+                f"{subdomain}.{TEST_EXTERNAL_HOSTNAME_CONFIG}", str(unit_ip_address)
+            ),
+        )
+        response = session.get(
+            url,
+            verify=False,  # nosec - calling charm ingress URL
+            timeout=30,
+        )
+        assert response.status_code == 200
+        assert "ok!" in response.text
