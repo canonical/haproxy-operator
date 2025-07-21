@@ -86,7 +86,7 @@ def get_ingress_per_unit_urls_for_application(
         list: The parsed ingress URLs per unit.
     """
     unit_name = app_name + "/0"
-    result = juju.cli("juju", "show-unit", unit_name, "--format", "json")
+    result = juju.cli("show-unit", unit_name, "--format", "json")
     unit_info = json.loads(result)[unit_name]
 
     for rel in unit_info["relation-info"]:

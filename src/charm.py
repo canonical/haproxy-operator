@@ -411,9 +411,7 @@ class HAProxyCharm(ops.CharmBase):
                     )
 
     @validate_config_and_tls(defer=True)
-    def _on_ingress_data_provided(
-        self, event: IngressPerAppDataProvidedEvent | IngressDataReadyEvent
-    ) -> None:
+    def _on_ingress_data_provided(self, event: IngressPerAppDataProvidedEvent) -> None:
         """Handle the data-provided event.
 
         Args:

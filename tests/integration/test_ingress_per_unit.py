@@ -27,17 +27,10 @@ async def test_ingress_per_unit_integration(
 
     Assert that the requirer endpoints are available.
     """
-    application = configured_application_with_tls
-    requirer_app = any_charm_ingress_per_unit_requirer
-    juju.integrate(f"{application}:ingress-per-unit", f"{requirer_app}:require-ingress-per-unit")
-    juju.wait(
-        lambda status: jubilant.all_active(
-            status, application, any_charm_ingress_per_unit_requirer
-        )
+    unit_ip = get_unit_ip_address(juju, configured_application_with_tls)
+    ingress_urls = get_ingress_per_unit_urls_for_application(
+        juju, any_charm_ingress_per_unit_requirer
     )
-
-    unit_ip = get_unit_ip_address(juju, application)
-    ingress_urls = get_ingress_per_unit_urls_for_application(juju, requirer_app)
 
     for parsed_url in ingress_urls:
         assert parsed_url.netloc == TEST_EXTERNAL_HOSTNAME_CONFIG

@@ -109,11 +109,14 @@ def certificate_provider_application_fixture(
 
 @pytest.fixture(scope="module", name="configured_application_with_tls")
 def configured_application_with_tls_fixture(
+    pytestconfig: pytest.Config,
     application: str,
     certificate_provider_application: str,
     juju: jubilant.Juju,
 ):
     """The haproxy charm configured and integrated with TLS provider."""
+    if pytestconfig.getoption("--no-deploy") and "haproxy" in juju.status().apps:
+        return "haproxy"
     juju.config(application, {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
     juju.integrate(application, certificate_provider_application)
     juju.wait(
@@ -128,7 +131,7 @@ def configured_application_with_tls_fixture(
 
 @pytest.fixture(name="any_charm_ingress_per_unit_requirer")
 def any_charm_ingress_per_unit_requirer_fixture(
-    pytestconfig: pytest.Config, juju: jubilant.Juju
+    pytestconfig: pytest.Config, juju: jubilant.Juju, configured_application_with_tls: str
 ) -> str:
     """Deploy any-charm and configure it to serve as a requirer for the ingress-per-unit
     interface.
@@ -162,5 +165,14 @@ def any_charm_ingress_per_unit_requirer_fixture(
     juju.wait(
         lambda status: (jubilant.all_active(status, ANY_CHARM_INGRESS_PER_UNIT_REQUIRER)),
         timeout=JUJU_WAIT_TIMEOUT,
+    )
+    juju.integrate(
+        f"{configured_application_with_tls}:ingress-per-unit",
+        f"{ANY_CHARM_INGRESS_PER_UNIT_REQUIRER}:require-ingress-per-unit",
+    )
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, ANY_CHARM_INGRESS_PER_UNIT_REQUIRER
+        )
     )
     return ANY_CHARM_INGRESS_PER_UNIT_REQUIRER
