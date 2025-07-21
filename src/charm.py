@@ -204,7 +204,7 @@ class HAProxyCharm(ops.CharmBase):
         """Handle data_removed event for reverseproxy integration."""
         self._reconcile()
 
-    def _reconcile(self) -> None:  # pylint: disable=too-many-locals, too-many-statements
+    def _reconcile(self) -> None:
         """Render the haproxy config and restart the service."""
         self.unit.status = ops.MaintenanceStatus("Configuring haproxy.")
         charm_state = CharmState.from_charm(
@@ -225,102 +225,13 @@ class HAProxyCharm(ops.CharmBase):
 
         match proxy_mode:
             case ProxyMode.INGRESS:
-                tls_information = TLSInformation.from_charm(self, self.certificates)
-                self._tls.certificate_available(tls_information)
-
-                ingress_requirers_information = IngressRequirersInformation.from_provider(
-                    self._ingress_provider
-                )
-                self.unit.set_ports(80, 443)
-                # In ingress mode it's expected for tls_information.hostnames
-                # to only contains the `external-hostname` charm config.
-                # Validation of tls_information will fail otherwise.
-                self.haproxy_service.reconcile_ingress(
-                    charm_state, ingress_requirers_information, tls_information.hostnames[0]
-                )
+                self._configure_ingress(charm_state)
             case ProxyMode.INGRESS_PER_UNIT:
-                tls_information = TLSInformation.from_charm(self, self.certificates)
-                self._tls.certificate_available(tls_information)
-                ingress_per_unit_requirers_information = (
-                    IngressPerUnitRequirersInformation.from_provider(
-                        self._ingress_per_unit_provider
-                    )
-                )
-                self.unit.set_ports(80, 443)
-                self.haproxy_service.reconcile_ingress(
-                    charm_state,
-                    ingress_per_unit_requirers_information,
-                    tls_information.hostnames[0],
-                )
+                self._configure_ingress_per_unit(charm_state)
             case ProxyMode.LEGACY:
-                if self.model.get_relation(TLS_CERT_RELATION):
-                    # Reconcile certificates in case the certificates relation is present
-                    tls_information = TLSInformation.from_charm(self, self.certificates)
-                    self._tls.certificate_available(tls_information)
-
-                legacy_invalid_requested_port: list[str] = []
-                required_ports: set[Port] = set()
-                for service in self.reverseproxy_requirer.get_services_definition().values():
-                    port = service["service_port"]
-                    if not _validate_port(port):
-                        logger.error("Requested port: %s is not a valid tcp port. Skipping", port)
-                        legacy_invalid_requested_port.append(f"{service['service_name']:{port}}")
-                        continue
-                    required_ports.add(Port(protocol="tcp", port=port))
-
-                if legacy_invalid_requested_port:
-                    self.unit.status = ops.BlockedStatus(
-                        f"Invalid ports requested: {','.join(legacy_invalid_requested_port)}"
-                    )
-                    return
-
-                self.unit.set_ports(*required_ports)
-                self.haproxy_service.reconcile_legacy(
-                    charm_state, self.reverseproxy_requirer.get_services()
-                )
+                self._configure_legacy(charm_state)
             case ProxyMode.HAPROXY_ROUTE:
-                tls_information = TLSInformation.from_charm(self, self.certificates)
-                self._tls.certificate_available(tls_information)
-
-                haproxy_route_requirers_information = (
-                    HaproxyRouteRequirersInformation.from_provider(
-                        self.haproxy_route_provider,
-                        typing.cast(
-                            typing.Optional[str], self.model.config.get("external-hostname")
-                        ),
-                        self._get_peer_units_address(),
-                    )
-                )
-                self.haproxy_service.reconcile_haproxy_route(
-                    charm_state, haproxy_route_requirers_information
-                )
-                self.unit.set_ports(80, 443)
-                if self.unit.is_leader():
-                    for backend in haproxy_route_requirers_information.backends:
-                        relation = self.model.get_relation(
-                            HAPROXY_ROUTE_RELATION, backend.relation_id
-                        )
-                        if not relation:
-                            logger.error("Relation does not exist, skipping.")
-                            break
-                        paths = (
-                            backend.application_data.paths if backend.path_acl_required else [""]
-                        )
-                        self.haproxy_route_provider.publish_proxied_endpoints(
-                            [
-                                f"https://{hostname}/{path}"
-                                for hostname in backend.hostname_acls
-                                for path in paths
-                            ],
-                            relation,
-                        )
-                    for (
-                        relation_id
-                    ) in haproxy_route_requirers_information.relation_ids_with_invalid_data:
-                        if relation := self.model.get_relation(
-                            HAPROXY_ROUTE_RELATION, relation_id
-                        ):
-                            self.haproxy_route_provider.publish_proxied_endpoints([], relation)
+                self._configure_haproxy_route(charm_state)
             case _:
                 if self.model.get_relation(TLS_CERT_RELATION):
                     # Reconcile certificates in case the certificates relation is present
@@ -330,6 +241,97 @@ class HAProxyCharm(ops.CharmBase):
                 self.unit.set_ports(80)
                 self.haproxy_service.reconcile_default(charm_state)
         self.unit.status = ops.ActiveStatus()
+
+    def _configure_ingress(self, charm_state: CharmState) -> None:
+        """Configure the ingress relation."""
+        tls_information = TLSInformation.from_charm(self, self.certificates)
+        self._tls.certificate_available(tls_information)
+
+        ingress_requirers_information = IngressRequirersInformation.from_provider(
+            self._ingress_provider
+        )
+        self.unit.set_ports(80, 443)
+        # In ingress mode it's expected for tls_information.hostnames
+        # to only contains the `external-hostname` charm config.
+        # Validation of tls_information will fail otherwise.
+        self.haproxy_service.reconcile_ingress(
+            charm_state, ingress_requirers_information, tls_information.hostnames[0]
+        )
+
+    def _configure_ingress_per_unit(self, charm_state: CharmState) -> None:
+        """Configure the ingress-per-unit relation."""
+        tls_information = TLSInformation.from_charm(self, self.certificates)
+        self._tls.certificate_available(tls_information)
+        ingress_per_unit_requirers_information = IngressPerUnitRequirersInformation.from_provider(
+            self._ingress_per_unit_provider
+        )
+        self.unit.set_ports(80, 443)
+        self.haproxy_service.reconcile_ingress(
+            charm_state,
+            ingress_per_unit_requirers_information,
+            tls_information.hostnames[0],
+        )
+
+    def _configure_legacy(self, charm_state: CharmState) -> None:
+        """Configure the legacy mode."""
+        if self.model.get_relation(TLS_CERT_RELATION):
+            # Reconcile certificates in case the certificates relation is present
+            tls_information = TLSInformation.from_charm(self, self.certificates)
+            self._tls.certificate_available(tls_information)
+
+        legacy_invalid_requested_port: list[str] = []
+        required_ports: set[Port] = set()
+        for service in self.reverseproxy_requirer.get_services_definition().values():
+            port = service["service_port"]
+            if not _validate_port(port):
+                logger.error("Requested port: %s is not a valid tcp port. Skipping", port)
+                legacy_invalid_requested_port.append(f"{service['service_name']:{port}}")
+                continue
+            required_ports.add(Port(protocol="tcp", port=port))
+
+        if legacy_invalid_requested_port:
+            self.unit.status = ops.BlockedStatus(
+                f"Invalid ports requested: {','.join(legacy_invalid_requested_port)}"
+            )
+            return
+
+        self.unit.set_ports(*required_ports)
+        self.haproxy_service.reconcile_legacy(
+            charm_state, self.reverseproxy_requirer.get_services()
+        )
+
+    def _configure_haproxy_route(self, charm_state: CharmState) -> None:
+        """Configure the haproxy route relation."""
+        tls_information = TLSInformation.from_charm(self, self.certificates)
+        self._tls.certificate_available(tls_information)
+
+        haproxy_route_requirers_information = HaproxyRouteRequirersInformation.from_provider(
+            self.haproxy_route_provider,
+            typing.cast(typing.Optional[str], self.model.config.get("external-hostname")),
+            self._get_peer_units_address(),
+        )
+        self.haproxy_service.reconcile_haproxy_route(
+            charm_state, haproxy_route_requirers_information
+        )
+        self.unit.set_ports(80, 443)
+        if self.unit.is_leader():
+            for backend in haproxy_route_requirers_information.backends:
+                relation = self.model.get_relation(HAPROXY_ROUTE_RELATION, backend.relation_id)
+                if not relation:
+                    logger.error("Relation does not exist, skipping.")
+                    break
+                paths = backend.application_data.paths if backend.path_acl_required else [""]
+                self.haproxy_route_provider.publish_proxied_endpoints(
+                    [
+                        f"https://{hostname}/{path}"
+                        for hostname in backend.hostname_acls
+                        for path in paths
+                    ],
+                    relation,
+                )
+            for relation_id in haproxy_route_requirers_information.relation_ids_with_invalid_data:
+                if relation := self.model.get_relation(HAPROXY_ROUTE_RELATION, relation_id):
+                    self.haproxy_route_provider.publish_proxied_endpoints([], relation)
 
     def _get_certificate_requests(self) -> typing.List[CertificateRequestAttributes]:
         """Get the certificate requests.
