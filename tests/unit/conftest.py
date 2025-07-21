@@ -137,6 +137,27 @@ def context_with_install_mock_fixture():
         )
 
 
+@pytest.fixture(name="context_with_reconcile_mock")
+def context_with_reconcile_mock_fixture():
+    """Context relation fixture.
+
+    Yield: The modeled haproxy-peers relation.
+    """
+    with (
+        patch("haproxy.HAProxyService.reconcile_haproxy_route") as reconcile_mock,
+        patch("tls_relation.TLSRelationService.write_certificate_to_unit"),
+        patch("charm.HAProxyCharm._get_unit_address") as get_unit_address_mock,
+        patch("haproxy.HAProxyService.install"),
+    ):
+        get_unit_address_mock.return_value = "10.0.0.1"
+        yield (
+            Context(
+                charm_type=HAProxyCharm,
+            ),
+            reconcile_mock,
+        )
+
+
 @pytest.fixture(name="peer_relation")
 def peer_relation_fixture():
     """Peer relation fixture.

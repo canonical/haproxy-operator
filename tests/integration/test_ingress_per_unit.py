@@ -5,20 +5,23 @@
 
 import ipaddress
 
+import jubilant
 import pytest
-from juju.application import Application
-from pytest_operator.plugin import OpsTest
 from requests import Session
 
-from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG, get_unit_ip_address
-from .helper import DNSResolverHTTPSAdapter, get_ingress_per_unit_urls_for_application
+from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
+from .helper import (
+    DNSResolverHTTPSAdapter,
+    get_ingress_per_unit_urls_for_application,
+    get_unit_ip_address,
+)
 
 
 @pytest.mark.abort_on_fail
 async def test_ingress_per_unit_integration(
-    configured_application_with_tls: Application,
-    any_charm_ingress_per_unit_requirer: Application,
-    ops_test: OpsTest,
+    configured_application_with_tls: str,
+    any_charm_ingress_per_unit_requirer: str,
+    juju: jubilant.Juju,
 ):
     """Deploy the charm with anycharm ingress per unit requirer that installs apache2.
 
@@ -26,18 +29,15 @@ async def test_ingress_per_unit_integration(
     """
     application = configured_application_with_tls
     requirer_app = any_charm_ingress_per_unit_requirer
-    await configured_application_with_tls.model.add_relation(
-        f"{configured_application_with_tls.name}:ingress-per-unit",
-        f"{requirer_app.name}:require-ingress-per-unit",
-    )
-    await configured_application_with_tls.model.wait_for_idle(
-        apps=[configured_application_with_tls.name, requirer_app.name],
-        idle_period=30,
-        status="active",
+    juju.integrate(f"{application}:ingress-per-unit", f"{requirer_app}:require-ingress-per-unit")
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, application, any_charm_ingress_per_unit_requirer
+        )
     )
 
-    unit_ip = await get_unit_ip_address(application)
-    ingress_urls = await get_ingress_per_unit_urls_for_application(requirer_app, ops_test)
+    unit_ip = get_unit_ip_address(juju, application)
+    ingress_urls = get_ingress_per_unit_urls_for_application(juju, requirer_app)
 
     for parsed_url in ingress_urls:
         assert parsed_url.netloc == TEST_EXTERNAL_HOSTNAME_CONFIG

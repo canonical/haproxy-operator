@@ -9,7 +9,6 @@
 
 import logging
 import typing
-from enum import StrEnum
 
 import ops
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
@@ -41,7 +40,7 @@ from http_interface import (
     HTTPProvider,
     HTTPRequirer,
 )
-from state.config import CharmConfig
+from state.charm_state import CharmState, ProxyMode
 from state.exception import CharmStateValidationBaseError
 from state.ha import HACLUSTER_INTEGRATION, HAPROXY_PEER_INTEGRATION, HAInformation
 from state.haproxy_route import (
@@ -65,30 +64,6 @@ WEBSITE_RELATION = "website"
 
 class HaproxyUnitAddressNotAvailableError(CharmStateValidationBaseError):
     """Exception raised when ingress integration is not established."""
-
-
-class HaproxyTooManyIntegrationsError(CharmStateValidationBaseError):
-    """Exception raised when haproxy is in an invalid state with too many integrations."""
-
-
-class ProxyMode(StrEnum):
-    """StrEnum of possible http_route types.
-
-    Attrs:
-        HAPROXY_ROUTE: When haproxy-route is related.
-        INGRESS: when ingress is related.
-        INGRESS_PER_UNIT: when ingress-per-unit is related.
-        LEGACY: when reverseproxy is related.
-        NOPROXY: when haproxy should return a default page.
-        INVALID: when the charm state is invalid.
-    """
-
-    HAPROXY_ROUTE = "haproxy-route"
-    INGRESS = "ingress"
-    INGRESS_PER_UNIT = "ingress-per-unit"
-    LEGACY = "legacy"
-    NOPROXY = "noproxy"
-    INVALID = "invalid"
 
 
 def _validate_port(port: int) -> bool:
@@ -232,7 +207,14 @@ class HAProxyCharm(ops.CharmBase):
     def _reconcile(self) -> None:  # pylint: disable=too-many-locals, too-many-statements
         """Render the haproxy config and restart the service."""
         self.unit.status = ops.MaintenanceStatus("Configuring haproxy.")
-        proxy_mode = self._validate_state()
+        charm_state = CharmState.from_charm(
+            self,
+            self._ingress_provider,
+            self._ingress_per_unit_provider,
+            self.haproxy_route_provider,
+            self.reverseproxy_requirer,
+        )
+        proxy_mode = charm_state.mode
         if proxy_mode == ProxyMode.INVALID:
             # We don't raise any exception/set status here as it should already be handled
             # by the _validate_state method
@@ -241,7 +223,6 @@ class HAProxyCharm(ops.CharmBase):
         ha_information = HAInformation.from_charm(self)
         self._reconcile_ha(ha_information)
 
-        config = CharmConfig.from_charm(self)
         match proxy_mode:
             case ProxyMode.INGRESS:
                 tls_information = TLSInformation.from_charm(self, self.certificates)
@@ -293,7 +274,7 @@ class HAProxyCharm(ops.CharmBase):
 
                 self.unit.set_ports(*required_ports)
                 self.haproxy_service.reconcile_legacy(
-                    config, self.reverseproxy_requirer.get_services()
+                    charm_state, self.reverseproxy_requirer.get_services()
                 )
             case ProxyMode.HAPROXY_ROUTE:
                 tls_information = TLSInformation.from_charm(self, self.certificates)
@@ -309,7 +290,7 @@ class HAProxyCharm(ops.CharmBase):
                     )
                 )
                 self.haproxy_service.reconcile_haproxy_route(
-                    config, haproxy_route_requirers_information
+                    charm_state, haproxy_route_requirers_information
                 )
                 self.unit.set_ports(80, 443)
                 if self.unit.is_leader():
@@ -345,7 +326,7 @@ class HAProxyCharm(ops.CharmBase):
                     self._tls.certificate_available(tls_information)
 
                 self.unit.set_ports(80)
-                self.haproxy_service.reconcile_default(config)
+                self.haproxy_service.reconcile_default(charm_state)
         self.unit.status = ops.ActiveStatus()
 
     def _get_certificate_requests(self) -> typing.List[CertificateRequestAttributes]:
@@ -355,9 +336,18 @@ class HAProxyCharm(ops.CharmBase):
             typing.List[CertificateRequestAttributes]: List of certificate request attributes.
         """
         external_hostname = typing.cast(str, self.config.get("external-hostname", None))
+        if not external_hostname:
+            return []
 
         try:
-            proxy_mode = self._validate_state()
+            charm_state = CharmState.from_charm(
+                self,
+                self._ingress_provider,
+                self._ingress_per_unit_provider,
+                self.haproxy_route_provider,
+                self.reverseproxy_requirer,
+            )
+            proxy_mode = charm_state.mode
 
             if proxy_mode == ProxyMode.HAPROXY_ROUTE:
                 haproxy_route_requirer_information = (
@@ -442,49 +432,6 @@ class HAProxyCharm(ops.CharmBase):
     ) -> None:
         """Handle the data-removed event."""
         self._reconcile()
-
-    def _validate_state(self) -> ProxyMode:
-        """Validate if all the necessary preconditions are fulfilled.
-
-        Raises:
-            HaproxyTooManyIntegrationsError: when there are too many integrations and
-            haproxy is in an invalid state.
-
-        Returns:
-            ProxyMode: The resulting proxy mode.
-        """
-        is_ingress_related = bool(self._ingress_provider.relations)
-        is_ingress_per_unit_related = bool(self._ingress_per_unit_provider.relations)
-        is_legacy_related = bool(self.reverseproxy_requirer.relations)
-        is_haproxy_route_related = bool(self.haproxy_route_provider.relations)
-
-        if (
-            is_ingress_per_unit_related
-            + is_ingress_related
-            + is_legacy_related
-            + is_haproxy_route_related
-            > 1
-        ):
-            msg = (
-                "Only one integration out of 'ingress', 'ingress-per-unit', "
-                "'reverseproxy' or 'haproxy-route' can be active at a time."
-            )
-            logger.error(msg)
-            raise HaproxyTooManyIntegrationsError(msg)
-
-        if is_ingress_related:
-            return ProxyMode.INGRESS
-
-        if is_ingress_per_unit_related:
-            return ProxyMode.INGRESS_PER_UNIT
-
-        if is_legacy_related:
-            return ProxyMode.LEGACY
-
-        if is_haproxy_route_related:
-            return ProxyMode.HAPROXY_ROUTE
-
-        return ProxyMode.NOPROXY
 
     def _reconcile_ha(self, ha_information: HAInformation) -> None:
         """Update ha configuration.

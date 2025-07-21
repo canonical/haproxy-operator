@@ -16,13 +16,17 @@ from state.haproxy_route import (
     HaproxyRouteIntegrationDataValidationError,
     HaproxyRouteRequirersInformation,
 )
+from state.ingress_per_unit import (
+    IngressPerUnitIntegrationDataValidationError,
+    IngressPerUnitRequirersInformation,
+)
 
 MOCK_EXTERNAL_HOSTNAME = "haproxy.internal"
 
 
-@pytest.fixture(name="requirer_application_data")
-def requirer_application_data_fixture():
-    """Create sample requirer data for testing."""
+@pytest.fixture(name="haproxy_requirer_application_data")
+def haproxy_requirer_application_data_fixture():
+    """Create sample haproxy requirer data for testing."""
     return RequirerApplicationData(
         service="test-service",
         ports=[8080, 8443],
@@ -34,9 +38,9 @@ def requirer_application_data_fixture():
     ).dump()
 
 
-@pytest.fixture(name="extra_requirer_application_data")
-def extra_requirer_application_data_fixture():
-    """Create sample requirer data for testing."""
+@pytest.fixture(name="extra_haproxy_requirer_application_data")
+def extra_haproxy_requirer_application_data_fixture():
+    """Create sample haproxy requirer data for testing."""
     return RequirerApplicationData(
         service="test-service-extra",
         ports=[9000],
@@ -69,8 +73,8 @@ def haproxy_peer_units_address_fixture() -> list[str]:
 
 def test_haproxy_route_from_provider(
     harness: Harness,
-    requirer_application_data,
-    extra_requirer_application_data,
+    haproxy_requirer_application_data,
+    extra_haproxy_requirer_application_data,
     haproxy_peer_units_address,
 ):
     """
@@ -81,7 +85,7 @@ def test_haproxy_route_from_provider(
     relation_id = harness.add_relation(
         "haproxy-route",
         "requirer-charm",
-        app_data=requirer_application_data,
+        app_data=haproxy_requirer_application_data,
     )
 
     harness.add_relation_unit(relation_id, "requirer-charm/0")
@@ -92,7 +96,7 @@ def test_haproxy_route_from_provider(
     extra_relation_id = harness.add_relation(
         "haproxy-route",
         "extra-requirer-charm",
-        app_data=extra_requirer_application_data,
+        app_data=extra_haproxy_requirer_application_data,
     )
     harness.add_relation_unit(extra_relation_id, "extra-requirer-charm/0")
     harness.update_relation_data(
@@ -127,7 +131,7 @@ def test_haproxy_route_from_provider(
 
 def test_haproxy_route_from_provider_duplicate_backend_names(
     harness: Harness,
-    requirer_application_data,
+    haproxy_requirer_application_data,
 ):
     """
     arrange: Given a charm with multiple haproxy route relations with duplicate backend names.
@@ -137,7 +141,7 @@ def test_haproxy_route_from_provider_duplicate_backend_names(
     relation_id = harness.add_relation(
         "haproxy-route",
         "requirer-charm",
-        app_data=requirer_application_data,
+        app_data=haproxy_requirer_application_data,
     )
 
     harness.add_relation_unit(relation_id, "requirer-charm/0")
@@ -148,7 +152,7 @@ def test_haproxy_route_from_provider_duplicate_backend_names(
     extra_relation_id = harness.add_relation(
         "haproxy-route",
         "extra-requirer-charm",
-        app_data=requirer_application_data,
+        app_data=haproxy_requirer_application_data,
     )
     harness.add_relation_unit(extra_relation_id, "extra-requirer-charm/0")
     harness.update_relation_data(
@@ -162,4 +166,85 @@ def test_haproxy_route_from_provider_duplicate_backend_names(
             haproxy_route=harness.charm.haproxy_route_provider,
             external_hostname=MOCK_EXTERNAL_HOSTNAME,
             peers=[],
+        )
+
+
+def test_ingress_per_unit_from_provider(harness: Harness):
+    """
+    arrange: Setup ingress-per-unit requirer charm with two remote units integrated with haproxy.
+    act: Initialize the IngressPerUnitRequirersInformation.
+    assert: The state component is initialized correctly with expected data.
+    """
+    harness.begin()
+
+    relation_id = harness.add_relation("ingress-per-unit", "requirer-charm")
+
+    harness.add_relation_unit(relation_id, "requirer-charm/0")
+    harness.update_relation_data(
+        relation_id,
+        "requirer-charm/0",
+        {
+            "host": "juju-unit1.lxd",
+            "port": "80",
+            "model": "test",
+            "name": "requirer-charm/0",
+        },
+    )
+
+    harness.add_relation_unit(relation_id, "requirer-charm/1")
+    harness.update_relation_data(
+        relation_id,
+        "requirer-charm/1",
+        {
+            "host": "juju-unit2.lxd",
+            "port": "80",
+            "model": "test",
+            "name": "requirer-charm/1",
+        },
+    )
+
+    ingress_per_unit = IngressPerUnitRequirersInformation.from_provider(
+        harness.charm._ingress_per_unit_provider  # pylint: disable=protected-access
+    )
+
+    backends = ingress_per_unit.backends
+    assert len(backends) == 2
+    hostnames = [backend.hostname_or_ip for backend in backends]
+    assert "juju-unit1.lxd" in hostnames
+    assert "juju-unit2.lxd" in hostnames
+    ports = [backend.port for backend in backends]
+    assert ports == [80, 80]
+    backend_names = [backend.backend_name for backend in backends]
+    assert "test_requirer-charm_0" in backend_names
+    assert "test_requirer-charm_1" in backend_names
+    backend_paths = [backend.backend_path for backend in backends]
+    assert "test-requirer-charm/0" in backend_paths
+    assert "test-requirer-charm/1" in backend_paths
+
+
+def test_ingress_per_unit_from_provider_validation_error(harness: Harness):
+    """
+    arrange: Setup ingress-per-unit requirer charm with invalid data.
+    act: Initialize the IngressPerUnitRequirersInformation.
+    assert: IngressPerUnitIntegrationDataValidationError is raised.
+    """
+    relation_id = harness.add_relation("ingress-per-unit", "requirer-charm")
+
+    harness.add_relation_unit(relation_id, "requirer-charm/0")
+    harness.update_relation_data(
+        relation_id,
+        "requirer-charm/0",
+        {
+            "host": "juju-unit1.lxd",
+            "port": "invalid_port",
+            "model": "test",
+            "name": "requirer-charm/0",
+        },
+    )
+
+    harness.begin()
+
+    with pytest.raises(IngressPerUnitIntegrationDataValidationError):
+        IngressPerUnitRequirersInformation.from_provider(
+            harness.charm._ingress_per_unit_provider  # pylint: disable=protected-access
         )

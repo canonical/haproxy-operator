@@ -4,14 +4,19 @@
 """HAproxy ingress per unit charm state component."""
 
 import dataclasses
+import logging
+from typing import Annotated
 
 from charms.traefik_k8s.v1.ingress_per_unit import (
     DataValidationError,
     IngressPerUnitProvider,
     RequirerData,
 )
+from pydantic import Field
 
 from .exception import CharmStateValidationBaseError
+
+logger = logging.getLogger()
 
 INGRESS_PER_UNIT_RELATION = "ingress_per_unit"
 
@@ -26,7 +31,7 @@ class HAProxyBackend:
 
     Attrs:
         backend_name: The name of the backend (computed).
-        backend_path: The path prefix for the requirer unit.
+        backend_path: The path prefix for the requirer unit (computed).
         hostname_or_ip: The host or ip address of the requirer unit.
         port: The port that the requirer unit wishes to be exposed.
         strip_prefix: Whether to strip the prefix from the ingress url.
@@ -35,7 +40,7 @@ class HAProxyBackend:
     backend_name: str
     backend_path: str
     hostname_or_ip: str
-    port: int
+    port: Annotated[int, Field(gt=0, le=65535)]
     strip_prefix: bool
 
 
@@ -86,5 +91,10 @@ class IngressPerUnitRequirersInformation:
                 except DataValidationError as exc:
                     raise IngressPerUnitIntegrationDataValidationError(
                         "Validation of ingress per unit relation data failed."
+                    ) from exc
+                except ValueError as exc:
+                    logger.error(str(exc))
+                    raise IngressPerUnitIntegrationDataValidationError(
+                        "App port from the ingress per unit relation is invalid."
                     ) from exc
         return cls(backends=backends)
