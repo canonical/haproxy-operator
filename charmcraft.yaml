@@ -58,6 +58,8 @@ requires:
 provides:
   ingress:
     interface: ingress
+  ingress-per-unit:
+    interface: ingress_per_unit
   cos-agent:
     interface: cos_agent
   website:
@@ -94,3 +96,7 @@ actions:
         description: Hostname to extract certs from.
     required:
       - hostname
+
+charm-libs:
+  - lib: traefik_k8s.ingress_per_unit
+    version: "1"

@@ -20,6 +20,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from state.config import CharmConfig
 from state.haproxy_route import HaproxyRouteRequirersInformation
 from state.ingress import IngressRequirersInformation
+from state.ingress_per_unit import IngressPerUnitRequirersInformation
 
 APT_PACKAGE_VERSION = "2.8.5-1ubuntu3.3"
 APT_PACKAGE_NAME = "haproxy"
@@ -44,6 +45,7 @@ HAPROXY_DH_PARAM = (
 HAPROXY_DHCONFIG = Path(HAPROXY_CONFIG_DIR / "ffdhe2048.txt")
 HAPROXY_SERVICE = "haproxy"
 HAPROXY_INGRESS_CONFIG_TEMPLATE = "haproxy_ingress.cfg.j2"
+HAPROXY_INGRESS_PER_UNIT_CONFIG_TEMPLATE = "haproxy_ingress_per_unit.cfg.j2"
 HAPROXY_LEGACY_CONFIG_TEMPLATE = "haproxy_legacy.cfg.j2"
 HAPROXY_ROUTE_CONFIG_TEMPLATE = "haproxy_route.cfg.j2"
 HAPROXY_DEFAULT_CONFIG_TEMPLATE = "haproxy.cfg.j2"
@@ -71,6 +73,10 @@ class HaproxyInvalidRelationError(Exception):
 
 class HaproxyValidateConfigError(Exception):
     """Error when validation of the generated haproxy config failed."""
+
+
+class InvalidRequirerInformationError(Exception):
+    """Exception raised when the requirer information is invalid."""
 
 
 class HAProxyService:
@@ -110,15 +116,22 @@ class HAProxyService:
     def reconcile_ingress(
         self,
         config: CharmConfig,
-        ingress_requirers_information: IngressRequirersInformation,
+        ingress_requirers_information: (
+            IngressRequirersInformation | IngressPerUnitRequirersInformation
+        ),
         external_hostname: str,
     ) -> None:
         """Render the haproxy config for ingress proxying and reload the service.
 
         Args:
             config: The charm's config.
-            ingress_requirers_information: Parsed information about ingress requirers.
+            ingress_requirers_information: Parsed information about ingress or ingress
+                per unit requirers.
             external_hostname: Configured external-hostname for TLS.
+
+        Raises:
+            InvalidRequirerInformationError: If the provided information is not of the expected
+                type.
         """
         template_context = {
             "config_global_max_connection": config.global_max_connection,
@@ -126,7 +139,16 @@ class HAProxyService:
             "config_external_hostname": external_hostname,
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
         }
-        self._render_haproxy_config(HAPROXY_INGRESS_CONFIG_TEMPLATE, template_context)
+        if isinstance(ingress_requirers_information, IngressRequirersInformation):
+            self._render_haproxy_config(HAPROXY_INGRESS_CONFIG_TEMPLATE, template_context)
+        elif isinstance(ingress_requirers_information, IngressPerUnitRequirersInformation):
+            self._render_haproxy_config(HAPROXY_INGRESS_PER_UNIT_CONFIG_TEMPLATE, template_context)
+        else:
+            raise InvalidRequirerInformationError(
+                "Expected ingress requirer or ingress per unit requirer "
+                f"but received {ingress_requirers_information} instead."
+            )
+
         self._validate_haproxy_config()
         self._reload_haproxy_service()
 

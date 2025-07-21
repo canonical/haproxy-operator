@@ -60,7 +60,7 @@ class IngressRequirersInformation:
     def from_provider(
         cls, ingress_provider: IngressPerAppProvider
     ) -> "IngressRequirersInformation":
-        """Get TLS information from a charm instance.
+        """Get requirer information from an IngressPerAppProvider instance.
 
         Args:
             ingress_provider: The ingress provider library.

@@ -20,6 +20,11 @@ from charms.tls_certificates_interface.v4.tls_certificates import (
     Mode,
     TLSCertificatesRequiresV4,
 )
+from charms.traefik_k8s.v1.ingress_per_unit import (
+    IngressDataReadyEvent,
+    IngressDataRemovedEvent,
+    IngressPerUnitProvider,
+)
 from charms.traefik_k8s.v2.ingress import (
     IngressPerAppDataProvidedEvent,
     IngressPerAppDataRemovedEvent,
@@ -45,6 +50,7 @@ from state.haproxy_route import (
     HaproxyRouteRequirersInformation,
 )
 from state.ingress import IngressRequirersInformation
+from state.ingress_per_unit import IngressPerUnitRequirersInformation
 from state.tls import TLSInformation, TLSNotReadyError
 from state.validation import validate_config_and_tls
 from tls_relation import TLSRelationService
@@ -71,6 +77,7 @@ class ProxyMode(StrEnum):
     Attrs:
         HAPROXY_ROUTE: When haproxy-route is related.
         INGRESS: when ingress is related.
+        INGRESS_PER_UNIT: when ingress-per-unit is related.
         LEGACY: when reverseproxy is related.
         NOPROXY: when haproxy should return a default page.
         INVALID: when the charm state is invalid.
@@ -78,6 +85,7 @@ class ProxyMode(StrEnum):
 
     HAPROXY_ROUTE = "haproxy-route"
     INGRESS = "ingress"
+    INGRESS_PER_UNIT = "ingress-per-unit"
     LEGACY = "legacy"
     NOPROXY = "noproxy"
     INVALID = "invalid"
@@ -113,6 +121,7 @@ class HAProxyCharm(ops.CharmBase):
         # Relation handlers are initialized before self.certificates as we need them when calling
         # self._get_certificate_requests()
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
+        self._ingress_per_unit_provider = IngressPerUnitProvider(charm=self)
         self.reverseproxy_requirer = HTTPRequirer(self, REVERSE_PROXY_RELATION)
         self.haproxy_route_provider = HaproxyRouteProvider(self)
         self.certificates = TLSCertificatesRequiresV4(
@@ -157,6 +166,13 @@ class HAProxyCharm(ops.CharmBase):
         )
         self.framework.observe(
             self._ingress_provider.on.data_removed, self._on_ingress_data_removed
+        )
+        self.framework.observe(
+            self._ingress_per_unit_provider.on.data_provided,
+            self._on_ingress_per_unit_data_provided,
+        )
+        self.framework.observe(
+            self._ingress_per_unit_provider.on.data_removed, self._on_ingress_data_removed
         )
         self.framework.observe(self.hacluster.on.ha_ready, self._on_config_changed)
         self.framework.observe(
@@ -213,7 +229,7 @@ class HAProxyCharm(ops.CharmBase):
         """Handle data_removed event for reverseproxy integration."""
         self._reconcile()
 
-    def _reconcile(self) -> None:
+    def _reconcile(self) -> None:  # pylint: disable=too-many-locals, too-many-statements
         """Render the haproxy config and restart the service."""
         self.unit.status = ops.MaintenanceStatus("Configuring haproxy.")
         proxy_mode = self._validate_state()
@@ -240,6 +256,20 @@ class HAProxyCharm(ops.CharmBase):
                 # Validation of tls_information will fail otherwise.
                 self.haproxy_service.reconcile_ingress(
                     config, ingress_requirers_information, tls_information.hostnames[0]
+                )
+            case ProxyMode.INGRESS_PER_UNIT:
+                tls_information = TLSInformation.from_charm(self, self.certificates)
+                self._tls.certificate_available(tls_information)
+                ingress_per_unit_requirers_information = (
+                    IngressPerUnitRequirersInformation.from_provider(
+                        self._ingress_per_unit_provider
+                    )
+                )
+                self.unit.set_ports(80, 443)
+                self.haproxy_service.reconcile_ingress(
+                    config,
+                    ingress_per_unit_requirers_information,
+                    tls_information.hostnames[0],
                 )
             case ProxyMode.LEGACY:
                 if self.model.get_relation(TLS_CERT_RELATION):
@@ -368,6 +398,28 @@ class HAProxyCharm(ops.CharmBase):
             )
         ]
 
+    @validate_config_and_tls(defer=False)
+    def _on_ingress_per_unit_data_provided(self, _: IngressDataReadyEvent) -> None:
+        """Handle the data-provided event for ingress-per-unit."""
+        self._reconcile()
+        if self.unit.is_leader():
+            tls_information = TLSInformation.from_charm(self, self.certificates)
+            for relation in self._ingress_per_unit_provider.relations:
+                for unit in relation.units:
+                    if not self._ingress_per_unit_provider.is_unit_ready(relation, unit):
+                        logger.warning(
+                            "Unit %s is not ready for ingress-per-unit relation, skipping.",
+                            unit.name,
+                        )
+                        continue
+                    integration_data = self._ingress_per_unit_provider.get_data(relation, unit)
+                    path_prefix = f"{integration_data['model']}-{integration_data['name']}"
+                    self._ingress_per_unit_provider.publish_url(
+                        relation,
+                        integration_data["name"],
+                        f"https://{tls_information.hostnames[0]}/{path_prefix}",
+                    )
+
     @validate_config_and_tls(defer=True)
     def _on_ingress_data_provided(self, event: IngressPerAppDataProvidedEvent) -> None:
         """Handle the data-provided event.
@@ -385,7 +437,9 @@ class HAProxyCharm(ops.CharmBase):
             )
 
     @validate_config_and_tls(defer=False)
-    def _on_ingress_data_removed(self, _: IngressPerAppDataRemovedEvent) -> None:
+    def _on_ingress_data_removed(
+        self, _: IngressPerAppDataRemovedEvent | IngressDataRemovedEvent
+    ) -> None:
         """Handle the data-removed event."""
         self._reconcile()
 
@@ -400,19 +454,29 @@ class HAProxyCharm(ops.CharmBase):
             ProxyMode: The resulting proxy mode.
         """
         is_ingress_related = bool(self._ingress_provider.relations)
+        is_ingress_per_unit_related = bool(self._ingress_per_unit_provider.relations)
         is_legacy_related = bool(self.reverseproxy_requirer.relations)
         is_haproxy_route_related = bool(self.haproxy_route_provider.relations)
 
-        if is_ingress_related + is_legacy_related + is_haproxy_route_related > 1:
+        if (
+            is_ingress_per_unit_related
+            + is_ingress_related
+            + is_legacy_related
+            + is_haproxy_route_related
+            > 1
+        ):
             msg = (
-                "Only one integration out of 'ingress', 'reverseproxy' or 'haproxy-route' "
-                "can be active at a time."
+                "Only one integration out of 'ingress', 'ingress-per-unit', "
+                "'reverseproxy' or 'haproxy-route' can be active at a time."
             )
             logger.error(msg)
             raise HaproxyTooManyIntegrationsError(msg)
 
         if is_ingress_related:
             return ProxyMode.INGRESS
+
+        if is_ingress_per_unit_related:
+            return ProxyMode.INGRESS_PER_UNIT
 
         if is_legacy_related:
             return ProxyMode.LEGACY

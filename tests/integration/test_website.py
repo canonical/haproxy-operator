@@ -1,7 +1,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Integration test for actions."""
+"""Integration tests for the website relation."""
 
 import pytest
 import requests

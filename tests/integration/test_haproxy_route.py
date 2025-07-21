@@ -1,7 +1,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Integration test for actions."""
+"""Integration tests for the haproxy route relation."""
 
 import pytest
 from juju.application import Application
