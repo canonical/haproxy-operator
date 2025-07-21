@@ -76,7 +76,7 @@ def application_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju, charm:
     """
     metadata = yaml.safe_load(pathlib.Path("./charmcraft.yaml").read_text(encoding="UTF-8"))
     app_name = metadata["name"]
-    if pytestconfig.getoption("--no-setup") and app_name in juju.status().apps:
+    if pytestconfig.getoption("--no-deploy") and app_name in juju.status().apps:
         return app_name
     juju.deploy(
         charm=charm,
@@ -93,7 +93,7 @@ def certificate_provider_application_fixture(
 ):
     """Deploy self-signed-certificates."""
     if (
-        pytestconfig.getoption("--no-setup")
+        pytestconfig.getoption("--no-deploy")
         and SELF_SIGNED_CERTIFICATES_APP_NAME in juju.status().apps
     ):
         logger.warning("Using existing application: %s", SELF_SIGNED_CERTIFICATES_APP_NAME)
@@ -134,7 +134,7 @@ def any_charm_ingress_per_unit_requirer_fixture(
     interface.
     """
     if (
-        pytestconfig.getoption("--no-setup")
+        pytestconfig.getoption("--no-deploy")
         and ANY_CHARM_INGRESS_PER_UNIT_REQUIRER in juju.status().apps
     ):
         logger.warning("Using existing application: %s", ANY_CHARM_INGRESS_PER_UNIT_REQUIRER)
