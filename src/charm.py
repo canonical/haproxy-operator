@@ -50,7 +50,7 @@ from state.haproxy_route import (
 )
 from state.ingress import IngressRequirersInformation
 from state.ingress_per_unit import IngressPerUnitRequirersInformation
-from state.tls import TLSInformation
+from state.tls import TLSInformation, TLSNotReadyError
 from state.validation import validate_config_and_tls
 from tls_relation import TLSRelationService
 
@@ -236,7 +236,7 @@ class HAProxyCharm(ops.CharmBase):
                 # to only contains the `external-hostname` charm config.
                 # Validation of tls_information will fail otherwise.
                 self.haproxy_service.reconcile_ingress(
-                    config, ingress_requirers_information, tls_information.hostnames[0]
+                    charm_state, ingress_requirers_information, tls_information.hostnames[0]
                 )
             case ProxyMode.INGRESS_PER_UNIT:
                 tls_information = TLSInformation.from_charm(self, self.certificates)
@@ -248,7 +248,9 @@ class HAProxyCharm(ops.CharmBase):
                 )
                 self.unit.set_ports(80, 443)
                 self.haproxy_service.reconcile_ingress(
-                    config, ingress_requirers_information, tls_information.external_hostname
+                    charm_state,
+                    ingress_per_unit_requirers_information,
+                    tls_information.hostnames[0],
                 )
             case ProxyMode.LEGACY:
                 if self.model.get_relation(TLS_CERT_RELATION):

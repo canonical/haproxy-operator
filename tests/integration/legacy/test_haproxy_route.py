@@ -3,8 +3,6 @@
 
 """Integration tests for the haproxy route relation."""
 
-import ipaddress
-
 import pytest
 from juju.application import Application
 from requests import Session
