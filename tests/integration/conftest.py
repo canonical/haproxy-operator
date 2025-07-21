@@ -72,7 +72,7 @@ def application_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju, charm:
         charm_file: Path to the packed charm file.
 
     Returns:
-        The ingress-configurator app name.
+        The haproxy app name.
     """
     metadata = yaml.safe_load(pathlib.Path("./charmcraft.yaml").read_text(encoding="UTF-8"))
     app_name = metadata["name"]
