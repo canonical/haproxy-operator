@@ -6,7 +6,6 @@
 import json
 from urllib.parse import ParseResult, urlparse
 
-import yaml
 from juju.application import Application
 from pytest_operator.plugin import OpsTest
 from requests.adapters import DEFAULT_POOLBLOCK, DEFAULT_POOLSIZE, DEFAULT_RETRIES, HTTPAdapter
