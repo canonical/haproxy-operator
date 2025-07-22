@@ -57,6 +57,7 @@ async def application_fixture(
         return
     # Deploy the charm and wait for active/idle status
     application = await model.deploy(f"./{charm}", trust=True)
+    await model.wait_for_idle(apps=[application.name], status="active", raise_on_error=True)
     yield application
 
 

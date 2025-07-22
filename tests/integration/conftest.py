@@ -101,9 +101,6 @@ def certificate_provider_application_fixture(
     juju.deploy(
         "self-signed-certificates", app=SELF_SIGNED_CERTIFICATES_APP_NAME, channel="1/edge"
     )
-    juju.wait(
-        lambda status: jubilant.all_active(status, SELF_SIGNED_CERTIFICATES_APP_NAME),
-    )
     return SELF_SIGNED_CERTIFICATES_APP_NAME
 
 
