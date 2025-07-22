@@ -65,7 +65,7 @@ class CharmState:
     """
 
     mode: ProxyMode
-    global_max_connection: int = Field(alias="global_max_connection")
+    global_max_connection: int = Field(gt=0, alias="global_max_connection")
 
     @field_validator("global_max_connection")
     @classmethod
@@ -81,9 +81,6 @@ class CharmState:
         Returns:
             int: The validated global_max_connection config.
         """
-        if global_max_connection < 0:
-            raise ValueError
-
         try:
             # No user input so we're disabling bandit rule here as it's considered safe
             output = check_output(  # nosec: B603

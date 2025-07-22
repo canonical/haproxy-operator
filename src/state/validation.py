@@ -96,6 +96,13 @@ def validate_config_and_tls(  # noqa: C901
                     str(exc),
                 )
                 return None
+            except ValueError as exc:
+                if defer:
+                    event, *_ = args
+                    event.defer()
+                instance.unit.status = ops.BlockedStatus(str(exc))
+                logger.exception("ValueError occurred: %s", str(exc))
+                return None
 
         return wrapper
 

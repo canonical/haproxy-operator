@@ -16,6 +16,7 @@ from state.haproxy_route import (
     HaproxyRouteIntegrationDataValidationError,
     HaproxyRouteRequirersInformation,
 )
+from state.ingress import IngressIntegrationDataValidationError, IngressRequirersInformation
 from state.ingress_per_unit import (
     IngressPerUnitIntegrationDataValidationError,
     IngressPerUnitRequirersInformation,
@@ -247,4 +248,27 @@ def test_ingress_per_unit_from_provider_validation_error(harness: Harness):
     with pytest.raises(IngressPerUnitIntegrationDataValidationError):
         IngressPerUnitRequirersInformation.from_provider(
             harness.charm._ingress_per_unit_provider  # pylint: disable=protected-access
+        )
+
+
+def test_ingress_from_provider_validation_error(harness: Harness):
+    """
+    arrange: Setup ingress requirer charm with invalid data.
+    act: Initialize the IngressRequirersInformation.
+    assert: IngressIntegrationDataValidationError is raised.
+    """
+    relation_id = harness.add_relation("ingress", "requirer-charm")
+
+    harness.add_relation_unit(relation_id, "requirer-charm/0")
+    harness.update_relation_data(
+        relation_id,
+        "requirer-charm",
+        {},
+    )
+
+    harness.begin()
+
+    with pytest.raises(IngressIntegrationDataValidationError):
+        IngressRequirersInformation.from_provider(
+            harness.charm._ingress_provider  # pylint: disable=protected-access
         )

@@ -94,7 +94,5 @@ class IngressPerUnitRequirersInformation:
                     ) from exc
                 except ValueError as exc:
                     logger.error(str(exc))
-                    raise IngressPerUnitIntegrationDataValidationError(
-                        "App port from the ingress per unit relation is invalid."
-                    ) from exc
+                    raise IngressPerUnitIntegrationDataValidationError(str(exc)) from exc
         return cls(backends=backends)

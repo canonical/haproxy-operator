@@ -225,9 +225,9 @@ class HAProxyCharm(ops.CharmBase):
 
         match proxy_mode:
             case ProxyMode.INGRESS:
-                self._configure_ingress(charm_state)
+                self._configure_ingress(charm_state, IngressRequirersInformation)
             case ProxyMode.INGRESS_PER_UNIT:
-                self._configure_ingress_per_unit(charm_state)
+                self._configure_ingress(charm_state, IngressPerUnitRequirersInformation)
             case ProxyMode.LEGACY:
                 self._configure_legacy(charm_state)
             case ProxyMode.HAPROXY_ROUTE:
@@ -242,34 +242,24 @@ class HAProxyCharm(ops.CharmBase):
                 self.haproxy_service.reconcile_default(charm_state)
         self.unit.status = ops.ActiveStatus()
 
-    def _configure_ingress(self, charm_state: CharmState) -> None:
-        """Configure the ingress relation."""
+    def _configure_ingress(
+        self,
+        charm_state: CharmState,
+        requirer_class: IngressRequirersInformation | IngressPerUnitRequirersInformation,
+    ) -> None:
+        """Configure the ingress or ingress-per-unit relation."""
         tls_information = TLSInformation.from_charm(self, self.certificates)
         self._tls.certificate_available(tls_information)
 
-        ingress_requirers_information = IngressRequirersInformation.from_provider(
+        ingress_provider = (
             self._ingress_provider
+            if requirer_class is IngressRequirersInformation
+            else self._ingress_per_unit_provider
         )
+        ingress_requirers_information = requirer_class.from_provider(ingress_provider)
         self.unit.set_ports(80, 443)
-        # In ingress mode it's expected for tls_information.hostnames
-        # to only contains the `external-hostname` charm config.
-        # Validation of tls_information will fail otherwise.
         self.haproxy_service.reconcile_ingress(
             charm_state, ingress_requirers_information, tls_information.hostnames[0]
-        )
-
-    def _configure_ingress_per_unit(self, charm_state: CharmState) -> None:
-        """Configure the ingress-per-unit relation."""
-        tls_information = TLSInformation.from_charm(self, self.certificates)
-        self._tls.certificate_available(tls_information)
-        ingress_per_unit_requirers_information = IngressPerUnitRequirersInformation.from_provider(
-            self._ingress_per_unit_provider
-        )
-        self.unit.set_ports(80, 443)
-        self.haproxy_service.reconcile_ingress(
-            charm_state,
-            ingress_per_unit_requirers_information,
-            tls_information.hostnames[0],
         )
 
     def _configure_legacy(self, charm_state: CharmState) -> None:
@@ -290,10 +280,8 @@ class HAProxyCharm(ops.CharmBase):
             required_ports.add(Port(protocol="tcp", port=port))
 
         if legacy_invalid_requested_port:
-            self.unit.status = ops.BlockedStatus(
-                f"Invalid ports requested: {','.join(legacy_invalid_requested_port)}"
-            )
-            return
+            error_msg = f"Invalid ports requested: {','.join(legacy_invalid_requested_port)}"
+            raise ValueError(error_msg)
 
         self.unit.set_ports(*required_ports)
         self.haproxy_service.reconcile_legacy(
@@ -340,8 +328,6 @@ class HAProxyCharm(ops.CharmBase):
             typing.List[CertificateRequestAttributes]: List of certificate request attributes.
         """
         external_hostname = typing.cast(str, self.config.get("external-hostname", None))
-        if not external_hostname:
-            return []
 
         try:
             charm_state = CharmState.from_charm(
