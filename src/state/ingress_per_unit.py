@@ -4,7 +4,6 @@
 """HAproxy ingress per unit charm state component."""
 
 import dataclasses
-import logging
 from typing import Annotated
 
 from charms.traefik_k8s.v1.ingress_per_unit import (
@@ -15,8 +14,6 @@ from charms.traefik_k8s.v1.ingress_per_unit import (
 from pydantic import Field
 
 from .exception import CharmStateValidationBaseError
-
-logger = logging.getLogger()
 
 INGRESS_PER_UNIT_RELATION = "ingress_per_unit"
 
@@ -93,6 +90,5 @@ class IngressPerUnitRequirersInformation:
                         "Validation of ingress per unit relation data failed."
                     ) from exc
                 except ValueError as exc:
-                    logger.error(str(exc))
                     raise IngressPerUnitIntegrationDataValidationError(str(exc)) from exc
         return cls(backends=backends)

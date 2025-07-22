@@ -66,6 +66,10 @@ class HaproxyUnitAddressNotAvailableError(CharmStateValidationBaseError):
     """Exception raised when ingress integration is not established."""
 
 
+class ReverseProxyInvalidPortError(CharmStateValidationBaseError):
+    """Exception raised when a requested port is not a valid TCP port."""
+
+
 def _validate_port(port: int) -> bool:
     """Validate if the given value is a valid TCP port.
 
@@ -281,7 +285,7 @@ class HAProxyCharm(ops.CharmBase):
 
         if legacy_invalid_requested_port:
             error_msg = f"Invalid ports requested: {','.join(legacy_invalid_requested_port)}"
-            raise ValueError(error_msg)
+            raise ReverseProxyInvalidPortError(error_msg)
 
         self.unit.set_ports(*required_ports)
         self.haproxy_service.reconcile_legacy(
