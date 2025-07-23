@@ -10,20 +10,11 @@ import pytest
 import scenario
 from charms.haproxy.v1.haproxy_route import RequirerApplicationData, RequirerUnitData
 from charms.tls_certificates_interface.v4.tls_certificates import Certificate, PrivateKey
-from ops.testing import Context, Harness
+from ops.testing import Context
 
 from charm import HAProxyCharm
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
-
-
-@pytest.fixture(scope="function", name="harness")
-def harness_fixture(monkeypatch: pytest.MonkeyPatch):
-    """Enable ops test framework harness."""
-    monkeypatch.setattr(HAProxyCharm, "_get_unit_address", MagicMock(return_value="10.0.0.1"))
-    harness = Harness(HAProxyCharm)
-    yield harness
-    harness.cleanup()
 
 
 @pytest.fixture(scope="function", name="systemd_mock")

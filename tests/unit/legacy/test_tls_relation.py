@@ -17,7 +17,7 @@ from ops.testing import Harness
 from state.tls import TLSInformation, TLSNotReadyError
 from tls_relation import TLSRelationService
 
-from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
+TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 
 
 def test_tls_information_integration_missing(harness: Harness):
