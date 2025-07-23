@@ -3,7 +3,6 @@
 
 """HAproxy ingress per unit charm state component."""
 
-import dataclasses
 from typing import Annotated
 
 from charms.traefik_k8s.v1.ingress_per_unit import (
@@ -12,6 +11,7 @@ from charms.traefik_k8s.v1.ingress_per_unit import (
     RequirerData,
 )
 from pydantic import Field
+from pydantic.dataclasses import dataclass
 
 from .exception import CharmStateValidationBaseError
 
@@ -22,7 +22,7 @@ class IngressPerUnitIntegrationDataValidationError(CharmStateValidationBaseError
     """Exception raised when ingress_per_unit integration fails data validation."""
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclass(frozen=True)
 class HAProxyBackend:
     """A component of charm state that represent an ingress per unit requirer.
 
@@ -41,7 +41,7 @@ class HAProxyBackend:
     strip_prefix: bool
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclass(frozen=True)
 class IngressPerUnitRequirersInformation:
     """A component of charm state containing ingress per unit requirers information.
 
@@ -89,6 +89,4 @@ class IngressPerUnitRequirersInformation:
                     raise IngressPerUnitIntegrationDataValidationError(
                         "Validation of ingress per unit relation data failed."
                     ) from exc
-                except ValueError as exc:
-                    raise IngressPerUnitIntegrationDataValidationError(str(exc)) from exc
         return cls(backends=backends)
