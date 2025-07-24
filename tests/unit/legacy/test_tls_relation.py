@@ -17,7 +17,7 @@ from ops.testing import Harness
 from state.tls import TLSInformation, TLSNotReadyError
 from tls_relation import TLSRelationService
 
-from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
+TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 
 
 def test_tls_information_integration_missing(harness: Harness):
@@ -93,7 +93,7 @@ def test_certificate_available(
     )
 
     tls_information = TLSInformation(
-        external_hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
+        hostnames=[TEST_EXTERNAL_HOSTNAME_CONFIG],
         tls_cert_and_ca_chain={
             TEST_EXTERNAL_HOSTNAME_CONFIG: (mock_certificate, [mock_certificate])
         },
@@ -127,15 +127,13 @@ def test_write_certificate_to_unit(
     monkeypatch.setattr("os.chmod", MagicMock())
     monkeypatch.setattr("pwd.getpwnam", MagicMock())
     monkeypatch.setattr("os.chown", MagicMock())
+    chain_string = "\n".join([str(cert) for cert in [mock_certificate]])
 
     tls_relation.write_certificate_to_unit(mock_certificate, [mock_certificate], mock_private_key)
-    pem_file_content = "".join(
-        [
-            str(mock_certificate),
-            "\n",
-            "\n".join(str(cert) for cert in [mock_certificate]),
-            "\n",
-            str(mock_private_key),
-        ]
+    pem_file_content = (
+        f"{str(mock_certificate)}\n"
+        f"{''.join(str(cert) + '\n' for cert in [mock_certificate])}"
+        f"{str(mock_private_key)}"
     )
+
     write_text_mock.assert_called_once_with(pem_file_content, encoding="utf-8")

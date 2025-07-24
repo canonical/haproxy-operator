@@ -28,6 +28,12 @@ from pydantic import ValidationError
 logger = logging.getLogger()
 MOCK_RELATION_NAME = "haproxy-route"
 MOCK_ADDRESS = "10.0.0.1"
+MOCK_REQUIRER_CHARM_META = """
+name: requirer
+requires:
+  haproxy-route:
+    interface: haproxy-route
+"""
 
 
 @pytest.fixture(name="mock_relation_data")
@@ -38,7 +44,7 @@ def mock_relation_data_fixture():
         "ports": [8080],
         "hosts": ["10.0.0.1", "10.0.0.2"],
         "paths": ["/api"],
-        "subdomains": ["api"],
+        "hostname": "api.haproxy.internal",
         "load_balancing": {"algorithm": "leastconn"},
         "check": {"interval": 60, "rise": 2, "fall": 3, "path": "/health"},
     }
@@ -56,6 +62,12 @@ def mock_provider_app_data_fixture():
     return HaproxyRouteProviderAppData(endpoints=["https://backend.haproxy.internal/path"]).dump()
 
 
+@pytest.fixture(name="mock_requirer_charm")
+def mock_requirer_charm_fixture():
+    """Create mock unit data."""
+    return Harness(ops.CharmBase, meta=MOCK_REQUIRER_CHARM_META)
+
+
 def test_requirer_application_data_validation():
     """
     arrange: Create a RequirerApplicationData model with valid data.
@@ -67,7 +79,7 @@ def test_requirer_application_data_validation():
         ports=[8080],
         hosts=["10.0.0.1"],
         paths=["/api"],
-        subdomains=["api"],
+        hostname="api.haproxy.internal",
         check=ServerHealthCheck(path="/health"),
         load_balancing={"algorithm": LoadBalancingAlgorithm.LEASTCONN},
     )
@@ -76,7 +88,7 @@ def test_requirer_application_data_validation():
     assert data.ports == [8080]
     assert data.hosts == [IPv4Address("10.0.0.1")]
     assert data.paths == ["/api"]
-    assert data.subdomains == ["api"]
+    assert data.hostname == "api.haproxy.internal"
     assert data.check.path == "/health"  # pylint: disable=no-member
     # pylint: disable=no-member
     assert data.load_balancing.algorithm == LoadBalancingAlgorithm.LEASTCONN
@@ -179,7 +191,9 @@ def test_requirers_data_duplicate_services():
     )
 
     with pytest.raises(DataValidationError):
-        HaproxyRouteRequirersData(requirers_data=[requirer_data1, requirer_data2])
+        HaproxyRouteRequirersData(
+            requirers_data=[requirer_data1, requirer_data2], relation_ids_with_invalid_data=[]
+        )
 
 
 def test_load_requirer_application_data(mock_relation_data):
@@ -195,7 +209,7 @@ def test_load_requirer_application_data(mock_relation_data):
     assert data.ports == [8080]
     assert data.hosts == [IPv4Address("10.0.0.1"), IPv4Address("10.0.0.2")]
     assert data.paths == ["/api"]
-    assert data.subdomains == ["api"]
+    assert data.hostname == "api.haproxy.internal"
     assert data.check.interval == 60
     assert data.check.rise == 2
     assert data.check.fall == 3
@@ -213,7 +227,7 @@ def test_dump_requirer_application_data():
         ports=[8080],
         hosts=["10.0.0.1"],
         paths=["/api"],
-        subdomains=["api"],
+        hostname="api.haproxy.internal",
         check=ServerHealthCheck(path="/health"),
     )
 
@@ -225,7 +239,7 @@ def test_dump_requirer_application_data():
     assert json.loads(databag["ports"]) == [8080]
     assert json.loads(databag["hosts"]) == ["10.0.0.1"]
     assert json.loads(databag["paths"]) == ["/api"]
-    assert json.loads(databag["subdomains"]) == ["api"]
+    assert json.loads(databag["hostname"]) == "api.haproxy.internal"
     assert json.loads(databag["check"])["path"] == "/health"
 
 
@@ -284,7 +298,7 @@ def test_provide_haproxy_route_requirements(mock_relation_data):
         service=mock_relation_data["service"],
         ports=mock_relation_data["ports"],
         paths=mock_relation_data["paths"],
-        subdomains=mock_relation_data["subdomains"],
+        hostname=mock_relation_data["hostname"],
         unit_address="10.0.1.0",
     )
 
@@ -308,15 +322,16 @@ def test_update_relation_data_non_leader(mock_relation_data):
         service=mock_relation_data["service"],
         ports=mock_relation_data["ports"],
         paths=mock_relation_data["paths"],
-        subdomains=mock_relation_data["subdomains"],
+        hostname=mock_relation_data["hostname"],
         unit_address="10.0.1.0",
     )
 
     relation_data_mock.update.assert_called_once()
 
 
-def test_get_proxied_endpoints(harness: Harness, mock_provider_app_data):
+def test_get_proxied_endpoints(mock_requirer_charm: Harness, mock_provider_app_data):
     """Test that get_proxied_endpoints returns the endpoints correctly."""
+    harness = mock_requirer_charm
     harness.add_relation("haproxy-route", "provider-app", app_data=mock_provider_app_data)
     harness.begin()
     requirer = HaproxyRouteRequirer(charm=harness.charm, relation_name=MOCK_RELATION_NAME)
@@ -326,8 +341,9 @@ def test_get_proxied_endpoints(harness: Harness, mock_provider_app_data):
     assert str(endpoints[0]) == json.loads(mock_provider_app_data["endpoints"])[0]
 
 
-def test_get_proxied_endpoints_empty_data(harness: Harness):
+def test_get_proxied_endpoints_empty_data(mock_requirer_charm: Harness):
     """Test that get_proxied_endpoints returns empty list when no data."""
+    harness = mock_requirer_charm
     harness.add_relation("haproxy-route", "provider-app")
     harness.begin()
     requirer = HaproxyRouteRequirer(charm=harness.charm, relation_name=MOCK_RELATION_NAME)
@@ -336,8 +352,9 @@ def test_get_proxied_endpoints_empty_data(harness: Harness):
     assert endpoints == []
 
 
-def test_get_proxied_endpoints_invalid_data(harness: Harness):
+def test_get_proxied_endpoints_invalid_data(mock_requirer_charm: Harness):
     """Test that get_proxied_endpoints handles invalid data gracefully."""
+    harness = mock_requirer_charm
     harness.add_relation(
         "haproxy-route",
         "provider-app",
@@ -350,8 +367,9 @@ def test_get_proxied_endpoints_invalid_data(harness: Harness):
     assert endpoints == []
 
 
-def test_prepare_unit_data_no_address(harness: Harness):
+def test_prepare_unit_data_no_address(mock_requirer_charm: Harness):
     """Test that DataValidationError is raised when no address is available."""
+    harness = mock_requirer_charm
     harness.begin()
     requirer = HaproxyRouteRequirer(charm=harness.charm, relation_name=MOCK_RELATION_NAME)
 

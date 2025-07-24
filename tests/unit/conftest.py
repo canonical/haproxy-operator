@@ -3,25 +3,18 @@
 
 """Fixtures for haproxy-operator unit tests."""
 import typing
+from ipaddress import IPv4Address
 from unittest.mock import MagicMock, patch
 
 import pytest
 import scenario
-from charms.haproxy.v1.haproxy_route import RequirerApplicationData
+from charms.haproxy.v1.haproxy_route import RequirerApplicationData, RequirerUnitData
 from charms.tls_certificates_interface.v4.tls_certificates import Certificate, PrivateKey
-from ops.testing import Context, Harness
+from ops.testing import Context
 
 from charm import HAProxyCharm
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
-
-
-@pytest.fixture(scope="function", name="harness")
-def harness_fixture():
-    """Enable ops test framework harness."""
-    harness = Harness(HAProxyCharm)
-    yield harness
-    harness.cleanup()
 
 
 @pytest.fixture(scope="function", name="systemd_mock")
@@ -96,6 +89,18 @@ def ingress_requirer_unit_data_fixture() -> dict[str, str]:
     return {"host": '"testing.ingress"', "ip": '"10.0.0.1"'}
 
 
+@pytest.fixture(scope="function", name="ingress_per_unit_requirer_data")
+def ingress_per_unit_requirer_data_fixture() -> dict[str, str]:
+    """Mock ingress per unit requirer data."""
+    return {
+        "model": '"testing"',
+        "name": "ingress-requirer/0",
+        "host": '"ingress-requirer-0.ingress-requirer-endpoints.testing.svc.cluster.local"',
+        "port": "8080",
+        "strip-prefix": "true",
+    }
+
+
 # Scenario
 @pytest.fixture(name="context_with_install_mock")
 def context_with_install_mock_fixture():
@@ -113,7 +118,32 @@ def context_with_install_mock_fixture():
             Context(
                 charm_type=HAProxyCharm,
             ),
-            (install_mock, reconcile_default_mock, reconcile_ingress_mock),
+            (
+                install_mock,
+                reconcile_default_mock,
+                reconcile_ingress_mock,
+            ),
+        )
+
+
+@pytest.fixture(name="context_with_reconcile_mock")
+def context_with_reconcile_mock_fixture():
+    """Context relation fixture.
+
+    Yield: The modeled haproxy-peers relation.
+    """
+    with (
+        patch("haproxy.HAProxyService.reconcile_haproxy_route") as reconcile_mock,
+        patch("tls_relation.TLSRelationService.write_certificate_to_unit"),
+        patch("charm.HAProxyCharm._get_unit_address") as get_unit_address_mock,
+        patch("haproxy.HAProxyService.install"),
+    ):
+        get_unit_address_mock.return_value = "10.0.0.1"
+        yield (
+            Context(
+                charm_type=HAProxyCharm,
+            ),
+            reconcile_mock,
         )
 
 
@@ -126,6 +156,19 @@ def peer_relation_fixture():
     return scenario.PeerRelation(
         endpoint="haproxy-peers",
         peers_data={},
+    )
+
+
+@pytest.fixture(name="ingress_per_unit_integration")
+def ingress_per_unit_integration_fixture(ingress_per_unit_requirer_data):
+    """Ingress integration fixture.
+
+    Returns: The modeled ingress integration.
+    """
+    return scenario.Relation(
+        endpoint="ingress-per-unit",
+        remote_app_name="requirer",
+        remote_units_data={0: ingress_per_unit_requirer_data},
     )
 
 
@@ -198,6 +241,7 @@ def haproxy_route_requirer_application_data_with_hosts_fixture():
         service="test-service",
         ports=[8080, 8443],
         hosts=["10.0.0.1", "10.0.0.2"],
+        hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
     ).dump()
 
 
@@ -222,10 +266,33 @@ def base_state_haproxy_route_fixture(
                 endpoint="haproxy-route",
                 remote_app_name="requirer",
                 remote_app_data=haproxy_route_requirer_application_data_with_hosts,
+                remote_units_data={0: RequirerUnitData(address=IPv4Address("10.0.0.1")).dump()},
             ),
         ],
         "config": {
             "external-hostname": "haproxy.internal",
+        },
+    }
+    return input_state
+
+
+@pytest.fixture(name="base_state_with_ingress_per_unit")
+def base_state_with_ingress_per_unit_fixture(
+    peer_relation, ingress_per_unit_integration, certificates_integration
+):
+    """Base state fixture with ingress per unit integration.
+
+    Args:
+        peer_relation: peer relation fixture.
+        ingress_per_unit_integration: ingress per unit integration fixture.
+        certificates_integration: certificates integration fixture.
+
+    Yield: The modeled haproxy-peers relation.
+    """
+    input_state = {
+        "relations": [peer_relation, ingress_per_unit_integration, certificates_integration],
+        "config": {
+            "external-hostname": "ingress.local",
         },
     }
     return input_state

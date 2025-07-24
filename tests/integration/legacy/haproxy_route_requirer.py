@@ -9,7 +9,7 @@ import pathlib
 import apt  # type: ignore
 import ops
 from any_charm_base import AnyCharmBase  # type: ignore
-from haproxy_route import HaproxyRouteRequirer, RateLimitPolicy  # type: ignore
+from haproxy_route import HaproxyRouteRequirer  # type: ignore
 
 HAPROXY_ROUTE_RELATION = "require-haproxy-route"
 
@@ -27,7 +27,7 @@ class AnyCharm(AnyCharmBase):
         apt.update()
         apt.add_package(package_names="apache2")
         www_dir = pathlib.Path("/var/www/html")
-        file_path = www_dir / "ok"
+        file_path = www_dir / "index.html"
         file_path.parent.mkdir(exist_ok=True)
         file_path.write_text("ok!")
         self.unit.status = ops.ActiveStatus("Server ready")
@@ -37,14 +37,23 @@ class AnyCharm(AnyCharmBase):
         self._haproxy_route.provide_haproxy_route_requirements(
             service="any",
             ports=[80],
-            subdomains=["ok", "ok2"],
-            rate_limit_connections_per_minute=1,
-            rate_limit_policy=RateLimitPolicy.DENY,
+            hostname="ok.haproxy.internal",
+            additional_hostnames=["ok2.haproxy.internal", "ok3.haproxy.internal"],
             check_interval=600,
             check_rise=3,
             check_fall=3,
-            check_path="/ok",
+            check_path="/",
             check_port=80,
-            path_rewrite_expressions=["/ok"],
-            deny_paths=["/private"],
+        )
+
+    def update_relation_no_hostname(self):
+        """Update relation details for haproxy-route."""
+        self._haproxy_route.provide_haproxy_route_requirements(
+            service="any2",
+            ports=[80],
+            check_interval=600,
+            check_rise=3,
+            check_fall=3,
+            check_path="/",
+            check_port=80,
         )

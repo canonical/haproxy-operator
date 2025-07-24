@@ -70,7 +70,7 @@ class HAProxyRouteBackend:
     relation_id: int
     application_data: RequirerApplicationData
     servers: list[HAProxyRouteServer]
-    external_hostname: str
+    external_hostname: Optional[str]
 
     @property
     def backend_name(self) -> str:
@@ -103,28 +103,20 @@ class HAProxyRouteBackend:
     def hostname_acls(self) -> list[str]:
         """Build the list of hostname ACL for the backend.
 
-        Appends subdomain to the configured external_hostname.
-        For example, with the configured hostname of `haproxy.internal`, and requested subdomains
-        ['api'] will result in the following haproxy ACL:
-
-        acl acl_host_<backend_name> req.hdr(Host) -m str api.haproxy.internal
+        Combines the hostname and additional_hostnames attribute into a list of hostname ACLs.
+        Returns the configured external-hostname if hostname is not set.
+        Returns an empty list if both external-hostname and the hostname attribute are not set.
 
         Returns:
             list[str]: List of hostname for ACL matching.
         """
-        if not self.application_data.subdomains:
+        if not self.application_data.hostname:
+            if not self.external_hostname:
+                return []
+
             return [self.external_hostname]
 
-        return list(
-            map(
-                lambda subdomain: (
-                    f"{cast(str, subdomain).rstrip('.')}.{self.external_hostname}"
-                    if subdomain
-                    else self.external_hostname
-                ),
-                self.application_data.subdomains,
-            )
-        )
+        return [self.application_data.hostname] + self.application_data.additional_hostnames
 
     # We disable no-member here because pylint doesn't know that
     # self.application_data.load_balancing Has a default value set
@@ -173,15 +165,20 @@ class HaproxyRouteRequirersInformation:
         backends: The list of backends each corresponds to a requirer application.
         stick_table_entries: List of stick table entries in the haproxy "peer" section.
         peers: List of IP address of haproxy peer units.
+        relation_ids_with_invalid_data: List of relation ids that contains invalid data.
     """
 
     backends: list[HAProxyRouteBackend]
     stick_table_entries: list[str]
     peers: list[IPvAnyAddress]
+    relation_ids_with_invalid_data: list[int]
 
     @classmethod
     def from_provider(
-        cls, haproxy_route: HaproxyRouteProvider, external_hostname: str, peers: list[str]
+        cls,
+        haproxy_route: HaproxyRouteProvider,
+        external_hostname: Optional[str],
+        peers: list[str],
     ) -> "HaproxyRouteRequirersInformation":
         """Initialize the HaproxyRouteRequirersInformation state component.
 
@@ -205,6 +202,7 @@ class HaproxyRouteRequirersInformation:
             stick_table_entries: list[str] = []
             requirers = haproxy_route.get_data(haproxy_route.relations)
             backends: list[HAProxyRouteBackend] = []
+            relation_ids_with_invalid_data = requirers.relation_ids_with_invalid_data
             for requirer in requirers.requirers_data:
                 # Duplicate backend names check is done in the library's `get_data` method
                 backend_names.add(requirer.application_data.service)
@@ -218,6 +216,11 @@ class HaproxyRouteRequirersInformation:
                     servers=get_servers_definition_from_requirer_data(requirer),
                     external_hostname=external_hostname,
                 )
+
+                if not backend.hostname_acls:
+                    relation_ids_with_invalid_data.append(requirer.relation_id)
+                    continue
+
                 backends.append(backend)
 
             return HaproxyRouteRequirersInformation(
@@ -226,6 +229,7 @@ class HaproxyRouteRequirersInformation:
                 backends=sorted(backends, key=get_backend_max_path_depth, reverse=True),
                 stick_table_entries=stick_table_entries,
                 peers=[cast(IPvAnyAddress, peer_address) for peer_address in peers],
+                relation_ids_with_invalid_data=relation_ids_with_invalid_data,
             )
         except DataValidationError as exc:
             # This exception is only raised if the provider has "raise_on_validation_error" set
@@ -233,7 +237,7 @@ class HaproxyRouteRequirersInformation:
 
     @model_validator(mode="after")
     def check_backend_paths(self) -> Self:
-        """Output a warning if requirers declared conflicting paths/subdomains.
+        """Output a warning if requirers declared conflicting paths/hostnames.
 
         Returns:
             Self: The validated model.
