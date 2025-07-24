@@ -39,13 +39,11 @@ class HAProxyBackend:
         backend_name: The name of the backend (computed).
         servers: The list of server each corresponding to a requirer unit.
         strip_prefix: Whether to strip the prefix from the ingress url.
-        redirect_https: Redirect incoming traffic to HTTPS.
     """
 
     backend_name: str
     servers: list[HAProxyServer]
     strip_prefix: bool = False
-    redirect_https: bool = False
 
 
 @dataclasses.dataclass(frozen=True)
@@ -78,7 +76,6 @@ class IngressRequirersInformation:
             try:
                 integration_data = ingress_provider.get_data(integration)
                 strip_prefix = bool(integration_data.app.strip_prefix)
-                redirect_https = bool(integration_data.app.redirect_https)
                 backend_name = f"{integration_data.app.model}-{integration_data.app.name}"
                 servers = []
                 for i, unit_data in enumerate(integration_data.units):
@@ -93,10 +90,7 @@ class IngressRequirersInformation:
                     )
                 backends.append(
                     HAProxyBackend(
-                        backend_name=backend_name,
-                        servers=servers,
-                        strip_prefix=strip_prefix,
-                        redirect_https=redirect_https,
+                        backend_name=backend_name, servers=servers, strip_prefix=strip_prefix
                     )
                 )
             except DataValidationError as exc:

@@ -130,10 +130,6 @@ def test_write_certificate_to_unit(
     chain_string = "\n".join([str(cert) for cert in [mock_certificate]])
 
     tls_relation.write_certificate_to_unit(mock_certificate, [mock_certificate], mock_private_key)
-    pem_file_content = (
-        f"{str(mock_certificate)}\n"
-        f"{''.join(str(cert) + '\n' for cert in [mock_certificate])}"
-        f"{str(mock_private_key)}"
-    )
+    pem_file_content = f"{str(mock_certificate)}\n{chain_string}\n{str(mock_private_key)}"
 
     write_text_mock.assert_called_once_with(pem_file_content, encoding="utf-8")

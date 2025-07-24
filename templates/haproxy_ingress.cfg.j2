@@ -28,7 +28,7 @@ backend {{ backend.backend_name }}
     http-request replace-path /{{ backend.backend_name }}(/)?(.*) /\2
 {% endif %}
 {% for server in backend.servers %}
-    server {{ server.server_name }} {{ server.hostname_or_ip }}:{{ server.port }} check {% if backend.redirect_https %}ssl verify required{% endif %}{% if haproxy_cas_file is defined %} ca-file {{ haproxy_cas_file }}{% endif %}
+    server {{ server.server_name }} {{ server.hostname_or_ip }}:{{ server.port }} check {% if haproxy_cas_file is defined %} ca-file {{ haproxy_cas_file }}{% endif %}
 {% endfor %}
 {% endfor %}
 {% endblock %}

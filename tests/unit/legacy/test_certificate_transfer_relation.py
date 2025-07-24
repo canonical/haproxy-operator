@@ -28,17 +28,17 @@ def test_ca_certificates_available(
         "tls_relation.TLSRelationService.write_cas_to_unit", write_cas_to_unit_mock
     )
 
-    mock_ca_certs_list = [
+    mock_ca_certs_set = {
         "ca1",
         "ca2",
-    ]
+    }
     mock_get_all_certificates = MagicMock()
-    mock_get_all_certificates.return_value = mock_ca_certs_list
+    mock_get_all_certificates.return_value = mock_ca_certs_set
     harness.add_relation("receive-ca-certs", "provider")
     harness.charm.recv_ca_certs.get_all_certificates = mock_get_all_certificates
-    tls_relation.cas_to_trust_available()
+    tls_relation.cas_to_trust_updated()
 
-    write_cas_to_unit_mock.assert_called_once_with(mock_ca_certs_list)
+    write_cas_to_unit_mock.assert_called_once_with(mock_ca_certs_set)
 
 
 def test_ca_certificates_removed(

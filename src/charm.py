@@ -162,7 +162,7 @@ class HAProxyCharm(ops.CharmBase):
         )
         self.framework.observe(self.hacluster.on.ha_ready, self._on_config_changed)
         self.framework.observe(
-            self.recv_ca_certs.on.certificate_set_updated, self._on_ca_certificates_available
+            self.recv_ca_certs.on.certificate_set_updated, self._on_ca_certificates_updated
         )
         self.framework.observe(
             self.recv_ca_certs.on.certificates_removed, self._on_ca_certificates_removed
@@ -393,15 +393,16 @@ class HAProxyCharm(ops.CharmBase):
             )
         ]
 
-    def _on_ca_certificates_available(self, _: CertificatesAvailableEvent) -> None:
+    def _on_ca_certificates_updated(self, _: CertificatesAvailableEvent) -> None:
         """Handle the CA certificates available event."""
-        self._tls.cas_to_trust_available()
+        self._tls.cas_to_trust_updated()
         self._reconcile()
 
     def _on_ca_certificates_removed(self, _: CertificatesRemovedEvent) -> None:
         """Handle the CA certificates removed event."""
         self._tls.remove_cas_from_unit()
         self._reconcile()
+
     @validate_config_and_tls(defer=False)
     def _on_ingress_per_unit_data_provided(self, _: IngressDataReadyEvent) -> None:
         """Handle the data-provided event for ingress-per-unit."""

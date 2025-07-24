@@ -94,8 +94,8 @@ class TLSRelationService:
                     private_key=tls_information.private_key,
                 )
 
-    def cas_to_trust_available(self) -> None:
-        """Handle CA certificates available event."""
+    def cas_to_trust_updated(self) -> None:
+        """Handle the change in the set of CAs to trust."""
         self.write_cas_to_unit(self.recv_ca_cert.get_all_certificates())
 
     def _certificate_matches_stored_content(
@@ -157,10 +157,10 @@ class TLSRelationService:
         if not HAPROXY_CAS_DIR.exists():
             HAPROXY_CAS_DIR.mkdir(exist_ok=True, parents=True)
 
-        pem_file_path = HAPROXY_CAS_FILE
-        pem_file_content = "\n".join(cas)
-        render_file(pem_file_path, pem_file_content, 0o644)
-        logger.info("CA bundle written to: %r", pem_file_path)
+        new_certs = sorted(cas)
+        new_content = "\n".join(new_certs) + "\n"
+        render_file(HAPROXY_CAS_FILE, new_content, 0o644)
+        logger.info("CA bundle written to: %r", HAPROXY_CAS_FILE)
 
     def remove_cas_from_unit(self) -> None:
         """Remove CA bundle from workload."""
