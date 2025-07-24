@@ -10,20 +10,11 @@ import pytest
 import scenario
 from charms.haproxy.v1.haproxy_route import RequirerApplicationData, RequirerUnitData
 from charms.tls_certificates_interface.v4.tls_certificates import Certificate, PrivateKey
-from ops.testing import Context, Harness
+from ops.testing import Context
 
 from charm import HAProxyCharm
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
-
-
-@pytest.fixture(scope="function", name="harness")
-def harness_fixture(monkeypatch: pytest.MonkeyPatch):
-    """Enable ops test framework harness."""
-    monkeypatch.setattr(HAProxyCharm, "_get_unit_address", MagicMock(return_value="10.0.0.1"))
-    harness = Harness(HAProxyCharm)
-    yield harness
-    harness.cleanup()
 
 
 @pytest.fixture(scope="function", name="systemd_mock")
@@ -132,6 +123,27 @@ def context_with_install_mock_fixture():
                 reconcile_default_mock,
                 reconcile_ingress_mock,
             ),
+        )
+
+
+@pytest.fixture(name="context_with_reconcile_mock")
+def context_with_reconcile_mock_fixture():
+    """Context relation fixture.
+
+    Yield: The modeled haproxy-peers relation.
+    """
+    with (
+        patch("haproxy.HAProxyService.reconcile_haproxy_route") as reconcile_mock,
+        patch("tls_relation.TLSRelationService.write_certificate_to_unit"),
+        patch("charm.HAProxyCharm._get_unit_address") as get_unit_address_mock,
+        patch("haproxy.HAProxyService.install"),
+    ):
+        get_unit_address_mock.return_value = "10.0.0.1"
+        yield (
+            Context(
+                charm_type=HAProxyCharm,
+            ),
+            reconcile_mock,
         )
 
 

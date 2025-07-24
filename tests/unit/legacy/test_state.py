@@ -20,9 +20,9 @@ from state.haproxy_route import (
 MOCK_EXTERNAL_HOSTNAME = "haproxy.internal"
 
 
-@pytest.fixture(name="requirer_application_data")
-def requirer_application_data_fixture():
-    """Create sample requirer data for testing."""
+@pytest.fixture(name="haproxy_requirer_application_data")
+def haproxy_requirer_application_data_fixture():
+    """Create sample haproxy requirer data for testing."""
     return RequirerApplicationData(
         service="test-service",
         ports=[8080, 8443],
@@ -34,9 +34,9 @@ def requirer_application_data_fixture():
     ).dump()
 
 
-@pytest.fixture(name="extra_requirer_application_data")
-def extra_requirer_application_data_fixture():
-    """Create sample requirer data for testing."""
+@pytest.fixture(name="extra_haproxy_requirer_application_data")
+def extra_haproxy_requirer_application_data_fixture():
+    """Create sample haproxy requirer data for testing."""
     return RequirerApplicationData(
         service="test-service-extra",
         ports=[9000],
@@ -69,8 +69,8 @@ def haproxy_peer_units_address_fixture() -> list[str]:
 
 def test_haproxy_route_from_provider(
     harness: Harness,
-    requirer_application_data,
-    extra_requirer_application_data,
+    haproxy_requirer_application_data,
+    extra_haproxy_requirer_application_data,
     haproxy_peer_units_address,
 ):
     """
@@ -81,7 +81,7 @@ def test_haproxy_route_from_provider(
     relation_id = harness.add_relation(
         "haproxy-route",
         "requirer-charm",
-        app_data=requirer_application_data,
+        app_data=haproxy_requirer_application_data,
     )
 
     harness.add_relation_unit(relation_id, "requirer-charm/0")
@@ -92,7 +92,7 @@ def test_haproxy_route_from_provider(
     extra_relation_id = harness.add_relation(
         "haproxy-route",
         "extra-requirer-charm",
-        app_data=extra_requirer_application_data,
+        app_data=extra_haproxy_requirer_application_data,
     )
     harness.add_relation_unit(extra_relation_id, "extra-requirer-charm/0")
     harness.update_relation_data(
@@ -127,7 +127,7 @@ def test_haproxy_route_from_provider(
 
 def test_haproxy_route_from_provider_duplicate_backend_names(
     harness: Harness,
-    requirer_application_data,
+    haproxy_requirer_application_data,
 ):
     """
     arrange: Given a charm with multiple haproxy route relations with duplicate backend names.
@@ -137,7 +137,7 @@ def test_haproxy_route_from_provider_duplicate_backend_names(
     relation_id = harness.add_relation(
         "haproxy-route",
         "requirer-charm",
-        app_data=requirer_application_data,
+        app_data=haproxy_requirer_application_data,
     )
 
     harness.add_relation_unit(relation_id, "requirer-charm/0")
@@ -148,7 +148,7 @@ def test_haproxy_route_from_provider_duplicate_backend_names(
     extra_relation_id = harness.add_relation(
         "haproxy-route",
         "extra-requirer-charm",
-        app_data=requirer_application_data,
+        app_data=haproxy_requirer_application_data,
     )
     harness.add_relation_unit(extra_relation_id, "extra-requirer-charm/0")
     harness.update_relation_data(

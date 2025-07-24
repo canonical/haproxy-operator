@@ -17,7 +17,7 @@ from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from state.config import CharmConfig
+from state.charm_state import CharmState
 from state.haproxy_route import HaproxyRouteRequirersInformation
 from state.ingress import IngressRequirersInformation
 from state.ingress_per_unit import IngressPerUnitRequirersInformation
@@ -75,10 +75,6 @@ class HaproxyValidateConfigError(Exception):
     """Error when validation of the generated haproxy config failed."""
 
 
-class InvalidRequirerInformationError(Exception):
-    """Exception raised when the requirer information is invalid."""
-
-
 class HAProxyService:
     """HAProxy service class."""
 
@@ -98,15 +94,15 @@ class HAProxyService:
         """
         return systemd.service_running(APT_PACKAGE_NAME)
 
-    def reconcile_legacy(self, config: CharmConfig, services: list) -> None:
+    def reconcile_legacy(self, charm_state: CharmState, services: list) -> None:
         """Render the haproxy config for legacy proxying and reload the service.
 
         Args:
-            config: The charm's config
+            charm_state: The charm state component.
             services: List of configuration stanzas for the defined services.
         """
         template_context = {
-            "config_global_max_connection": config.global_max_connection,
+            "config_global_max_connection": charm_state.global_max_connection,
             "services": services,
         }
         self._render_haproxy_config(HAPROXY_LEGACY_CONFIG_TEMPLATE, template_context)
@@ -115,7 +111,7 @@ class HAProxyService:
 
     def reconcile_ingress(
         self,
-        config: CharmConfig,
+        charm_state: CharmState,
         ingress_requirers_information: (
             IngressRequirersInformation | IngressPerUnitRequirersInformation
         ),
@@ -124,47 +120,40 @@ class HAProxyService:
         """Render the haproxy config for ingress proxying and reload the service.
 
         Args:
-            config: The charm's config.
+            charm_state: The charm's state component.
             ingress_requirers_information: Parsed information about ingress or ingress
                 per unit requirers.
             external_hostname: Configured external-hostname for TLS.
-
-        Raises:
-            InvalidRequirerInformationError: If the provided information is not of the expected
-                type.
         """
         template_context = {
-            "config_global_max_connection": config.global_max_connection,
+            "config_global_max_connection": charm_state.global_max_connection,
             "ingress_requirers_information": ingress_requirers_information,
             "config_external_hostname": external_hostname,
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
         }
-        if isinstance(ingress_requirers_information, IngressRequirersInformation):
-            self._render_haproxy_config(HAPROXY_INGRESS_CONFIG_TEMPLATE, template_context)
-        elif isinstance(ingress_requirers_information, IngressPerUnitRequirersInformation):
-            self._render_haproxy_config(HAPROXY_INGRESS_PER_UNIT_CONFIG_TEMPLATE, template_context)
-        else:
-            raise InvalidRequirerInformationError(
-                "Expected ingress requirer or ingress per unit requirer "
-                f"but received {ingress_requirers_information} instead."
-            )
+        template = (
+            HAPROXY_INGRESS_CONFIG_TEMPLATE
+            if isinstance(ingress_requirers_information, IngressRequirersInformation)
+            else HAPROXY_INGRESS_PER_UNIT_CONFIG_TEMPLATE
+        )
+        self._render_haproxy_config(template, template_context)
 
         self._validate_haproxy_config()
         self._reload_haproxy_service()
 
     def reconcile_haproxy_route(
         self,
-        config: CharmConfig,
+        charm_state: CharmState,
         haproxy_route_requirers_information: HaproxyRouteRequirersInformation,
     ) -> None:
         """Render the haproxy config for haproxy-route.
 
         Args:
-            config: The charm's config.
+            charm_state: The charm state component.
             haproxy_route_requirers_information: HaproxyRouteRequirersInformation state component.
         """
         template_context = {
-            "config_global_max_connection": config.global_max_connection,
+            "config_global_max_connection": charm_state.global_max_connection,
             "backends": haproxy_route_requirers_information.backends,
             "stick_table_entries": haproxy_route_requirers_information.stick_table_entries,
             "peer_units_address": haproxy_route_requirers_information.peers,
@@ -174,16 +163,16 @@ class HAProxyService:
         self._validate_haproxy_config()
         self._reload_haproxy_service()
 
-    def reconcile_default(self, config: CharmConfig) -> None:
+    def reconcile_default(self, charm_state: CharmState) -> None:
         """Render the default haproxy config and reload the service.
 
         Args:
-            config (CharmConfig): _description_
+            charm_state (CharmState): The charm state component.
         """
         self._render_haproxy_config(
             HAPROXY_DEFAULT_CONFIG_TEMPLATE,
             {
-                "config_global_max_connection": config.global_max_connection,
+                "config_global_max_connection": charm_state.global_max_connection,
             },
         )
         self._validate_haproxy_config()
