@@ -26,7 +26,7 @@ name: haproxy
 title: HAProxy charm.
 description: |
   A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
-  deploying and managing [haproxy](https://www.haproxy.org/) on machines.
+  deploying and managing [HAProxy](https://www.haproxy.org/) on machines.
   
   HAProxy is a TCP/HTTP reverse proxy which is particularly suited for high
   availability environments. It features connection persistence through HTTP
@@ -34,7 +34,7 @@ description: |
   has request blocking capabilities and provides interface to display server
   status.
 
-  This charm simplifies initial deployment and "day N" operations of haproxy on 
+  This charm simplifies initial deployment and "day N" operations of HAProxy on 
   VMs and bare metal.
 summary: Fast and reliable load balancing reverse proxy.
 links:
@@ -76,7 +76,7 @@ config:
     external-hostname:
       default: ""
       type: string
-      description: Hostname of haproxy.
+      description: Hostname of HAProxy.
     global-maxconn:
       default: 4096
       type: int
