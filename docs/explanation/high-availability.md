@@ -31,10 +31,10 @@ By default it is required to have at least three HAProxy units when using the `h
 The `hacluster` charm provide operators with configuration options to fine-tune the cluster's behavior. Below are some key settings for HAProxy.
 
 ### Cluster count configuration
-The [cluster_count](https://opendev.org/openstack/charm-hacluster/src/commit/2449932bf7c618fda4fa412228a133688db13b02/config.yaml#L125) configuration adjusts the number of peer units required to bootstrap cluster services.
+The [`cluster_count`](https://opendev.org/openstack/charm-hacluster/src/commit/2449932bf7c618fda4fa412228a133688db13b02/config.yaml#L125) configuration adjusts the number of peer units required to bootstrap cluster services.
 
 ### Quorum policy configuration
-The [no_quorum_policy](https://opendev.org/openstack/charm-hacluster/src/commit/2449932bf7c618fda4fa412228a133688db13b02/config.yaml#L221) configuration determines the quorum policy. Allowed values are:
+The [`no_quorum_policy`](https://opendev.org/openstack/charm-hacluster/src/commit/2449932bf7c618fda4fa412228a133688db13b02/config.yaml#L221) configuration determines the quorum policy. Allowed values are:
 
 * ignore: continue all resource management.
 * freeze: continue resource management, but don’t recover resources from nodes not in the affected partition.
