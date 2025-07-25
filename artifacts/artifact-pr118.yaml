@@ -1,0 +1,13 @@
+# --- Release notes artifact ----
+
+change:
+  - title: Validated requirer relation data object
+    author: Thanhphan1147
+    type: major
+    description: Validation is now done on both the requirer and provider side to check for invalid characters. On the requirer an exception will be raised while on the provider the related service will be ignored.
+    urls: 
+      - pr: https://github.com/canonical/haproxy-operator/pull/118
+        related_doc: ""
+        related_issue: ""
+    internal: true
+    highlight: false
