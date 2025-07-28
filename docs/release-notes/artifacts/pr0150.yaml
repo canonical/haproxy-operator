@@ -1,0 +1,14 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+change:
+  - title: Updated certifications handling
+    author: Thanhphan1147
+    type: minor
+    description: The charm now requests a new certification for each subdomain during initialization.
+    urls: 
+      - pr: https://github.com/canonical/haproxy-operator/pull/150
+        related_doc: ""
+        related_issue: ""
+    internal: false
+    highlight: false

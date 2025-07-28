@@ -1,0 +1,14 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+change:
+  - title: Allow customization to configure port for HTTP check
+    author: Thanhphan1147
+    type: minor
+    description: Added `check-port` attribute to the requirer databag model, allowing users to customize the port used for `http-check`.
+    urls: 
+      - pr: https://github.com/canonical/haproxy-operator/pull/119
+        related_doc: ""
+        related_issue: ""
+    internal: false
+    highlight: false

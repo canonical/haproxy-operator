@@ -1,0 +1,14 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+change:
+  - title: Updated integration tests
+    author: Thanhphan1147
+    type: minor
+    description: The integration tests now only run one unit to save CI time.
+    urls: 
+      - pr: https://github.com/canonical/haproxy-operator/pull/131
+        related_doc: ""
+        related_issue: ""
+    internal: false
+    highlight: false
