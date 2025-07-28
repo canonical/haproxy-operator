@@ -1,0 +1,156 @@
+<!-- Remember to update this file for your charm -- replace <charm-name> with the appropriate name,
+follow the release notes policy in the title, and fill in the relevant details. -->
+
+# {{ charm_name }} release notes – {{ release_condition }}
+
+These release notes cover new features and changes in {{ charm_name }} for <release condition here>.
+
+<!--
+Add an introduction summarizing the most significant features and impactful changes
+outlined in this file. Organize this content in bulleted lists of "Main features"
+and "Main bug fixes", using past tense to describe each of the items
+(for instance, "Added support for X relation").
+-->
+
+See our [Release policy and schedule](docs/release-notes/landing-page.md).
+
+## Requirements and compatibility
+
+<!--
+Specify the workload version; link to the workload's release notes if available.
+
+Add information about the requirements for this charm in the table
+below, for instance, a minimum Juju version. 
+
+If the user will need any specific upgrade instructions for this
+release, include those instructions here.
+
+-->
+
+The charm operates <workload name with version>.
+
+The table below shows the required or supported versions of the software necessary to operate the charm.
+
+| Software                | Required version |
+|-------------------------|------------------|
+| Juju                    | XXXX             |
+| Terraform               | XXXX             |
+| Terraform Juju provider | XXXX             |
+| Ubuntu                  | XXXX             |
+| XXXX                    | XXXX             |
+
+## Updates
+<!--
+Use this section to highlight major and minor features that were added in this release.
+The subsection below shows the pattern for each feature. Include links to the relevant PR or commit.
+-->
+
+{% for feat in change -%}
+{%- if feat.type == "major" or feat.type == "minor" -%}
+
+### {{ feat.title }}
+{{ feat.description }}
+<Add more context and information about the entry>
+
+Relevant links:
+{% for url in feat.urls -%}
+* [PR]({{ url.pr }})
+{% if url.related_doc is not none -%}
+* [Related documentation]({{ url.related_doc }})
+{% endif -%}
+{% if url.related_issue is not none -%}
+* [Related issue]({{ url.related_issue }})
+{% endif -%}
+{% endfor %}
+
+{% endif -%}
+{% endfor -%}
+
+## Bug fixes
+<!--
+Add a bulleted list of bug fixes here, with links to the relevant PR/commit.
+-->
+
+{% for feat in change -%}
+{%- if feat.type == "bugfix" -%}
+{% for url in feat.urls -%}
+* {{ feat.title }} ([PR]({{ url.pr }})).
+{% endfor -%}
+{% endif -%}
+{% endfor %}
+
+## Breaking changes
+
+<!--
+Use this section to highlight any backwards-incompatible changes in this release.
+Include links to the relevant PR or commit.
+If there are no breaking changes, keep the section and write "No breaking changes".
+-->
+
+{% for feat in change -%}
+{% if feat.type == "breaking" -%}
+### {{ feat.title }}
+{{ feat.description }}
+<Add more context and information about the entry>
+
+Relevant links:
+{% for url in feat.urls -%}
+* [PR]({{ url.pr }})
+{% if url.related_doc is not none -%}
+* [Related documentation]({{ url.related_doc }})
+{% endif -%}
+{% if url.related_issue is not none -%}
+* [Related issue]({{ url.related_issue }})
+{% endif -%}
+{% endfor %}
+
+{% endif -%}
+{% endfor -%}
+
+## Deprecated
+
+<!--
+Use this section to highlight any deprecated features in this release.
+Include links to the relevant PR or commit.
+If there are no deprecated features, keep the section and write "No deprecated features".
+-->
+
+{% for feat in change -%}
+{% if feat.type == "deprecated" -%}
+### {{ feat.title }}
+{{ feat.description }}
+<Add more context and information about the entry>
+
+Relevant links:
+{% for url in feat.urls -%}
+* [PR]({{ url.pr }})
+{% if url.related_doc is not none -%}
+* [Related documentation]({{ url.related_doc }})
+{% endif -%}
+{% if url.related_issue is not none -%}
+* [Related issue]({{ url.related_issue }})
+{% endif -%}
+{% endfor %}
+
+{% endif -%}
+{% endfor -%}
+
+## Known issues
+<!--
+Add a bulleted list with links to unresolved issues – the most important/pressing ones,
+the ones being worked on currently, or the ones with the most visibility/traffic.
+You don’t need to add links to all the issues in the repository if there are
+several – a list of 3-5 issues is sufficient. 
+If there are no known issues, keep the section and write "No known issues".
+-->
+
+## Thanks to our contributors
+<!--
+List of contributors based on PRs/commits. Remove this section if there are no contributors in this release.
+-->
+{% for feat in change -%}
+{{ feat.author }},
+{% endfor %}
+
+
+

@@ -8,7 +8,7 @@ change:
     description: Added Contents section to documentation overview page.
     urls: 
       - pr: https://github.com/canonical/haproxy-operator/pull/137
-        related_doc: ""
-        related_issue: ""
+        related_doc: 
+        related_issue: 
     internal: false
     highlight: false

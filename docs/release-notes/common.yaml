@@ -1,0 +1,4 @@
+# --- Common information that applies to all releases ----
+
+charm_name: HAProxy
+release_condition: 2.8/stable

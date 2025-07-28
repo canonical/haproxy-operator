@@ -8,7 +8,7 @@ change:
     description: The integration tests now only run one unit to save CI time.
     urls: 
       - pr: https://github.com/canonical/haproxy-operator/pull/131
-        related_doc: ""
-        related_issue: ""
+        related_doc: 
+        related_issue: 
     internal: false
     highlight: false

@@ -8,7 +8,7 @@ change:
     description: The charm now requests a new certification for each subdomain during initialization.
     urls: 
       - pr: https://github.com/canonical/haproxy-operator/pull/150
-        related_doc: ""
-        related_issue: ""
+        related_doc: 
+        related_issue: 
     internal: false
     highlight: false
