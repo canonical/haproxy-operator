@@ -1,5 +1,6 @@
 # --- Release notes artifact ----
 
+schema_version: 1
 change:
   - title: Validated requirer relation data object
     author: Thanhphan1147

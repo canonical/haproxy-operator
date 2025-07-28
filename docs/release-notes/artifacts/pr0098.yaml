@@ -1,5 +1,6 @@
 # --- Release notes artifact ----
 
+schema_version: 1
 change:
   - title: Added terraform charm and product module
     author: Thanhphan1147
