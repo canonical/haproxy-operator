@@ -1,15 +1,13 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
-# pylint: disable=duplicate-code
 
 """Helper methods for integration tests."""
 
-import ipaddress
 import json
 from urllib.parse import ParseResult, urlparse
 
-import jubilant
-import yaml
+from juju.application import Application
+from pytest_operator.plugin import OpsTest
 from requests.adapters import DEFAULT_POOLBLOCK, DEFAULT_POOLSIZE, DEFAULT_RETRIES, HTTPAdapter
 
 
@@ -73,64 +71,22 @@ class DNSResolverHTTPSAdapter(HTTPAdapter):
         return super().send(request, stream, timeout, verify, cert, proxies)
 
 
-def get_ingress_per_unit_urls_for_application(
-    juju: jubilant.Juju, app_name: str
-) -> list[ParseResult]:
-    """Get the list of ingress URLs per unit from the requirer's unit data.
+async def get_ingress_url_for_application(
+    ingress_requirer_application: Application, ops_test: OpsTest
+) -> ParseResult:
+    """Get the ingress url from the requirer's unit data.
 
     Args:
-        juju: Jubilant Juju client.
-        app_name: Requirer application name.
+        ingress_requirer_application: Requirer application.
+        ops_test: OpsTest framework to run juju show-unit.
 
     Returns:
-        list: The parsed ingress URLs per unit.
+        ParseResult: The parsed ingress url.
     """
-    unit_name = f"{app_name}/0"
-    result = juju.cli("show-unit", unit_name, "--format", "json")
-    unit_info = json.loads(result)[unit_name]
-
-    for rel in unit_info["relation-info"]:
-        if rel["related-endpoint"] == "ingress-per-unit":
-            ingress_data = rel["application-data"].get("ingress")
-            break
-
-    parsed_yaml = yaml.safe_load(ingress_data)
-    return [urlparse(data["url"]) for _, data in parsed_yaml.items()]
-
-
-def get_unit_ip_address(
-    juju: jubilant.Juju,
-    application: str,
-) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
-    """Get the unit IP address of a Juju application to make HTTP requests.
-
-    Args:
-        juju: Jubilant Juju instance.
-        application: The name of the deployed application.
-
-    Returns:
-        The IP address of the first unit.
-    """
-    status = juju.status()
-    app_status = status.apps.get(application)
-    assert app_status, f"Application {application} not found in model status"
-    unit_status = next(iter(app_status.units.values()))
-    address = unit_status.public_address
-    assert address, f"Unit of {application} has no public address"
-    return ipaddress.ip_address(address)
-
-
-def get_unit_address(juju: jubilant.Juju, application: str) -> str:
-    """Get the HTTP address of the first unit of a Juju application.
-
-    Args:
-        juju: Jubilant Juju instance.
-        application: The name of the deployed application.
-
-    Returns:
-        A string representing the base HTTP URL for the first unit.
-    """
-    unit_ip_address = get_unit_ip_address(juju, application)
-    if isinstance(unit_ip_address, ipaddress.IPv6Address):
-        return f"http://[{unit_ip_address}]"
-    return f"http://{unit_ip_address}"
+    unit_name = ingress_requirer_application.units[0].name
+    _, stdout, _ = await ops_test.juju("show-unit", unit_name, "--format", "json")
+    unit_information = json.loads(stdout)[unit_name]
+    ingress_integration_data = json.loads(
+        unit_information["relation-info"][0]["application-data"]["ingress"]
+    )
+    return urlparse(ingress_integration_data["url"])

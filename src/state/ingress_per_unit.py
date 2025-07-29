@@ -3,13 +3,15 @@
 
 """HAproxy ingress per unit charm state component."""
 
-import dataclasses
+from typing import Annotated
 
 from charms.traefik_k8s.v1.ingress_per_unit import (
     DataValidationError,
     IngressPerUnitProvider,
     RequirerData,
 )
+from pydantic import Field
+from pydantic.dataclasses import dataclass
 
 from .exception import CharmStateValidationBaseError
 
@@ -20,13 +22,13 @@ class IngressPerUnitIntegrationDataValidationError(CharmStateValidationBaseError
     """Exception raised when ingress_per_unit integration fails data validation."""
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclass(frozen=True)
 class HAProxyBackend:
     """A component of charm state that represent an ingress per unit requirer.
 
     Attrs:
         backend_name: The name of the backend (computed).
-        backend_path: The path prefix for the requirer unit.
+        backend_path: The path prefix for the requirer unit (computed).
         hostname_or_ip: The host or ip address of the requirer unit.
         port: The port that the requirer unit wishes to be exposed.
         strip_prefix: Whether to strip the prefix from the ingress url.
@@ -35,11 +37,11 @@ class HAProxyBackend:
     backend_name: str
     backend_path: str
     hostname_or_ip: str
-    port: int
+    port: Annotated[int, Field(gt=0, le=65535)]
     strip_prefix: bool
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclass(frozen=True)
 class IngressPerUnitRequirersInformation:
     """A component of charm state containing ingress per unit requirers information.
 

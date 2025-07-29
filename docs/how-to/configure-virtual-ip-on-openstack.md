@@ -1,5 +1,5 @@
 # How to configure a virtual IP on OpenStack
-The process to get a virtual IP address for hacluster is different based the cloud on which the haproxy charm units are running. This document covers the process of creating a virtual IP address for a haproxy charm deployed on OpenStack.
+The process to get a virtual IP address for hacluster is different based the cloud on which the HAProxy charm units are running. This document covers the process of creating a virtual IP address for a HAProxy charm deployed on OpenStack.
 
 ## Create the OpenStack port for the virtual IP
 We need to do this to ensure that this IP will not get assigned to a new machine in the OpenStack subnet. 
@@ -43,7 +43,7 @@ Run `openstack port list` to get the ID of the corresponding OpenStack ports. Th
 +--------------------------------------+------+-------------------+------------------------------------------------------------------------------+--------+
 ```
 
-In this example, the OpenStack port IDs of the relevant units are `38861254-8991-4d1a-b686-050a016b2622`, `6885fbf7-8a3d-463b-9a85-5a74f88559c2`, `75ed7444-9fb6-42f9-bf33-237022b59255` and `fa086c2f-f8c4-41c1-87e6-89c4751c2cd3`. For each port, run `openstack port set --allow-address` to allow the virtual IP to forward traffic to the haproxy charm units:
+In this example, the OpenStack port IDs of the relevant units are `38861254-8991-4d1a-b686-050a016b2622`, `6885fbf7-8a3d-463b-9a85-5a74f88559c2`, `75ed7444-9fb6-42f9-bf33-237022b59255` and `fa086c2f-f8c4-41c1-87e6-89c4751c2cd3`. For each port, run `openstack port set --allow-address` to allow the virtual IP to forward traffic to the HAProxy charm units:
 ```
 openstack port set 38861254-8991-4d1a-b686-050a016b2622 --allowed-address ip-address=10.142.65.2
 openstack port set 6885fbf7-8a3d-463b-9a85-5a74f88559c2 --allowed-address ip-address=10.142.65.2
