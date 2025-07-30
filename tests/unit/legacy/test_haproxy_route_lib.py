@@ -42,6 +42,7 @@ def mock_relation_data_fixture():
     return {
         "service": "test-service",
         "ports": [8080],
+        "protocol": "http",
         "hosts": ["10.0.0.1", "10.0.0.2"],
         "paths": ["/api"],
         "hostname": "api.haproxy.internal",
@@ -194,6 +195,23 @@ def test_requirers_data_duplicate_services():
         HaproxyRouteRequirersData(
             requirers_data=[requirer_data1, requirer_data2], relation_ids_with_invalid_data=[]
         )
+
+
+def test_load_legacy_requirer_application_data(mock_relation_data):
+    """Validate that databag can be loaded from older version of the library."""
+    databag = {k: json.dumps(v) for k, v in mock_relation_data.items()}
+    databag.pop("protocol")
+    data = RequirerApplicationData.load(databag)
+
+    assert data.service == "test-service"
+    assert data.ports == [8080]
+    assert data.hosts == [IPv4Address("10.0.0.1"), IPv4Address("10.0.0.2")]
+    assert data.paths == ["/api"]
+    assert data.hostname == "api.haproxy.internal"
+    assert data.check.interval == 60
+    assert data.check.rise == 2
+    assert data.check.fall == 3
+    assert data.check.path == "/health"
 
 
 def test_load_requirer_application_data(mock_relation_data):
