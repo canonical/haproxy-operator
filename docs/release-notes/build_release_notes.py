@@ -31,23 +31,13 @@ def combine_data(file_paths, output_file):
 
     save_yaml(combined_data, output_file)
 
-# DEPRECATED TAG; NEED TO REFACTOR
-def filter_by_tag(files, tag):
-    files_with_tag = []
-    for file in files:
-        data = load_yaml(file)
-        if tag == data.get('change')[0].get('release_tag'):
-            files_with_tag.append(file)
-
-    return files_with_tag
-
 def main():
     """"Generates release notes based on multiple artifacts."""
 
     # define variables
     artifact_dir = 'artifacts'
     output_dir = '.'
-    release_tag = 'rev1-split'
+    release_tag = 'test'
     combined_file = 'all_data.yaml'
     common_file = 'common.yaml'
 
@@ -64,14 +54,9 @@ def main():
     
     print(f"Found {len(artifact_files)} artifact(s) to process.")
 
-    # only keep artifact_files with the correct release_tag
-    # WARNING: Uses deprecated value
-    # artifact_files = filter_by_tag(artifact_files, release_tag)
-    # print(f"Found {len(artifact_files)} artifact(s) with release tag {release_tag}.")
-
     for file in artifact_files:
         data = load_yaml(file)
-        print(data.get('change')[0].get('urls')[0].get('pr'))
+        print(data.get('change')[0].get('urls').get('pr'))
 
     # add common file to list of files
     artifact_files.append(common_file)

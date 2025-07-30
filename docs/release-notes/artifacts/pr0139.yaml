@@ -7,8 +7,8 @@ change:
     type: bugfix
     description: Fixed Jinja2 handling of newlines to prevent invalid configuration generation.
     urls: 
-      - pr: https://github.com/canonical/haproxy-operator/pull/139
-        related_doc: 
-        related_issue: 
+      pr: https://github.com/canonical/haproxy-operator/pull/139
+      related_doc: 
+      related_issue: 
     internal: false
     highlight: false

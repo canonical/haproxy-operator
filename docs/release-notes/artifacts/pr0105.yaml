@@ -3,12 +3,12 @@
 schema_version: 1
 change:
   - title: Added a new dependency to fix the linting step
-    author: Thanhphan1147
+    author: arturo-seijas
     type: bugfix
     description: Added a new dependency to fix the linting step.
     urls: 
-      - pr: https://github.com/canonical/haproxy-operator/pull/105
-        related_doc: 
-        related_issue: 
+      pr: https://github.com/canonical/haproxy-operator/pull/105
+      related_doc: 
+      related_issue: 
     internal: false
     highlight: false

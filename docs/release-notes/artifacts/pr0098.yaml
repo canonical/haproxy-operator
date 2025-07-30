@@ -7,8 +7,8 @@ change:
     type: major
     description: You can now deploy HAProxy with high-availability support through Terraform. The module can be found under https://github.com/canonical/haproxy-operator/tree/main/terraform/product 
     urls: 
-      - pr: https://github.com/canonical/haproxy-operator/pull/98
-        related_doc: 
-        related_issue: 
+      pr: https://github.com/canonical/haproxy-operator/pull/98
+      related_doc: 
+      related_issue: 
     internal: false
     highlight: false

@@ -7,8 +7,8 @@ change:
     type: minor
     description: The `subdomain` attribute has been replaced with the `hostname` and `additional_hostnames` attribute. The charm now sends an empty list as the `proxied_endpoints` when the requirer data is ignored.
     urls: 
-      - pr: https://github.com/canonical/haproxy-operator/pull/152
-        related_doc: 
-        related_issue: 
+      pr: https://github.com/canonical/haproxy-operator/pull/152
+      related_doc: 
+      related_issue: 
     internal: false
     highlight: false

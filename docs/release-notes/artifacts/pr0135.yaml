@@ -7,8 +7,8 @@ change:
     type: bugfix
     description: Mitigated bug in Terraform provider by setting subordinate charm units to `1`.
     urls: 
-      - pr: https://github.com/canonical/haproxy-operator/pull/135
-        related_doc: 
-        related_issue: 
+      pr: https://github.com/canonical/haproxy-operator/pull/135
+      related_doc: 
+      related_issue: 
     internal: false
     highlight: false

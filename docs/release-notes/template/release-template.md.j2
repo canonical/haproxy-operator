@@ -12,6 +12,20 @@ and "Main bug fixes", using past tense to describe each of the items
 (for instance, "Added support for X relation").
 -->
 
+Main features:
+{% for feat in change -%}
+{%- if feat.highlight == true and (feat.type == "major" or feat.type == "minor") -%}
+* {{ feat.title }}.
+{% endif -%}
+{% endfor %}
+
+Main bug fixes:
+{% for feat in change -%}
+{%- if feat.highlight == true and feat.type == "bugfix" -%}
+* {{ feat.title }}.
+{% endif -%}
+{% endfor %}
+
 See our [Release policy and schedule](docs/release-notes/landing-page.md).
 
 ## Requirements and compatibility
@@ -45,7 +59,9 @@ Use this section to highlight major and minor features that were added in this r
 The subsection below shows the pattern for each feature. Include links to the relevant PR or commit.
 -->
 
-{% for feat in change -%}
+The following major and minor features were added in this release.
+
+{% for feat in change %}
 {%- if feat.type == "major" or feat.type == "minor" -%}
 
 ### {{ feat.title }}
@@ -53,18 +69,16 @@ The subsection below shows the pattern for each feature. Include links to the re
 <Add more context and information about the entry>
 
 Relevant links:
-{% for url in feat.urls -%}
-* [PR]({{ url.pr }})
-{% if url.related_doc is not none -%}
-* [Related documentation]({{ url.related_doc }})
+* [PR]({{ feat.urls.pr }})
+{% if feat.urls.related_doc is not none -%}
+* [Related documentation]({{ feat.urls.related_doc }})
 {% endif -%}
-{% if url.related_issue is not none -%}
-* [Related issue]({{ url.related_issue }})
-{% endif -%}
-{% endfor %}
+{% if feat.urls.related_issue is not none -%}
+* [Related issue]({{ feat.urls.related_issue }})
+{% endif %}
 
 {% endif -%}
-{% endfor -%}
+{% endfor %}
 
 ## Bug fixes
 <!--
@@ -73,9 +87,7 @@ Add a bulleted list of bug fixes here, with links to the relevant PR/commit.
 
 {% for feat in change -%}
 {%- if feat.type == "bugfix" -%}
-{% for url in feat.urls -%}
-* {{ feat.title }} ([PR]({{ url.pr }})).
-{% endfor -%}
+* {{ feat.title }} ([PR]({{ feat.urls.pr }})).
 {% endif -%}
 {% endfor %}
 
@@ -87,25 +99,25 @@ Include links to the relevant PR or commit.
 If there are no breaking changes, keep the section and write "No breaking changes".
 -->
 
+The following backwards-incompatible changes are included in this release.
+
 {% for feat in change -%}
-{% if feat.type == "breaking" -%}
+{%- if feat.type == "breaking" -%}
 ### {{ feat.title }}
 {{ feat.description }}
 <Add more context and information about the entry>
 
 Relevant links:
-{% for url in feat.urls -%}
-* [PR]({{ url.pr }})
-{% if url.related_doc is not none -%}
-* [Related documentation]({{ url.related_doc }})
+* [PR]({{ feat.urls.pr }})
+{% if feat.urls.related_doc is not none -%}
+* [Related documentation]({{ feat.urls.related_doc }})
 {% endif -%}
-{% if url.related_issue is not none -%}
-* [Related issue]({{ url.related_issue }})
+{% if feat.urls.related_issue is not none -%}
+* [Related issue]({{ feat.urls.related_issue }})
 {% endif -%}
-{% endfor %}
 
 {% endif -%}
-{% endfor -%}
+{% endfor %}
 
 ## Deprecated
 
@@ -115,25 +127,25 @@ Include links to the relevant PR or commit.
 If there are no deprecated features, keep the section and write "No deprecated features".
 -->
 
+The following features have been deprecated.
+
 {% for feat in change -%}
-{% if feat.type == "deprecated" -%}
+{%- if feat.type == "deprecated" -%}
 ### {{ feat.title }}
 {{ feat.description }}
 <Add more context and information about the entry>
 
 Relevant links:
-{% for url in feat.urls -%}
-* [PR]({{ url.pr }})
-{% if url.related_doc is not none -%}
-* [Related documentation]({{ url.related_doc }})
+* [PR]({{ feat.urls.pr }})
+{% if feat.urls.related_doc is not none -%}
+* [Related documentation]({{ feat.urls.related_doc }})
 {% endif -%}
-{% if url.related_issue is not none -%}
-* [Related issue]({{ url.related_issue }})
+{% if feat.urls.related_issue is not none -%}
+* [Related issue]({{ feat.urls.related_issue }})
 {% endif -%}
-{% endfor %}
 
 {% endif -%}
-{% endfor -%}
+{% endfor %}
 
 ## Known issues
 <!--
@@ -148,9 +160,12 @@ If there are no known issues, keep the section and write "No known issues".
 <!--
 List of contributors based on PRs/commits. Remove this section if there are no contributors in this release.
 -->
+{% set authors_in_list = [] -%}
 {% for feat in change -%}
-{{ feat.author }},
-{% endfor %}
+{% set author_value = '['+feat.author+'](https://github.com/'+feat.author+')' -%}
+{% if author_value not in authors_in_list -%}
+{{ authors_in_list.append(author_value) or "" }}
+{% endif -%}
+{% endfor -%}
 
-
-
+{{ authors_in_list|join(', ') }}

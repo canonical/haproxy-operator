@@ -7,8 +7,8 @@ change:
     type: minor
     description: Requirer application data now includes a `hosts` attribute to allow for the requirer to override the unit IP addresses used to generate server entries in the HAProxy configuration.
     urls: 
-      - pr: https://github.com/canonical/haproxy-operator/pull/149
-        related_doc: 
-        related_issue: 
+      pr: https://github.com/canonical/haproxy-operator/pull/149
+      related_doc: 
+      related_issue: 
     internal: false
     highlight: false

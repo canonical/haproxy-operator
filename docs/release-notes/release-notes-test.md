@@ -12,6 +12,12 @@ and "Main bug fixes", using past tense to describe each of the items
 (for instance, "Added support for X relation").
 -->
 
+Main features:
+
+
+Main bug fixes:
+
+
 See our [Release policy and schedule](docs/release-notes/landing-page.md).
 
 ## Requirements and compatibility
@@ -44,6 +50,8 @@ The table below shows the required or supported versions of the software necessa
 Use this section to highlight major and minor features that were added in this release.
 The subsection below shows the pattern for each feature. Include links to the relevant PR or commit.
 -->
+
+The following major and minor features were added in this release.
 
 ### Allow customization to configure port for HTTP check
 Added `check-port` attribute to the requirer databag model, allowing users to customize the port used for `http-check`.
@@ -118,6 +126,8 @@ Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/98)
 
 
+
+
 ## Bug fixes
 <!--
 Add a bulleted list of bug fixes here, with links to the relevant PR/commit.
@@ -141,6 +151,10 @@ Include links to the relevant PR or commit.
 If there are no breaking changes, keep the section and write "No breaking changes".
 -->
 
+The following backwards-incompatible changes are included in this release.
+
+
+
 ## Deprecated
 
 <!--
@@ -148,6 +162,10 @@ Use this section to highlight any deprecated features in this release.
 Include links to the relevant PR or commit.
 If there are no deprecated features, keep the section and write "No deprecated features".
 -->
+
+The following features have been deprecated.
+
+
 
 ## Known issues
 <!--
@@ -162,24 +180,8 @@ If there are no known issues, keep the section and write "No known issues".
 <!--
 List of contributors based on PRs/commits. Remove this section if there are no contributors in this release.
 -->
-Thanhphan1147,
-erinecon,
-Thanhphan1147,
-Thanhphan1147,
-Thanhphan1147,
-Thanhphan1147,
-swetha1654,
-Thanhphan1147,
-Thanhphan1147,
-Thanhphan1147,
-Thanhphan1147,
-Thanhphan1147,
-Thanhphan1147,
-Thanhphan1147,
-Thanhphan1147,
-Thanhphan1147,
-Thanhphan1147,
-Thanhphan1147,
 
 
 
+
+[Thanhphan1147](https://github.com/Thanhphan1147), [erinecon](https://github.com/erinecon), [swetha1654](https://github.com/swetha1654), [arturo-seijas](https://github.com/arturo-seijas)
