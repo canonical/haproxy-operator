@@ -768,7 +768,12 @@ class HaproxyRouteProvider(Object):
         requirer_units_data: list[RequirerUnitData] = []
 
         for unit in relation.units:
-            databag = relation.data[unit]
+            databag = relation.data.get(unit)
+            if not databag:
+                logger.error(
+                    "Requirer unit data does not exist even though the unit is still present."
+                )
+                continue
             try:
                 data = cast(RequirerUnitData, RequirerUnitData.load(databag))
                 requirer_units_data.append(data)
