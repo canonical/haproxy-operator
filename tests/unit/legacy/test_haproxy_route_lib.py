@@ -205,6 +205,7 @@ def test_load_legacy_requirer_application_data(mock_relation_data):
 
     assert data.service == "test-service"
     assert data.ports == [8080]
+    assert data.protocol == "http"  # the default value
     assert data.hosts == [IPv4Address("10.0.0.1"), IPv4Address("10.0.0.2")]
     assert data.paths == ["/api"]
     assert data.hostname == "api.haproxy.internal"
