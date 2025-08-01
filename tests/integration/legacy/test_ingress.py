@@ -9,9 +9,10 @@ import pytest
 from juju.application import Application
 from pytest_operator.plugin import OpsTest
 from requests import Session
+from requests_toolbelt.adapters.host_header_ssl import HostHeaderSSLAdapter
 
 from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG, get_unit_ip_address
-from .helper import DNSResolverHTTPSAdapter, get_ingress_url_for_application
+from .helper import get_ingress_url_for_application
 
 
 @pytest.mark.abort_on_fail
@@ -26,6 +27,7 @@ async def test_ingress_integration(
     """
     application = configured_application_with_tls
     unit_ip_address = await get_unit_ip_address(application)
+
     await application.model.add_relation(
         f"{application.name}:ingress", f"{any_charm_ingress_requirer.name}:ingress"
     )
@@ -39,12 +41,16 @@ async def test_ingress_integration(
     assert ingress_url.netloc == TEST_EXTERNAL_HOSTNAME_CONFIG
     assert ingress_url.path == f"/{application.model.name}-{any_charm_ingress_requirer.name}/"
 
-    session = Session()
-    session.mount("https://", DNSResolverHTTPSAdapter(ingress_url.netloc, str(unit_ip_address)))
-
-    requirer_url = f"http://{str(unit_ip_address)}/{ingress_url.path}ok"
+    ip_str = str(unit_ip_address)
     if isinstance(unit_ip_address, ipaddress.IPv6Address):
-        requirer_url = f"http://[{str(unit_ip_address)}]/{ingress_url.path}ok"
+        ip_str = f"[{ip_str}]"
+
+    # Mount adapter for HTTPS requests to the IP address
+    session = Session()
+    session.mount(f"https://{ip_str}", HostHeaderSSLAdapter())
+
+    requirer_url = f"http://{ip_str}/{ingress_url.path}ok"
+
     response = session.get(
         requirer_url,
         headers={"Host": ingress_url.netloc},

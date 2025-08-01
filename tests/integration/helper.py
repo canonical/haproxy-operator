@@ -10,7 +10,7 @@ from urllib.parse import ParseResult, urlparse
 
 import jubilant
 import yaml
-from requests.adapters import DEFAULT_POOLBLOCK, DEFAULT_POOLSIZE, DEFAULT_RETRIES, HTTPAdapter
+from requests.adapters import HTTPAdapter
 
 
 class DNSResolverHTTPSAdapter(HTTPAdapter):
@@ -29,12 +29,7 @@ class DNSResolverHTTPSAdapter(HTTPAdapter):
         """
         self.hostname = hostname
         self.ip = ip
-        super().__init__(
-            pool_connections=DEFAULT_POOLSIZE,
-            pool_maxsize=DEFAULT_POOLSIZE,
-            max_retries=DEFAULT_RETRIES,
-            pool_block=DEFAULT_POOLBLOCK,
-        )
+        super().__init__()
 
     # Ignore pylint rule as this is the parent method signature
     def send(
