@@ -31,21 +31,25 @@ class SomeCharm(CharmBase):
     # There are 2 ways you can use the requirer implementation:
     # 1. To initialize the requirer with parameters:
     self.haproxy_route_requirer = HaproxyRouteRequirer(self,
-        address=<required>,
-        port=<required>,
+        relation_name=<required>,
+        service=<optional>,
+        ports=<optional>,
+        protocol=<optional>,
+        hosts=<optional>,
         paths=<optional>,
         hostname=<optional>,
         additional_hostnames=<optional>,
-        path_rewrite_expressions=<optional>, list of path rewrite expressions,
-        query_rewrite_expressions=<optional>, list of query rewrite expressions,
-        header_rewrites=<optional>, map of {<header_name>: <list of rewrite_expressions>,
         check_interval=<optional>,
         check_rise=<optional>,
         check_fall=<optional>,
-        check_paths=<optional>,
+        check_path=<optional>,
+        check_port=<optional>,
+        path_rewrite_expressions=<optional>, list of path rewrite expressions,
+        query_rewrite_expressions=<optional>, list of query rewrite expressions,
+        header_rewrite_expressions=<optional>, list of (header_name, rewrite_expression),
         load_balancing_algorithm=<optional>, defaults to "leastconn",
         load_balancing_cookie=<optional>, only used when load_balancing_algorithm is cookie
-        rate_limit_connections_per_minutes=<optional>,
+        rate_limit_connections_per_minute=<optional>,
         rate_limit_policy=<optional>,
         upload_limit=<optional>,
         download_limit=<optional>,
@@ -57,6 +61,7 @@ class SomeCharm(CharmBase):
         connect_timeout=<optional>,
         queue_timeout=<optional>,
         server_maxconn=<optional>,
+        unit_address=<optional>,
     )
 
     # 2.To initialize the requirer with no parameters, i.e
@@ -100,7 +105,7 @@ Note that this interface supports relating to multiple endpoints.
 
 Then, to initialise the library:
 ```python
-from charms.haproxy.v1.haproxy_route import HaproxyRouteRequirer
+from charms.haproxy.v1.haproxy_route import HaproxyRouteProvider
 
 class SomeCharm(CharmBase):
     self.haproxy_route_provider = HaproxyRouteProvider(self)
@@ -116,7 +121,7 @@ class SomeCharm(CharmBase):
 import json
 import logging
 from enum import Enum
-from typing import Annotated, Any, MutableMapping, Optional, cast
+from typing import Annotated, Any, Literal, MutableMapping, Optional, cast
 
 from ops import CharmBase, ModelError, RelationBrokenEvent
 from ops.charm import CharmEvents
@@ -144,7 +149,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 2
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -467,6 +472,7 @@ class RequirerApplicationData(_DatabagModel):
     Attributes:
         service: Name of the service requesting HAProxy routing.
         ports: List of port numbers on which the service is listening.
+        protocol: The protocol that the service speaks.
         hosts: List of backend server addresses.
         paths: List of URL paths to route to this service. Defaults to an empty list.
         hostname: Optional: The hostname of this service.
@@ -486,6 +492,10 @@ class RequirerApplicationData(_DatabagModel):
 
     service: VALIDSTR = Field(description="The name of the service.")
     ports: list[int] = Field(description="The list of ports listening for this service.")
+    protocol: Optional[Literal["http", "https"]] = Field(
+        description="The protocol that the service speaks.",
+        default="http",
+    )
     hosts: list[IPvAnyAddress] = Field(
         description="The list of backend server addresses. Currently only support IP addresses.",
         default=[],
@@ -848,6 +858,7 @@ class HaproxyRouteRequirer(Object):
         relation_name: str,
         service: Optional[str] = None,
         ports: Optional[list[int]] = None,
+        protocol: Literal["http", "https"] = "http",
         hosts: Optional[list[str]] = None,
         paths: Optional[list[str]] = None,
         hostname: Optional[str] = None,
@@ -883,6 +894,7 @@ class HaproxyRouteRequirer(Object):
             relation_name: The name of the relation to bind to.
             service: The name of the service to route traffic to.
             ports: List of ports the service is listening on.
+            protocol: The protocol that the service speaks.
             hosts: List of backend server addresses. Currently only support IP addresses.
             paths: List of URL paths to route to this service.
             hostname: Hostname of this service.
@@ -923,6 +935,7 @@ class HaproxyRouteRequirer(Object):
         self._application_data = self._generate_application_data(
             service,
             ports,
+            protocol,
             hosts,
             paths,
             hostname,
@@ -976,6 +989,7 @@ class HaproxyRouteRequirer(Object):
         self,
         service: str,
         ports: list[int],
+        protocol: Literal["http", "https"] = "http",
         hosts: Optional[list[str]] = None,
         paths: Optional[list[str]] = None,
         hostname: Optional[str] = None,
@@ -1009,6 +1023,7 @@ class HaproxyRouteRequirer(Object):
         Args:
             service: The name of the service to route traffic to.
             ports: List of ports the service is listening on.
+            protocol: The protocol that the serive speaks, deafults to "http".
             hosts: List of backend server addresses. Currently only support IP addresses.
             paths: List of URL paths to route to this service.
             hostname: Hostname of this service.
@@ -1042,6 +1057,7 @@ class HaproxyRouteRequirer(Object):
         self._application_data = self._generate_application_data(
             service,
             ports,
+            protocol,
             hosts,
             paths,
             hostname,
@@ -1076,6 +1092,7 @@ class HaproxyRouteRequirer(Object):
         self,
         service: Optional[str] = None,
         ports: Optional[list[int]] = None,
+        protocol: Literal["http", "https"] = "http",
         hosts: Optional[list[str]] = None,
         paths: Optional[list[str]] = None,
         hostname: Optional[str] = None,
@@ -1108,6 +1125,7 @@ class HaproxyRouteRequirer(Object):
         Args:
             service: The name of the service to route traffic to.
             ports: List of ports the service is listening on.
+            protocol: The protocol that the service speaks.
             hosts: List of backend server addresses. Currently only support IP addresses.
             paths: List of URL paths to route to this service.
             hostname: Hostname of this service.
@@ -1160,6 +1178,7 @@ class HaproxyRouteRequirer(Object):
         application_data: dict[str, Any] = {
             "service": service,
             "ports": ports,
+            "protocol": protocol,
             "hosts": hosts,
             "paths": paths,
             "hostname": hostname,

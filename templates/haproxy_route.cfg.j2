@@ -31,9 +31,9 @@ peers haproxy_peers
 {% for backend in backends %}
 backend {{ backend.backend_name }}
     balance {{ backend.load_balancing_configuration }}
-    timeout server {{ backend.application_data.timeout.server }}
-    timeout connect {{ backend.application_data.timeout.connect }}
-    timeout queue {{ backend.application_data.timeout.queue }}
+    timeout server {{ backend.application_data.timeout.server }}s
+    timeout connect {{ backend.application_data.timeout.connect }}s
+    timeout queue {{ backend.application_data.timeout.queue }}s
 
     option httpchk {% if backend.application_data.check.path %}GET {{ backend.application_data.check.path }}{% endif +%}
 {% if backend.application_data.check.port %}
