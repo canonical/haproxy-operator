@@ -93,6 +93,18 @@ Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/150)
 
 
+### Refactored source code and tests
+Several changes to the source code, integration tests, and unit tests.
+The reconcile function was broken into smaller modules, mode validation is
+now performed in a state in the charm class, some tests were migrated to jubilant,
+and other tests were moved to different directories.
+
+<Add more context and information about the entry>
+
+Relevant links:
+* [PR](https://github.com/canonical/haproxy-operator/pull/158)
+
+
 ### Added a new relation
 Added the `ingress-per-unit` relation to support reaching each unit separately for a Vault deployed behind an ingress.
 <Add more context and information about the entry>
@@ -108,6 +120,16 @@ The `subdomain` attribute has been replaced with the `hostname` and `additional_
 
 Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/152)
+
+
+### Added new field to the requirer application databag
+The requirer application databag now has a "protocol" field to
+support HTTPS supstream servers.
+
+<Add more context and information about the entry>
+
+Relevant links:
+* [PR](https://github.com/canonical/haproxy-operator/pull/164)
 
 
 ### Added first scenario test
@@ -138,6 +160,7 @@ Add a bulleted list of bug fixes here, with links to the relevant PR/commit.
 * Disabled sending host headers in `httpchk` so the charm doesn't refuse to proxy incoming requests ([PR](https://github.com/canonical/haproxy-operator/pull/111)).
 * Added checks before reloading the HAProxy service and set the charm to waiting if the validation fails ([PR](https://github.com/canonical/haproxy-operator/pull/122)).
 * Added a new dependency to fix the linting step ([PR](https://github.com/canonical/haproxy-operator/pull/105)).
+* Added "s" suffix to timeout entries ([PR](https://github.com/canonical/haproxy-operator/pull/162)).
 * Fixed Jinja2 handling of newlines to prevent invalid configuration generation ([PR](https://github.com/canonical/haproxy-operator/pull/139)).
 * Mitigated bug in Terraform provider by setting subordinate charm units to `1` ([PR](https://github.com/canonical/haproxy-operator/pull/135)).
 * Fixed an ambiguous endpoint in an integration test ([PR](https://github.com/canonical/haproxy-operator/pull/129)).
@@ -181,7 +204,4 @@ If there are no known issues, keep the section and write "No known issues".
 List of contributors based on PRs/commits. Remove this section if there are no contributors in this release.
 -->
 
-
-
-
-[Thanhphan1147](https://github.com/Thanhphan1147), [erinecon](https://github.com/erinecon), [swetha1654](https://github.com/swetha1654), [arturo-seijas](https://github.com/arturo-seijas)
+[yhaliaw](https://github.com/yhaliaw), [Thanhphan1147](https://github.com/Thanhphan1147), [erinecon](https://github.com/erinecon), [swetha1654](https://github.com/swetha1654), [dimaqq](https://github.com/dimaqq), [arturo-seijas](https://github.com/arturo-seijas)

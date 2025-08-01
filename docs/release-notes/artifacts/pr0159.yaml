@@ -3,11 +3,12 @@
 schema_version: 1
 changes:
   - title: Updated documentation
-    author: erinecon
+    author: yhaliaw
     type: minor
-    description: Added Contents section to documentation overview page.
+    description: |
+      Several updates to the documentation to fix errors raised by Vale.
     urls: 
-      pr: https://github.com/canonical/haproxy-operator/pull/137
+      pr: https://github.com/canonical/haproxy-operator/pull/159
       related_doc: 
       related_issue: 
     visibility: hidden

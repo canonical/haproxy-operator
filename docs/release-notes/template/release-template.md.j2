@@ -160,12 +160,12 @@ If there are no known issues, keep the section and write "No known issues".
 <!--
 List of contributors based on PRs/commits. Remove this section if there are no contributors in this release.
 -->
-{% set authors_in_list = [] -%}
-{% for feat in changes -%}
-{% set author_value = '['+feat.author+'](https://github.com/'+feat.author+')' -%}
-{% if author_value not in authors_in_list -%}
+{%- set authors_in_list = [] -%}
+{% for feat in changes %}
+{%- set author_value = '['+feat.author+'](https://github.com/'+feat.author+')' -%}
+{%- if author_value not in authors_in_list -%}
 {{ authors_in_list.append(author_value) or "" }}
-{% endif -%}
-{% endfor -%}
+{%- endif -%}
+{% endfor %}
 
 {{ authors_in_list|join(', ') }}
