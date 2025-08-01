@@ -1,7 +1,7 @@
 # --- Release notes artifact ----
 
 schema_version: 1
-change:
+changes:
   - title: Added first scenario test
     author: Thanhphan1147
     type: major
@@ -10,5 +10,5 @@ change:
       pr: https://github.com/canonical/haproxy-operator/pull/108
       related_doc: 
       related_issue: 
-    internal: true
+    visibility: internal
     highlight: false

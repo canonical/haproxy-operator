@@ -54,10 +54,6 @@ def main():
     
     print(f"Found {len(artifact_files)} artifact(s) to process.")
 
-    for file in artifact_files:
-        data = load_yaml(file)
-        print(data.get('change')[0].get('urls').get('pr'))
-
     # add common file to list of files
     artifact_files.append(common_file)
 

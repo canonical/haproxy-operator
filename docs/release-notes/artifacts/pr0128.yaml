@@ -1,7 +1,7 @@
 # --- Release notes artifact ----
 
 schema_version: 1
-change:
+changes:
   - title: Added missing new lines in haproxy-route j2 template and added missing `unit_address` in `provide_haproxy_route_requirements` helper method
     author: Thanhphan1147
     type: bugfix
@@ -10,5 +10,5 @@ change:
       pr: https://github.com/canonical/haproxy-operator/pull/128
       related_doc: 
       related_issue: 
-    internal: false
+    visibility: public
     highlight: false

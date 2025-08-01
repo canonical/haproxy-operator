@@ -1,7 +1,7 @@
 # --- Release notes artifact ----
 
 schema_version: 1
-change:
+changes:
   - title: Added checks before reloading the HAProxy service and set the charm to waiting if the validation fails
     author: Thanhphan1147
     type: bugfix
@@ -10,5 +10,5 @@ change:
       pr: https://github.com/canonical/haproxy-operator/pull/122
       related_doc: 
       related_issue: https://github.com/canonical/haproxy-operator/issues/69
-    internal: false
+    visibility: public
     highlight: false

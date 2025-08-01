@@ -1,7 +1,7 @@
 # --- Release notes artifact ----
 
 schema_version: 1
-change:
+changes:
   - title: Added a new dependency to fix the linting step
     author: arturo-seijas
     type: bugfix
@@ -10,5 +10,5 @@ change:
       pr: https://github.com/canonical/haproxy-operator/pull/105
       related_doc: 
       related_issue: 
-    internal: false
+    visibility: public
     highlight: false

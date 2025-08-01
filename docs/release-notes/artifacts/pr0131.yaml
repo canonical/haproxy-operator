@@ -1,7 +1,7 @@
 # --- Release notes artifact ----
 
 schema_version: 1
-change:
+changes:
   - title: Updated integration tests
     author: Thanhphan1147
     type: minor
@@ -10,5 +10,5 @@ change:
       pr: https://github.com/canonical/haproxy-operator/pull/131
       related_doc: 
       related_issue: 
-    internal: false
+    visibility: public
     highlight: false

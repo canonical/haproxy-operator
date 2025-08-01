@@ -1,7 +1,7 @@
 # --- Release notes artifact ----
 
 schema_version: 1
-change:
+changes:
   - title: ""
     author: ""
     type: ""
@@ -10,6 +10,5 @@ change:
       pr: ""
       related_doc: ""
       related_issue: ""
-    internal: false
+    visibility: public
     highlight: false
-

@@ -1,7 +1,7 @@
 # --- Release notes artifact ----
 
 schema_version: 1
-change:
+changes:
   - title: Disabled sending host headers in `httpchk` so the charm doesn't refuse to proxy incoming requests
     author: Thanhphan1147
     type: bugfix
@@ -10,5 +10,5 @@ change:
       pr: https://github.com/canonical/haproxy-operator/pull/111
       related_doc: 
       related_issue: 
-    internal: false
+    visibility: public
     highlight: false

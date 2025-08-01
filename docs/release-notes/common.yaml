@@ -2,3 +2,4 @@
 
 charm_name: HAProxy
 release_condition: 2.8/stable
+show_internal: true

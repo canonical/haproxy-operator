@@ -1,7 +1,7 @@
 # --- Release notes artifact ----
 
 schema_version: 1
-change:
+changes:
   - title: Pinned the HAProxy version and prevented automatic updates
     author: Thanhphan1147
     type: bugfix
@@ -10,5 +10,5 @@ change:
       pr: https://github.com/canonical/haproxy-operator/pull/136
       related_doc: 
       related_issue: 
-    internal: false
+    visibility: public
     highlight: false

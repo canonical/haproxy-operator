@@ -1,7 +1,7 @@
 # --- Release notes artifact ----
 
 schema_version: 1
-change:
+changes:
   - title: Added terraform charm and product module
     author: Thanhphan1147
     type: major
@@ -10,5 +10,5 @@ change:
       pr: https://github.com/canonical/haproxy-operator/pull/98
       related_doc: 
       related_issue: 
-    internal: false
+    visibility: public
     highlight: false
