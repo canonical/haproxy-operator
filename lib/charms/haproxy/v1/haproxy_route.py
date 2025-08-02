@@ -31,37 +31,31 @@ class SomeCharm(CharmBase):
     # There are 2 ways you can use the requirer implementation:
     # 1. To initialize the requirer with parameters:
     self.haproxy_route_requirer = HaproxyRouteRequirer(self,
-        relation_name=<required>,
-        service=<optional>,
-        ports=<optional>,
-        protocol=<optional>,
-        hosts=<optional>,
+        address=<required>,
+        port=<required>,
         paths=<optional>,
         hostname=<optional>,
         additional_hostnames=<optional>,
+        path_rewrite_expressions=<optional>, list of path rewrite expressions,
+        query_rewrite_expressions=<optional>, list of query rewrite expressions,
+        header_rewrites=<optional>, map of {<header_name>: <list of rewrite_expressions>,
         check_interval=<optional>,
         check_rise=<optional>,
         check_fall=<optional>,
-        check_path=<optional>,
-        check_port=<optional>,
-        path_rewrite_expressions=<optional>, list of path rewrite expressions,
-        query_rewrite_expressions=<optional>, list of query rewrite expressions,
-        header_rewrite_expressions=<optional>, list of (header_name, rewrite_expression),
+        check_paths=<optional>,
         load_balancing_algorithm=<optional>, defaults to "leastconn",
         load_balancing_cookie=<optional>, only used when load_balancing_algorithm is cookie
-        rate_limit_connections_per_minute=<optional>,
+        rate_limit_connections_per_minutes=<optional>,
         rate_limit_policy=<optional>,
         upload_limit=<optional>,
         download_limit=<optional>,
         retry_count=<optional>,
-        retry_interval=<optional>,
         retry_redispatch=<optional>,
         deny_paths=<optional>,
         server_timeout=<optional>,
         connect_timeout=<optional>,
         queue_timeout=<optional>,
         server_maxconn=<optional>,
-        unit_address=<optional>,
     )
 
     # 2.To initialize the requirer with no parameters, i.e
@@ -105,7 +99,7 @@ Note that this interface supports relating to multiple endpoints.
 
 Then, to initialise the library:
 ```python
-from charms.haproxy.v1.haproxy_route import HaproxyRouteProvider
+from charms.haproxy.v1.haproxy_route import HaproxyRouteRequirer
 
 class SomeCharm(CharmBase):
     self.haproxy_route_provider = HaproxyRouteProvider(self)
@@ -121,7 +115,7 @@ class SomeCharm(CharmBase):
 import json
 import logging
 from enum import Enum
-from typing import Annotated, Any, Literal, MutableMapping, Optional, cast
+from typing import Annotated, Any, MutableMapping, Optional, cast
 
 from ops import CharmBase, ModelError, RelationBrokenEvent
 from ops.charm import CharmEvents
@@ -149,7 +143,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 3
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -401,12 +395,10 @@ class Retry(BaseModel):
 
     Attributes:
         count: How many times should a request retry.
-        interval: Interval (in seconds) between retries.
         redispatch: Whether to redispatch failed requests to another server.
     """
 
     count: int = Field(description="How many times should a request retry.")
-    interval: int = Field(description="Interval (in seconds) between retries.")
     redispatch: bool = Field(
         description="Whether to redispatch failed requests to another server.", default=False
     )
@@ -472,7 +464,6 @@ class RequirerApplicationData(_DatabagModel):
     Attributes:
         service: Name of the service requesting HAProxy routing.
         ports: List of port numbers on which the service is listening.
-        protocol: The protocol that the service speaks.
         hosts: List of backend server addresses.
         paths: List of URL paths to route to this service. Defaults to an empty list.
         hostname: Optional: The hostname of this service.
@@ -492,10 +483,6 @@ class RequirerApplicationData(_DatabagModel):
 
     service: VALIDSTR = Field(description="The name of the service.")
     ports: list[int] = Field(description="The list of ports listening for this service.")
-    protocol: Optional[Literal["http", "https"]] = Field(
-        description="The protocol that the service speaks.",
-        default="http",
-    )
     hosts: list[IPvAnyAddress] = Field(
         description="The list of backend server addresses. Currently only support IP addresses.",
         default=[],
@@ -781,7 +768,12 @@ class HaproxyRouteProvider(Object):
         requirer_units_data: list[RequirerUnitData] = []
 
         for unit in relation.units:
-            databag = relation.data[unit]
+            databag = relation.data.get(unit)
+            if not databag:
+                logger.error(
+                    "Requirer unit data does not exist even though the unit is still present."
+                )
+                continue
             try:
                 data = cast(RequirerUnitData, RequirerUnitData.load(databag))
                 requirer_units_data.append(data)
@@ -858,7 +850,6 @@ class HaproxyRouteRequirer(Object):
         relation_name: str,
         service: Optional[str] = None,
         ports: Optional[list[int]] = None,
-        protocol: Literal["http", "https"] = "http",
         hosts: Optional[list[str]] = None,
         paths: Optional[list[str]] = None,
         hostname: Optional[str] = None,
@@ -878,7 +869,6 @@ class HaproxyRouteRequirer(Object):
         upload_limit: Optional[int] = None,
         download_limit: Optional[int] = None,
         retry_count: Optional[int] = None,
-        retry_interval: Optional[int] = None,
         retry_redispatch: bool = False,
         deny_paths: Optional[list[str]] = None,
         server_timeout: int = 60,
@@ -894,7 +884,6 @@ class HaproxyRouteRequirer(Object):
             relation_name: The name of the relation to bind to.
             service: The name of the service to route traffic to.
             ports: List of ports the service is listening on.
-            protocol: The protocol that the service speaks.
             hosts: List of backend server addresses. Currently only support IP addresses.
             paths: List of URL paths to route to this service.
             hostname: Hostname of this service.
@@ -915,7 +904,6 @@ class HaproxyRouteRequirer(Object):
             upload_limit: Maximum upload bandwidth in bytes per second.
             download_limit: Maximum download bandwidth in bytes per second.
             retry_count: Number of times to retry failed requests.
-            retry_interval: Interval between retries in seconds.
             retry_redispatch: Whether to redispatch failed requests to another server.
             deny_paths: List of paths that should not be routed to the backend.
             server_timeout: Timeout for requests from haproxy to backend servers in seconds.
@@ -935,7 +923,6 @@ class HaproxyRouteRequirer(Object):
         self._application_data = self._generate_application_data(
             service,
             ports,
-            protocol,
             hosts,
             paths,
             hostname,
@@ -955,7 +942,6 @@ class HaproxyRouteRequirer(Object):
             upload_limit,
             download_limit,
             retry_count,
-            retry_interval,
             retry_redispatch,
             deny_paths,
             server_timeout,
@@ -989,7 +975,6 @@ class HaproxyRouteRequirer(Object):
         self,
         service: str,
         ports: list[int],
-        protocol: Literal["http", "https"] = "http",
         hosts: Optional[list[str]] = None,
         paths: Optional[list[str]] = None,
         hostname: Optional[str] = None,
@@ -1009,7 +994,6 @@ class HaproxyRouteRequirer(Object):
         upload_limit: Optional[int] = None,
         download_limit: Optional[int] = None,
         retry_count: Optional[int] = None,
-        retry_interval: Optional[int] = None,
         retry_redispatch: bool = False,
         deny_paths: Optional[list[str]] = None,
         server_timeout: int = 60,
@@ -1023,7 +1007,6 @@ class HaproxyRouteRequirer(Object):
         Args:
             service: The name of the service to route traffic to.
             ports: List of ports the service is listening on.
-            protocol: The protocol that the serive speaks, deafults to "http".
             hosts: List of backend server addresses. Currently only support IP addresses.
             paths: List of URL paths to route to this service.
             hostname: Hostname of this service.
@@ -1044,7 +1027,6 @@ class HaproxyRouteRequirer(Object):
             upload_limit: Maximum upload bandwidth in bytes per second.
             download_limit: Maximum download bandwidth in bytes per second.
             retry_count: Number of times to retry failed requests.
-            retry_interval: Interval between retries in seconds.
             retry_redispatch: Whether to redispatch failed requests to another server.
             deny_paths: List of paths that should not be routed to the backend.
             server_timeout: Timeout for requests from haproxy to backend servers in seconds.
@@ -1057,7 +1039,6 @@ class HaproxyRouteRequirer(Object):
         self._application_data = self._generate_application_data(
             service,
             ports,
-            protocol,
             hosts,
             paths,
             hostname,
@@ -1077,7 +1058,6 @@ class HaproxyRouteRequirer(Object):
             upload_limit,
             download_limit,
             retry_count,
-            retry_interval,
             retry_redispatch,
             deny_paths,
             server_timeout,
@@ -1092,7 +1072,6 @@ class HaproxyRouteRequirer(Object):
         self,
         service: Optional[str] = None,
         ports: Optional[list[int]] = None,
-        protocol: Literal["http", "https"] = "http",
         hosts: Optional[list[str]] = None,
         paths: Optional[list[str]] = None,
         hostname: Optional[str] = None,
@@ -1112,7 +1091,6 @@ class HaproxyRouteRequirer(Object):
         upload_limit: Optional[int] = None,
         download_limit: Optional[int] = None,
         retry_count: Optional[int] = None,
-        retry_interval: Optional[int] = None,
         retry_redispatch: bool = False,
         deny_paths: Optional[list[str]] = None,
         server_timeout: int = 60,
@@ -1125,7 +1103,6 @@ class HaproxyRouteRequirer(Object):
         Args:
             service: The name of the service to route traffic to.
             ports: List of ports the service is listening on.
-            protocol: The protocol that the service speaks.
             hosts: List of backend server addresses. Currently only support IP addresses.
             paths: List of URL paths to route to this service.
             hostname: Hostname of this service.
@@ -1146,7 +1123,6 @@ class HaproxyRouteRequirer(Object):
             upload_limit: Maximum upload bandwidth in bytes per second.
             download_limit: Maximum download bandwidth in bytes per second.
             retry_count: Number of times to retry failed requests.
-            retry_interval: Interval between retries in seconds.
             retry_redispatch: Whether to redispatch failed requests to another server.
             deny_paths: List of paths that should not be routed to the backend.
             server_timeout: Timeout for requests from haproxy to backend servers in seconds.
@@ -1178,7 +1154,6 @@ class HaproxyRouteRequirer(Object):
         application_data: dict[str, Any] = {
             "service": service,
             "ports": ports,
-            "protocol": protocol,
             "hosts": hosts,
             "paths": paths,
             "hostname": hostname,
@@ -1215,9 +1190,7 @@ class HaproxyRouteRequirer(Object):
         ):
             application_data["rate_limit"] = rate_limit
 
-        if retry := self._generate_retry_configuration(
-            retry_count, retry_interval, retry_redispatch
-        ):
+        if retry := self._generate_retry_configuration(retry_count, retry_redispatch):
             application_data["retry"] = retry
         return application_data
 
@@ -1309,23 +1282,21 @@ class HaproxyRouteRequirer(Object):
         return rate_limit_configuration
 
     def _generate_retry_configuration(
-        self, count: Optional[int], interval: Optional[int], redispatch: bool
+        self, count: Optional[int], redispatch: bool
     ) -> dict[str, Any]:
         """Generate retry configuration.
 
         Args:
             count: Number of times to retry failed requests.
-            interval: Interval between retries in seconds.
             redispatch: Whether to redispatch failed requests to another server.
 
         Returns:
             dict[str, Any]: Retry configuration dictionary, or empty dict if retry not configured.
         """
         retry_configuration = {}
-        if count and interval:
+        if count:
             retry_configuration = {
                 "count": count,
-                "interval": interval,
                 "redispatch": redispatch,
             }
         return retry_configuration
