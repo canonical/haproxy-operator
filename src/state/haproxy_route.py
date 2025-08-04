@@ -135,6 +135,19 @@ class HAProxyRouteBackend:
         return str(self.application_data.load_balancing.algorithm.value)
 
     @property
+    def consistent_hashing(self) -> bool:
+        """Indicate if consistent hashing should be applied for this backend.
+
+        Returns:
+            bool: Whether consistent hashing should be applied.
+        """
+        return (
+            self.application_data.load_balancing.consistent_hashing
+            and self.application_data.load_balancing.algorithm
+            in [LoadBalancingAlgorithm.COOKIE, LoadBalancingAlgorithm.SRCIP]
+        )
+
+    @property
     def rewrite_configurations(self) -> list[str]:
         """Build the rewrite configurations.
 
