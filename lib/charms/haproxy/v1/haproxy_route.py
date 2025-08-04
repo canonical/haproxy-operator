@@ -304,17 +304,44 @@ class ServerHealthCheck(BaseModel):
         port: Customize port value for http-check.
     """
 
-    interval: int = Field(
-        description="The interval (in seconds) between health checks.", default=60
+    interval: Optional[int] = Field(
+        description="The interval (in seconds) between health checks.", default=None
     )
-    rise: int = Field(
-        description="How many successful health checks before server is considered up.", default=2
+    rise: Optional[int] = Field(
+        description="How many successful health checks before server is considered up.",
+        default=None,
     )
-    fall: int = Field(
-        description="How many failed health checks before server is considered down.", default=3
+    fall: Optional[int] = Field(
+        description="How many failed health checks before server is considered down.", default=None
     )
     path: Optional[VALIDSTR] = Field(description="The health check path.", default=None)
     port: Optional[int] = Field(description="The health check port.", default=None)
+
+    @model_validator(mode="after")
+    def check_all_required_fields_set(self) -> Self:
+        """Check that all required fields for health check are set.
+
+        Raises:
+            ValueError: When validation fails.
+
+        Returns:
+            The validated model.
+        """
+        nb_fields_set = sum(
+            bool(value is not None) for value in [self.interval, self.rise, self.fall]
+        )
+        if nb_fields_set != 0 or nb_fields_set != 3:
+            raise ValueError("All three of interval, rise and fall must be set.")
+        return self
+
+    @property
+    def is_health_check_configured(self) -> bool:
+        """Indicate if the backend has activated health checks.
+
+        Returns:
+            bool: Whether health check has been configured.
+        """
+        return sum(bool(value is not None) for value in [self.interval, self.rise, self.fall]) == 3
 
 
 # tarpit is not yet implemented
@@ -510,9 +537,9 @@ class RequirerApplicationData(_DatabagModel):
     rewrites: list[RewriteConfiguration] = Field(
         description="The list of path rewrite rules.", default=[]
     )
-    check: ServerHealthCheck = Field(
+    check: Optional[ServerHealthCheck] = Field(
         description="Configure health check for the service.",
-        default=ServerHealthCheck(),
+        default=None,
     )
     load_balancing: LoadBalancingConfiguration = Field(
         description="Configure loadbalancing.", default=LoadBalancingConfiguration()
