@@ -49,6 +49,17 @@ class HAProxyRouteServer:
     check: Optional[ServerHealthCheck]
     maxconn: Optional[int]
 
+    @property
+    def is_health_check_configured(self) -> bool:
+        """Indicate if health check is configured and should be rendered.
+
+        Returns:
+            bool: When health check is configured and should be rendered.
+        """
+        return self.check and (
+            bool(self.check.interval) == bool(self.check.rise) == bool(self.check.fall)
+        )
+
 
 @dataclass(frozen=True)
 class HAProxyRouteBackend:
