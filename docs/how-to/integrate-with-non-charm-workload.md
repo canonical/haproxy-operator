@@ -24,7 +24,7 @@ created machine 4
 
 Take note of the machine ID, in this example it's `4`.
 
-Next, we will install an apache server on the created juju unit:
+Next, we will install an `apache` server on the created juju unit:
 ```sh
 juju ssh 4 sudo apt install apache2
 ```
