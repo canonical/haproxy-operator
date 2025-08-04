@@ -58,7 +58,7 @@ class HAProxyRouteServer:
         Returns:
             bool: When health check is configured and should be rendered.
         """
-        return self.check and (
+        return self.check is not None and (
             bool(self.check.interval) == bool(self.check.rise) == bool(self.check.fall)
         )
 

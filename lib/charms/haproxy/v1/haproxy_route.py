@@ -326,7 +326,7 @@ class ServerHealthCheck(BaseModel):
         Returns:
             The validated model.
         """
-        if not (bool(self.interval) == bool(self.rise) == bool(self.fall)):
+        if not bool(self.interval) == bool(self.rise) == bool(self.fall):
             raise ValueError("All three of interval, rise and fall must be set.")
         return self
 

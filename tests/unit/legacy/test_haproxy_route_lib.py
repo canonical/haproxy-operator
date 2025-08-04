@@ -399,3 +399,17 @@ def test_prepare_unit_data_no_address(mock_requirer_charm: Harness):
     with pytest.raises(DataValidationError):
         # We want to specifically test this method.
         requirer._prepare_unit_data()  # pylint: disable=protected-access
+
+
+def test_requirer_application_data_incomplete_health_check():
+    """
+    arrange: Create a RequirerApplicationData model with incomplete health check configuration.
+    act: Validate the model.
+    assert: DataValidationError is raised.
+    """
+    with pytest.raises(ValidationError):
+        RequirerApplicationData(
+            service="test-service",
+            ports=[8080],
+            check=ServerHealthCheck(interval=60),
+        )
