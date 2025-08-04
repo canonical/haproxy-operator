@@ -58,7 +58,7 @@ juju config ingress-configurator hostname=pollen.internal
 ```
 
 ## Verify that the requirer charm is reachable through haproxy
-sing `juju status`, note down the IP address of the haproxy charm unit, in this example it is `10.207.217.234`.Then, verify that we can reach Pollen using `curl` 
+sing `juju status`, note down the IP address of the `haproxy` charm unit, in this example it is `10.207.217.234`.Then, verify that we can reach `pollen` using `curl` 
 ```sh
 curl https://pollen.internal -L --insecure --resolve pollen.internal:443:10.207.217.234
 Please use the pollinate client.  'sudo apt-get install pollinate' or download from: https://bazaar.launchpad.net/~pollinate/pollinate/trunk/view/head:/pollinate
