@@ -51,7 +51,7 @@ Machine  State    Address         Inst id        Base          AZ  Message
 4        started  10.207.217.155  juju-61cf18-4  ubuntu@24.04      Running
 ```
 
-Verify that the apache server is responding to requests:
+Verify that the `apache` server is responding to requests:
 ```sh
 curl 10.207.217.155 -I
 HTTP/1.1 200 OK
