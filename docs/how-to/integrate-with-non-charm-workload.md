@@ -29,7 +29,7 @@ Next, we will install an `apache` server on the created juju unit:
 juju ssh 4 sudo apt install apache2
 ```
 
-Get the IP address of the created unit using `juju status`. In this example, the unit IP address is `10.207.217.155`:
+Get the IP address of the created unit using `juju status --format=json | jq -r '.machines["4"].ip-addresses[0]'`. In this example, the unit IP address is `10.207.217.155`:
 ```sh
 Model    Controller  Cloud/Region         Version  SLA          Timestamp
 haproxy  lxd         localhost/localhost  3.6.8    unsupported  17:11:16+02:00
