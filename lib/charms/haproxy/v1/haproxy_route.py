@@ -148,7 +148,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 3
+LIBPATCH = 4
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -326,10 +326,7 @@ class ServerHealthCheck(BaseModel):
         Returns:
             The validated model.
         """
-        nb_fields_set = sum(
-            bool(value is not None) for value in [self.interval, self.rise, self.fall]
-        )
-        if nb_fields_set != 0 or nb_fields_set != 3:
+        if not (bool(self.interval) == bool(self.rise) == bool(self.fall)):
             raise ValueError("All three of interval, rise and fall must be set.")
         return self
 
