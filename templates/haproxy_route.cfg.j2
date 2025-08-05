@@ -57,10 +57,7 @@ backend {{ backend.backend_name }}
     http-request {{ rewrite_configuration }}
 {% endfor %}
 {% for server in backend.servers %}
-    server \
-        {{ server.server_name }} {{ server.address }}:{{ server.port }} \
-        check inter {{ server.check.interval }}s rise {{ server.check.rise }} fall {{ server.check.fall }} \
-        {% if server.protocol == "https" %} ssl ca-file @system-ca {% endif %}
+    server {{ server.server_name }} {{ server.address }}:{{ server.port }} check inter {{ server.check.interval }}s rise {{ server.check.rise }} fall {{ server.check.fall }} {% if server.protocol == "https" %} ssl ca-file @system-ca {% endif %}
 {% endfor %}
 
 {% endfor %}
