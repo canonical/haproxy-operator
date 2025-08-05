@@ -30,7 +30,7 @@ class SomeCharm(CharmBase):
 
     # There are 2 ways you can use the requirer implementation:
     # 1. To initialize the requirer with parameters:
-    self.haproxy_route_requirer = HaproxyRouteTcpRequirer(
+    self.haproxy_route_tcp_requirer = HaproxyRouteTcpRequirer(
         self,
         relation_name="haproxy-route-tcp"
         port=<optional>  # The name of the service to route traffic to.
@@ -66,26 +66,26 @@ class SomeCharm(CharmBase):
     )
 
     # 2.To initialize the requirer with no parameters, i.e
-    # self.haproxy_route_requirer = HaproxyRouteRequirer(self)
+    # self.haproxy_route_tcp_requirer = HaproxyRouteTcpRequirer(self)
     # This will simply initialize the requirer class and it won't perfom any action.
 
     # Afterwards regardless of how you initialized the requirer you can call the
     # provide_haproxy_route_requirements method anywhere in your charm to update the requirer data.
     # The method takes the same number of parameters as the requirer class.
-    # provide_haproxy_route_requirements(address=, port=, ...)
+    # provide_haproxy_route_tcp_requirements(address=, port=, ...)
 
     self.framework.observe(
         self.framework.on.config_changed, self._on_config_changed
     )
     self.framework.observe(
-        self.haproxy_route_requirer.on.ready, self._on_endpoints_ready
+        self.haproxy_route_tcp_requirer.on.ready, self._on_endpoints_ready
     )
     self.framework.observe(
-        self.haproxy_route_requirer.on.removed, self._on_endpoints_removed
+        self.haproxy_route_tcp_requirer.on.removed, self._on_endpoints_removed
     )
 
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
-        self.haproxy_route_requirer.provide_haproxy_route_requirements(...)
+        self.haproxy_route_tcp_requirer.provide_haproxy_route_tcp_requirements(...)
 
     def _on_endpoints_ready(self, _: EventBase) -> None:
         # Handle endpoints ready event
@@ -99,23 +99,23 @@ class SomeCharm(CharmBase):
 The provider charm should expose the interface as shown below:
 ```yaml
 provides:
-    haproxy-route:
-        interface: haproxy-route
+    haproxy-route-tcp:
+        interface: haproxy-route-tcp
 ```
 Note that this interface supports relating to multiple endpoints.
 
 Then, to initialise the library:
 ```python
-from charms.haproxy.v1.haproxy_route import HaproxyRouteProvider
+from charms.haproxy.v0.haproxy_route import HaproxyRouteTcpProvider
 
 class SomeCharm(CharmBase):
-    self.haproxy_route_provider = HaproxyRouteProvider(self)
+    self.haproxy_route_tcp_provider = HaproxyRouteTcpProvider(self)
     self.framework.observe(
-        self.haproxy_route_provider.on.data_available, self._on_haproxy_route_data_available
+        self.haproxy_route_tcp_provider.on.data_available, self._on_haproxy_route_data_available
     )
 
     def _on_haproxy_route_data_available(self, event: EventBase) -> None:
-        data = self.haproxy_route_provider.get_data(self.haproxy_route_provider.relations)
+        data = self.haproxy_route_tcp_provider.get_data(self.haproxy_route_tcp_provider.relations)
         ...
 """
 
