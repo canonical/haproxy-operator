@@ -1,4 +1,4 @@
-# pylint: disable=too-many-lines
+# pylint: disable=too-many-lines,duplicate-code
 """Haproxy-route interface library.
 
 ## Getting Started
@@ -7,22 +7,22 @@ To get started using the library, you just need to fetch the library using `char
 
 ```shell
 cd some-charm
-charmcraft fetch-lib charms.haproxy.v1.haproxy_route
+charmcraft fetch-lib charms.haproxy.v1.haproxy_route_tcp
 ```
 
 In the `metadata.yaml` of the charm, add the following:
 
 ```yaml
 requires:
-    backend:
-        interface: haproxy-route
+    backend-tcp:
+        interface: haproxy-route-tcp
         limit: 1
 ```
 
 Then, to initialise the library:
 
 ```python
-from charms.haproxy.v1.haproxy_route import HaproxyRouteRequirer
+from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpRequirer
 
 class SomeCharm(CharmBase):
   def __init__(self, *args):
@@ -30,39 +30,39 @@ class SomeCharm(CharmBase):
 
     # There are 2 ways you can use the requirer implementation:
     # 1. To initialize the requirer with parameters:
-    self.haproxy_route_requirer = HaproxyRouteRequirer(self,
-        relation_name=<required>,
-        service=<optional>,
-        ports=<optional>,
-        protocol=<optional>,
-        hosts=<optional>,
-        paths=<optional>,
-        hostname=<optional>,
-        additional_hostnames=<optional>,
-        check_interval=<optional>,
-        check_rise=<optional>,
-        check_fall=<optional>,
-        check_path=<optional>,
-        check_port=<optional>,
-        path_rewrite_expressions=<optional>, list of path rewrite expressions,
-        query_rewrite_expressions=<optional>, list of query rewrite expressions,
-        header_rewrite_expressions=<optional>, list of (header_name, rewrite_expression),
-        load_balancing_algorithm=<optional>, defaults to "leastconn",
-        load_balancing_cookie=<optional>, only used when load_balancing_algorithm is cookie
-        load_balancing_consistent_hashing=<optional>, to enable consistent hashing,
-            defaults to False,
-        rate_limit_connections_per_minute=<optional>,
-        rate_limit_policy=<optional>,
-        upload_limit=<optional>,
-        download_limit=<optional>,
-        retry_count=<optional>,
-        retry_redispatch=<optional>,
-        deny_paths=<optional>,
-        server_timeout=<optional>,
-        connect_timeout=<optional>,
-        queue_timeout=<optional>,
-        server_maxconn=<optional>,
-        unit_address=<optional>,
+    self.haproxy_route_requirer = HaproxyRouteTcpRequirer(
+        self,
+        relation_name="haproxy-route-tcp"
+        port=<optional>  # The name of the service to route traffic to.
+        backend_port=<optional>  # List of ports the service is listening on.
+        hosts=<optional>  # List of backend server addresses. Currently only support IP addresses.
+        sni=<optional>  # List of URL paths to route to this service.
+        check_interval=<optional>  # Interval between health checks in seconds.
+        check_rise=<optional>  # Number of successful health checks
+            before server is considered up.
+        check_fall=<optional>  # Number of failed health checks before server is considered down.
+        check_type=<optional>  # The path to use for server health checks.
+        check_send=<optional>  # The port to use for http-check.
+        check_expect=<optional>  # The port to use for http-check.
+        check_db_user=<optional>  # The port to use for http-check.
+        load_balancing_algorithm=<optional>  # Algorithm to use for load balancing.
+        load_balancing_consistent_hashing=<optional>  # Whether to use consistent hashing.
+        rate_limit_connections_per_minute=<optional>  # Maximum connections allowed per minute.
+        rate_limit_policy=<optional>  # Policy to apply when rate limit is reached.
+        upload_limit=<optional>  # Maximum upload bandwidth in bytes per second.
+        download_limit=<optional>  # Maximum download bandwidth in bytes per second.
+        retry_count=<optional>  # Number of times to retry failed requests.
+        retry_redispatch=<optional>  # Whether to redispatch failed requests to another server.
+        server_timeout=<optional>  # Timeout for requests from haproxy
+            to backend servers in seconds.
+        connect_timeout=<optional>  # Timeout for client requests to haproxy in seconds.
+        queue_timeout=<optional>  # Timeout for requests waiting in queue in seconds.
+        server_maxconn=<optional>  # Maximum connections per server.
+        ip_deny_list=<optional>  # List of source IP addresses to block.
+        enforce_tls=<optional>  # Whether to enforce TLS for all traffic coming to the backend.
+        tls_terminate=<optional>  # Whether to enable tls termination on the dedicated frontend.
+        unit_address=<optional>  # IP address of the unit
+            (if not provided, will use binding address).
     )
 
     # 2.To initialize the requirer with no parameters, i.e
@@ -122,7 +122,7 @@ class SomeCharm(CharmBase):
 import json
 import logging
 from enum import Enum
-from typing import Annotated, Any, Literal, MutableMapping, Optional, cast
+from typing import Annotated, Any, MutableMapping, Optional, cast
 
 from ops import CharmBase, ModelError, RelationBrokenEvent
 from ops.charm import CharmEvents
@@ -136,24 +136,23 @@ from pydantic import (
     Field,
     IPvAnyAddress,
     ValidationError,
-    field_validator,
     model_validator,
 )
 from pydantic.dataclasses import dataclass
 from typing_extensions import Self
 
 # The unique Charmhub library identifier, never change it
-LIBID = "08b6347482f6455486b5f5bb4dc4e6cf"
+LIBID = "b1b5c0a6f1b5481c9923efa042846681"
 
 # Increment this major API version when introducing breaking changes
-LIBAPI = 1
+LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 5
+LIBPATCH = 1
 
 logger = logging.getLogger(__name__)
-HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
+HAPROXY_ROUTE_TCP_RELATION_NAME = "haproxy-route-tcp"
 HAPROXY_CONFIG_INVALID_CHARACTERS = "\n\t#\\'\"\r$ "
 
 
@@ -294,15 +293,39 @@ class _DatabagModel(BaseModel):
         return databag
 
 
-class ServerHealthCheck(BaseModel):
+class TCPHealthCheckType(Enum):
+    """Enum of possible rate limiting policies.
+
+    Attrs:
+        GENERIC: deny a client's HTTP request to return a 403 Forbidden error.
+        MYSQL: closes the connection immediately without sending a response.
+        POSTGRES: disconnects immediately without notifying the client
+            that the connection has been closed.
+        REDIS: closes the connection immediately without sending a response.
+        SMTP: closes the connection immediately without sending a response.
+    """
+
+    GENERIC = "generic"
+    MYSQL = "mysql"
+    POSTGRES = "postgres"
+    REDIS = "redis"
+    SMTP = "smtp"
+
+
+class TCPServerHealthCheck(BaseModel):
     """Configuration model for backend server health checks.
 
     Attributes:
         interval: Number of seconds between consecutive health check attempts.
         rise: Number of consecutive successful health checks required for up.
         fall: Number of consecutive failed health checks required for DOWN.
-        path: List of URL paths to use for HTTP health checks.
-        port: Customize port value for http-check.
+        check_type: Health check type, Can be “generic”, “mysql”, “postgres”, “redis” or “smtp”.
+        send: Only used in generic health checks,
+            specify a string to send in the health check request.
+        expect: Only used in generic health checks,
+            specify the expected response from a health check request.
+        db_user: Only used if type is postgres or mysql,
+            specify the user name to enable HAproxy to send a Client Authentication packet.
     """
 
     interval: Optional[int] = Field(
@@ -315,8 +338,10 @@ class ServerHealthCheck(BaseModel):
     fall: Optional[int] = Field(
         description="How many failed health checks before server is considered down.", default=None
     )
-    path: Optional[VALIDSTR] = Field(description="The health check path.", default=None)
-    port: Optional[int] = Field(description="The health check port.", default=None)
+    check_type: Optional[VALIDSTR] = Field(description="The health check path.", default=None)
+    send: Optional[str] = Field(description="The health check port.", default=None)
+    expect: Optional[str] = Field(description="The health check port.", default=None)
+    db_user: Optional[str] = Field(description="The health check port.", default=None)
 
     @model_validator(mode="after")
     def check_all_required_fields_set(self) -> Self:
@@ -370,38 +395,30 @@ class LoadBalancingAlgorithm(Enum):
         LEASTCONN: The server with the lowest number of connections receives the connection.
         SRCIP: Load balance using the hash of The source IP address.
         ROUNDROBIN: Each server is used in turns, according to their weights.
-        COOKIE: Load balance using hash req.cookie(clientid).
     """
 
     LEASTCONN = "leastconn"
     SRCIP = "source"
     ROUNDROBIN = "roundrobin"
-    COOKIE = "cookie"
 
 
-class LoadBalancingConfiguration(BaseModel):
+class TCPLoadBalancingConfiguration(BaseModel):
     """Configuration model for load balancing.
 
     Attributes:
         algorithm: Algorithm to use for load balancing.
-        cookie: Cookie name to use when algorithm is set to cookie.
         consistent_hashing: Use consistent hashing to avoid redirection
             when servers are added/removed.
     """
 
     algorithm: LoadBalancingAlgorithm = Field(
         description="Configure the load balancing algorithm for the service.",
-        default=LoadBalancingAlgorithm.LEASTCONN,
-    )
-    cookie: Optional[VALIDSTR] = Field(
-        description="Only used when algorithm is COOKIE. Define the cookie to load balance on.",
-        default=None,
     )
     # Note: Later when the generic LoadBalancingAlgorithm.HASH is implemented this attribute
     # will also apply under that mode.
     consistent_hashing: bool = Field(
         description=(
-            "Only used when the `algorithm` is SRCIP or COOKIE. "
+            "Only used when the `algorithm` is SRCIP. "
             "Use consistent hashing to avoid redirection when servers are added/removed. "
             "Default is False as it usually does not give a balanced distribution."
         ),
@@ -420,13 +437,7 @@ class LoadBalancingConfiguration(BaseModel):
         Returns:
             The validated model.
         """
-        if self.cookie is not None and self.algorithm != LoadBalancingAlgorithm.COOKIE:
-            raise ValueError("cookie only applies when algorithm is COOKIE.")
-
-        if self.consistent_hashing and self.algorithm not in [
-            LoadBalancingAlgorithm.COOKIE,
-            LoadBalancingAlgorithm.SRCIP,
-        ]:
+        if self.consistent_hashing and self.algorithm != LoadBalancingAlgorithm.SRCIP:
             raise ValueError("Consistent hashing only applies when algorithm is COOKIE or SRCIP.")
         return self
 
@@ -469,48 +480,14 @@ class TimeoutConfiguration(BaseModel):
         queue: Timeout for requests waiting in the queue after server-maxconn is reached.
     """
 
-    server: int = Field(
+    server: Optional[int] = Field(
         description="Timeout (in seconds) for requests from haproxy to backend servers.",
-        default=60,
     )
-    connect: int = Field(
-        description="Timeout (in seconds) for client requests to haproxy.", default=60
+    connect: Optional[int] = Field(
+        description="Timeout (in seconds) for client requests to haproxy.",
     )
-    queue: int = Field(
+    queue: Optional[int] = Field(
         description="Timeout (in seconds) for requests in the queue.",
-        default=60,
-    )
-
-
-class HaproxyRewriteMethod(Enum):
-    """Enum of possible HTTP rewrite methods.
-
-    Attrs:
-        SET_PATH: The server with the lowest number of connections receives the connection.
-        SET_QUERY: Load balance using the hash of The source IP address.
-        SET_HEADER: Each server is used in turns, according to their weights.
-    """
-
-    SET_PATH = "set-path"
-    SET_QUERY = "set-query"
-    SET_HEADER = "set-header"
-
-
-class RewriteConfiguration(BaseModel):
-    """Configuration model for HTTP rewrite.
-
-    Attributes:
-        method: Which rewrite method to apply.One of set-path, set-query, set-header.
-        expression: Regular expression to use with the rewrite method.
-        header: The name of the header to rewrited.
-    """
-
-    method: HaproxyRewriteMethod = Field(
-        description="Which rewrite method to apply.One of set-path, set-query, set-header."
-    )
-    expression: VALIDSTR = Field(description="Regular expression to use with the rewrite method.")
-    header: Optional[VALIDSTR] = Field(
-        description="The name of the header to rewrite.", default=None
     )
 
 
@@ -518,114 +495,69 @@ class RequirerApplicationData(_DatabagModel):
     """Configuration model for HAProxy route requirer application data.
 
     Attributes:
-        service: Name of the service requesting HAProxy routing.
-        ports: List of port numbers on which the service is listening.
-        protocol: The protocol that the service speaks.
-        hosts: List of backend server addresses.
-        paths: List of URL paths to route to this service. Defaults to an empty list.
-        hostname: Optional: The hostname of this service.
-        additional_hostnames: List of additional hostnames of this service.
-            Defaults to an empty list.
-        rewrites: List of RewriteConfiguration objects defining path, query, or header
-            rewrite rules.
-        check: ServerHealthCheck configuration for monitoring backend health.
-        load_balancing: Configuration for the load balancing strategy.
-        rate_limit: Optional configuration for limiting connection rates.
-        bandwidth_limit: Optional configuration for limiting upload and download bandwidth.
-        retry: Optional configuration for request retry behavior.
-        deny_paths: List of URL paths that should not be routed to the backend.
-        timeout: Configuration for server, client, and queue timeouts.
-        server_maxconn: Optional maximum number of connections per server.
+        port: The name of the service to route traffic to.
+        backend_port: List of ports the service is listening on.
+        hosts: List of backend server addresses. Currently only support IP addresses.
+        sni: List of URL paths to route to this service.
+        check: TCP health check configuration
+        load_balancing: Load balancing configuration.
+        rate_limit: Rate limit configuration.
+        bandwidth_limit: Bandwith limit configuration.
+        retry: Retry configuration.
+        timeout: Timeout configuration.
+        server_maxconn: Maximum connections per server.
+        ip_deny_list: List of source IP addresses to block.
+        enforce_tls: Whether to enforce TLS for all traffic coming to the backend.
+        tls_terminate: Whether to enable tls termination on the dedicated frontend.
     """
 
-    service: VALIDSTR = Field(description="The name of the service.")
-    ports: list[int] = Field(description="The list of ports listening for this service.")
-    protocol: Optional[Literal["http", "https"]] = Field(
-        description="The protocol that the service speaks.",
-        default="http",
+    port: int = Field(description="The port exposed on HAProxy.")
+    backend_port: Optional[int] = Field(
+        description=(
+            "The port where the backend service is listening. "
+            "Defaults to the haproxy port if not set"
+        ),
+        default=None,
+    )
+    sni: Optional[VALIDSTR] = Field(
+        description="Server name identification. Used to route traffic to the service.",
+        default=None,
     )
     hosts: list[IPvAnyAddress] = Field(
         description="The list of backend server addresses. Currently only support IP addresses.",
         default=[],
     )
-    paths: list[VALIDSTR] = Field(
-        description="The list of paths to route to this service.", default=[]
-    )
-    hostname: Optional[VALIDSTR] = Field(description="Hostname of this service.", default=None)
-    additional_hostnames: list[VALIDSTR] = Field(
-        description="The list of additional hostnames of this service.", default=[]
-    )
-    rewrites: list[RewriteConfiguration] = Field(
-        description="The list of path rewrite rules.", default=[]
-    )
-    check: Optional[ServerHealthCheck] = Field(
+    check: Optional[TCPServerHealthCheck] = Field(
         description="Configure health check for the service.",
         default=None,
     )
-    load_balancing: LoadBalancingConfiguration = Field(
-        description="Configure loadbalancing.", default=LoadBalancingConfiguration()
+    load_balancing: Optional[TCPLoadBalancingConfiguration] = Field(
+        description="Configure loadbalancing.", default=None
     )
     rate_limit: Optional[RateLimit] = Field(
         description="Configure rate limit for the service.", default=None
     )
-    bandwidth_limit: BandwidthLimit = Field(
-        description="Configure bandwidth limit for the service.", default=BandwidthLimit()
+    bandwidth_limit: Optional[BandwidthLimit] = Field(
+        description="Configure bandwidth limit for the service.", default=None
     )
     retry: Optional[Retry] = Field(
         description="Configure retry for incoming requests.", default=None
     )
-    deny_paths: list[VALIDSTR] = Field(
-        description="Configure path that should not be routed to the backend", default=[]
-    )
-    timeout: TimeoutConfiguration = Field(
+    timeout: Optional[TimeoutConfiguration] = Field(
         description="Configure timeout",
-        default=TimeoutConfiguration(),
+        default=None,
     )
     server_maxconn: Optional[int] = Field(
         description="Configure maximum connection per server", default=None
     )
-
-    @field_validator("load_balancing")
-    @classmethod
-    def validate_load_balancing_configuration(
-        cls, configuration: LoadBalancingConfiguration
-    ) -> LoadBalancingConfiguration:
-        """Validate the parsed load balancing configuration.
-
-        Args:
-            configuration: The configuration to validate.
-
-        Raises:
-            ValueError: When cookie is not set under COOKIE load balancing mode.
-
-        Returns:
-            LoadBalancingConfiguration: The validated configuration.
-        """
-        if configuration.algorithm == LoadBalancingAlgorithm.COOKIE and not configuration.cookie:
-            raise ValueError("cookie must be set if load balacing algorithm is COOKIE.")
-        return configuration
-
-    @field_validator("rewrites")
-    @classmethod
-    def validate_rewrites(cls, rewrites: list[RewriteConfiguration]) -> list[RewriteConfiguration]:
-        """Validate the parsed list of rewrite configurations.
-
-        Args:
-            rewrites: The configurations to validate.
-
-        Raises:
-            ValueError: When header is not set under SET_HEADER rewrite method.
-
-        Returns:
-            list[RewriteConfiguration]: The validated configurations.
-        """
-        for rewrite in rewrites:
-            if rewrite.method == HaproxyRewriteMethod.SET_HEADER and not rewrite.method:
-                raise ValueError("header must be set if rewrite method is SET_HEADER.")
-        return rewrites
+    ip_deny_list: list[IPvAnyAddress] = Field(
+        description="List of IP addresses to block.", default=[]
+    )
+    enforce_tls: bool = Field(description="Whether to enforce TLS for all traffic.", default=True)
+    tls_terminate: bool = Field(description="Whether to enable tls termination.", default=True)
 
 
-class HaproxyRouteProviderAppData(_DatabagModel):
+class HaproxyRouteTcpProviderAppData(_DatabagModel):
     """haproxy-route provider databag schema.
 
     Attributes:
@@ -661,7 +593,7 @@ class HaproxyRouteRequirerData:
 
 
 @dataclass
-class HaproxyRouteRequirersData:
+class HaproxyRouteTcpRequirersData:
     """haproxy-route requirers data.
 
     Attributes:
@@ -673,21 +605,30 @@ class HaproxyRouteRequirersData:
     relation_ids_with_invalid_data: list[int]
 
     @model_validator(mode="after")
-    def check_services_unique(self) -> Self:
-        """Check that requirers define unique services.
-
-        Raises:
-            DataValidationError: When requirers declared duplicate services.
+    def check_ports_unique(self) -> Self:
+        """Check that requirers define unique ports.
 
         Returns:
-            The validated model.
+            The validated model, with invalid relation IDs updated in
+                `self.relation_ids_with_invalid_data`
         """
-        services = [
-            requirer_data.application_data.service for requirer_data in self.requirers_data
-        ]
-        if len(services) != len(set(services)):
-            raise DataValidationError("Services declaration by requirers must be unique.")
+        # Maybe the logic here can be optimized, we want to keep track of
+        # the relation IDs that request overlapping ports to ignore them during
+        # rendering of the haproxy configuration.
+        port_to_relation_ids: dict[int, list[int]] = {}
+        for requirer_data in self.requirers_data:
+            if not port_to_relation_ids.get(requirer_data.application_data.port):
+                port_to_relation_ids[requirer_data.application_data.port] = [
+                    requirer_data.relation_id
+                ]
+                continue
+            port_to_relation_ids[requirer_data.application_data.port].append(
+                requirer_data.relation_id
+            )
 
+        for relation_ids in port_to_relation_ids.values():
+            if len(relation_ids) > 1:
+                self.relation_ids_with_invalid_data.extend(relation_ids)
         return self
 
 
@@ -718,7 +659,7 @@ class HaproxyRouteProviderEvents(CharmEvents):
     data_removed = EventSource(HaproxyRouteDataRemovedEvent)
 
 
-class HaproxyRouteProvider(Object):
+class HaproxyRouteTcpProvider(Object):
     """Haproxy-route interface provider implementation.
 
     Attributes:
@@ -731,7 +672,7 @@ class HaproxyRouteProvider(Object):
     def __init__(
         self,
         charm: CharmBase,
-        relation_name: str = HAPROXY_ROUTE_RELATION_NAME,
+        relation_name: str = HAPROXY_ROUTE_TCP_RELATION_NAME,
         raise_on_validation_error: bool = False,
     ) -> None:
         """Initialize the HaproxyRouteProvider.
@@ -773,7 +714,7 @@ class HaproxyRouteProvider(Object):
         """Handle relation broken/departed events."""
         self.on.data_removed.emit()
 
-    def get_data(self, relations: list[Relation]) -> HaproxyRouteRequirersData:
+    def get_data(self, relations: list[Relation]) -> HaproxyRouteTcpRequirersData:
         """Fetch requirer data.
 
         Args:
@@ -809,7 +750,7 @@ class HaproxyRouteProvider(Object):
                     ) from exc
                 relation_ids_with_invalid_data.append(relation.id)
                 continue
-        return HaproxyRouteRequirersData(
+        return HaproxyRouteTcpRequirersData(
             requirers_data=requirers_data,
             relation_ids_with_invalid_data=relation_ids_with_invalid_data,
         )
@@ -870,20 +811,20 @@ class HaproxyRouteProvider(Object):
             endpoints: The list of proxied endpoints to publish.
             relation: The relation with the requirer application.
         """
-        HaproxyRouteProviderAppData(
+        HaproxyRouteTcpProviderAppData(
             endpoints=list(map(lambda x: cast(AnyHttpUrl, x), endpoints))
         ).dump(relation.data[self.charm.app], clear=True)
 
 
-class HaproxyRouteEnpointsReadyEvent(EventBase):
-    """HaproxyRouteEnpointsReadyEvent custom event."""
+class HaproxyRouteTcpEnpointsReadyEvent(EventBase):
+    """HaproxyRouteTcpEnpointsReadyEvent custom event."""
 
 
-class HaproxyRouteEndpointsRemovedEvent(EventBase):
-    """HaproxyRouteEndpointsRemovedEvent custom event."""
+class HaproxyRouteTcpEndpointsRemovedEvent(EventBase):
+    """HaproxyRouteTcpEndpointsRemovedEvent custom event."""
 
 
-class HaproxyRouteRequirerEvents(CharmEvents):
+class HaproxyRouteTcpRequirerEvents(CharmEvents):
     """List of events that the TLS Certificates requirer charm can leverage.
 
     Attributes:
@@ -891,41 +832,36 @@ class HaproxyRouteRequirerEvents(CharmEvents):
         removed: when the provider
     """
 
-    ready = EventSource(HaproxyRouteEnpointsReadyEvent)
-    removed = EventSource(HaproxyRouteEndpointsRemovedEvent)
+    ready = EventSource(HaproxyRouteTcpEnpointsReadyEvent)
+    removed = EventSource(HaproxyRouteTcpEndpointsRemovedEvent)
 
 
-class HaproxyRouteRequirer(Object):
+class HaproxyRouteTcpRequirer(Object):
     """haproxy-route interface requirer implementation.
 
     Attributes:
         on: Custom events of the requirer.
     """
 
-    on = HaproxyRouteRequirerEvents()
+    on = HaproxyRouteTcpRequirerEvents()
 
     # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
     def __init__(
         self,
         charm: CharmBase,
         relation_name: str,
-        service: Optional[str] = None,
-        ports: Optional[list[int]] = None,
-        protocol: Literal["http", "https"] = "http",
+        port: Optional[int] = None,
+        backend_port: Optional[int] = None,
         hosts: Optional[list[str]] = None,
-        paths: Optional[list[str]] = None,
-        hostname: Optional[str] = None,
-        additional_hostnames: Optional[list[str]] = None,
+        sni: Optional[str] = None,
         check_interval: Optional[int] = None,
         check_rise: Optional[int] = None,
         check_fall: Optional[int] = None,
-        check_path: Optional[str] = None,
-        check_port: Optional[int] = None,
-        path_rewrite_expressions: Optional[list[str]] = None,
-        query_rewrite_expressions: Optional[list[str]] = None,
-        header_rewrite_expressions: Optional[list[tuple[str, str]]] = None,
-        load_balancing_algorithm: LoadBalancingAlgorithm = LoadBalancingAlgorithm.LEASTCONN,
-        load_balancing_cookie: Optional[str] = None,
+        check_type: Optional[TCPHealthCheckType] = None,
+        check_send: Optional[str] = None,
+        check_expect: Optional[str] = None,
+        check_db_user: Optional[str] = None,
+        load_balancing_algorithm: Optional[LoadBalancingAlgorithm] = None,
         load_balancing_consistent_hashing: bool = False,
         rate_limit_connections_per_minute: Optional[int] = None,
         rate_limit_policy: RateLimitPolicy = RateLimitPolicy.DENY,
@@ -933,11 +869,13 @@ class HaproxyRouteRequirer(Object):
         download_limit: Optional[int] = None,
         retry_count: Optional[int] = None,
         retry_redispatch: bool = False,
-        deny_paths: Optional[list[str]] = None,
-        server_timeout: int = 60,
-        connect_timeout: int = 60,
-        queue_timeout: int = 60,
+        server_timeout: Optional[int] = None,
+        connect_timeout: Optional[int] = None,
+        queue_timeout: Optional[int] = None,
         server_maxconn: Optional[int] = None,
+        ip_deny_list: Optional[list[IPvAnyAddress]] = None,
+        enforce_tls: bool = True,
+        tls_terminate: bool = True,
         unit_address: Optional[str] = None,
     ) -> None:
         """Initialize the HaproxyRouteRequirer.
@@ -945,24 +883,18 @@ class HaproxyRouteRequirer(Object):
         Args:
             charm: The charm that is instantiating the library.
             relation_name: The name of the relation to bind to.
-            service: The name of the service to route traffic to.
-            ports: List of ports the service is listening on.
-            protocol: The protocol that the service speaks.
+            port: The name of the service to route traffic to.
+            backend_port: List of ports the service is listening on.
             hosts: List of backend server addresses. Currently only support IP addresses.
-            paths: List of URL paths to route to this service.
-            hostname: Hostname of this service.
-            additional_hostnames: Additional hostnames of this service.
+            sni: List of URL paths to route to this service.
             check_interval: Interval between health checks in seconds.
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
-            check_path: The path to use for server health checks.
-            check_port: The port to use for http-check.
-            path_rewrite_expressions: List of regex expressions for path rewrites.
-            query_rewrite_expressions: List of regex expressions for query rewrites.
-            header_rewrite_expressions: List of tuples containing header name
-                and rewrite expression.
+            check_type: The path to use for server health checks.
+            check_send: The port to use for http-check.
+            check_expect: The port to use for http-check.
+            check_db_user: The port to use for http-check.
             load_balancing_algorithm: Algorithm to use for load balancing.
-            load_balancing_cookie: Cookie name to use when algorithm is set to cookie.
             load_balancing_consistent_hashing: Whether to use consistent hashing.
             rate_limit_connections_per_minute: Maximum connections allowed per minute.
             rate_limit_policy: Policy to apply when rate limit is reached.
@@ -970,11 +902,13 @@ class HaproxyRouteRequirer(Object):
             download_limit: Maximum download bandwidth in bytes per second.
             retry_count: Number of times to retry failed requests.
             retry_redispatch: Whether to redispatch failed requests to another server.
-            deny_paths: List of paths that should not be routed to the backend.
             server_timeout: Timeout for requests from haproxy to backend servers in seconds.
             connect_timeout: Timeout for client requests to haproxy in seconds.
             queue_timeout: Timeout for requests waiting in queue in seconds.
             server_maxconn: Maximum connections per server.
+            ip_deny_list: List of source IP addresses to block.
+            enforce_tls: Whether to enforce TLS for all traffic coming to the backend.
+            tls_terminate: Whether to enable tls termination on the dedicated frontend.
             unit_address: IP address of the unit (if not provided, will use binding address).
         """
         super().__init__(charm, relation_name)
@@ -986,23 +920,18 @@ class HaproxyRouteRequirer(Object):
 
         # build the full application data
         self._application_data = self._generate_application_data(
-            service,
-            ports,
-            protocol,
+            port,
+            backend_port,
             hosts,
-            paths,
-            hostname,
-            additional_hostnames,
+            sni,
             check_interval,
             check_rise,
             check_fall,
-            check_path,
-            check_port,
-            path_rewrite_expressions,
-            query_rewrite_expressions,
-            header_rewrite_expressions,
+            check_type,
+            check_send,
+            check_expect,
+            check_db_user,
             load_balancing_algorithm,
-            load_balancing_cookie,
             load_balancing_consistent_hashing,
             rate_limit_connections_per_minute,
             rate_limit_policy,
@@ -1010,11 +939,13 @@ class HaproxyRouteRequirer(Object):
             download_limit,
             retry_count,
             retry_redispatch,
-            deny_paths,
             server_timeout,
             connect_timeout,
             queue_timeout,
             server_maxconn,
+            ip_deny_list,
+            enforce_tls,
+            tls_terminate,
         )
         self._unit_address = unit_address
 
@@ -1038,25 +969,20 @@ class HaproxyRouteRequirer(Object):
         self.on.removed.emit()
 
     # pylint: disable=too-many-arguments,too-many-positional-arguments
-    def provide_haproxy_route_requirements(
+    def provide_haproxy_route_tcp_requirements(
         self,
-        service: str,
-        ports: list[int],
-        protocol: Literal["http", "https"] = "http",
+        port: int,
+        backend_port: Optional[int] = None,
         hosts: Optional[list[str]] = None,
-        paths: Optional[list[str]] = None,
-        hostname: Optional[str] = None,
-        additional_hostnames: Optional[list[str]] = None,
+        sni: Optional[str] = None,
         check_interval: Optional[int] = None,
         check_rise: Optional[int] = None,
         check_fall: Optional[int] = None,
-        check_path: Optional[str] = None,
-        check_port: Optional[int] = None,
-        path_rewrite_expressions: Optional[list[str]] = None,
-        query_rewrite_expressions: Optional[list[str]] = None,
-        header_rewrite_expressions: Optional[list[tuple[str, str]]] = None,
-        load_balancing_algorithm: LoadBalancingAlgorithm = LoadBalancingAlgorithm.LEASTCONN,
-        load_balancing_cookie: Optional[str] = None,
+        check_type: Optional[TCPHealthCheckType] = None,
+        check_send: Optional[str] = None,
+        check_expect: Optional[str] = None,
+        check_db_user: Optional[str] = None,
+        load_balancing_algorithm: Optional[LoadBalancingAlgorithm] = None,
         load_balancing_consistent_hashing: bool = False,
         rate_limit_connections_per_minute: Optional[int] = None,
         rate_limit_policy: RateLimitPolicy = RateLimitPolicy.DENY,
@@ -1064,34 +990,30 @@ class HaproxyRouteRequirer(Object):
         download_limit: Optional[int] = None,
         retry_count: Optional[int] = None,
         retry_redispatch: bool = False,
-        deny_paths: Optional[list[str]] = None,
-        server_timeout: int = 60,
-        connect_timeout: int = 60,
-        queue_timeout: int = 60,
+        server_timeout: Optional[int] = None,
+        connect_timeout: Optional[int] = None,
+        queue_timeout: Optional[int] = None,
         server_maxconn: Optional[int] = None,
+        ip_deny_list: Optional[list[IPvAnyAddress]] = None,
+        enforce_tls: bool = True,
+        tls_terminate: bool = True,
         unit_address: Optional[str] = None,
     ) -> None:
         """Update haproxy-route requirements data in the relation.
 
         Args:
-            service: The name of the service to route traffic to.
-            ports: List of ports the service is listening on.
-            protocol: The protocol that the serive speaks, deafults to "http".
+            port: The name of the service to route traffic to.
+            backend_port: List of ports the service is listening on.
             hosts: List of backend server addresses. Currently only support IP addresses.
-            paths: List of URL paths to route to this service.
-            hostname: Hostname of this service.
-            additional_hostnames: Additional hostnames of this service.
+            sni: List of URL paths to route to this service.
             check_interval: Interval between health checks in seconds.
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
-            check_path: The path to use for server health checks.
-            check_port: The port to use for http-check.
-            path_rewrite_expressions: List of regex expressions for path rewrites.
-            query_rewrite_expressions: List of regex expressions for query rewrites.
-            header_rewrite_expressions: List of tuples containing header name
-                and rewrite expression.
+            check_type: The path to use for server health checks.
+            check_send: The port to use for http-check.
+            check_expect: The port to use for http-check.
+            check_db_user: The port to use for http-check.
             load_balancing_algorithm: Algorithm to use for load balancing.
-            load_balancing_cookie: Cookie name to use when algorithm is set to cookie.
             load_balancing_consistent_hashing: Whether to use consistent hashing.
             rate_limit_connections_per_minute: Maximum connections allowed per minute.
             rate_limit_policy: Policy to apply when rate limit is reached.
@@ -1099,32 +1021,29 @@ class HaproxyRouteRequirer(Object):
             download_limit: Maximum download bandwidth in bytes per second.
             retry_count: Number of times to retry failed requests.
             retry_redispatch: Whether to redispatch failed requests to another server.
-            deny_paths: List of paths that should not be routed to the backend.
             server_timeout: Timeout for requests from haproxy to backend servers in seconds.
             connect_timeout: Timeout for client requests to haproxy in seconds.
             queue_timeout: Timeout for requests waiting in queue in seconds.
             server_maxconn: Maximum connections per server.
+            ip_deny_list: List of source IP addresses to block.
+            enforce_tls: Whether to enforce TLS for all traffic coming to the backend.
+            tls_terminate: Whether to enable tls termination on the dedicated frontend.
             unit_address: IP address of the unit (if not provided, will use binding address).
         """
         self._unit_address = unit_address
         self._application_data = self._generate_application_data(
-            service,
-            ports,
-            protocol,
+            port,
+            backend_port,
             hosts,
-            paths,
-            hostname,
-            additional_hostnames,
+            sni,
             check_interval,
             check_rise,
             check_fall,
-            check_path,
-            check_port,
-            path_rewrite_expressions,
-            query_rewrite_expressions,
-            header_rewrite_expressions,
+            check_type,
+            check_send,
+            check_expect,
+            check_db_user,
             load_balancing_algorithm,
-            load_balancing_cookie,
             load_balancing_consistent_hashing,
             rate_limit_connections_per_minute,
             rate_limit_policy,
@@ -1132,34 +1051,31 @@ class HaproxyRouteRequirer(Object):
             download_limit,
             retry_count,
             retry_redispatch,
-            deny_paths,
             server_timeout,
             connect_timeout,
             queue_timeout,
             server_maxconn,
+            ip_deny_list,
+            enforce_tls,
+            tls_terminate,
         )
         self.update_relation_data()
 
     # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
     def _generate_application_data(  # noqa: C901
         self,
-        service: Optional[str] = None,
-        ports: Optional[list[int]] = None,
-        protocol: Literal["http", "https"] = "http",
+        port: Optional[int] = None,
+        backend_port: Optional[int] = None,
         hosts: Optional[list[str]] = None,
-        paths: Optional[list[str]] = None,
-        hostname: Optional[str] = None,
-        additional_hostnames: Optional[list[str]] = None,
+        sni: Optional[str] = None,
         check_interval: Optional[int] = None,
         check_rise: Optional[int] = None,
         check_fall: Optional[int] = None,
-        check_path: Optional[str] = None,
-        check_port: Optional[int] = None,
-        path_rewrite_expressions: Optional[list[str]] = None,
-        query_rewrite_expressions: Optional[list[str]] = None,
-        header_rewrite_expressions: Optional[list[tuple[str, str]]] = None,
-        load_balancing_algorithm: LoadBalancingAlgorithm = LoadBalancingAlgorithm.LEASTCONN,
-        load_balancing_cookie: Optional[str] = None,
+        check_type: Optional[TCPHealthCheckType] = None,
+        check_send: Optional[str] = None,
+        check_expect: Optional[str] = None,
+        check_db_user: Optional[str] = None,
+        load_balancing_algorithm: Optional[LoadBalancingAlgorithm] = None,
         load_balancing_consistent_hashing: bool = False,
         rate_limit_connections_per_minute: Optional[int] = None,
         rate_limit_policy: RateLimitPolicy = RateLimitPolicy.DENY,
@@ -1167,33 +1083,29 @@ class HaproxyRouteRequirer(Object):
         download_limit: Optional[int] = None,
         retry_count: Optional[int] = None,
         retry_redispatch: bool = False,
-        deny_paths: Optional[list[str]] = None,
-        server_timeout: int = 60,
-        connect_timeout: int = 60,
-        queue_timeout: int = 60,
+        server_timeout: Optional[int] = None,
+        connect_timeout: Optional[int] = None,
+        queue_timeout: Optional[int] = None,
         server_maxconn: Optional[int] = None,
+        ip_deny_list: Optional[list[IPvAnyAddress]] = None,
+        enforce_tls: bool = True,
+        tls_terminate: bool = True,
     ) -> dict[str, Any]:
         """Generate the complete application data structure.
 
         Args:
-            service: The name of the service to route traffic to.
-            ports: List of ports the service is listening on.
-            protocol: The protocol that the service speaks.
+            port: The name of the service to route traffic to.
+            backend_port: List of ports the service is listening on.
             hosts: List of backend server addresses. Currently only support IP addresses.
-            paths: List of URL paths to route to this service.
-            hostname: Hostname of this service.
-            additional_hostnames: Additional hostnames of this service.
+            sni: List of URL paths to route to this service.
             check_interval: Interval between health checks in seconds.
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
-            check_path: The path to use for server health checks.
-            check_port: The port to use for http-check.
-            path_rewrite_expressions: List of regex expressions for path rewrites.
-            query_rewrite_expressions: List of regex expressions for query rewrites.
-            header_rewrite_expressions: List of tuples containing header name and
-                rewrite expression.
+            check_type: The path to use for server health checks.
+            check_send: The port to use for http-check.
+            check_expect: The port to use for http-check.
+            check_db_user: The port to use for http-check.
             load_balancing_algorithm: Algorithm to use for load balancing.
-            load_balancing_cookie: Cookie name to use when algorithm is set to cookie.
             load_balancing_consistent_hashing: Whether to use consistent hashing.
             rate_limit_connections_per_minute: Maximum connections allowed per minute.
             rate_limit_policy: Policy to apply when rate limit is reached.
@@ -1201,44 +1113,30 @@ class HaproxyRouteRequirer(Object):
             download_limit: Maximum download bandwidth in bytes per second.
             retry_count: Number of times to retry failed requests.
             retry_redispatch: Whether to redispatch failed requests to another server.
-            deny_paths: List of paths that should not be routed to the backend.
             server_timeout: Timeout for requests from haproxy to backend servers in seconds.
             connect_timeout: Timeout for client requests to haproxy in seconds.
             queue_timeout: Timeout for requests waiting in queue in seconds.
             server_maxconn: Maximum connections per server.
+            ip_deny_list: List of source IP addresses to block.
+            enforce_tls: Whether to enforce TLS for all traffic coming to the backend.
+            tls_terminate: Whether to enable tls termination on the dedicated frontend.
 
         Returns:
             dict: A dictionary containing the complete application data structure.
         """
         # Apply default value to list parameters to avoid problems with mutable default args.
-        if not ports:
-            ports = []
         if not hosts:
             hosts = []
-        if not paths:
-            paths = []
-        if not additional_hostnames:
-            additional_hostnames = []
-        if not path_rewrite_expressions:
-            path_rewrite_expressions = []
-        if not query_rewrite_expressions:
-            query_rewrite_expressions = []
-        if not header_rewrite_expressions:
-            header_rewrite_expressions = []
-        if not deny_paths:
-            deny_paths = []
+        if not ip_deny_list:
+            ip_deny_list = []
 
         application_data: dict[str, Any] = {
-            "service": service,
-            "ports": ports,
-            "protocol": protocol,
+            "port": port,
+            "backend_port": backend_port,
             "hosts": hosts,
-            "paths": paths,
-            "hostname": hostname,
-            "additional_hostnames": additional_hostnames,
+            "sni": sni,
             "load_balancing": {
                 "algorithm": load_balancing_algorithm,
-                "cookie": load_balancing_cookie,
                 "consistent_hashing": load_balancing_consistent_hashing,
             },
             "timeout": {
@@ -1250,17 +1148,20 @@ class HaproxyRouteRequirer(Object):
                 "download": download_limit,
                 "upload": upload_limit,
             },
-            "deny_paths": deny_paths,
+            "ip_deny_list": ip_deny_list,
             "server_maxconn": server_maxconn,
-            "rewrites": self._generate_rewrite_configuration(
-                path_rewrite_expressions,
-                query_rewrite_expressions,
-                header_rewrite_expressions,
-            ),
+            "enforce_tls": enforce_tls,
+            "tls_terminate": tls_terminate,
         }
 
         if check := self._generate_server_healthcheck_configuration(
-            check_interval, check_rise, check_fall, check_path, check_port
+            check_interval,
+            check_rise,
+            check_fall,
+            check_type,
+            check_send,
+            check_expect,
+            check_db_user,
         ):
             application_data["check"] = check
 
@@ -1278,67 +1179,40 @@ class HaproxyRouteRequirer(Object):
         interval: Optional[int],
         rise: Optional[int],
         fall: Optional[int],
-        path: Optional[str],
-        port: Optional[int],
-    ) -> dict[str, int | Optional[str]]:
+        check_type: Optional[TCPHealthCheckType],
+        send: Optional[str],
+        expect: Optional[str],
+        db_user: Optional[str],
+    ) -> dict[str, int | str | TCPHealthCheckType | None]:
         """Generate configuration for server health checks.
 
         Args:
-            interval: Time between health checks in seconds.
-            rise: Number of successful checks before marking server as up.
-            fall: Number of failed checks before marking server as down.
-            path: The path to use for health checks.
-            port: The port to use for http-check.
+        interval: Number of seconds between consecutive health check attempts.
+        rise: Number of consecutive successful health checks required for up.
+        fall: Number of consecutive failed health checks required for DOWN.
+        check_type: Health check type, Can be “generic”, “mysql”, “postgres”, “redis” or “smtp”.
+        send: Only used in generic health checks,
+            specify a string to send in the health check request.
+        expect: Only used in generic health checks,
+            specify the expected response from a health check request.
+        db_user: Only used if type is postgres or mysql,
+            specify the user name to enable HAproxy to send a Client Authentication packet.
 
         Returns:
             dict[str, int | Optional[str]]: Health check configuration dictionary.
         """
-        server_healthcheck_configuration: dict[str, int | Optional[str]] = {}
+        server_healthcheck_configuration: dict[str, int | str | TCPHealthCheckType | None] = {}
         if interval and rise and fall:
             server_healthcheck_configuration = {
                 "interval": interval,
                 "rise": rise,
                 "fall": fall,
-                "path": path,
-                "port": port,
+                "type": check_type,
+                "send": send,
+                "expect": expect,
+                "db_user": db_user,
             }
         return server_healthcheck_configuration
-
-    def _generate_rewrite_configuration(
-        self,
-        path_rewrite_expressions: list[str],
-        query_rewrite_expressions: list[str],
-        header_rewrite_expressions: list[tuple[str, str]],
-    ) -> list[dict[str, str | HaproxyRewriteMethod]]:
-        """Generate rewrite configuration from provided expressions.
-
-        Args:
-            path_rewrite_expressions: List of path rewrite expressions.
-            query_rewrite_expressions: List of query rewrite expressions.
-            header_rewrite_expressions: List of header name and expression tuples.
-
-        Returns:
-            list[dict[str, str]]: List of generated rewrite configurations.
-        """
-        # rewrite configuration
-        rewrite_configurations: list[dict[str, str | HaproxyRewriteMethod]] = []
-        for expression in path_rewrite_expressions:
-            rewrite_configurations.append(
-                {"method": HaproxyRewriteMethod.SET_PATH, "expression": expression}
-            )
-        for expression in query_rewrite_expressions:
-            rewrite_configurations.append(
-                {"method": HaproxyRewriteMethod.SET_QUERY, "expression": expression}
-            )
-        for header, expression in header_rewrite_expressions:
-            rewrite_configurations.append(
-                {
-                    "method": HaproxyRewriteMethod.SET_HEADER,
-                    "expression": expression,
-                    "header": header,
-                }
-            )
-        return rewrite_configurations
 
     def _generate_rate_limit_configuration(
         self, rate_limit_connections_per_minute: Optional[int], rate_limit_policy: RateLimitPolicy
@@ -1472,7 +1346,7 @@ class HaproxyRouteRequirer(Object):
 
         try:
             provider_data = cast(
-                HaproxyRouteProviderAppData, HaproxyRouteProviderAppData.load(databag)
+                HaproxyRouteTcpProviderAppData, HaproxyRouteTcpProviderAppData.load(databag)
             )
             return provider_data.endpoints
         except DataValidationError:
