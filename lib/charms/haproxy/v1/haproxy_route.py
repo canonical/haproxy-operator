@@ -148,7 +148,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 3
+LIBPATCH = 4
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -303,17 +303,32 @@ class ServerHealthCheck(BaseModel):
         port: Customize port value for http-check.
     """
 
-    interval: int = Field(
-        description="The interval (in seconds) between health checks.", default=60
+    interval: Optional[int] = Field(
+        description="The interval (in seconds) between health checks.", default=None
     )
-    rise: int = Field(
-        description="How many successful health checks before server is considered up.", default=2
+    rise: Optional[int] = Field(
+        description="How many successful health checks before server is considered up.",
+        default=None,
     )
-    fall: int = Field(
-        description="How many failed health checks before server is considered down.", default=3
+    fall: Optional[int] = Field(
+        description="How many failed health checks before server is considered down.", default=None
     )
     path: Optional[VALIDSTR] = Field(description="The health check path.", default=None)
     port: Optional[int] = Field(description="The health check port.", default=None)
+
+    @model_validator(mode="after")
+    def check_all_required_fields_set(self) -> Self:
+        """Check that all required fields for health check are set.
+
+        Raises:
+            ValueError: When validation fails.
+
+        Returns:
+            The validated model.
+        """
+        if not bool(self.interval) == bool(self.rise) == bool(self.fall):
+            raise ValueError("All three of interval, rise and fall must be set.")
+        return self
 
 
 # tarpit is not yet implemented
@@ -507,9 +522,9 @@ class RequirerApplicationData(_DatabagModel):
     rewrites: list[RewriteConfiguration] = Field(
         description="The list of path rewrite rules.", default=[]
     )
-    check: ServerHealthCheck = Field(
+    check: Optional[ServerHealthCheck] = Field(
         description="Configure health check for the service.",
-        default=ServerHealthCheck(),
+        default=None,
     )
     load_balancing: LoadBalancingConfiguration = Field(
         description="Configure loadbalancing.", default=LoadBalancingConfiguration()
