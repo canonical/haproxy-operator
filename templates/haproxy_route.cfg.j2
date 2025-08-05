@@ -63,7 +63,7 @@ backend {{ backend.backend_name }}
     http-request {{ rewrite_configuration }}
 {% endfor %}
 {% for server in backend.servers %}
-    server {{ server.server_name }} {{ server.address }}:{{ server.port }} {% if server.is_health_check_configured %} check inter {{ server.check.interval }}s rise {{ server.check.rise }} fall {{ server.check.fall }} {% endif +%}
+    server {{ server.server_name }} {{ server.address }}:{{ server.port }} {% if server.check %} check inter {{ server.check.interval }}s rise {{ server.check.rise }} fall {{ server.check.fall }} {% endif +%}
 {% endfor %}
 
 {% endfor %}
