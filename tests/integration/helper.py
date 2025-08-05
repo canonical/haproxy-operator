@@ -6,9 +6,11 @@
 
 import ipaddress
 import json
+import typing
 from urllib.parse import ParseResult, urlparse
 
 import jubilant
+import pytest
 import yaml
 from requests.adapters import DEFAULT_POOLBLOCK, DEFAULT_POOLSIZE, DEFAULT_RETRIES, HTTPAdapter
 
@@ -134,3 +136,45 @@ def get_unit_address(juju: jubilant.Juju, application: str) -> str:
     if isinstance(unit_ip_address, ipaddress.IPv6Address):
         return f"http://[{unit_ip_address}]"
     return f"http://{unit_ip_address}"
+
+
+def pytestconfig_arg_no_deploy(application: str) -> typing.Callable:
+    """Create a decorator that handles the --no-deploy config.
+
+    Args:
+        application: The application to deploy.
+
+    Returns:
+        the function decorator.
+    """
+
+    def decorator(
+        method: typing.Callable,
+    ) -> typing.Callable:
+        """Create a decorator that handles the --no-deploy config.
+
+        Args:
+            method: observer method to wrap.
+
+        Returns:
+            the function wrapper.
+        """
+
+        def wrapper(pytestconfig: pytest.Config, juju: jubilant.Juju, *args: typing.Any) -> str:
+            """Block the charm if the config is wrong.
+
+            Args:
+                pytestconfig: Contains parameters passed to the test.
+                juju: jubilant fixture
+                args: Additional arguments
+
+            Returns:
+                The value returned from the original function. That is, None.
+            """
+            if pytestconfig.getoption("--no-deploy") and application in juju.status().apps:
+                return application
+            return method(pytestconfig, juju, *args)
+
+        return wrapper
+
+    return decorator

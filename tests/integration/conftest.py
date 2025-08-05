@@ -14,10 +14,11 @@ import jubilant
 import pytest
 import yaml
 
+from .helper import pytestconfig_arg_no_deploy
+
 logger = logging.getLogger(__name__)
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
-GATEWAY_CLASS_CONFIG = "cilium"
 HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/haproxy_route_requirer.py"
 HAPROXY_ROUTE_LIB_SRC = "lib/charms/haproxy/v1/haproxy_route.py"
 APT_LIB_SRC = "lib/charms/operator_libs_linux/v0/apt.py"
@@ -25,6 +26,7 @@ ANY_CHARM_INGRESS_PER_UNIT_REQUIRER = "ingress-per-unit-requirer-any"
 ANY_CHARM_INGRESS_PER_UNIT_REQUIRER_SRC = "tests/integration/ingress_per_unit_requirer.py"
 JUJU_WAIT_TIMEOUT = 10 * 60  # 10 minutes
 SELF_SIGNED_CERTIFICATES_APP_NAME = "self-signed-certificates"
+INGRESS_CONFIGURATOR_APPLICATION = "ingress-configurator"
 
 
 @pytest.fixture(scope="session", name="charm")
@@ -173,3 +175,27 @@ def any_charm_ingress_per_unit_requirer_fixture(
         )
     )
     return ANY_CHARM_INGRESS_PER_UNIT_REQUIRER
+
+
+@pytest.fixture(scope="function", name="ingress_configurator")
+@pytestconfig_arg_no_deploy(application=INGRESS_CONFIGURATOR_APPLICATION)
+def ingress_configurator_fixture(_pytestconfig: pytest.Config, juju: jubilant.Juju) -> str:
+    """Deploy any-charm and configure it to serve as a requirer for the haproxy-route interface."""
+    juju.deploy(
+        INGRESS_CONFIGURATOR_APPLICATION,
+        app=INGRESS_CONFIGURATOR_APPLICATION,
+        channel="edge",
+        revision=10,
+        config={
+            "backend-addresses": "10.0.0.1",
+            "backend-ports": "80",
+            "hostname": "example.com",
+        },
+    )
+
+    juju.wait(
+        lambda status: (jubilant.all_blocked(status, INGRESS_CONFIGURATOR_APPLICATION)),
+        timeout=JUJU_WAIT_TIMEOUT,
+    )
+
+    return INGRESS_CONFIGURATOR_APPLICATION
