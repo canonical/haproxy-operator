@@ -449,6 +449,7 @@ def test_requirer_application_data_load_balancing_consistent_hashing_with_incorr
         )
 
 
+# pylint: disable=no-member
 def test_requirer_application_data_with_load_balancing_configuration():
     """
     arrange: Create a RequirerApplicationData model with mismatch load balancing configuration.

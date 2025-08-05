@@ -34,3 +34,5 @@ async def test_haproxy_route_ingress_configurator(
         f"{configured_application_with_tls}/leader", "cat /etc/haproxy/haproxy.cfg"
     )
     assert all(entry in haproxy_config for entry in ["retries 3", "option redispatch"])
+    # Integration tests for loadbalacing, cookie and consistent hashing will be added
+    # When the ingress-configurator charm is updated with the corresponding charm configs.
