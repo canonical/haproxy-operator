@@ -41,8 +41,6 @@ class HAProxyRouteServer:
         port: The port that the requirer application wishes to be exposed.
         check: Health check configuration.
         maxconn: Maximum allowed connections before requests are queued.
-        is_health_check_configured: Indicate if health check is configured and
-            should be rendered.
     """
 
     server_name: str
