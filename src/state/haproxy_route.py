@@ -65,6 +65,8 @@ class HAProxyRouteBackend:
         rewrite_configurations: Rewrite configuration.
         path_acl_required: Indicate if path routing is required.
         deny_path_acl_required: Indicate if deny_path is required.
+        consistent_hashing: Use consistent hashing to avoid redirection
+            when servers are added/removed.
     """
 
     relation_id: int

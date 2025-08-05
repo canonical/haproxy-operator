@@ -148,7 +148,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 4
+LIBPATCH = 5
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -383,6 +383,8 @@ class LoadBalancingConfiguration(BaseModel):
     Attributes:
         algorithm: Algorithm to use for load balancing.
         cookie: Cookie name to use when algorithm is set to cookie.
+        consistent_hashing: Use consistent hashing to avoid redirection
+            when servers are added/removed.
     """
 
     algorithm: LoadBalancingAlgorithm = Field(
@@ -393,8 +395,8 @@ class LoadBalancingConfiguration(BaseModel):
         description="Only used when algorithm is COOKIE. Define the cookie to load balance on.",
         default=None,
     )
-    # Note: Later when LoadBalancingAlgorithm.HASH is implemented this attribute will also apply
-    # under that mode.
+    # Note: Later when the generic LoadBalancingAlgorithm.HASH is implemented this attribute
+    # will also apply under that mode.
     consistent_hashing: bool = Field(
         description=(
             "Only used when the `algorithm` is SRCIP or COOKIE. "
