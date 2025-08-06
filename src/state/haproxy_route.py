@@ -46,7 +46,7 @@ class HAProxyRouteServer:
     server_name: str
     address: IPvAnyAddress
     port: int
-    check: ServerHealthCheck
+    check: Optional[ServerHealthCheck]
     maxconn: Optional[int]
 
 
