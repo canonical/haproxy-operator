@@ -22,7 +22,7 @@ requires:
 Then, to initialise the library:
 
 ```python
-from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpRequirer
+from charms.haproxy.v0.haproxy_route_tcp import HaproxyRouteTcpRequirer
 
 class SomeCharm(CharmBase):
   def __init__(self, *args):
@@ -33,18 +33,21 @@ class SomeCharm(CharmBase):
     self.haproxy_route_tcp_requirer = HaproxyRouteTcpRequirer(
         self,
         relation_name="haproxy-route-tcp"
-        port=<optional>  # The name of the service to route traffic to.
-        backend_port=<optional>  # List of ports the service is listening on.
+        port=<optional>  # The port exposed on the provider.
+        backend_port=<optional>  # The port where the backend service is listening.
         hosts=<optional>  # List of backend server addresses. Currently only support IP addresses.
-        sni=<optional>  # List of URL paths to route to this service.
+        sni=<optional>  # Server name identification. Used to route traffic to the service.
         check_interval=<optional>  # Interval between health checks in seconds.
         check_rise=<optional>  # Number of successful health checks
             before server is considered up.
         check_fall=<optional>  # Number of failed health checks before server is considered down.
-        check_type=<optional>  # The path to use for server health checks.
-        check_send=<optional>  # The port to use for http-check.
-        check_expect=<optional>  # The port to use for http-check.
-        check_db_user=<optional>  # The port to use for http-check.
+        check_type=<optional>  # Can be 'generic', 'mysql', 'postgres', 'redis' or 'smtp'ßß.
+        check_send=<optional>  # Only used in generic health checks,
+            specify a string to send in the health check request.
+        check_expect=<optional>  # Only used in generic health checks,
+            specify the expected response from a health check request.
+        check_db_user=<optional>  # Only used if type is postgres or mysql,
+            specify the user name to enable HAproxy to send a Client Authentication packet.
         load_balancing_algorithm=<optional>  # Algorithm to use for load balancing.
         load_balancing_consistent_hashing=<optional>  # Whether to use consistent hashing.
         rate_limit_connections_per_minute=<optional>  # Maximum connections allowed per minute.
@@ -72,7 +75,7 @@ class SomeCharm(CharmBase):
     # Afterwards regardless of how you initialized the requirer you can call the
     # provide_haproxy_route_requirements method anywhere in your charm to update the requirer data.
     # The method takes the same number of parameters as the requirer class.
-    # provide_haproxy_route_tcp_requirements(address=, port=, ...)
+    # provide_haproxy_route_tcp_requirements(port=, ...)
 
     self.framework.observe(
         self.framework.on.config_changed, self._on_config_changed
@@ -129,7 +132,7 @@ from ops.charm import CharmEvents
 from ops.framework import EventBase, EventSource, Object
 from ops.model import Relation
 from pydantic import (
-    AnyHttpUrl,
+    AnyUrl,
     BaseModel,
     BeforeValidator,
     ConfigDict,
@@ -183,7 +186,7 @@ class DataValidationError(Exception):
     """Raised when data validation fails."""
 
 
-class HaproxyRouteInvalidRelationDataError(Exception):
+class HaproxyRouteTcpInvalidRelationDataError(Exception):
     """Rasied when data validation of the haproxy-route relation fails."""
 
 
@@ -328,20 +331,50 @@ class TCPServerHealthCheck(BaseModel):
             specify the user name to enable HAproxy to send a Client Authentication packet.
     """
 
-    interval: Optional[int] = Field(
-        description="The interval (in seconds) between health checks.", default=None
+    # interval, rise and fall don't have a default value since the class itself is optional
+    # in the requirer databag model, so once the class is instantiated we need all of the
+    # required attributes to be present as we can assume that health-check is being configured.
+    interval: int = Field(
+        description="The interval (in seconds) between health checks.",
+        gt=0,
     )
-    rise: Optional[int] = Field(
+    rise: int = Field(
         description="How many successful health checks before server is considered up.",
+        gt=0,
+    )
+    fall: int = Field(
+        description="How many failed health checks before server is considered down.", gt=0
+    )
+    check_type: Optional[TCPHealthCheckType] = Field(
+        description=(
+            "The health check type, can be 'generic', 'mysql', 'postgres', 'redis' or 'smtp'"
+        ),
         default=None,
     )
-    fall: Optional[int] = Field(
-        description="How many failed health checks before server is considered down.", default=None
+    # send and expect does not have VALIDSTR validation because we need the flexibilty to
+    # specify anything in the health-check TCP requests. They will need to be properly
+    # sanitized / validated in the provider charm.
+    send: Optional[str] = Field(
+        description=(
+            "Only used in generic health checks, "
+            "specify a string to send in the health check request."
+        ),
+        default=None,
     )
-    check_type: Optional[VALIDSTR] = Field(description="The health check path.", default=None)
-    send: Optional[str] = Field(description="The health check port.", default=None)
-    expect: Optional[str] = Field(description="The health check port.", default=None)
-    db_user: Optional[str] = Field(description="The health check port.", default=None)
+    expect: Optional[str] = Field(
+        description=(
+            "Only used in generic health checks, "
+            "specify the expected response from a health check request."
+        ),
+        default=None,
+    )
+    db_user: Optional[VALIDSTR] = Field(
+        description=(
+            "Only used if type is postgres or mysql, "
+            "specify the user name to enable HAproxy to send a Client Authentication packet."
+        ),
+        default=None,
+    )
 
     @model_validator(mode="after")
     def check_all_required_fields_set(self) -> Self:
@@ -353,8 +386,15 @@ class TCPServerHealthCheck(BaseModel):
         Returns:
             The validated model.
         """
-        if not bool(self.interval) == bool(self.rise) == bool(self.fall):
-            raise ValueError("All three of interval, rise and fall must be set.")
+        if (
+            self.send is not None or self.expect is not None
+        ) and self.check_type == TCPHealthCheckType.GENERIC:
+            raise ValueError("send and expect can only be set if type is 'generic'")
+        if self.db_user is not None and self.check_type not in [
+            TCPHealthCheckType.MYSQL,
+            TCPHealthCheckType.POSTGRES,
+        ]:
+            raise ValueError("db_user can only be set if type is postgres or mysql")
         return self
 
 
@@ -363,13 +403,11 @@ class RateLimitPolicy(Enum):
     """Enum of possible rate limiting policies.
 
     Attrs:
-        DENY: deny a client's HTTP request to return a 403 Forbidden error.
         REJECT: closes the connection immediately without sending a response.
         SILENT: disconnects immediately without notifying the client
             that the connection has been closed.
     """
 
-    DENY = "deny"
     REJECT = "reject"
     SILENT = "silent-drop"
 
@@ -384,7 +422,7 @@ class RateLimit(BaseModel):
 
     connections_per_minute: int = Field(description="How many connections are allowed per minute.")
     policy: RateLimitPolicy = Field(
-        description="Configure the rate limit policy.", default=RateLimitPolicy.DENY
+        description="Configure the rate limit policy.", default=RateLimitPolicy.REJECT
     )
 
 
@@ -491,14 +529,15 @@ class TimeoutConfiguration(BaseModel):
     )
 
 
-class RequirerApplicationData(_DatabagModel):
+class TcpRequirerApplicationData(_DatabagModel):
     """Configuration model for HAProxy route requirer application data.
 
     Attributes:
-        port: The name of the service to route traffic to.
-        backend_port: List of ports the service is listening on.
+        port: The port exposed on the provider.
+        backend_port: The port where the backend service is listening. Defaults to the
+            provider port.
         hosts: List of backend server addresses. Currently only support IP addresses.
-        sni: List of URL paths to route to this service.
+        sni: Server name identification. Used to route traffic to the service.
         check: TCP health check configuration
         load_balancing: Load balancing configuration.
         rate_limit: Rate limit configuration.
@@ -511,13 +550,14 @@ class RequirerApplicationData(_DatabagModel):
         tls_terminate: Whether to enable tls termination on the dedicated frontend.
     """
 
-    port: int = Field(description="The port exposed on HAProxy.")
+    port: int = Field(description="The port exposed on the provider.", gt=0, le=65535)
     backend_port: Optional[int] = Field(
         description=(
-            "The port where the backend service is listening. "
-            "Defaults to the haproxy port if not set"
+            "The port where the backend service is listening. " "Defaults to the provider port."
         ),
         default=None,
+        gt=0,
+        le=65525,
     )
     sni: Optional[VALIDSTR] = Field(
         description="Server name identification. Used to route traffic to the service.",
@@ -556,6 +596,19 @@ class RequirerApplicationData(_DatabagModel):
     enforce_tls: bool = Field(description="Whether to enforce TLS for all traffic.", default=True)
     tls_terminate: bool = Field(description="Whether to enable tls termination.", default=True)
 
+    @model_validator(mode="after")
+    def assign_default_backend_port(self) -> "Self":
+        """Assign a default value to backend_port if not set.
+
+        The value is equal to the provider port.
+
+        Returns:
+            The model with backend_port default value applied.
+        """
+        if self.backend_port is None:
+            self.backend_port = self.port
+        return self
+
 
 class HaproxyRouteTcpProviderAppData(_DatabagModel):
     """haproxy-route provider databag schema.
@@ -564,10 +617,10 @@ class HaproxyRouteTcpProviderAppData(_DatabagModel):
         endpoints: The list of proxied endpoints that maps to the backend.
     """
 
-    endpoints: list[AnyHttpUrl]
+    endpoints: list[AnyUrl]
 
 
-class RequirerUnitData(_DatabagModel):
+class TcpRequirerUnitData(_DatabagModel):
     """haproxy-route requirer unit data.
 
     Attributes:
@@ -578,7 +631,7 @@ class RequirerUnitData(_DatabagModel):
 
 
 @dataclass
-class HaproxyRouteRequirerData:
+class HaproxyRouteTcpRequirerData:
     """haproxy-route requirer data.
 
     Attributes:
@@ -588,8 +641,8 @@ class HaproxyRouteRequirerData:
     """
 
     relation_id: int
-    application_data: RequirerApplicationData
-    units_data: list[RequirerUnitData]
+    application_data: TcpRequirerApplicationData
+    units_data: list[TcpRequirerUnitData]
 
 
 @dataclass
@@ -601,7 +654,7 @@ class HaproxyRouteTcpRequirersData:
         relation_ids_with_invalid_data: List of relation ids that contains invalid data.
     """
 
-    requirers_data: list[HaproxyRouteRequirerData]
+    requirers_data: list[HaproxyRouteTcpRequirerData]
     relation_ids_with_invalid_data: list[int]
 
     @model_validator(mode="after")
@@ -632,21 +685,21 @@ class HaproxyRouteTcpRequirersData:
         return self
 
 
-class HaproxyRouteDataAvailableEvent(EventBase):
+class HaproxyRouteTcpDataAvailableEvent(EventBase):
     """HaproxyRouteDataAvailableEvent custom event.
 
     This event indicates that the requirers data are available.
     """
 
 
-class HaproxyRouteDataRemovedEvent(EventBase):
+class HaproxyRouteTcpDataRemovedEvent(EventBase):
     """HaproxyRouteDataRemovedEvent custom event.
 
     This event indicates that one of the endpoints was removed.
     """
 
 
-class HaproxyRouteProviderEvents(CharmEvents):
+class HaproxyRouteTcpProviderEvents(CharmEvents):
     """List of events that the TLS Certificates requirer charm can leverage.
 
     Attributes:
@@ -655,8 +708,8 @@ class HaproxyRouteProviderEvents(CharmEvents):
         data_removed: This event indicates that one of the endpoints was removed.
     """
 
-    data_available = EventSource(HaproxyRouteDataAvailableEvent)
-    data_removed = EventSource(HaproxyRouteDataRemovedEvent)
+    data_available = EventSource(HaproxyRouteTcpDataAvailableEvent)
+    data_removed = EventSource(HaproxyRouteTcpDataRemovedEvent)
 
 
 class HaproxyRouteTcpProvider(Object):
@@ -667,7 +720,7 @@ class HaproxyRouteTcpProvider(Object):
         relations: Related appliations.
     """
 
-    on = HaproxyRouteProviderEvents()
+    on = HaproxyRouteTcpProviderEvents()
 
     def __init__(
         self,
@@ -681,7 +734,7 @@ class HaproxyRouteTcpProvider(Object):
             charm: The charm that is instantiating the library.
             relation_name: The name of the relation.
             raise_on_validation_error: Whether the library should raise
-                HaproxyRouteInvalidRelationDataError when requirer data validation fails.
+                HaproxyRouteTcpInvalidRelationDataError when requirer data validation fails.
                 If this is set to True the provider charm needs to also catch and handle the
                 thrown exception.
         """
@@ -721,32 +774,32 @@ class HaproxyRouteTcpProvider(Object):
             relations: A list of Relation instances to fetch data from.
 
         Raises:
-            HaproxyRouteInvalidRelationDataError: When requirer data validation fails.
+            HaproxyRouteTcpInvalidRelationDataError: When requirer data validation fails.
 
         Returns:
             HaproxyRouteRequirersData: Validated data from all haproxy-route requirers.
         """
-        requirers_data: list[HaproxyRouteRequirerData] = []
+        requirers_data: list[HaproxyRouteTcpRequirerData] = []
         relation_ids_with_invalid_data: list[int] = []
         for relation in relations:
             try:
                 application_data = self._get_requirer_application_data(relation)
                 units_data = self._get_requirer_units_data(relation)
-                haproxy_route_requirer_data = HaproxyRouteRequirerData(
+                haproxy_route_tcp_requirer_data = HaproxyRouteTcpRequirerData(
                     application_data=application_data,
                     units_data=units_data,
                     relation_id=relation.id,
                 )
-                requirers_data.append(haproxy_route_requirer_data)
+                requirers_data.append(haproxy_route_tcp_requirer_data)
             except DataValidationError as exc:
                 if self.raise_on_validation_error:
                     logger.error(
-                        "haproxy-route data validation failed for relation %s: %s",
+                        "haproxy-route-tcp data validation failed for relation %s: %s",
                         relation,
                         str(exc),
                     )
-                    raise HaproxyRouteInvalidRelationDataError(
-                        f"haproxy-route data validation failed for relation: {relation}"
+                    raise HaproxyRouteTcpInvalidRelationDataError(
+                        f"haproxy-route-tcp data validation failed for relation: {relation}"
                     ) from exc
                 relation_ids_with_invalid_data.append(relation.id)
                 continue
@@ -755,7 +808,7 @@ class HaproxyRouteTcpProvider(Object):
             relation_ids_with_invalid_data=relation_ids_with_invalid_data,
         )
 
-    def _get_requirer_units_data(self, relation: Relation) -> list[RequirerUnitData]:
+    def _get_requirer_units_data(self, relation: Relation) -> list[TcpRequirerUnitData]:
         """Fetch and validate the requirer's units data.
 
         Args:
@@ -767,7 +820,7 @@ class HaproxyRouteTcpProvider(Object):
         Returns:
             list[RequirerUnitData]: List of validated unit data from the requirer.
         """
-        requirer_units_data: list[RequirerUnitData] = []
+        requirer_units_data: list[TcpRequirerUnitData] = []
 
         for unit in relation.units:
             databag = relation.data.get(unit)
@@ -777,14 +830,14 @@ class HaproxyRouteTcpProvider(Object):
                 )
                 continue
             try:
-                data = cast(RequirerUnitData, RequirerUnitData.load(databag))
+                data = cast(TcpRequirerUnitData, TcpRequirerUnitData.load(databag))
                 requirer_units_data.append(data)
             except DataValidationError:
                 logger.error("Invalid requirer application data for %s", unit)
                 raise
         return requirer_units_data
 
-    def _get_requirer_application_data(self, relation: Relation) -> RequirerApplicationData:
+    def _get_requirer_application_data(self, relation: Relation) -> TcpRequirerApplicationData:
         """Fetch and validate the requirer's application databag.
 
         Args:
@@ -798,7 +851,8 @@ class HaproxyRouteTcpProvider(Object):
         """
         try:
             return cast(
-                RequirerApplicationData, RequirerApplicationData.load(relation.data[relation.app])
+                TcpRequirerApplicationData,
+                TcpRequirerApplicationData.load(relation.data[relation.app]),
             )
         except DataValidationError:
             logger.error("Invalid requirer application data for %s", relation.app.name)
@@ -812,7 +866,7 @@ class HaproxyRouteTcpProvider(Object):
             relation: The relation with the requirer application.
         """
         HaproxyRouteTcpProviderAppData(
-            endpoints=list(map(lambda x: cast(AnyHttpUrl, x), endpoints))
+            endpoints=[cast(AnyUrl, endpoint) for endpoint in endpoints]
         ).dump(relation.data[self.charm.app], clear=True)
 
 
@@ -864,7 +918,7 @@ class HaproxyRouteTcpRequirer(Object):
         load_balancing_algorithm: Optional[LoadBalancingAlgorithm] = None,
         load_balancing_consistent_hashing: bool = False,
         rate_limit_connections_per_minute: Optional[int] = None,
-        rate_limit_policy: RateLimitPolicy = RateLimitPolicy.DENY,
+        rate_limit_policy: RateLimitPolicy = RateLimitPolicy.REJECT,
         upload_limit: Optional[int] = None,
         download_limit: Optional[int] = None,
         retry_count: Optional[int] = None,
@@ -985,7 +1039,7 @@ class HaproxyRouteTcpRequirer(Object):
         load_balancing_algorithm: Optional[LoadBalancingAlgorithm] = None,
         load_balancing_consistent_hashing: bool = False,
         rate_limit_connections_per_minute: Optional[int] = None,
-        rate_limit_policy: RateLimitPolicy = RateLimitPolicy.DENY,
+        rate_limit_policy: RateLimitPolicy = RateLimitPolicy.REJECT,
         upload_limit: Optional[int] = None,
         download_limit: Optional[int] = None,
         retry_count: Optional[int] = None,
@@ -1078,7 +1132,7 @@ class HaproxyRouteTcpRequirer(Object):
         load_balancing_algorithm: Optional[LoadBalancingAlgorithm] = None,
         load_balancing_consistent_hashing: bool = False,
         rate_limit_connections_per_minute: Optional[int] = None,
-        rate_limit_policy: RateLimitPolicy = RateLimitPolicy.DENY,
+        rate_limit_policy: RateLimitPolicy = RateLimitPolicy.REJECT,
         upload_limit: Optional[int] = None,
         download_limit: Optional[int] = None,
         retry_count: Optional[int] = None,
@@ -1283,7 +1337,7 @@ class HaproxyRouteTcpRequirer(Object):
         unit_data = self._prepare_unit_data()
         unit_data.dump(relation.data[self.charm.unit], clear=True)
 
-    def _prepare_application_data(self) -> RequirerApplicationData:
+    def _prepare_application_data(self) -> TcpRequirerApplicationData:
         """Prepare and validate the application data.
 
         Raises:
@@ -1294,7 +1348,8 @@ class HaproxyRouteTcpRequirer(Object):
         """
         try:
             return cast(
-                RequirerApplicationData, RequirerApplicationData.from_dict(self._application_data)
+                TcpRequirerApplicationData,
+                TcpRequirerApplicationData.from_dict(self._application_data),
             )
         except ValidationError as exc:
             logger.error("Validation error when preparing requirer application data.")
@@ -1302,7 +1357,7 @@ class HaproxyRouteTcpRequirer(Object):
                 "Validation error when preparing requirer application data."
             ) from exc
 
-    def _prepare_unit_data(self) -> RequirerUnitData:
+    def _prepare_unit_data(self) -> TcpRequirerUnitData:
         """Prepare and validate unit data.
 
         Raises:
@@ -1322,9 +1377,9 @@ class HaproxyRouteTcpRequirer(Object):
             else:
                 logger.error("No unit IP available.")
                 raise DataValidationError("No unit IP available.")
-        return RequirerUnitData(address=cast(IPvAnyAddress, address))
+        return TcpRequirerUnitData(address=cast(IPvAnyAddress, address))
 
-    def get_proxied_endpoints(self) -> list[AnyHttpUrl]:
+    def get_proxied_endpoints(self) -> list[AnyUrl]:
         """The full ingress URL to reach the current unit.
 
         Returns:

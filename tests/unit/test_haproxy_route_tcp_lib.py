@@ -10,13 +10,14 @@ from typing import Any, cast
 
 import pytest
 from charms.haproxy.v0.haproxy_route_tcp import (
-    HaproxyRouteRequirerData,
     HaproxyRouteTcpProviderAppData,
+    HaproxyRouteTcpRequirerData,
     HaproxyRouteTcpRequirersData,
     LoadBalancingAlgorithm,
-    RequirerApplicationData,
-    RequirerUnitData,
+    TCPHealthCheckType,
     TCPLoadBalancingConfiguration,
+    TcpRequirerApplicationData,
+    TcpRequirerUnitData,
     TCPServerHealthCheck,
 )
 from pydantic import AnyHttpUrl, ValidationError
@@ -59,16 +60,18 @@ def mock_provider_app_data_fixture():
 # pylint: disable=no-member
 def test_requirer_application_data_validation():
     """
-    arrange: Create a RequirerApplicationData model with valid data.
+    arrange: Create a TcpRequirerApplicationData model with valid data.
     act: Validate the model.
     assert: Model validation passes.
     """
-    data = RequirerApplicationData(
+    data = TcpRequirerApplicationData(
         port=8080,
         backend_port=9090,
         hosts=[MOCK_ADDRESS],
         sni="api.haproxy.internal",
-        check=TCPServerHealthCheck(interval=60, rise=2, fall=3, check_type="generic"),
+        check=TCPServerHealthCheck(
+            interval=60, rise=2, fall=3, check_type=TCPHealthCheckType.GENERIC
+        ),
         load_balancing=TCPLoadBalancingConfiguration(algorithm=LoadBalancingAlgorithm.LEASTCONN),
         enforce_tls=True,
         tls_terminate=True,
@@ -82,7 +85,7 @@ def test_requirer_application_data_validation():
     assert data.check.interval == 60
     assert data.check.rise == 2
     assert data.check.fall == 3
-    assert data.check.check_type == "generic"
+    assert data.check.check_type == TCPHealthCheckType.GENERIC
     assert data.load_balancing
     assert data.load_balancing.algorithm == LoadBalancingAlgorithm.LEASTCONN
     assert data.enforce_tls is True
@@ -91,12 +94,12 @@ def test_requirer_application_data_validation():
 
 def test_requirer_application_data_invalid_hosts():
     """
-    arrange: Create a RequirerApplicationData model with hosts having invalid ip addresses.
+    arrange: Create a TcpRequirerApplicationData model with hosts having invalid ip addresses.
     act: Validate the model.
     assert: Validation raises an error.
     """
     with pytest.raises(ValidationError):
-        RequirerApplicationData(
+        TcpRequirerApplicationData(
             port=8080,
             # We want to force an invalid address here
             hosts=["invalid"],  # type: ignore
@@ -105,14 +108,14 @@ def test_requirer_application_data_invalid_hosts():
 
 def test_requirer_application_data_minimal_valid():
     """
-    arrange: Create a RequirerApplicationData model with minimal valid data.
+    arrange: Create a TcpRequirerApplicationData model with minimal valid data.
     act: Validate the model.
     assert: Model validation passes with defaults.
     """
-    data = RequirerApplicationData(port=8080)
+    data = TcpRequirerApplicationData(port=8080)
 
     assert data.port == 8080
-    assert data.backend_port is None
+    assert data.backend_port == 8080
     assert data.hosts == []
     assert data.sni is None
     assert data.enforce_tls is True
@@ -129,7 +132,7 @@ def test_tcp_server_health_check_validation():
         interval=30,
         rise=3,
         fall=2,
-        check_type="mysql",
+        check_type=TCPHealthCheckType.MYSQL,
         send="SELECT 1",
         expect="1",
         db_user="health_check",
@@ -138,20 +141,10 @@ def test_tcp_server_health_check_validation():
     assert check.interval == 30
     assert check.rise == 3
     assert check.fall == 2
-    assert check.check_type == "mysql"
+    assert check.check_type == TCPHealthCheckType.MYSQL
     assert check.send == "SELECT 1"
     assert check.expect == "1"
     assert check.db_user == "health_check"
-
-
-def test_tcp_server_health_check_incomplete():
-    """
-    arrange: Create a TCPServerHealthCheck model with incomplete required fields.
-    act: Validate the model.
-    assert: Validation raises an error.
-    """
-    with pytest.raises(ValidationError):
-        TCPServerHealthCheck(interval=60)
 
 
 def test_tcp_load_balancing_configuration_validation():
@@ -182,11 +175,11 @@ def test_tcp_load_balancing_configuration_invalid_consistent_hashing():
 
 def test_requirer_unit_data_validation():
     """
-    arrange: Create a RequirerUnitData model with valid data.
+    arrange: Create a TcpRequirerUnitData model with valid data.
     act: Validate the model.
     assert: Model validation passes.
     """
-    data = RequirerUnitData(address=MOCK_ADDRESS)
+    data = TcpRequirerUnitData(address=MOCK_ADDRESS)
     assert str(data.address) == str(MOCK_ADDRESS)
 
 
@@ -208,19 +201,19 @@ def test_tcp_requirers_data_duplicate_ports():
     act: Validate the model.
     assert: Validation updates relation_ids_with_invalid_data.
     """
-    app_data1 = RequirerApplicationData(port=8080)
-    app_data2 = RequirerApplicationData(port=8080)  # Same port
+    app_data1 = TcpRequirerApplicationData(port=8080)
+    app_data2 = TcpRequirerApplicationData(port=8080)  # Same port
 
-    tcp_requirer_data1 = HaproxyRouteRequirerData(
+    tcp_requirer_data1 = HaproxyRouteTcpRequirerData(
         relation_id=1,
         application_data=app_data1,
-        units_data=[RequirerUnitData(address=MOCK_ADDRESS)],
+        units_data=[TcpRequirerUnitData(address=MOCK_ADDRESS)],
     )
 
-    tcp_requirer_data2 = HaproxyRouteRequirerData(
+    tcp_requirer_data2 = HaproxyRouteTcpRequirerData(
         relation_id=2,
         application_data=app_data2,
-        units_data=[RequirerUnitData(address=ANOTHER_MOCK_ADDRESS)],
+        units_data=[TcpRequirerUnitData(address=ANOTHER_MOCK_ADDRESS)],
     )
 
     requirers_data = HaproxyRouteTcpRequirersData(
@@ -234,11 +227,11 @@ def test_tcp_requirers_data_duplicate_ports():
 def test_load_requirer_application_data(mock_relation_data):
     """
     arrange: Create a databag with valid TCP application data.
-    act: Load the data with RequirerApplicationData.load().
+    act: Load the data with TcpRequirerApplicationData.load().
     assert: Data is loaded correctly.
     """
     databag = {k: json.dumps(v) for k, v in mock_relation_data.items()}
-    data = cast(RequirerApplicationData, RequirerApplicationData.load(databag))
+    data = cast(TcpRequirerApplicationData, TcpRequirerApplicationData.load(databag))
 
     assert data.port == 8080
     assert data.backend_port == 9090
@@ -248,23 +241,25 @@ def test_load_requirer_application_data(mock_relation_data):
     assert data.check.interval == 60
     assert data.check.rise == 2
     assert data.check.fall == 3
-    assert data.check.check_type == "generic"
+    assert data.check.check_type == TCPHealthCheckType.GENERIC
     assert data.enforce_tls is True
     assert data.tls_terminate is True
 
 
 def test_dump_requirer_application_data():
     """
-    arrange: Create a RequirerApplicationData model with valid data.
+    arrange: Create a TcpRequirerApplicationData model with valid data.
     act: Dump the model to a databag.
     assert: Databag contains correct data.
     """
-    data = RequirerApplicationData(
+    data = TcpRequirerApplicationData(
         port=8080,
         backend_port=9090,
         hosts=[MOCK_ADDRESS],
         sni="api.haproxy.internal",
-        check=TCPServerHealthCheck(interval=60, rise=2, fall=3, check_type="generic"),
+        check=TCPServerHealthCheck(
+            interval=60, rise=2, fall=3, check_type=TCPHealthCheckType.GENERIC
+        ),
         enforce_tls=False,
         tls_terminate=False,
     )
@@ -284,22 +279,22 @@ def test_dump_requirer_application_data():
 def test_load_requirer_unit_data(mock_unit_data):
     """
     arrange: Create a databag with valid unit data.
-    act: Load the data with RequirerUnitData.load().
+    act: Load the data with TcpRequirerUnitData.load().
     assert: Data is loaded correctly.
     """
     databag = {k: json.dumps(v) for k, v in mock_unit_data.items()}
-    data = cast(RequirerUnitData, RequirerUnitData.load(databag))
+    data = cast(TcpRequirerUnitData, TcpRequirerUnitData.load(databag))
 
     assert str(data.address) == str(MOCK_ADDRESS)
 
 
 def test_dump_requirer_unit_data():
     """
-    arrange: Create a RequirerUnitData model with valid data.
+    arrange: Create a TcpRequirerUnitData model with valid data.
     act: Dump the model to a databag.
     assert: Databag contains correct data.
     """
-    data = RequirerUnitData(address=MOCK_ADDRESS)
+    data = TcpRequirerUnitData(address=MOCK_ADDRESS)
 
     databag: dict[str, str] = {}
     data.dump(databag)
@@ -338,47 +333,59 @@ def test_tcp_health_check_types():
     assert: All health check types are valid.
     """
     # Test generic health check
-    generic_check = TCPServerHealthCheck(interval=30, rise=2, fall=3, check_type="generic")
-    assert generic_check.check_type == "generic"
+    generic_check = TCPServerHealthCheck(
+        interval=30, rise=2, fall=3, check_type=TCPHealthCheckType.GENERIC
+    )
+    assert generic_check.check_type == TCPHealthCheckType.GENERIC
 
     # Test MySQL health check
     mysql_check = TCPServerHealthCheck(
-        interval=30, rise=2, fall=3, check_type="mysql", db_user="test_user"
+        interval=30, rise=2, fall=3, check_type=TCPHealthCheckType.MYSQL, db_user="test_user"
     )
-    assert mysql_check.check_type == "mysql"
+    assert mysql_check.check_type == TCPHealthCheckType.MYSQL
     assert mysql_check.db_user == "test_user"
 
     # Test PostgreSQL health check
     postgres_check = TCPServerHealthCheck(
-        interval=30, rise=2, fall=3, check_type="postgres", db_user="test_user"
+        interval=30, rise=2, fall=3, check_type=TCPHealthCheckType.POSTGRES, db_user="test_user"
     )
-    assert postgres_check.check_type == "postgres"
+    assert postgres_check.check_type == TCPHealthCheckType.POSTGRES
     assert postgres_check.db_user == "test_user"
 
     # Test Redis health check
     redis_check = TCPServerHealthCheck(
-        interval=30, rise=2, fall=3, check_type="redis", send="PING", expect="PONG"
+        interval=30,
+        rise=2,
+        fall=3,
+        check_type=TCPHealthCheckType.REDIS,
+        send="PING",
+        expect="PONG",
     )
-    assert redis_check.check_type == "redis"
+    assert redis_check.check_type == TCPHealthCheckType.REDIS
     assert redis_check.send == "PING"
     assert redis_check.expect == "PONG"
 
     # Test SMTP health check
     smtp_check = TCPServerHealthCheck(
-        interval=30, rise=2, fall=3, check_type="smtp", send="HELO test", expect="250"
+        interval=30,
+        rise=2,
+        fall=3,
+        check_type=TCPHealthCheckType.SMTP,
+        send="HELO test",
+        expect="250",
     )
-    assert smtp_check.check_type == "smtp"
+    assert smtp_check.check_type == TCPHealthCheckType.SMTP
     assert smtp_check.send == "HELO test"
     assert smtp_check.expect == "250"
 
 
 def test_requirer_application_data_with_ip_deny_list():
     """
-    arrange: Create a RequirerApplicationData model with IP deny list.
+    arrange: Create a TcpRequirerApplicationData model with IP deny list.
     act: Validate the model.
     assert: Model validation passes with IP deny list.
     """
-    data = RequirerApplicationData(
+    data = TcpRequirerApplicationData(
         port=8080, ip_deny_list=[ip_address("192.168.1.100"), ip_address("10.0.0.50")]
     )
 
@@ -390,29 +397,29 @@ def test_requirer_application_data_with_ip_deny_list():
 
 def test_requirer_application_data_backend_port_defaults():
     """
-    arrange: Create a RequirerApplicationData model without backend_port.
+    arrange: Create a TcpRequirerApplicationData model without backend_port.
     act: Validate the model.
     assert: backend_port defaults to None.
     """
-    data = RequirerApplicationData(port=8080)
+    data = TcpRequirerApplicationData(port=8080)
 
     assert data.port == 8080
-    assert data.backend_port is None
+    assert data.backend_port == 8080
 
 
 def test_requirer_application_data_tls_settings():
     """
-    arrange: Create a RequirerApplicationData model with different TLS settings.
+    arrange: Create a TcpRequirerApplicationData model with different TLS settings.
     act: Validate the model.
     assert: TLS settings are correctly set.
     """
     # Test with enforce_tls=False, tls_terminate=False
-    data1 = RequirerApplicationData(port=8080, enforce_tls=False, tls_terminate=False)
+    data1 = TcpRequirerApplicationData(port=8080, enforce_tls=False, tls_terminate=False)
     assert data1.enforce_tls is False
     assert data1.tls_terminate is False
 
     # Test with enforce_tls=True, tls_terminate=False
-    data2 = RequirerApplicationData(port=8080, enforce_tls=True, tls_terminate=False)
+    data2 = TcpRequirerApplicationData(port=8080, enforce_tls=True, tls_terminate=False)
     assert data2.enforce_tls is True
     assert data2.tls_terminate is False
 
@@ -433,11 +440,11 @@ def test_tcp_load_balancing_roundrobin():
 
 def test_requirer_application_data_complete_configuration(mock_relation_data):
     """
-    arrange: Create a RequirerApplicationData model with complete configuration.
+    arrange: Create a TcpRequirerApplicationData model with complete configuration.
     act: Validate the model.
     assert: All fields are correctly set.
     """
-    data = RequirerApplicationData(
+    data = TcpRequirerApplicationData(
         port=mock_relation_data["port"],
         backend_port=mock_relation_data["backend_port"],
         hosts=mock_relation_data["hosts"],
