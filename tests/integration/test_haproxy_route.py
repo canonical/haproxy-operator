@@ -23,7 +23,12 @@ async def test_haproxy_route_ingress_configurator(
     # ingress-configurator is not yet synced with the updated lib. This will be removed.
     juju.config(
         ingress_configurator,
-        values={"retry-count": 3, "retry-interval": 1, "retry-redispatch": True},
+        values={
+            "retry-count": 3,
+            "retry-interval": 1,
+            "retry-redispatch": True,
+            "http-server-close": True,
+        },
     )
     juju.wait(
         lambda status: jubilant.all_active(
@@ -33,4 +38,7 @@ async def test_haproxy_route_ingress_configurator(
     haproxy_config = juju.ssh(
         f"{configured_application_with_tls}/leader", "cat /etc/haproxy/haproxy.cfg"
     )
-    assert all(entry in haproxy_config for entry in ["retries 3", "option redispatch"])
+    assert all(
+        entry in haproxy_config
+        for entry in ["retries 3", "option redispatch", "option http-server-close"]
+    )

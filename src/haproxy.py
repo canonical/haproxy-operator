@@ -194,6 +194,8 @@ class HAProxyService:
         )
         template = env.get_template(template_file_path)
         rendered = template.render(context)
+        logger.warning(f"@@@ Rendering HAProxy config: {rendered}")
+        logger.warning(f"@@@ HAProxy config context: {context}")
         render_file(HAPROXY_CONFIG, rendered, 0o644)
 
     def _reload_haproxy_service(self) -> None:
