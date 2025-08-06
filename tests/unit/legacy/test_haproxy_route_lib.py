@@ -48,6 +48,7 @@ def mock_relation_data_fixture():
         "hostname": "api.haproxy.internal",
         "load_balancing": {"algorithm": "leastconn"},
         "check": {"interval": 60, "rise": 2, "fall": 3, "path": "/health"},
+        "http_server_close": True,
     }
 
 
@@ -213,6 +214,7 @@ def test_load_legacy_requirer_application_data(mock_relation_data):
     assert data.check.rise == 2
     assert data.check.fall == 3
     assert data.check.path == "/health"
+    assert data.http_server_close is True
 
 
 def test_load_requirer_application_data(mock_relation_data):
@@ -234,6 +236,7 @@ def test_load_requirer_application_data(mock_relation_data):
     assert data.check.rise == 2
     assert data.check.fall == 3
     assert data.check.path == "/health"
+    assert data.http_server_close is True
 
 
 def test_dump_requirer_application_data():
