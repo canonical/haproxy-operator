@@ -49,7 +49,7 @@ class SomeCharm(CharmBase):
         header_rewrite_expressions=<optional>, list of (header_name, rewrite_expression),
         load_balancing_algorithm=<optional>, defaults to "leastconn",
         load_balancing_cookie=<optional>, only used when load_balancing_algorithm is cookie
-        load_balancing_consistent_hashing=<optional>, to enable consistent hashing, 
+        load_balancing_consistent_hashing=<optional>, to enable consistent hashing,
             defaults to False,
         rate_limit_connections_per_minute=<optional>,
         rate_limit_policy=<optional>,
