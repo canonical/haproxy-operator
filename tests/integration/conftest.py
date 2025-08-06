@@ -185,7 +185,7 @@ def ingress_configurator_fixture(_pytestconfig: pytest.Config, juju: jubilant.Ju
         INGRESS_CONFIGURATOR_APPLICATION,
         app=INGRESS_CONFIGURATOR_APPLICATION,
         channel="edge",
-        revision=10,
+        revision=14,
         config={
             "backend-addresses": "10.0.0.1",
             "backend-ports": "80",
