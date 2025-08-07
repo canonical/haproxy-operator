@@ -305,4 +305,6 @@ def mock_out_validate_global_max_conn_check(monkeypatch):
     This function shells out to `sysctl` which is unnecessary and not
     representative on a machine where unit tests are run.
     """
-    monkeypatch.setattr("state.charm_state.check_output", Mock(return_value="fs.file-max = 9223372036854775807"))
+    monkeypatch.setattr(
+        "state.charm_state.check_output", Mock(return_value="fs.file-max = 9223372036854775807")
+    )

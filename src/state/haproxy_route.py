@@ -39,6 +39,7 @@ class HAProxyRouteServer:
         server_name: The name of the unit with invalid characters replaced.
         address: The IP address of the requirer unit.
         port: The port that the requirer application wishes to be exposed.
+        protocol: The protocol that the backend service speaks. "http" (default) or "https".
         check: Health check configuration.
         maxconn: Maximum allowed connections before requests are queued.
     """
