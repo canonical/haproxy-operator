@@ -22,7 +22,7 @@ juju deploy haproxy --channel=2.8/edge --base=ubuntu@24.04
 ```
 
 ## Configure TLS
-HAproxy enforces HTTPS when using the `ingress` integration. To set up the TLS for the HAProxy charm, deploy the `self-signed-certificates` charm as the `cert` application and integrate with the HAProxy charm.
+HAProxy enforces HTTPS when using the `ingress` integration. To set up the TLS for the HAProxy charm, deploy the `self-signed-certificates` charm as the `cert` application and integrate with the HAProxy charm.
 ```
 juju deploy self-signed-certificates cert
 juju integrate haproxy cert
