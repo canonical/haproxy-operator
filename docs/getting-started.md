@@ -67,7 +67,7 @@ The [Ingress configurator charm](https://charmhub.io/ingress-configurator) can
 be used as a translation layer between the ingress interface and the haproxy-route interface,
 but it also works to proxy backends external to Juju.
 
-In this tutorial we are going to run a local Python aplication hosting a web server. Run the following command:
+In this tutorial we are going to run a local Python application hosting a web server. Run the following command:
 ```
 python3 -m http.server 8080 &
 ```
