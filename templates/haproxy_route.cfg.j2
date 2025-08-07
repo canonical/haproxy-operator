@@ -31,6 +31,9 @@ peers haproxy_peers
 {% for backend in backends %}
 backend {{ backend.backend_name }}
     balance {{ backend.load_balancing_configuration }}
+{% if backend.consistent_hashing %}
+    hash-type consistent
+{% endif %}
     timeout server {{ backend.application_data.timeout.server }}s
     timeout connect {{ backend.application_data.timeout.connect }}s
     timeout queue {{ backend.application_data.timeout.queue }}s
