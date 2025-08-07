@@ -7,65 +7,72 @@ from unittest.mock import MagicMock
 import pytest
 
 from ops.testing import ActiveStatus
-from ops.testing import Relation, State, WaitingStatus, TCPPort, Model, Context
+from ops.testing import Relation, State, TCPPort, Model, Context
 
-from charm import HAProxyCharm as CHARM_TYPE
+from charm import HAProxyCharm
 
 
 @pytest.fixture
 def mocks(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr("haproxy.HAProxyService.install", MagicMock())
-    monkeypatch.setattr("haproxy.render_file", MagicMock())
+    monkeypatch.setattr("haproxy.pin_haproxy_package_version", MagicMock())
     monkeypatch.setattr("haproxy.HAProxyService._validate_haproxy_config", MagicMock())
 
 
-def test_case(systemd_mock: None, mocks: None):
+@pytest.mark.usefixtures("systemd_mock")
+def test_case(mocks: None, monkeypatch: pytest.MonkeyPatch):
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+
     # Arrange: prepare the state
+    haproxy_route_relation = Relation(
+        endpoint="haproxy-route",
+        interface="haproxy-route",
+        id=7,
+        local_app_data={"endpoints": '["https://haproxy.internal/"]'},
+        local_unit_data={},
+        remote_app_name="ingress-configurator",
+        limit=1,
+        remote_app_data={
+            "hostname": '"haproxy.internal"',
+            "hosts": '["10.12.97.153","10.12.97.154"]',
+            "ports": "[443]",
+            "protocol": '"https"',
+            "service": '"haproxy-tutorial-ingress-configurator"',
+        },
+        remote_units_data={0: {"address": '"10.75.1.129"'}}
+    )
+
     state = State(
-        config={"external-hostname": "fqdn.example", "global-maxconn": 4096},
+        config={"global-maxconn": 4096},
         relations=frozenset(
             {
-                Relation(
-                    endpoint="haproxy-route",
-                    interface="haproxy-route",
-                    id=8,
-                    local_app_data={},
-                    local_unit_data={},
-                    remote_app_name="ingress-configurator",
-                    limit=1,
-                    remote_app_data={
-                        "hosts": '["1.1.1.1"]',
-                        "ports": "[80]",
-                        "protocol": '"https"',
-                        "service": '"lexi-ingress-configurator"',
-                    },
-                    remote_units_data={1: {"address": '"10.56.206.24"'}},
-                ),
+                haproxy_route_relation,
                 Relation(
                     endpoint="certificates",
                     interface="tls-certificates",
-                    id=7,
+                    id=2,
                     local_app_data={},
                     local_unit_data={
-                        "certificate_signing_requests": '[{"certificate_signing_request": "-----BEGIN CERTIFICATE REQUEST-----\\nMIICtTCCAZ0CAQAwRjEVMBMGA1UEAwwMZnFkbi5leGFtcGxlMS0wKwYDVQQtDCRm\\nZmMyNzQ3MS1jMTc4LTQzOTgtYmZmNi0yNmQ1YmY2ZTNiYmYwggEiMA0GCSqGSIb3\\nDQEBAQUAA4IBDwAwggEKAoIBAQC/LjPWzQm2F+CCqIwbQ7S1iGKq2zZW+nNxyRFk\\n2FjXQvSxif2xdH8h+vdh/KBn0WetCEGMbPo1Gikv++MIvvsZk3WM8on4+ljEe6i+\\n1xhK61Jnxji+xl/yOtS9JS50VY+sokIVkpW403r1/Hzjtncr/5ff6eBcJ2uigt/3\\nmv18QRmJERzYyM5VqUY4R6JelEFl67yijpQOVKr1DsHiUYrXBSLxQ0phr0Q2jjL5\\ngyrbE910Rt5OdwTt/yOBhsqHWV5Fx8J/4zJm4D6f8Ohob5E8yG2HV3U1KG1qqXqV\\n56CIBqx0eZQalH4dL6MGLUiC893+lgF7fWiI8YnLzP7sPyLnAgMBAAGgKjAoBgkq\\nhkiG9w0BCQ4xGzAZMBcGA1UdEQQQMA6CDGZxZG4uZXhhbXBsZTANBgkqhkiG9w0B\\nAQsFAAOCAQEAEXTSjGqs7itBgfMUT50a5WFqr86BfkYs7oLWfR/1hP0b5I60qrLz\\nlLieZ/uYz7L/8fz1VoaavI3ciX4LtjW2RAtTG7Fqx9uPolwveiBK+xyH067Ij01/\\nsIqi+fj7O4lx+cggI9IS6GzlQPJ37h348Asg3jo1tyxDR3w0D17pWLhSz6d6KLSU\\nnedc3lomFq28h76hUew48y6qMbvP/XY5oXTDkNFv8/ilxRX2EulvZY+CCpLlmB0O\\ne7rYUmjHdyidAZyzK8Kkt4f9BYJsH31s07Y50zRV3u3atvz2un+FoOrvLcNc4MSp\\nYteoYWWk0Ey13IYlwY3Q9IoWINUw1BsJFw==\\n-----END CERTIFICATE REQUEST-----", "ca": false}]'
+                        "certificate_signing_requests": RANDOM_CERTIFICATES_SIGNING_REQUESTS,
                     },
-                    remote_app_name="self-signed-certificates",
+                    remote_app_name="cert",
                     limit=1,
                     remote_app_data={
-                        "certificates": '[{"ca": "-----BEGIN CERTIFICATE-----\\nMIIDTTCCAjWgAwIBAgIUN2mVv5+H7t0i3hAe06udfblztkswDQYJKoZIhvcNAQEL\\nBQAwLDEqMCgGA1UEAwwhc2VsZi1zaWduZWQtY2VydGlmaWNhdGVzLW9wZXJhdG9y\\nMB4XDTI1MDgwNTA1NDEwMFoXDTI2MDgwNTA1NDEwMFowLDEqMCgGA1UEAwwhc2Vs\\nZi1zaWduZWQtY2VydGlmaWNhdGVzLW9wZXJhdG9yMIIBIjANBgkqhkiG9w0BAQEF\\nAAOCAQ8AMIIBCgKCAQEAyJ9YZBAZrJfqhmMlbxX827B9Zu4cIAwLRLoLwcB+aucL\\nqZjpCn4qz4SQg/VXrEnKpNs18JtcvmehPwy8FaL6e2Ss3fb4BhbCQ5wwmU+Urrkb\\nPiK34kgn2h1bSRDe+lCuBS9Cw4Amrfgvm0qrWzVkhbhaUnoB+Q8K9oiOu41W+YJM\\n6BTw8CBOAledVoOf8Z1NyCfpFbAbSQaXPpaquUKQugQokzqBfLFU4LHOQNfhNlSb\\n5MZNctMXb6Wss+YAHMI0BgrHPQDswB20yOWVALZp8eQJ/hgV7+uYs044sfEfQsKQ\\nc2FiogqQl6VfJbAWX+AiN/elNTejiv/99/n+IFqAgQIDAQABo2cwZTAfBgNVHQ4E\\nGAQWBBT1vWAgwk/eadV65PGhrJ25/wJdIzAhBgNVHSMEGjAYgBYEFPW9YCDCT95p\\n1Xrk8aGsnbn/Al0jMA4GA1UdDwEB/wQEAwICpDAPBgNVHRMBAf8EBTADAQH/MA0G\\nCSqGSIb3DQEBCwUAA4IBAQAG5DoW4Y6878CaVBUTT6gO/YoS1gJGNew5eNyAbD4l\\nEI2PjICYm+XqISOtdneexeZxqBZ2sqllEmLZqWbFJgJZtjenBkQZC9zLdJKWr7GW\\nQqtZZUo4hZ2Ed0bBidZw4zCQZ+MiWad7hRQfHuHQyhZPPxbA7CzKEV12UN6dJfFd\\nw41a2EoXXl2ZEa4KiNUvMYrpPVW8y6uailjEb/MzId0LFiGiygOKoHsTYUqg77Vs\\nkcdFEAWJNpzqEMN/xecmEEEqmM4cWViphLnmahOJkmV16h89UR+n36STXF0SAt82\\nxMrQ6BDmFG+D+y+BBbs3wN35x++5CgPv/wzTqea7hSgu\\n-----END CERTIFICATE-----", "certificate_signing_request": "-----BEGIN CERTIFICATE REQUEST-----\\nMIICtTCCAZ0CAQAwRjEVMBMGA1UEAwwMZnFkbi5leGFtcGxlMS0wKwYDVQQtDCRm\\nZmMyNzQ3MS1jMTc4LTQzOTgtYmZmNi0yNmQ1YmY2ZTNiYmYwggEiMA0GCSqGSIb3\\nDQEBAQUAA4IBDwAwggEKAoIBAQC/LjPWzQm2F+CCqIwbQ7S1iGKq2zZW+nNxyRFk\\n2FjXQvSxif2xdH8h+vdh/KBn0WetCEGMbPo1Gikv++MIvvsZk3WM8on4+ljEe6i+\\n1xhK61Jnxji+xl/yOtS9JS50VY+sokIVkpW403r1/Hzjtncr/5ff6eBcJ2uigt/3\\nmv18QRmJERzYyM5VqUY4R6JelEFl67yijpQOVKr1DsHiUYrXBSLxQ0phr0Q2jjL5\\ngyrbE910Rt5OdwTt/yOBhsqHWV5Fx8J/4zJm4D6f8Ohob5E8yG2HV3U1KG1qqXqV\\n56CIBqx0eZQalH4dL6MGLUiC893+lgF7fWiI8YnLzP7sPyLnAgMBAAGgKjAoBgkq\\nhkiG9w0BCQ4xGzAZMBcGA1UdEQQQMA6CDGZxZG4uZXhhbXBsZTANBgkqhkiG9w0B\\nAQsFAAOCAQEAEXTSjGqs7itBgfMUT50a5WFqr86BfkYs7oLWfR/1hP0b5I60qrLz\\nlLieZ/uYz7L/8fz1VoaavI3ciX4LtjW2RAtTG7Fqx9uPolwveiBK+xyH067Ij01/\\nsIqi+fj7O4lx+cggI9IS6GzlQPJ37h348Asg3jo1tyxDR3w0D17pWLhSz6d6KLSU\\nnedc3lomFq28h76hUew48y6qMbvP/XY5oXTDkNFv8/ilxRX2EulvZY+CCpLlmB0O\\ne7rYUmjHdyidAZyzK8Kkt4f9BYJsH31s07Y50zRV3u3atvz2un+FoOrvLcNc4MSp\\nYteoYWWk0Ey13IYlwY3Q9IoWINUw1BsJFw==\\n-----END CERTIFICATE REQUEST-----", "certificate": "-----BEGIN CERTIFICATE-----\\nMIIDazCCAlOgAwIBAgIUFYBBQ8VHHT+onBzrVv9Z3hBPfaEwDQYJKoZIhvcNAQEL\\nBQAwLDEqMCgGA1UEAwwhc2VsZi1zaWduZWQtY2VydGlmaWNhdGVzLW9wZXJhdG9y\\nMB4XDTI1MDgwNTA2NDAzNloXDTI1MTEwMzA2NDAzNlowRjEVMBMGA1UEAwwMZnFk\\nbi5leGFtcGxlMS0wKwYDVQQtDCRmZmMyNzQ3MS1jMTc4LTQzOTgtYmZmNi0yNmQ1\\nYmY2ZTNiYmYwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC/LjPWzQm2\\nF+CCqIwbQ7S1iGKq2zZW+nNxyRFk2FjXQvSxif2xdH8h+vdh/KBn0WetCEGMbPo1\\nGikv++MIvvsZk3WM8on4+ljEe6i+1xhK61Jnxji+xl/yOtS9JS50VY+sokIVkpW4\\n03r1/Hzjtncr/5ff6eBcJ2uigt/3mv18QRmJERzYyM5VqUY4R6JelEFl67yijpQO\\nVKr1DsHiUYrXBSLxQ0phr0Q2jjL5gyrbE910Rt5OdwTt/yOBhsqHWV5Fx8J/4zJm\\n4D6f8Ohob5E8yG2HV3U1KG1qqXqV56CIBqx0eZQalH4dL6MGLUiC893+lgF7fWiI\\n8YnLzP7sPyLnAgMBAAGjazBpMCEGA1UdIwQaMBiAFgQU9b1gIMJP3mnVeuTxoayd\\nuf8CXSMwHQYDVR0OBBYEFKHtvtELswbxn+Kijg/pUSS6CLy9MAwGA1UdEwEB/wQC\\nMAAwFwYDVR0RBBAwDoIMZnFkbi5leGFtcGxlMA0GCSqGSIb3DQEBCwUAA4IBAQAB\\nhPFXayF99mHU9m68fxFq9WJhpCuD1aT518dH35K2RMmPNq7Rh1f7yZvyGiTGWlK4\\n0UiWBzZPuO6BAHvts1PNWhDAXNxDDVC5bbloAii46Ii6pJa/wDsYclVgiX0CQwCh\\neyKy2iN5qC5B2hpi5qyqGDG1fqynFQkZrlOyuGVlAjP7MXRtzb0vDZko5izvwm0S\\nLQCpSx96oa8CBw76xedAUk/3D5BjlsjVMsgrbMGIjREdXKLDupplY2RNt6n2u2B+\\nGEBqiDQSA6ETOMhS5ypaGRceQ6bbIk/z/DeVuFpN6u6RYfV+Q3rbGMBBvj38LUeB\\nDd9TI0MoN5MwDzDcLl3n\\n-----END CERTIFICATE-----", "chain": ["-----BEGIN CERTIFICATE-----\\nMIIDazCCAlOgAwIBAgIUFYBBQ8VHHT+onBzrVv9Z3hBPfaEwDQYJKoZIhvcNAQEL\\nBQAwLDEqMCgGA1UEAwwhc2VsZi1zaWduZWQtY2VydGlmaWNhdGVzLW9wZXJhdG9y\\nMB4XDTI1MDgwNTA2NDAzNloXDTI1MTEwMzA2NDAzNlowRjEVMBMGA1UEAwwMZnFk\\nbi5leGFtcGxlMS0wKwYDVQQtDCRmZmMyNzQ3MS1jMTc4LTQzOTgtYmZmNi0yNmQ1\\nYmY2ZTNiYmYwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC/LjPWzQm2\\nF+CCqIwbQ7S1iGKq2zZW+nNxyRFk2FjXQvSxif2xdH8h+vdh/KBn0WetCEGMbPo1\\nGikv++MIvvsZk3WM8on4+ljEe6i+1xhK61Jnxji+xl/yOtS9JS50VY+sokIVkpW4\\n03r1/Hzjtncr/5ff6eBcJ2uigt/3mv18QRmJERzYyM5VqUY4R6JelEFl67yijpQO\\nVKr1DsHiUYrXBSLxQ0phr0Q2jjL5gyrbE910Rt5OdwTt/yOBhsqHWV5Fx8J/4zJm\\n4D6f8Ohob5E8yG2HV3U1KG1qqXqV56CIBqx0eZQalH4dL6MGLUiC893+lgF7fWiI\\n8YnLzP7sPyLnAgMBAAGjazBpMCEGA1UdIwQaMBiAFgQU9b1gIMJP3mnVeuTxoayd\\nuf8CXSMwHQYDVR0OBBYEFKHtvtELswbxn+Kijg/pUSS6CLy9MAwGA1UdEwEB/wQC\\nMAAwFwYDVR0RBBAwDoIMZnFkbi5leGFtcGxlMA0GCSqGSIb3DQEBCwUAA4IBAQAB\\nhPFXayF99mHU9m68fxFq9WJhpCuD1aT518dH35K2RMmPNq7Rh1f7yZvyGiTGWlK4\\n0UiWBzZPuO6BAHvts1PNWhDAXNxDDVC5bbloAii46Ii6pJa/wDsYclVgiX0CQwCh\\neyKy2iN5qC5B2hpi5qyqGDG1fqynFQkZrlOyuGVlAjP7MXRtzb0vDZko5izvwm0S\\nLQCpSx96oa8CBw76xedAUk/3D5BjlsjVMsgrbMGIjREdXKLDupplY2RNt6n2u2B+\\nGEBqiDQSA6ETOMhS5ypaGRceQ6bbIk/z/DeVuFpN6u6RYfV+Q3rbGMBBvj38LUeB\\nDd9TI0MoN5MwDzDcLl3n\\n-----END CERTIFICATE-----", "-----BEGIN CERTIFICATE-----\\nMIIDTTCCAjWgAwIBAgIUN2mVv5+H7t0i3hAe06udfblztkswDQYJKoZIhvcNAQEL\\nBQAwLDEqMCgGA1UEAwwhc2VsZi1zaWduZWQtY2VydGlmaWNhdGVzLW9wZXJhdG9y\\nMB4XDTI1MDgwNTA1NDEwMFoXDTI2MDgwNTA1NDEwMFowLDEqMCgGA1UEAwwhc2Vs\\nZi1zaWduZWQtY2VydGlmaWNhdGVzLW9wZXJhdG9yMIIBIjANBgkqhkiG9w0BAQEF\\nAAOCAQ8AMIIBCgKCAQEAyJ9YZBAZrJfqhmMlbxX827B9Zu4cIAwLRLoLwcB+aucL\\nqZjpCn4qz4SQg/VXrEnKpNs18JtcvmehPwy8FaL6e2Ss3fb4BhbCQ5wwmU+Urrkb\\nPiK34kgn2h1bSRDe+lCuBS9Cw4Amrfgvm0qrWzVkhbhaUnoB+Q8K9oiOu41W+YJM\\n6BTw8CBOAledVoOf8Z1NyCfpFbAbSQaXPpaquUKQugQokzqBfLFU4LHOQNfhNlSb\\n5MZNctMXb6Wss+YAHMI0BgrHPQDswB20yOWVALZp8eQJ/hgV7+uYs044sfEfQsKQ\\nc2FiogqQl6VfJbAWX+AiN/elNTejiv/99/n+IFqAgQIDAQABo2cwZTAfBgNVHQ4E\\nGAQWBBT1vWAgwk/eadV65PGhrJ25/wJdIzAhBgNVHSMEGjAYgBYEFPW9YCDCT95p\\n1Xrk8aGsnbn/Al0jMA4GA1UdDwEB/wQEAwICpDAPBgNVHRMBAf8EBTADAQH/MA0G\\nCSqGSIb3DQEBCwUAA4IBAQAG5DoW4Y6878CaVBUTT6gO/YoS1gJGNew5eNyAbD4l\\nEI2PjICYm+XqISOtdneexeZxqBZ2sqllEmLZqWbFJgJZtjenBkQZC9zLdJKWr7GW\\nQqtZZUo4hZ2Ed0bBidZw4zCQZ+MiWad7hRQfHuHQyhZPPxbA7CzKEV12UN6dJfFd\\nw41a2EoXXl2ZEa4KiNUvMYrpPVW8y6uailjEb/MzId0LFiGiygOKoHsTYUqg77Vs\\nkcdFEAWJNpzqEMN/xecmEEEqmM4cWViphLnmahOJkmV16h89UR+n36STXF0SAt82\\nxMrQ6BDmFG+D+y+BBbs3wN35x++5CgPv/wzTqea7hSgu\\n-----END CERTIFICATE-----"]}]'
+                        "certificates": RANDOM_CERTIFICATES,
                     },
                     remote_units_data={0: {}},
                 ),
             }
         ),
-        # networks=frozenset( {"certificates", "haproxy-peers", "juju-info", "haproxy-route"}),
         containers=frozenset(),
         storages=frozenset(),
-        opened_ports=frozenset({TCPPort(port=80, protocol="tcp")}),
+        opened_ports=frozenset(
+            {TCPPort(port=443, protocol="tcp"), TCPPort(port=80, protocol="tcp")}
+        ),
         leader=False,
         model=Model(
-            name="lexi",
-            uuid="bbd03f86-3631-4ca4-8b5f-4044f38b88ce",
+            name="haproxy-tutorial",
+            uuid="b3c6eb18-f565-4d9c-8da2-603a3e846016",
             type="lxd",
             cloud_spec=None,
         ),
@@ -74,19 +81,45 @@ def test_case(systemd_mock: None, mocks: None):
         planned_units=1,
         deferred=[],
         stored_states=frozenset(),
-        app_status=WaitingStatus("Failed validating the HAProxy config."),
-        unit_status=WaitingStatus("Failed validating the HAProxy config."),
+        app_status=ActiveStatus(""),
+        unit_status=ActiveStatus(""),
         workload_version="",
     )
-
     # Act: trigger an event on the state
     ctx = Context(
-        CHARM_TYPE, juju_version="3.6.8"  # TODO: replace with charm type name,
+        HAProxyCharm, juju_version="3.6.8"
     )
 
     out = ctx.run(
-        ctx.on.config_changed(),
+        ctx.on.relation_changed(haproxy_route_relation),
         state,
     )
 
+    render_file_mock.assert_called_once()
+    haproxy_conf_contents = render_file_mock.call_args_list[0].args[1]
+    assert "server haproxy-tutorial-ingress-configurator_443_0 10.12.97.153:443 check inter 60s rise 2 fall 3 ssl ca-file @system-ca\n" in haproxy_conf_contents
+    assert "server haproxy-tutorial-ingress-configurator_443_1 10.12.97.154:443 check inter 60s rise 2 fall 3 ssl ca-file @system-ca\n" in haproxy_conf_contents
     assert out.app_status == ActiveStatus("")
+
+RANDOM_CERTIFICATES_SIGNING_REQUESTS="""
+[
+   {
+      "certificate_signing_request":"-----BEGIN CERTIFICATE REQUEST-----\\nMIICvTCCAaUCAQAwSjEZMBcGA1UEAwwQaGFwcm94eS5pbnRlcm5hbDEtMCsGA1UE\\nLQwkYjAyOTMyNzUtOGU0NC00MTY0LTk5OTktOTVmMjI0NGFlMzZjMIIBIjANBgkq\\nhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvqAAvchk4gMnkGAaCSRhP6z2xabv1u1K\\npN7H07ktXt5g3gNhQfcWAhsT3NTPjt3Mkk7mubC/U7mZsGVIGTccv3oxaXfW3z3R\\nl3OZMYySdMq+TZibJEmMlk4howYToV28w7YdnaknAeNxAPRThFk6PCke4+3baEzX\\nT1kQN8d85MkwvbrMgi81rJn7HI0PyeuZQ+4jLn/WePYWyvfcNDlZm+cd3jvKDEzd\\nn/LKb+knmUeNFSzazBBToMbOCFq4V0m7k5vK6rs5uLsg43RWvKa6gX/oFm3BrJgh\\n9zxC8d4Rk09SKN4+a7nWhE5KMgnw1EZ6PbICA/L6O0kgrnYKfxsmKQIDAQABoC4w\\nLAYJKoZIhvcNAQkOMR8wHTAbBgNVHREEFDASghBoYXByb3h5LmludGVybmFsMA0G\\nCSqGSIb3DQEBCwUAA4IBAQAUuXJ9zPYKSFPILwHoxMa184VHYNaQUs8vbepXSJuE\\nd+nIzM1+TCT03cs+UM5lbBhMZei/GL53oWIqq9ZqOSKHPV0C0qMgnws5Gvvbfobf\\nS7WSqsm9GEM+tH0NTaku925T/d1FqZV9cwtGWYDFDElHvz88oJkkDSuJRd+IUekN\\n7eI/p/T3BcPN4DpTJyUPcWSOWoslsAS6ETeIlMoEGuKd9M7RYzaLpY0j0GzmH+m+\\ne1az2vOxN4Tmqa8oLqrmyinlGxLAbTfX6UaBrG4NkbEiLjOnRyYmVQTptM18B5L8\\nufXaOFTlc2T2xPcX+W461Njd9uHLwFogZrz7w0B+M9Xk\\n-----END CERTIFICATE REQUEST-----",
+      "ca":false
+   }
+]
+"""
+
+RANDOM_CERTIFICATES = """
+[
+   {
+      "ca":"-----BEGIN CERTIFICATE-----\\nMIIDTTCCAjWgAwIBAgIUY7GquNSsgAafIeaMAjmgfGdf9F0wDQYJKoZIhvcNAQEL\\nBQAwLDEqMCgGA1UEAwwhc2VsZi1zaWduZWQtY2VydGlmaWNhdGVzLW9wZXJhdG9y\\nMB4XDTI1MDgwNzEzNDczM1oXDTI2MDgwNzEzNDczM1owLDEqMCgGA1UEAwwhc2Vs\\nZi1zaWduZWQtY2VydGlmaWNhdGVzLW9wZXJhdG9yMIIBIjANBgkqhkiG9w0BAQEF\\nAAOCAQ8AMIIBCgKCAQEAwt5427KsVz6mAP5xLlwwBXWQCBKvaI4ge91NxPsqzUSA\\nKzl0yAVClaKaxyO0unfurxbFkbEhrD28MLAejm9GD6HR/GXoqbzR39xog9suTBzc\\nL7flPoxvgBMZOQpTsNQ/ovk+3i6jRbCuglm9rCziCEjulmU3nVceYerDlyqoNLQ+\\nYGtaYMY51FKoVHpPs4CTh1EflsWC7uQpBT0i5Qa9aqY8weJtkKPF5WdD2Uc6IFGM\\nbOCEeyXyZRMHTGBZN9J081g+9SgihapfJaBmvs5XDhxyisYMc2nhv/VLecZtWZsT\\nB6kbV4K4mN9/lHjhXzgGoJw7ooaT4FcQVWnySrbW+wIDAQABo2cwZTAfBgNVHQ4E\\nGAQWBBQFLrK51xa+OAZMmFyq3uYdP9lglDAhBgNVHSMEGjAYgBYEFAUusrnXFr44\\nBkyYXKre5h0/2WCUMA4GA1UdDwEB/wQEAwICpDAPBgNVHRMBAf8EBTADAQH/MA0G\\nCSqGSIb3DQEBCwUAA4IBAQApoZGJe3LwKipilFlCG2IT617aWDKSvcvuiDAs429O\\nJqJz5rGnchIb92CCtxHvNbyGlKebk4nCVQfWigabYkq1zdiWgTH4ntQc6DeLjtPp\\ntnxKfvWzaMYS9Y310//ekYGBdP+TwqZOMU69D4D73M1sf49/WDdaXqk18zjOhxCw\\nZn5V+1nTH1qFD2h6ecGLVXGnyaHHlpgu1CEzHM4DuggnI/j2YktAcelxqq9N+EtJ\\nhnooq8DvZ4oHAxSdpFtglIPS+mnYZ8XGvcv4EwP6fPTNwVbPZzLpwPreA/XblSMJ\\ncBeAYONSb1blSyDfrCwoJnI0Fge9xRHjtzvsl7D3loRD\\n-----END CERTIFICATE-----",
+      "certificate_signing_request":"-----BEGIN CERTIFICATE REQUEST-----\\nMIICvTCCAaUCAQAwSjEZMBcGA1UEAwwQaGFwcm94eS5pbnRlcm5hbDEtMCsGA1UE\\nLQwkYjAyOTMyNzUtOGU0NC00MTY0LTk5OTktOTVmMjI0NGFlMzZjMIIBIjANBgkq\\nhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvqAAvchk4gMnkGAaCSRhP6z2xabv1u1K\\npN7H07ktXt5g3gNhQfcWAhsT3NTPjt3Mkk7mubC/U7mZsGVIGTccv3oxaXfW3z3R\\nl3OZMYySdMq+TZibJEmMlk4howYToV28w7YdnaknAeNxAPRThFk6PCke4+3baEzX\\nT1kQN8d85MkwvbrMgi81rJn7HI0PyeuZQ+4jLn/WePYWyvfcNDlZm+cd3jvKDEzd\\nn/LKb+knmUeNFSzazBBToMbOCFq4V0m7k5vK6rs5uLsg43RWvKa6gX/oFm3BrJgh\\n9zxC8d4Rk09SKN4+a7nWhE5KMgnw1EZ6PbICA/L6O0kgrnYKfxsmKQIDAQABoC4w\\nLAYJKoZIhvcNAQkOMR8wHTAbBgNVHREEFDASghBoYXByb3h5LmludGVybmFsMA0G\\nCSqGSIb3DQEBCwUAA4IBAQAUuXJ9zPYKSFPILwHoxMa184VHYNaQUs8vbepXSJuE\\nd+nIzM1+TCT03cs+UM5lbBhMZei/GL53oWIqq9ZqOSKHPV0C0qMgnws5Gvvbfobf\\nS7WSqsm9GEM+tH0NTaku925T/d1FqZV9cwtGWYDFDElHvz88oJkkDSuJRd+IUekN\\n7eI/p/T3BcPN4DpTJyUPcWSOWoslsAS6ETeIlMoEGuKd9M7RYzaLpY0j0GzmH+m+\\ne1az2vOxN4Tmqa8oLqrmyinlGxLAbTfX6UaBrG4NkbEiLjOnRyYmVQTptM18B5L8\\nufXaOFTlc2T2xPcX+W461Njd9uHLwFogZrz7w0B+M9Xk\\n-----END CERTIFICATE REQUEST-----",
+      "certificate":"-----BEGIN CERTIFICATE-----\\nMIIDczCCAlugAwIBAgIUMNkZOqIO3vHv7WKN66NoRX56hFUwDQYJKoZIhvcNAQEL\\nBQAwLDEqMCgGA1UEAwwhc2VsZi1zaWduZWQtY2VydGlmaWNhdGVzLW9wZXJhdG9y\\nMB4XDTI1MDgwNzEzNTMyNloXDTI1MTEwNTEzNTMyNlowSjEZMBcGA1UEAwwQaGFw\\ncm94eS5pbnRlcm5hbDEtMCsGA1UELQwkYjAyOTMyNzUtOGU0NC00MTY0LTk5OTkt\\nOTVmMjI0NGFlMzZjMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvqAA\\nvchk4gMnkGAaCSRhP6z2xabv1u1KpN7H07ktXt5g3gNhQfcWAhsT3NTPjt3Mkk7m\\nubC/U7mZsGVIGTccv3oxaXfW3z3Rl3OZMYySdMq+TZibJEmMlk4howYToV28w7Yd\\nnaknAeNxAPRThFk6PCke4+3baEzXT1kQN8d85MkwvbrMgi81rJn7HI0PyeuZQ+4j\\nLn/WePYWyvfcNDlZm+cd3jvKDEzdn/LKb+knmUeNFSzazBBToMbOCFq4V0m7k5vK\\n6rs5uLsg43RWvKa6gX/oFm3BrJgh9zxC8d4Rk09SKN4+a7nWhE5KMgnw1EZ6PbIC\\nA/L6O0kgrnYKfxsmKQIDAQABo28wbTAhBgNVHSMEGjAYgBYEFAUusrnXFr44BkyY\\nXKre5h0/2WCUMB0GA1UdDgQWBBTOTrB4WjSKJ2c7eL8Buo8Wqs3gnzAMBgNVHRMB\\nAf8EAjAAMBsGA1UdEQQUMBKCEGhhcHJveHkuaW50ZXJuYWwwDQYJKoZIhvcNAQEL\\nBQADggEBAL2q0G0CTUkw7IIip68gy9QqU+FEuHeJLxmu/eht/a1j9bkDGbc+AN71\\nKLHlmvaAiD7VxyiynYLhLJ1Bu0k8wsoVlP7Cly9CrKBh5I4jpONPQI/gdlD3IMZh\\n4fGSrxSTCk9FtMoMpsEyMnkC/IvB8bhWTLmJaKrVir8fJojhBt8k7cpSJhLxBurP\\n8k9zsT+O3q3MtxH9TyDRQSQD9Md/EinKXH3ObLwttsLDxRuY8pyQ/pRs/DJKzNhh\\n9E0U+CnSqtGqiWGhMNDEFyzHygJ+oQc1UI2MFD/bsnpqqEIf2/fMupWRBZIsElba\\nmioXC4d8O4BKELlTVAROy9msc0Dff2k=\\n-----END CERTIFICATE-----",
+      "chain":[
+         "-----BEGIN CERTIFICATE-----\\nMIIDczCCAlugAwIBAgIUMNkZOqIO3vHv7WKN66NoRX56hFUwDQYJKoZIhvcNAQEL\\nBQAwLDEqMCgGA1UEAwwhc2VsZi1zaWduZWQtY2VydGlmaWNhdGVzLW9wZXJhdG9y\\nMB4XDTI1MDgwNzEzNTMyNloXDTI1MTEwNTEzNTMyNlowSjEZMBcGA1UEAwwQaGFw\\ncm94eS5pbnRlcm5hbDEtMCsGA1UELQwkYjAyOTMyNzUtOGU0NC00MTY0LTk5OTkt\\nOTVmMjI0NGFlMzZjMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvqAA\\nvchk4gMnkGAaCSRhP6z2xabv1u1KpN7H07ktXt5g3gNhQfcWAhsT3NTPjt3Mkk7m\\nubC/U7mZsGVIGTccv3oxaXfW3z3Rl3OZMYySdMq+TZibJEmMlk4howYToV28w7Yd\\nnaknAeNxAPRThFk6PCke4+3baEzXT1kQN8d85MkwvbrMgi81rJn7HI0PyeuZQ+4j\\nLn/WePYWyvfcNDlZm+cd3jvKDEzdn/LKb+knmUeNFSzazBBToMbOCFq4V0m7k5vK\\n6rs5uLsg43RWvKa6gX/oFm3BrJgh9zxC8d4Rk09SKN4+a7nWhE5KMgnw1EZ6PbIC\\nA/L6O0kgrnYKfxsmKQIDAQABo28wbTAhBgNVHSMEGjAYgBYEFAUusrnXFr44BkyY\\nXKre5h0/2WCUMB0GA1UdDgQWBBTOTrB4WjSKJ2c7eL8Buo8Wqs3gnzAMBgNVHRMB\\nAf8EAjAAMBsGA1UdEQQUMBKCEGhhcHJveHkuaW50ZXJuYWwwDQYJKoZIhvcNAQEL\\nBQADggEBAL2q0G0CTUkw7IIip68gy9QqU+FEuHeJLxmu/eht/a1j9bkDGbc+AN71\\nKLHlmvaAiD7VxyiynYLhLJ1Bu0k8wsoVlP7Cly9CrKBh5I4jpONPQI/gdlD3IMZh\\n4fGSrxSTCk9FtMoMpsEyMnkC/IvB8bhWTLmJaKrVir8fJojhBt8k7cpSJhLxBurP\\n8k9zsT+O3q3MtxH9TyDRQSQD9Md/EinKXH3ObLwttsLDxRuY8pyQ/pRs/DJKzNhh\\n9E0U+CnSqtGqiWGhMNDEFyzHygJ+oQc1UI2MFD/bsnpqqEIf2/fMupWRBZIsElba\\nmioXC4d8O4BKELlTVAROy9msc0Dff2k=\\n-----END CERTIFICATE-----",
+         "-----BEGIN CERTIFICATE-----\\nMIIDTTCCAjWgAwIBAgIUY7GquNSsgAafIeaMAjmgfGdf9F0wDQYJKoZIhvcNAQEL\\nBQAwLDEqMCgGA1UEAwwhc2VsZi1zaWduZWQtY2VydGlmaWNhdGVzLW9wZXJhdG9y\\nMB4XDTI1MDgwNzEzNDczM1oXDTI2MDgwNzEzNDczM1owLDEqMCgGA1UEAwwhc2Vs\\nZi1zaWduZWQtY2VydGlmaWNhdGVzLW9wZXJhdG9yMIIBIjANBgkqhkiG9w0BAQEF\\nAAOCAQ8AMIIBCgKCAQEAwt5427KsVz6mAP5xLlwwBXWQCBKvaI4ge91NxPsqzUSA\\nKzl0yAVClaKaxyO0unfurxbFkbEhrD28MLAejm9GD6HR/GXoqbzR39xog9suTBzc\\nL7flPoxvgBMZOQpTsNQ/ovk+3i6jRbCuglm9rCziCEjulmU3nVceYerDlyqoNLQ+\\nYGtaYMY51FKoVHpPs4CTh1EflsWC7uQpBT0i5Qa9aqY8weJtkKPF5WdD2Uc6IFGM\\nbOCEeyXyZRMHTGBZN9J081g+9SgihapfJaBmvs5XDhxyisYMc2nhv/VLecZtWZsT\\nB6kbV4K4mN9/lHjhXzgGoJw7ooaT4FcQVWnySrbW+wIDAQABo2cwZTAfBgNVHQ4E\\nGAQWBBQFLrK51xa+OAZMmFyq3uYdP9lglDAhBgNVHSMEGjAYgBYEFAUusrnXFr44\\nBkyYXKre5h0/2WCUMA4GA1UdDwEB/wQEAwICpDAPBgNVHRMBAf8EBTADAQH/MA0G\\nCSqGSIb3DQEBCwUAA4IBAQApoZGJe3LwKipilFlCG2IT617aWDKSvcvuiDAs429O\\nJqJz5rGnchIb92CCtxHvNbyGlKebk4nCVQfWigabYkq1zdiWgTH4ntQc6DeLjtPp\\ntnxKfvWzaMYS9Y310//ekYGBdP+TwqZOMU69D4D73M1sf49/WDdaXqk18zjOhxCw\\nZn5V+1nTH1qFD2h6ecGLVXGnyaHHlpgu1CEzHM4DuggnI/j2YktAcelxqq9N+EtJ\\nhnooq8DvZ4oHAxSdpFtglIPS+mnYZ8XGvcv4EwP6fPTNwVbPZzLpwPreA/XblSMJ\\ncBeAYONSb1blSyDfrCwoJnI0Fge9xRHjtzvsl7D3loRD\\n-----END CERTIFICATE-----"
+      ]
+   }
+]
+"""
