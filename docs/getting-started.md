@@ -22,7 +22,7 @@ juju deploy haproxy --channel=2.8/edge --base=ubuntu@24.04
 ```
 
 ## Configure TLS
-Haproxy enforces HTTPS when using the `ingress` integration. To set up the TLS for the HAProxy charm, deploy the `self-signed-certificates` charm as the `cert` application and integrate with the HAProxy charm.
+HAproxy enforces HTTPS when using the `ingress` integration. To set up the TLS for the HAProxy charm, deploy the `self-signed-certificates` charm as the `cert` application and integrate with the HAProxy charm.
 ```
 juju deploy self-signed-certificates cert
 juju integrate haproxy cert
@@ -45,7 +45,7 @@ Machine  State    Address         Inst id        Base          AZ  Message
 1        started  10.208.204.86   juju-1d3062-1  ubuntu@24.04      Running
 ```
 
-Note the IP address of the HAProxy unit; in the above example, the relevant IP address is `10.208.204.138`. Use that IP address to an environment variable named HAPROXY_IP. 
+Note the IP address of the HAProxy unit; in the above example, the relevant IP address is `10.208.204.138`. Use that IP address to an environment variable named `HAPROXY_IP`. 
 You can configure the IP from the output of `juju status` with:
 ```
 HAPROXY_IP=$(juju status --format json | jq -r '.applications.haproxy.units."haproxy/0"."public-address"')
@@ -61,10 +61,12 @@ If successful, the terminal will output:
 Default page for the haproxy-operator charm
 ```
 
+<!-- valeCanonical.007-Headings-sentence-case = NO -->
 ## Use the Ingress configurator charm to proxy a web server
+<!-- valeCanonical.007-Headings-sentence-case = YES -->
 
 The [Ingress configurator charm](https://charmhub.io/ingress-configurator) can
-be used as a translation layer between the ingress interface and the haproxy-route interface,
+be used as a translation layer between the ingress interface and the `haproxy-route` interface,
 but it also works to proxy backends external to Juju.
 
 In this tutorial we are going to run a local Python application hosting a web server. Run the following command:
