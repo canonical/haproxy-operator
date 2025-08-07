@@ -122,10 +122,10 @@ def test_case(monkeypatch: pytest.MonkeyPatch):
 
     assert (
         "server haproxy-tutorial-ingress-configurator_443_0 10.12.97.153:443"
-        " check inter 60s rise 2 fall 3 ssl ca-file @system-ca\n" in haproxy_conf_contents
+        " ssl ca-file @system-ca\n" in haproxy_conf_contents
     )
     assert (
         "server haproxy-tutorial-ingress-configurator_443_1 10.12.97.154:443"
-        " check inter 60s rise 2 fall 3 ssl ca-file @system-ca\n" in haproxy_conf_contents
+        " ssl ca-file @system-ca\n" in haproxy_conf_contents
     )
     assert out.app_status == ActiveStatus("")

@@ -48,7 +48,7 @@ class HAProxyRouteServer:
     address: IPvAnyAddress
     port: int
     protocol: str
-    check: ServerHealthCheck
+    check: Optional[ServerHealthCheck]
     maxconn: Optional[int]
 
 
@@ -67,6 +67,8 @@ class HAProxyRouteBackend:
         rewrite_configurations: Rewrite configuration.
         path_acl_required: Indicate if path routing is required.
         deny_path_acl_required: Indicate if deny_path is required.
+        consistent_hashing: Use consistent hashing to avoid redirection
+            when servers are added/removed.
     """
 
     relation_id: int
@@ -135,6 +137,19 @@ class HAProxyRouteBackend:
             # then the cookie attribute must be not none
             return f"hash req.cookie({cast(str, self.application_data.load_balancing.cookie)})"
         return str(self.application_data.load_balancing.algorithm.value)
+
+    @property
+    def consistent_hashing(self) -> bool:
+        """Indicate if consistent hashing should be applied for this backend.
+
+        Returns:
+            bool: Whether consistent hashing should be applied.
+        """
+        return (
+            self.application_data.load_balancing.consistent_hashing
+            and self.application_data.load_balancing.algorithm
+            in [LoadBalancingAlgorithm.COOKIE, LoadBalancingAlgorithm.SRCIP]
+        )
 
     @property
     def rewrite_configurations(self) -> list[str]:

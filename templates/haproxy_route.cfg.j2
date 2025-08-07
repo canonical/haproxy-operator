@@ -31,9 +31,18 @@ peers haproxy_peers
 {% for backend in backends %}
 backend {{ backend.backend_name }}
     balance {{ backend.load_balancing_configuration }}
+{% if backend.consistent_hashing %}
+    hash-type consistent
+{% endif %}
     timeout server {{ backend.application_data.timeout.server }}s
     timeout connect {{ backend.application_data.timeout.connect }}s
     timeout queue {{ backend.application_data.timeout.queue }}s
+{% if backend.application_data.retry %}
+    retries {{ backend.application_data.retry.count }}
+{% if backend.application_data.retry.redispatch %}
+    option redispatch
+{% endif %}
+{% endif %}
 
     option httpchk {% if backend.application_data.check.path %}GET {{ backend.application_data.check.path }}{% endif +%}
 {% if backend.application_data.check.port %}
@@ -57,7 +66,7 @@ backend {{ backend.backend_name }}
     http-request {{ rewrite_configuration }}
 {% endfor %}
 {% for server in backend.servers %}
-    server {{ server.server_name }} {{ server.address }}:{{ server.port }} check inter {{ server.check.interval }}s rise {{ server.check.rise }} fall {{ server.check.fall }}{% if server.protocol == "https" %} ssl ca-file @system-ca{% endif +%}
+    server {{ server.server_name }} {{ server.address }}:{{ server.port }}{% if server.check %} check inter {{ server.check.interval }}s rise {{ server.check.rise }} fall {{ server.check.fall }}{% endif +%}{% if server.protocol == "https" %} ssl ca-file @system-ca{% endif +%}
 {% endfor %}
 
 {% endfor %}

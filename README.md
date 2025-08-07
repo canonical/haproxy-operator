@@ -9,6 +9,8 @@ A Juju charm that deploys and manages HAProxy on machine. HAProxy is a TCP/HTTP 
 Deploy the HAProxy charm and integrate it with a certificate provider charm
 ```
 juju deploy haproxy --channel=2.8/edge
+juju config haproxy external-hostname="fqdn.example"
+
 juju deploy self-signed-certificates
 juju integrate haproxy self-signed-certificates
 ```
