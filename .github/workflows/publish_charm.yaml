@@ -30,7 +30,7 @@ jobs:
           workspace = os.environ["GITHUB_WORKSPACE"]
           print(json.dumps(
             {
-              "any_charm.py": pathlib.Path(f"{workspace}/tests/integration/haproxy_route_requirer.py").read_text(
+              "any_charm.py": pathlib.Path(f"{workspace}/tests/integration/legacy/haproxy_route_requirer.py").read_text(
                 encoding="utf-8"
               ),
               "haproxy_route.py": pathlib.Path(f"{workspace}/lib/charms/haproxy/v1/haproxy_route.py").read_text(

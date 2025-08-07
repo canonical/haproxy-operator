@@ -68,7 +68,8 @@ In this tutorial we will use `any-charm` as the backend application. We will fet
 ```
 juju deploy any-charm requirer --channel beta --config src-overwrite="$(curl -L https://github.com/canonical/haproxy-operator/releases/download/rev141/haproxy_route_requirer_src.json)" --config python-packages="pydantic~=2.10"
 juju run requirer/0 rpc method=start_server
-juju integrate requirer haproxy
+juju integrate requirer haproxy:haproxy-route
+juju run requirer/0 rpc method=update_relation
 ```
 
 Let's check that the request has been properly proxied to the backend service. The `--insecure` option is needed here as we are using a self-signed certificate, as well as the `--resolve` option to manually perform a DNS lookup as HAProxy will issue an HTTPS redirect to `$HAPROXY_HOSTNAME`. Finally, `-L` is also needed to automatically follow redirects.
