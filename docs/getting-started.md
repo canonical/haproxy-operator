@@ -125,7 +125,7 @@ If successful, the terminal will respond with `ok!`.
 
 Well done! You've successfully completed the HAProxy tutorial.
 
-Kill the backgroup Python web server with:
+Kill the background Python web server with:
 ```
 kill $!
 ```
