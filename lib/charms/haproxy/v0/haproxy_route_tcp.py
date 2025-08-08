@@ -1447,8 +1447,9 @@ class HaproxyRouteTcpRequirer(Object):
             return []
 
     # The following methods allows for chaining which aims to improve the developper experience
+    # The following methods allows for chaining which aims to improve the developper experience
     def configure_port(self, port: int) -> "Self":
-        """Set the provider port
+        """Set the provider port.
 
         Args:
             port: The provider port to set
@@ -1460,10 +1461,10 @@ class HaproxyRouteTcpRequirer(Object):
         return self
 
     def configure_backend_port(self, backend_port: int) -> "Self":
-        """Set the backend port
+        """Set the backend port.
 
         Args:
-            port: The provider port to set
+            backend_port: The backend port to set
 
         Returns:
             Self: The HaproxyRouteTcpRequirer class
@@ -1472,10 +1473,10 @@ class HaproxyRouteTcpRequirer(Object):
         return self
 
     def configure_hosts(self, hosts: Optional[list[int]] = None) -> "Self":
-        """Set the backend port
+        """Set backend hosts.
 
         Args:
-            port: The provider port to set
+            hosts: The hosts list to set
 
         Returns:
             Self: The HaproxyRouteTcpRequirer class
@@ -1486,10 +1487,10 @@ class HaproxyRouteTcpRequirer(Object):
         return self
 
     def configure_sni(self, sni: str) -> "Self":
-        """Set the backend port
+        """Set the SNI.
 
         Args:
-            port: The provider port to set
+            sni: The SNI to set
 
         Returns:
             Self: The HaproxyRouteTcpRequirer class
@@ -1513,7 +1514,7 @@ class HaproxyRouteTcpRequirer(Object):
         interval: Number of seconds between consecutive health check attempts.
         rise: Number of consecutive successful health checks required for up.
         fall: Number of consecutive failed health checks required for DOWN.
-        check_type: Health check type, Can be “generic”, “mysql”, “postgres”, “redis” or “smtp”.
+        check_type: Health check type, Can be "generic", "mysql", "postgres", "redis" or "smtp".
         send: Only used in generic health checks,
             specify a string to send in the health check request.
         expect: Only used in generic health checks,
@@ -1540,10 +1541,11 @@ class HaproxyRouteTcpRequirer(Object):
         connections_per_minute: int,
         policy: TCPRateLimitPolicy = TCPRateLimitPolicy.REJECT,
     ) -> "Self":
-        """Set the backend port
+        """Configure rate limit.
 
         Args:
-            port: The provider port to set
+            connections_per_minute: The number of connections per minute allowed
+            policy: The rate limit policy to apply
 
         Returns:
             Self: The HaproxyRouteTcpRequirer class
@@ -1558,10 +1560,11 @@ class HaproxyRouteTcpRequirer(Object):
         upload_bytes_per_second: Optional[int] = None,
         download_bytes_per_second: Optional[int] = None,
     ) -> "Self":
-        """Set the backend port
+        """Configure bandwidth limit.
 
         Args:
-            port: The provider port to set
+            upload_bytes_per_second: Upload bandwidth limit in bytes per second
+            download_bytes_per_second: Download bandwidth limit in bytes per second
 
         Returns:
             Self: The HaproxyRouteTcpRequirer class
@@ -1586,10 +1589,11 @@ class HaproxyRouteTcpRequirer(Object):
         retry_count: int,
         retry_redispatch: bool = False,
     ) -> "Self":
-        """Set the backend port
+        """Configure retry.
 
         Args:
-            port: The provider port to set
+            retry_count: The number of retries to attempt
+            retry_redispatch: Whether to enable retry redispatch
 
         Returns:
             Self: The HaproxyRouteTcpRequirer class
@@ -1662,6 +1666,9 @@ class HaproxyRouteTcpRequirer(Object):
 
     def configure_deny_list(self, ip_deny_list: Optional[list[IPvAnyAddress]] = None) -> "Self":
         """Configure IP deny list.
+
+        Args:
+            ip_deny_list: List of IP addresses to deny
 
         Returns:
             Self: The HaproxyRouteTcpRequirer class
