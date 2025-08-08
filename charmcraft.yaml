@@ -86,12 +86,6 @@ config:
     vip:
       type: string
       description: Virtual IP address, used in active-passive ha mode.
-    http-server-close:
-      type: boolean
-      default: false
-      description: |
-          If set to true, the server will close the connection after each request.
-          This can be useful for certain applications that do not support keep-alive.
 
 actions:
   get-certificate:
