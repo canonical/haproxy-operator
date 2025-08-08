@@ -100,6 +100,16 @@ class SomeCharm(CharmBase):
         # Handle endpoints removed event
         ...
 
+    # 3.To initialize the requirer together with helper methods.
+    # This will use chaining of the helper methods to populate the requirer
+    # data attributes.
+    self.haproxy_tcp_route_requirer = HaproxyRouteTcpRequirer(self, relation_name="") \
+        .configure_port(4000) \
+        .configure_backend_port(5000) \
+        .configure_health_check(60, 5, 5) \
+        .configure_rate_limit(10, TCPRateLimitPolicy.SILENT)
+
+
 ## Using the library as the provider
 The provider charm should expose the interface as shown below:
 ```yaml
