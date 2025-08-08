@@ -12,6 +12,7 @@ import typing
 
 import ops
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
+from charms.haproxy.v0.haproxy_route_tcp import HaproxyRouteTcpProvider
 from charms.haproxy.v1.haproxy_route import HaproxyRouteProvider
 from charms.tls_certificates_interface.v4.tls_certificates import (
     CertificateAvailableEvent,
@@ -103,6 +104,8 @@ class HAProxyCharm(ops.CharmBase):
         self._ingress_per_unit_provider = IngressPerUnitProvider(charm=self)
         self.reverseproxy_requirer = HTTPRequirer(self, REVERSE_PROXY_RELATION)
         self.haproxy_route_provider = HaproxyRouteProvider(self)
+        self.haproxy_route_tcp_provider = HaproxyRouteTcpProvider(self)
+
         self.certificates = TLSCertificatesRequiresV4(
             charm=self,
             relationship_name=TLS_CERT_RELATION,
@@ -159,6 +162,12 @@ class HAProxyCharm(ops.CharmBase):
         )
         self.framework.observe(
             self.haproxy_route_provider.on.data_removed, self._on_config_changed
+        )
+        self.framework.observe(
+            self.haproxy_route_tcp_provider.on.data_available, self._on_config_changed
+        )
+        self.framework.observe(
+            self.haproxy_route_tcp_provider.on.data_removed, self._on_config_changed
         )
 
     @validate_config_and_tls(defer=False)
@@ -299,6 +308,7 @@ class HAProxyCharm(ops.CharmBase):
 
         haproxy_route_requirers_information = HaproxyRouteRequirersInformation.from_provider(
             self.haproxy_route_provider,
+            self.haproxy_route_tcp_provider,
             typing.cast(typing.Optional[str], self.model.config.get("external-hostname")),
             self._get_peer_units_address(),
         )

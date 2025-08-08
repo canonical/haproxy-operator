@@ -16,6 +16,11 @@ from charms.haproxy.v1.haproxy_route import (
     RequirerApplicationData,
     ServerHealthCheck,
 )
+from charms.haproxy.v0.haproxy_route_tcp import (
+    HaproxyRouteTcpProvider,
+    TcpRequirerApplicationData,
+    HaproxyRouteTcpRequirersData,
+)
 from pydantic import IPvAnyAddress, model_validator
 from pydantic.dataclasses import dataclass
 from typing_extensions import Self
@@ -173,6 +178,20 @@ class HAProxyRouteBackend:
 
 
 @dataclass(frozen=True)
+class HAProxyRouteTcpEndpoint:
+    """Represent an endpoint for haproxy-route-tcp which contains
+        a frontend with a custom port and a backend.
+
+    Attrs:
+        relation_id: Relation ID
+        application_data: Application data
+    """
+
+    relation_id: int
+    application_data: TcpRequirerApplicationData
+
+
+@dataclass(frozen=True)
 class HaproxyRouteRequirersInformation:
     """A component of charm state containing haproxy-route requirers information.
 
@@ -180,18 +199,25 @@ class HaproxyRouteRequirersInformation:
         backends: The list of backends each corresponds to a requirer application.
         stick_table_entries: List of stick table entries in the haproxy "peer" section.
         peers: List of IP address of haproxy peer units.
-        relation_ids_with_invalid_data: List of relation ids that contains invalid data.
+        relation_ids_with_invalid_data: List of haproxy-route relation ids
+            that contains invalid data.
+        relation_ids_with_invalid_data_tcp: List of haproxy-route-tcp relation ids
+            that contains invalid data.
+        tcp_endpoints: List of frontend/backend pairs in TCP mode.
     """
 
     backends: list[HAProxyRouteBackend]
     stick_table_entries: list[str]
     peers: list[IPvAnyAddress]
     relation_ids_with_invalid_data: list[int]
+    relation_ids_with_invalid_data_tcp: list[int]
+    tcp_endpoints: list[HAProxyRouteTcpEndpoint]
 
     @classmethod
     def from_provider(
         cls,
         haproxy_route: HaproxyRouteProvider,
+        haproxy_route_tcp: HaproxyRouteTcpProvider,
         external_hostname: Optional[str],
         peers: list[str],
     ) -> "HaproxyRouteRequirersInformation":
@@ -238,6 +264,23 @@ class HaproxyRouteRequirersInformation:
 
                 backends.append(backend)
 
+            tcp_endpoints: list[HAProxyRouteTcpEndpoint] = []
+            tcp_requirers: HaproxyRouteTcpRequirersData = haproxy_route_tcp.get_data(
+                haproxy_route_tcp.relations
+            )
+            relation_ids_with_invalid_data_tcp = tcp_requirers.relation_ids_with_invalid_data
+            for tcp_requirer in tcp_requirers.requirers_data:
+                if haproxy_route.relations and tcp_requirer.application_data.port in [80, 443]:
+                    logger.error("port 80 and 443 are not allowed if haproxy_route is present.")
+                    relation_ids_with_invalid_data_tcp.append(tcp_requirer.relation_id)
+                    continue
+                tcp_endpoints.append(
+                    HAProxyRouteTcpEndpoint(
+                        relation_id=tcp_requirer.relation_id,
+                        application_data=tcp_requirer.application_data,
+                    )
+                )
+
             return HaproxyRouteRequirersInformation(
                 # Sort backend by the max depth of the required path.
                 # This is to ensure that backends with deeper path ACLs get routed first.
@@ -245,6 +288,8 @@ class HaproxyRouteRequirersInformation:
                 stick_table_entries=stick_table_entries,
                 peers=[cast(IPvAnyAddress, peer_address) for peer_address in peers],
                 relation_ids_with_invalid_data=relation_ids_with_invalid_data,
+                relation_ids_with_invalid_data_tcp=relation_ids_with_invalid_data_tcp,
+                tcp_endpoints=tcp_endpoints,
             )
         except DataValidationError as exc:
             # This exception is only raised if the provider has "raise_on_validation_error" set
