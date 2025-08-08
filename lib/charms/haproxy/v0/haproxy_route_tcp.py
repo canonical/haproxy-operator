@@ -409,7 +409,7 @@ class TCPServerHealthCheck(BaseModel):
 
 
 # tarpit is not yet implemented
-class RateLimitPolicy(Enum):
+class TCPRateLimitPolicy(Enum):
     """Enum of possible rate limiting policies.
 
     Attrs:
@@ -431,8 +431,8 @@ class RateLimit(BaseModel):
     """
 
     connections_per_minute: int = Field(description="How many connections are allowed per minute.")
-    policy: RateLimitPolicy = Field(
-        description="Configure the rate limit policy.", default=RateLimitPolicy.REJECT
+    policy: TCPRateLimitPolicy = Field(
+        description="Configure the rate limit policy.", default=TCPRateLimitPolicy.REJECT
     )
 
 
@@ -932,7 +932,7 @@ class HaproxyRouteTcpRequirer(Object):
         load_balancing_algorithm: Optional[LoadBalancingAlgorithm] = None,
         load_balancing_consistent_hashing: bool = False,
         rate_limit_connections_per_minute: Optional[int] = None,
-        rate_limit_policy: RateLimitPolicy = RateLimitPolicy.REJECT,
+        rate_limit_policy: TCPRateLimitPolicy = TCPRateLimitPolicy.REJECT,
         upload_limit: Optional[int] = None,
         download_limit: Optional[int] = None,
         retry_count: Optional[int] = None,
@@ -1054,7 +1054,7 @@ class HaproxyRouteTcpRequirer(Object):
         load_balancing_algorithm: Optional[LoadBalancingAlgorithm] = None,
         load_balancing_consistent_hashing: bool = False,
         rate_limit_connections_per_minute: Optional[int] = None,
-        rate_limit_policy: RateLimitPolicy = RateLimitPolicy.REJECT,
+        rate_limit_policy: TCPRateLimitPolicy = TCPRateLimitPolicy.REJECT,
         upload_limit: Optional[int] = None,
         download_limit: Optional[int] = None,
         retry_count: Optional[int] = None,
@@ -1148,7 +1148,7 @@ class HaproxyRouteTcpRequirer(Object):
         load_balancing_algorithm: Optional[LoadBalancingAlgorithm] = None,
         load_balancing_consistent_hashing: bool = False,
         rate_limit_connections_per_minute: Optional[int] = None,
-        rate_limit_policy: RateLimitPolicy = RateLimitPolicy.REJECT,
+        rate_limit_policy: TCPRateLimitPolicy = TCPRateLimitPolicy.REJECT,
         upload_limit: Optional[int] = None,
         download_limit: Optional[int] = None,
         retry_count: Optional[int] = None,
@@ -1209,42 +1209,35 @@ class HaproxyRouteTcpRequirer(Object):
                 "algorithm": load_balancing_algorithm,
                 "consistent_hashing": load_balancing_consistent_hashing,
             },
-            "timeout": {
-                "server": server_timeout,
-                "connect": connect_timeout,
-                "queue": queue_timeout,
-            },
+            "check": self._generate_server_health_check_configuration(
+                check_interval,
+                check_rise,
+                check_fall,
+                check_type,
+                check_send,
+                check_expect,
+                check_db_user,
+            ),
+            "timeout": self._generate_timeout_configuration(
+                server_timeout, connect_timeout, queue_timeout
+            ),
+            "rate_limit": self._generate_rate_limit_configuration(
+                rate_limit_connections_per_minute, rate_limit_policy
+            ),
             "bandwidth_limit": {
                 "download": download_limit,
                 "upload": upload_limit,
             },
+            "retry": self._generate_retry_configuration(retry_count, retry_redispatch),
             "ip_deny_list": ip_deny_list,
             "server_maxconn": server_maxconn,
             "enforce_tls": enforce_tls,
             "tls_terminate": tls_terminate,
         }
 
-        if check := self._generate_server_healthcheck_configuration(
-            check_interval,
-            check_rise,
-            check_fall,
-            check_type,
-            check_send,
-            check_expect,
-            check_db_user,
-        ):
-            application_data["check"] = check
-
-        if rate_limit := self._generate_rate_limit_configuration(
-            rate_limit_connections_per_minute, rate_limit_policy
-        ):
-            application_data["rate_limit"] = rate_limit
-
-        if retry := self._generate_retry_configuration(retry_count, retry_redispatch):
-            application_data["retry"] = retry
         return application_data
 
-    def _generate_server_healthcheck_configuration(
+    def _generate_server_health_check_configuration(
         self,
         interval: Optional[int],
         rise: Optional[int],
@@ -1253,7 +1246,7 @@ class HaproxyRouteTcpRequirer(Object):
         send: Optional[str],
         expect: Optional[str],
         db_user: Optional[str],
-    ) -> dict[str, int | str | TCPHealthCheckType | None]:
+    ) -> Optional[dict[str, int | str | TCPHealthCheckType | None]]:
         """Generate configuration for server health checks.
 
         Args:
@@ -1269,44 +1262,73 @@ class HaproxyRouteTcpRequirer(Object):
             specify the user name to enable HAproxy to send a Client Authentication packet.
 
         Returns:
-            dict[str, int | Optional[str]]: Health check configuration dictionary.
+            Optional[dict[str, int | str | TCPHealthCheckType | None]]:
+                Health check configuration dictionary.
         """
-        server_healthcheck_configuration: dict[str, int | str | TCPHealthCheckType | None] = {}
-        if interval and rise and fall:
-            server_healthcheck_configuration = {
-                "interval": interval,
-                "rise": rise,
-                "fall": fall,
-                "type": check_type,
-                "send": send,
-                "expect": expect,
-                "db_user": db_user,
-            }
-        return server_healthcheck_configuration
+        if not (interval and rise and fall):
+            return None
+        return {
+            "interval": interval,
+            "rise": rise,
+            "fall": fall,
+            "type": check_type,
+            "send": send,
+            "expect": expect,
+            "db_user": db_user,
+        }
 
     def _generate_rate_limit_configuration(
-        self, rate_limit_connections_per_minute: Optional[int], rate_limit_policy: RateLimitPolicy
-    ) -> dict[str, Any]:
+        self,
+        connections_per_minute: Optional[int],
+        policy: TCPRateLimitPolicy,
+    ) -> Optional[dict[str, Any]]:
         """Generate rate limit configuration.
 
         Args:
-            rate_limit_connections_per_minute: Maximum connections allowed per minute.
-            rate_limit_policy: Policy to apply when rate limit is reached.
+            connections_per_minute: Maximum connections allowed per minute.
+            policy: Policy to apply when rate limit is reached.
 
         Returns:
-            dict[str, Any]: Rate limit configuration, or empty dict if no limits are set.
+            Optional[dict[str, Any]]: Rate limit configuration,
+                or None if required fields are not configured.
         """
-        rate_limit_configuration = {}
-        if rate_limit_connections_per_minute:
-            rate_limit_configuration = {
-                "connections_per_minute": rate_limit_connections_per_minute,
-                "policy": rate_limit_policy,
-            }
-        return rate_limit_configuration
+        if not connections_per_minute:
+            return None
+        return {
+            "connections_per_minute": connections_per_minute,
+            "policy": policy,
+        }
+
+    def _generate_timeout_configuration(
+        self,
+        server_timeout_in_seconds: Optional[int],
+        connect_timeout_in_seconds: Optional[int],
+        queue_timeout_in_seconds: Optional[int],
+    ) -> Optional[dict[str, Optional[int]]]:
+        """Generate rate limit configuration.
+
+        Args:
+            server_timeout_in_seconds: Server timeout.
+            connect_timeout_in_seconds: Connect timeout.
+            queue_timeout_in_seconds: Queue timeout
+
+        Returns:
+            Optional[dict[str, Any]]: Rate limit configuration,
+                or None if required fields are not configured.
+        """
+        if not (
+            server_timeout_in_seconds or connect_timeout_in_seconds or queue_timeout_in_seconds
+        ):
+            return None
+        return {
+            "server": server_timeout_in_seconds,
+            "connect": connect_timeout_in_seconds,
+            "queue": queue_timeout_in_seconds,
+        }
 
     def _generate_retry_configuration(
         self, count: Optional[int], redispatch: bool
-    ) -> dict[str, Any]:
+    ) -> Optional[dict[str, Any]]:
         """Generate retry configuration.
 
         Args:
@@ -1314,20 +1336,20 @@ class HaproxyRouteTcpRequirer(Object):
             redispatch: Whether to redispatch failed requests to another server.
 
         Returns:
-            dict[str, Any]: Retry configuration dictionary, or empty dict if retry not configured.
+            Optional[dict[str, Any]]: Retry configuration dictionary,
+                or None if required fields are not configured.
         """
-        retry_configuration = {}
-        if count:
-            retry_configuration = {
-                "count": count,
-                "redispatch": redispatch,
-            }
-        return retry_configuration
+        if not count:
+            return None
+        return {
+            "count": count,
+            "redispatch": redispatch,
+        }
 
     def update_relation_data(self) -> None:
         """Update both application and unit data in the relation."""
-        if not self._application_data.get("service") and not self._application_data.get("ports"):
-            logger.warning("Required field(s) are missing, skipping update of the relation data.")
+        if not self._application_data.get("port"):
+            logger.warning("port must be set, skipping update.")
             return
 
         if relation := self.relation:
@@ -1423,3 +1445,228 @@ class HaproxyRouteTcpRequirer(Object):
         except DataValidationError:
             logger.exception("Invalid provider url.")
             return []
+
+    # The following methods allows for chaining which aims to improve the developper experience
+    def configure_port(self, port: int) -> "Self":
+        """Set the provider port
+
+        Args:
+            port: The provider port to set
+
+        Returns:
+            Self: The HaproxyRouteTcpRequirer class
+        """
+        self._application_data["port"] = port
+        return self
+
+    def configure_backend_port(self, backend_port: int) -> "Self":
+        """Set the backend port
+
+        Args:
+            port: The provider port to set
+
+        Returns:
+            Self: The HaproxyRouteTcpRequirer class
+        """
+        self._application_data["backend_port"] = backend_port
+        return self
+
+    def configure_hosts(self, hosts: Optional[list[int]] = None) -> "Self":
+        """Set the backend port
+
+        Args:
+            port: The provider port to set
+
+        Returns:
+            Self: The HaproxyRouteTcpRequirer class
+        """
+        if not hosts:
+            hosts = []
+        self._application_data["hosts"] = hosts
+        return self
+
+    def configure_sni(self, sni: str) -> "Self":
+        """Set the backend port
+
+        Args:
+            port: The provider port to set
+
+        Returns:
+            Self: The HaproxyRouteTcpRequirer class
+        """
+        self._application_data["sni"] = sni
+        return self
+
+    def configure_health_check(
+        self,
+        interval: int,
+        rise: int,
+        fall: int,
+        check_type: TCPHealthCheckType = TCPHealthCheckType.GENERIC,
+        send: Optional[str] = None,
+        expect: Optional[str] = None,
+        db_user: Optional[str] = None,
+    ) -> "Self":
+        """Configure server health check.
+
+        Args:
+        interval: Number of seconds between consecutive health check attempts.
+        rise: Number of consecutive successful health checks required for up.
+        fall: Number of consecutive failed health checks required for DOWN.
+        check_type: Health check type, Can be “generic”, “mysql”, “postgres”, “redis” or “smtp”.
+        send: Only used in generic health checks,
+            specify a string to send in the health check request.
+        expect: Only used in generic health checks,
+            specify the expected response from a health check request.
+        db_user: Only used if type is postgres or mysql,
+            specify the user name to enable HAproxy to send a Client Authentication packet.
+
+        Returns:
+            Self: The HaproxyRouteTcpRequirer class
+        """
+        self._application_data["check"] = self._generate_server_health_check_configuration(
+            interval,
+            rise,
+            fall,
+            check_type,
+            send,
+            expect,
+            db_user,
+        )
+        return self
+
+    def configure_rate_limit(
+        self,
+        connections_per_minute: int,
+        policy: TCPRateLimitPolicy = TCPRateLimitPolicy.REJECT,
+    ) -> "Self":
+        """Set the backend port
+
+        Args:
+            port: The provider port to set
+
+        Returns:
+            Self: The HaproxyRouteTcpRequirer class
+        """
+        self._application_data["rate_limit"] = self._generate_rate_limit_configuration(
+            connections_per_minute, policy
+        )
+        return self
+
+    def configure_bandwidth_limit(
+        self,
+        upload_bytes_per_second: Optional[int] = None,
+        download_bytes_per_second: Optional[int] = None,
+    ) -> "Self":
+        """Set the backend port
+
+        Args:
+            port: The provider port to set
+
+        Returns:
+            Self: The HaproxyRouteTcpRequirer class
+        """
+        if not upload_bytes_per_second and not download_bytes_per_second:
+            logger.error(
+                (
+                    "At least one of `upload_bytes_per_second` "
+                    "or `upload_bytes_per_second` must be set."
+                )
+            )
+            return self
+        self._application_data["bandwidth_limit"] = {
+            "download": download_bytes_per_second,
+            "upload": upload_bytes_per_second,
+        }
+
+        return self
+
+    def configure_retry(
+        self,
+        retry_count: int,
+        retry_redispatch: bool = False,
+    ) -> "Self":
+        """Set the backend port
+
+        Args:
+            port: The provider port to set
+
+        Returns:
+            Self: The HaproxyRouteTcpRequirer class
+        """
+        self._application_data["retry"] = self._generate_retry_configuration(
+            retry_count, retry_redispatch
+        )
+        return self
+
+    def configure_timeout(
+        self,
+        server_timeout_in_seconds: Optional[int],
+        connect_timeout_in_seconds: Optional[int],
+        queue_timeout_in_seconds: Optional[int],
+    ) -> "Self":
+        """Configure timeout.
+
+        Args:
+            server_timeout_in_seconds: Server timeout.
+            connect_timeout_in_seconds: Connect timeout.
+            queue_timeout_in_seconds: Queue timeout
+
+        Returns:
+            Self: The HaproxyRouteTcpRequirer class
+        """
+        if not (
+            server_timeout_in_seconds or connect_timeout_in_seconds or queue_timeout_in_seconds
+        ):
+            logger.error(
+                (
+                    "At least one of `server_timeout_in_seconds`, `connect_timeout_in_seconds` "
+                    "or `queue_timeout_in_seconds` must be set."
+                )
+            )
+            return self
+        self._application_data["timeout"] = self._generate_timeout_configuration(
+            server_timeout_in_seconds, connect_timeout_in_seconds, queue_timeout_in_seconds
+        )
+        return self
+
+    def configure_server_max_connections(self, max_connections: int) -> "Self":
+        """Set the server max connections.
+
+        Args:
+            max_connections: The number of max connections to set
+
+        Returns:
+            Self: The HaproxyRouteTcpRequirer class
+        """
+        self._application_data["server_maxconn"] = max_connections
+        return self
+
+    def disable_tls_termination(self) -> "Self":
+        """Disable TLS termination.
+
+        Returns:
+            Self: The HaproxyRouteTcpRequirer class
+        """
+        self._application_data["tls_terminate"] = False
+        return self
+
+    def allow_http(self) -> "Self":
+        """Do not enforce TLS.
+
+        Returns:
+            Self: The HaproxyRouteTcpRequirer class
+        """
+        self._application_data["enforce_tls"] = False
+        return self
+
+    def configure_deny_list(self, ip_deny_list: Optional[list[IPvAnyAddress]] = None) -> "Self":
+        """Configure IP deny list.
+
+        Returns:
+            Self: The HaproxyRouteTcpRequirer class
+        """
+        if not ip_deny_list:
+            ip_deny_list = []
+        self._application_data["ip_deny_list"] = False
+        return self
