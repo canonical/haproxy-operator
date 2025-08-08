@@ -92,6 +92,8 @@ class SomeCharm(CharmBase):
 
     def _on_endpoints_ready(self, _: EventBase) -> None:
         # Handle endpoints ready event
+        if endpoints := self.haproxy_route_tcp_requirer.get_proxied_endpoints():
+            # Do something with the endpoints information
         ...
 
     def _on_endpoints_removed(self, _: EventBase) -> None:
@@ -119,7 +121,15 @@ class SomeCharm(CharmBase):
 
     def _on_haproxy_route_data_available(self, event: EventBase) -> None:
         data = self.haproxy_route_tcp_provider.get_data(self.haproxy_route_tcp_provider.relations)
+        # data is an object of the `HaproxyRouteTcpRequirersData` class, see below for the
+        # available attributes
         ...
+
+        # Publish the endpoints to the requirers
+        for requirer_data in data.requirers_data:
+            self.haproxy_route_tcp.publish_proxied_endpoints(
+                ["..."], requirer_data.relation_id
+            )
 """
 
 import json
@@ -560,7 +570,10 @@ class TcpRequirerApplicationData(_DatabagModel):
         le=65525,
     )
     sni: Optional[VALIDSTR] = Field(
-        description="Server name identification. Used to route traffic to the service.",
+        description=(
+            "Server name identification. Used to route traffic to the service. "
+            "Only available if TLS is enabled."
+        ),
         default=None,
     )
     hosts: list[IPvAnyAddress] = Field(
@@ -904,6 +917,7 @@ class HaproxyRouteTcpRequirer(Object):
         self,
         charm: CharmBase,
         relation_name: str,
+        *,
         port: Optional[int] = None,
         backend_port: Optional[int] = None,
         hosts: Optional[list[str]] = None,
@@ -974,32 +988,32 @@ class HaproxyRouteTcpRequirer(Object):
 
         # build the full application data
         self._application_data = self._generate_application_data(
-            port,
-            backend_port,
-            hosts,
-            sni,
-            check_interval,
-            check_rise,
-            check_fall,
-            check_type,
-            check_send,
-            check_expect,
-            check_db_user,
-            load_balancing_algorithm,
-            load_balancing_consistent_hashing,
-            rate_limit_connections_per_minute,
-            rate_limit_policy,
-            upload_limit,
-            download_limit,
-            retry_count,
-            retry_redispatch,
-            server_timeout,
-            connect_timeout,
-            queue_timeout,
-            server_maxconn,
-            ip_deny_list,
-            enforce_tls,
-            tls_terminate,
+            port=port,
+            backend_port=backend_port,
+            hosts=hosts,
+            sni=sni,
+            check_interval=check_interval,
+            check_rise=check_rise,
+            check_fall=check_fall,
+            check_type=check_type,
+            check_send=check_send,
+            check_expect=check_expect,
+            check_db_user=check_db_user,
+            load_balancing_algorithm=load_balancing_algorithm,
+            load_balancing_consistent_hashing=load_balancing_consistent_hashing,
+            rate_limit_connections_per_minute=rate_limit_connections_per_minute,
+            rate_limit_policy=rate_limit_policy,
+            upload_limit=upload_limit,
+            download_limit=download_limit,
+            retry_count=retry_count,
+            retry_redispatch=retry_redispatch,
+            server_timeout=server_timeout,
+            connect_timeout=connect_timeout,
+            queue_timeout=queue_timeout,
+            server_maxconn=server_maxconn,
+            ip_deny_list=ip_deny_list,
+            enforce_tls=enforce_tls,
+            tls_terminate=tls_terminate,
         )
         self._unit_address = unit_address
 
@@ -1025,6 +1039,7 @@ class HaproxyRouteTcpRequirer(Object):
     # pylint: disable=too-many-arguments,too-many-positional-arguments
     def provide_haproxy_route_tcp_requirements(
         self,
+        *,
         port: int,
         backend_port: Optional[int] = None,
         hosts: Optional[list[str]] = None,
@@ -1086,38 +1101,39 @@ class HaproxyRouteTcpRequirer(Object):
         """
         self._unit_address = unit_address
         self._application_data = self._generate_application_data(
-            port,
-            backend_port,
-            hosts,
-            sni,
-            check_interval,
-            check_rise,
-            check_fall,
-            check_type,
-            check_send,
-            check_expect,
-            check_db_user,
-            load_balancing_algorithm,
-            load_balancing_consistent_hashing,
-            rate_limit_connections_per_minute,
-            rate_limit_policy,
-            upload_limit,
-            download_limit,
-            retry_count,
-            retry_redispatch,
-            server_timeout,
-            connect_timeout,
-            queue_timeout,
-            server_maxconn,
-            ip_deny_list,
-            enforce_tls,
-            tls_terminate,
+            port=port,
+            backend_port=backend_port,
+            hosts=hosts,
+            sni=sni,
+            check_interval=check_interval,
+            check_rise=check_rise,
+            check_fall=check_fall,
+            check_type=check_type,
+            check_send=check_send,
+            check_expect=check_expect,
+            check_db_user=check_db_user,
+            load_balancing_algorithm=load_balancing_algorithm,
+            load_balancing_consistent_hashing=load_balancing_consistent_hashing,
+            rate_limit_connections_per_minute=rate_limit_connections_per_minute,
+            rate_limit_policy=rate_limit_policy,
+            upload_limit=upload_limit,
+            download_limit=download_limit,
+            retry_count=retry_count,
+            retry_redispatch=retry_redispatch,
+            server_timeout=server_timeout,
+            connect_timeout=connect_timeout,
+            queue_timeout=queue_timeout,
+            server_maxconn=server_maxconn,
+            ip_deny_list=ip_deny_list,
+            enforce_tls=enforce_tls,
+            tls_terminate=tls_terminate,
         )
         self.update_relation_data()
 
     # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
     def _generate_application_data(  # noqa: C901
         self,
+        *,
         port: Optional[int] = None,
         backend_port: Optional[int] = None,
         hosts: Optional[list[str]] = None,
