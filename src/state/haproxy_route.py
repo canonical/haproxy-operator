@@ -7,6 +7,11 @@ import logging
 from functools import cached_property
 from typing import Optional, cast
 
+from charms.haproxy.v0.haproxy_route_tcp import (
+    HaproxyRouteTcpProvider,
+    HaproxyRouteTcpRequirersData,
+    TcpRequirerApplicationData,
+)
 from charms.haproxy.v1.haproxy_route import (
     DataValidationError,
     HaproxyRewriteMethod,
@@ -15,11 +20,6 @@ from charms.haproxy.v1.haproxy_route import (
     LoadBalancingAlgorithm,
     RequirerApplicationData,
     ServerHealthCheck,
-)
-from charms.haproxy.v0.haproxy_route_tcp import (
-    HaproxyRouteTcpProvider,
-    TcpRequirerApplicationData,
-    HaproxyRouteTcpRequirersData,
 )
 from pydantic import IPvAnyAddress, model_validator
 from pydantic.dataclasses import dataclass
