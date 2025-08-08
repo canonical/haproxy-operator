@@ -207,7 +207,7 @@ def any_charm_haproxy_route_requirer_fixture(_pytestconfig: pytest.Config, juju:
         timeout=JUJU_WAIT_TIMEOUT,
     )
     juju.run(
-        f"{ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION}/0", "rpc", {"method": "start-server"}
+        f"{ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION}/0", "rpc", {"method": "start_server"}
     )
     juju.wait(
         lambda status: (jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)),
