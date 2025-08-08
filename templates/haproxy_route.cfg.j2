@@ -74,4 +74,14 @@ backend {{ backend.backend_name }}
 {% endfor %}
 
 {% endfor %}
+
+{% for endpoint in tcp_endpoints %}
+frontend haproxy_route_tcp_{{ endpoint.application_data.port }}
+    bind [::]:{{ endpoint.application_data.port }} v4v6 {% if endpoint.application_data.enforce_tls %} ssl crt {{ haproxy_crt_dir }} {% endif +%}
+
+backend haproxy_route_tcp_{{ endpoint.application_data.port }}
+{% for server in backend.servers %}
+    server {{ server.server_name }} {{ server.address }}:{{ server.port }} {% if server.check %} check inter {{ server.check.interval }}s rise {{ server.check.rise }} fall {{ server.check.fall }} {% endif +%}
+{% endfor %}
+{% endfor %}
 {% endblock %}
