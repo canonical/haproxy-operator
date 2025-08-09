@@ -4,7 +4,7 @@
 """Fixtures for haproxy-operator unit tests."""
 import typing
 from ipaddress import IPv4Address
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import scenario
@@ -296,3 +296,15 @@ def base_state_with_ingress_per_unit_fixture(
         },
     }
     return input_state
+
+
+@pytest.fixture(autouse=True)
+def mock_out_validate_global_max_conn_check(monkeypatch):
+    """Mock out State.validate_global_max_conn.
+
+    This function shells out to `sysctl` which is unnecessary and not
+    representative on a machine where unit tests are run.
+    """
+    monkeypatch.setattr(
+        "state.charm_state.check_output", Mock(return_value="fs.file-max = 9223372036854775807")
+    )

@@ -39,6 +39,7 @@ class HAProxyRouteServer:
         server_name: The name of the unit with invalid characters replaced.
         address: The IP address of the requirer unit.
         port: The port that the requirer application wishes to be exposed.
+        protocol: The protocol that the backend service speaks. "http" (default) or "https".
         check: Health check configuration.
         maxconn: Maximum allowed connections before requests are queued.
     """
@@ -46,6 +47,7 @@ class HAProxyRouteServer:
     server_name: str
     address: IPvAnyAddress
     port: int
+    protocol: str
     check: Optional[ServerHealthCheck]
     maxconn: Optional[int]
 
@@ -306,6 +308,7 @@ def get_servers_definition_from_requirer_data(
                     server_name=f"{requirer.application_data.service}_{port}_{i}",
                     address=server_address,
                     port=port,
+                    protocol=requirer.application_data.protocol,
                     check=requirer.application_data.check,
                     maxconn=requirer.application_data.server_maxconn,
                 )
