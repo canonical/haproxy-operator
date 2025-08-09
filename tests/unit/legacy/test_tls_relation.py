@@ -44,7 +44,9 @@ def test_get_provider_cert_with_hostname(
             common_name=TEST_EXTERNAL_HOSTNAME_CONFIG,
         )
     ]
-    tls_relation = TLSRelationService(harness.model, harness.charm.certificates)
+    tls_relation = TLSRelationService(
+        harness.model, harness.charm.certificates, harness.charm.recv_ca_certs
+    )
     assert str(
         tls_relation.get_provider_cert_with_hostname(TEST_EXTERNAL_HOSTNAME_CONFIG).certificate
     ) == str(mock_certificate)
@@ -57,7 +59,9 @@ def test_get_provider_cert_with_invalid_hostname(harness: Harness):
     assert: None is returned.
     """
     harness.begin()
-    tls_relation = TLSRelationService(harness.model, harness.charm.certificates)
+    tls_relation = TLSRelationService(
+        harness.model, harness.charm.certificates, harness.charm.recv_ca_certs
+    )
     assert tls_relation.get_provider_cert_with_hostname("") is None
 
 
@@ -79,7 +83,9 @@ def test_certificate_available(
         )
     ]
 
-    tls_relation = TLSRelationService(harness.model, harness.charm.certificates)
+    tls_relation = TLSRelationService(
+        harness.model, harness.charm.certificates, harness.charm.recv_ca_certs
+    )
 
     write_cert_mock = MagicMock()
     monkeypatch.setattr(
@@ -112,7 +118,9 @@ def test_write_certificate_to_unit(
     path_mkdir_mock = MagicMock()
     write_text_mock = MagicMock()
     harness.begin()
-    tls_relation = TLSRelationService(harness.model, harness.charm.certificates)
+    tls_relation = TLSRelationService(
+        harness.model, harness.charm.certificates, harness.charm.recv_ca_certs
+    )
     monkeypatch.setattr("pathlib.Path.unlink", MagicMock(return_value=False))
     monkeypatch.setattr("pathlib.Path.mkdir", path_mkdir_mock)
     monkeypatch.setattr("pathlib.Path.write_text", write_text_mock)
@@ -122,6 +130,6 @@ def test_write_certificate_to_unit(
     chain_string = "\n".join([str(cert) for cert in [mock_certificate]])
 
     tls_relation.write_certificate_to_unit(mock_certificate, [mock_certificate], mock_private_key)
+    pem_file_content = f"{str(mock_certificate)}\n{chain_string}\n{str(mock_private_key)}"
 
-    pem_file_content = f"{str(mock_certificate)}\n" f"{chain_string}\n" f"{str(mock_private_key)}"
     write_text_mock.assert_called_once_with(pem_file_content, encoding="utf-8")
