@@ -246,6 +246,20 @@ def test_load_requirer_application_data(mock_relation_data):
     assert data.tls_terminate is True
 
 
+def test_dump_requirer_application_data_sni_with_tls_disabled():
+    """
+    arrange: Create a TcpRequirerApplicationData model with valid data.
+    act: Dump the model to a databag.
+    assert: Databag contains correct data.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(
+            port=8080,
+            sni="api.haproxy.internal",
+            enforce_tls=False,
+        )
+
+
 def test_dump_requirer_application_data():
     """
     arrange: Create a TcpRequirerApplicationData model with valid data.
@@ -256,7 +270,6 @@ def test_dump_requirer_application_data():
         port=8080,
         backend_port=9090,
         hosts=[MOCK_ADDRESS],
-        sni="api.haproxy.internal",
         check=TCPServerHealthCheck(
             interval=60, rise=2, fall=3, check_type=TCPHealthCheckType.GENERIC
         ),
@@ -270,7 +283,6 @@ def test_dump_requirer_application_data():
     assert json.loads(databag["port"]) == 8080
     assert json.loads(databag["backend_port"]) == 9090
     assert json.loads(databag["hosts"]) == [str(ip_address("10.0.0.1"))]
-    assert json.loads(databag["sni"]) == "api.haproxy.internal"
     assert json.loads(databag["check"])["check_type"] == "generic"
     assert json.loads(databag["enforce_tls"]) is False
     assert json.loads(databag["tls_terminate"]) is False
