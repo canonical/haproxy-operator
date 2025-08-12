@@ -107,7 +107,8 @@ class SomeCharm(CharmBase):
         .configure_port(4000) \
         .configure_backend_port(5000) \
         .configure_health_check(60, 5, 5) \
-        .configure_rate_limit(10, TCPRateLimitPolicy.SILENT)
+        .configure_rate_limit(10, TCPRateLimitPolicy.SILENT) \
+        .update_relation_data()
 
 
 ## Using the library as the provider
@@ -207,7 +208,7 @@ class DataValidationError(Exception):
 
 
 class HaproxyRouteTcpInvalidRelationDataError(Exception):
-    """Rasied when data validation of the haproxy-route relation fails."""
+    """Raised when data validation of the haproxy-route relation fails."""
 
 
 class _DatabagModel(BaseModel):
@@ -632,6 +633,19 @@ class TcpRequirerApplicationData(_DatabagModel):
             self.backend_port = self.port
         return self
 
+    @model_validator(mode="after")
+    def tls_only_attributes_are_set_when_not_enforcing_tls(self) -> "Self":
+        """Assign a default value to backend_port if not set.
+
+        The value is equal to the provider port.
+
+        Returns:
+            The model with backend_port default value applied.
+        """
+        if not self.enforce_tls and self.sni is not None:
+            raise ValueError("setting sni and disabling TLS are mutually exclusive.")
+        return self
+
 
 class HaproxyRouteTcpProviderAppData(_DatabagModel):
     """haproxy-route provider databag schema.
@@ -967,11 +981,14 @@ class HaproxyRouteTcpRequirer(Object):
             sni: List of URL paths to route to this service.
             check_interval: Interval between health checks in seconds.
             check_rise: Number of successful health checks before server is considered up.
-            check_fall: Number of failed health checks before server is considered down.
-            check_type: The path to use for server health checks.
-            check_send: The port to use for http-check.
-            check_expect: The port to use for http-check.
-            check_db_user: The port to use for http-check.
+            check_type: Health check type,
+                Can be “generic”, “mysql”, “postgres”, “redis” or “smtp”.
+            check_send: Only used in generic health checks,
+                specify a string to send in the health check request.
+            check_expect: Only used in generic health checks,
+                specify the expected response from a health check request.
+            check_db_user: Only used if type is postgres or mysql,
+                specify the user name to enable HAproxy to send a Client Authentication packet.
             load_balancing_algorithm: Algorithm to use for load balancing.
             load_balancing_consistent_hashing: Whether to use consistent hashing.
             rate_limit_connections_per_minute: Maximum connections allowed per minute.
@@ -1088,10 +1105,14 @@ class HaproxyRouteTcpRequirer(Object):
             check_interval: Interval between health checks in seconds.
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
-            check_type: The path to use for server health checks.
-            check_send: The port to use for http-check.
-            check_expect: The port to use for http-check.
-            check_db_user: The port to use for http-check.
+            check_type: Health check type,
+                Can be “generic”, “mysql”, “postgres”, “redis” or “smtp”.
+            check_send: Only used in generic health checks,
+                specify a string to send in the health check request.
+            check_expect: Only used in generic health checks,
+                specify the expected response from a health check request.
+            check_db_user: Only used if type is postgres or mysql,
+                specify the user name to enable HAproxy to send a Client Authentication packet.
             load_balancing_algorithm: Algorithm to use for load balancing.
             load_balancing_consistent_hashing: Whether to use consistent hashing.
             rate_limit_connections_per_minute: Maximum connections allowed per minute.
@@ -1181,10 +1202,14 @@ class HaproxyRouteTcpRequirer(Object):
             check_interval: Interval between health checks in seconds.
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
-            check_type: The path to use for server health checks.
-            check_send: The port to use for http-check.
-            check_expect: The port to use for http-check.
-            check_db_user: The port to use for http-check.
+            check_type: Health check type,
+                Can be “generic”, “mysql”, “postgres”, “redis” or “smtp”.
+            check_send: Only used in generic health checks,
+                specify a string to send in the health check request.
+            check_expect: Only used in generic health checks,
+                specify the expected response from a health check request.
+            check_db_user: Only used if type is postgres or mysql,
+                specify the user name to enable HAproxy to send a Client Authentication packet.
             load_balancing_algorithm: Algorithm to use for load balancing.
             load_balancing_consistent_hashing: Whether to use consistent hashing.
             rate_limit_connections_per_minute: Maximum connections allowed per minute.
