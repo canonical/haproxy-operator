@@ -674,11 +674,13 @@ class HaproxyRouteTcpRequirerData:
 
     Attributes:
         relation_id: Id of the relation.
+        application: Name of the requirer application.
         application_data: Application data.
         units_data: Units data
     """
 
     relation_id: int
+    application: str
     application_data: TcpRequirerApplicationData
     units_data: list[TcpRequirerUnitData]
 
@@ -827,6 +829,7 @@ class HaproxyRouteTcpProvider(Object):
                     application_data=application_data,
                     units_data=units_data,
                     relation_id=relation.id,
+                    application=relation.app.name,
                 )
                 requirers_data.append(haproxy_route_tcp_requirer_data)
             except DataValidationError as exc:

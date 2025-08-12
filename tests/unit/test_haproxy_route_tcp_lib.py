@@ -207,12 +207,14 @@ def test_tcp_requirers_data_duplicate_ports():
     tcp_requirer_data1 = HaproxyRouteTcpRequirerData(
         relation_id=1,
         application_data=app_data1,
+        application="",
         units_data=[TcpRequirerUnitData(address=MOCK_ADDRESS)],
     )
 
     tcp_requirer_data2 = HaproxyRouteTcpRequirerData(
         relation_id=2,
         application_data=app_data2,
+        application="",
         units_data=[TcpRequirerUnitData(address=ANOTHER_MOCK_ADDRESS)],
     )
 
