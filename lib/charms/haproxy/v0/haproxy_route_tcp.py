@@ -634,13 +634,14 @@ class TcpRequirerApplicationData(_DatabagModel):
         return self
 
     @model_validator(mode="after")
-    def tls_only_attributes_are_set_when_not_enforcing_tls(self) -> "Self":
-        """Assign a default value to backend_port if not set.
+    def sni_set_when_not_enforcing_tls(self) -> "Self":
+        """Check if sni is configured but TLS is disabled.
 
-        The value is equal to the provider port.
+        Raises:
+            ValueError: If sni is configured and TLS is disabled.
 
         Returns:
-            The model with backend_port default value applied.
+            The validated model.
         """
         if not self.enforce_tls and self.sni is not None:
             raise ValueError("setting sni and disabling TLS are mutually exclusive.")
@@ -981,6 +982,7 @@ class HaproxyRouteTcpRequirer(Object):
             sni: List of URL paths to route to this service.
             check_interval: Interval between health checks in seconds.
             check_rise: Number of successful health checks before server is considered up.
+            check_fall: Number of failed health checks before server is considered down.
             check_type: Health check type,
                 Can be “generic”, “mysql”, “postgres”, “redis” or “smtp”.
             check_send: Only used in generic health checks,
