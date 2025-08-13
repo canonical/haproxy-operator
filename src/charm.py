@@ -225,6 +225,7 @@ class HAProxyCharm(ops.CharmBase):
             self._ingress_provider,
             self._ingress_per_unit_provider,
             self.haproxy_route_provider,
+            self.haproxy_route_tcp_provider,
             self.reverseproxy_requirer,
         )
         proxy_mode = charm_state.mode
@@ -349,6 +350,7 @@ class HAProxyCharm(ops.CharmBase):
                 self._ingress_provider,
                 self._ingress_per_unit_provider,
                 self.haproxy_route_provider,
+                self.haproxy_route_tcp_provider,
                 self.reverseproxy_requirer,
             )
             proxy_mode = charm_state.mode
@@ -357,6 +359,7 @@ class HAProxyCharm(ops.CharmBase):
                 haproxy_route_requirer_information = (
                     HaproxyRouteRequirersInformation.from_provider(
                         self.haproxy_route_provider,
+                        self.haproxy_route_tcp_provider,
                         external_hostname,
                         self._get_peer_units_address(),
                     )

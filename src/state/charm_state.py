@@ -115,6 +115,7 @@ class CharmState:
             ingress_provider: The ingress provider.
             ingress_per_unit_provider: The ingress per unit provider.
             haproxy_route_provider: The haproxy route provider.
+            haproxy_route_tcp_provider: The haproxy-route-tcp provider.
             reverseproxy_requirer: The reverse proxy requirer.
 
         Raises:
@@ -175,7 +176,8 @@ class CharmState:
             charm: The haproxy charm.
             ingress_provider: The ingress provider.
             ingress_per_unit_provider: The ingress per unit provider.
-            haproxy_route_provider: The haproxy route provider.
+            haproxy_route_provider: The haproxy-route provider.
+            haproxy_route_tcp_provider: The haproxy-route-tcp provider.
             reverseproxy_requirer: The reverse proxy requirer.
 
         Raises:

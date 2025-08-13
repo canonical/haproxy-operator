@@ -116,7 +116,7 @@ def test_requirer_application_data_minimal_valid():
 
     assert data.port == 8080
     assert data.backend_port == 8080
-    assert data.hosts == []
+    assert not data.hosts
     assert data.sni is None
     assert data.enforce_tls is True
     assert data.tls_terminate is True

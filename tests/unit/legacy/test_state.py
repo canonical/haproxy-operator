@@ -101,7 +101,10 @@ def test_haproxy_route_from_provider(
 
     harness.begin()
     haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
-        harness.charm.haproxy_route_provider, MOCK_EXTERNAL_HOSTNAME, haproxy_peer_units_address
+        harness.charm.haproxy_route_provider,
+        harness.charm.haproxy_route_tcp_provider,
+        MOCK_EXTERNAL_HOSTNAME,
+        haproxy_peer_units_address,
     )
 
     assert len(haproxy_route_information.backends) == 2
@@ -159,7 +162,8 @@ def test_haproxy_route_from_provider_duplicate_backend_names(
     # Act & Assert
     with pytest.raises(HaproxyRouteIntegrationDataValidationError):
         HaproxyRouteRequirersInformation.from_provider(
-            haproxy_route=harness.charm.haproxy_route_provider,
+            harness.charm.haproxy_route_provider,
+            harness.charm.haproxy_route_tcp_provider,
             external_hostname=MOCK_EXTERNAL_HOSTNAME,
             peers=[],
         )

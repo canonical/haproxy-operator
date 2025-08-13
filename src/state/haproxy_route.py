@@ -10,7 +10,6 @@ from typing import Optional, cast
 from charms.haproxy.v0.haproxy_route_tcp import (
     HaproxyRouteTcpProvider,
     HaproxyRouteTcpRequirersData,
-    TcpRequirerApplicationData,
 )
 from charms.haproxy.v1.haproxy_route import (
     DataValidationError,
@@ -26,6 +25,7 @@ from pydantic.dataclasses import dataclass
 from typing_extensions import Self
 
 from .exception import CharmStateValidationBaseError
+from .haproxy_route_tcp import HAProxyRouteTcpEndpoint
 
 HAPROXY_ROUTE_RELATION = "haproxy-route"
 HAPROXY_PEER_INTEGRATION = "haproxy-peers"
@@ -177,20 +177,7 @@ class HAProxyRouteBackend:
         return rewrite_configurations
 
 
-@dataclass(frozen=True)
-class HAProxyRouteTcpEndpoint:
-    """Represent an endpoint for haproxy-route-tcp which contains
-        a frontend with a custom port and a backend.
-
-    Attrs:
-        relation_id: Relation ID
-        application_data: Application data
-    """
-
-    relation_id: int
-    application_data: TcpRequirerApplicationData
-
-
+# pylint: disable=too-many-locals
 @dataclass(frozen=True)
 class HaproxyRouteRequirersInformation:
     """A component of charm state containing haproxy-route requirers information.
@@ -225,6 +212,7 @@ class HaproxyRouteRequirersInformation:
 
         Args:
             haproxy_route: The haproxy-route provider class.
+            haproxy_route_tcp: The haproxy-route-tcp provider class.
             external_hostname: The charm's configured hostname.
             peers: List of IP address of haproxy peer units.
 
@@ -274,12 +262,7 @@ class HaproxyRouteRequirersInformation:
                     logger.error("port 80 and 443 are not allowed if haproxy_route is present.")
                     relation_ids_with_invalid_data_tcp.append(tcp_requirer.relation_id)
                     continue
-                tcp_endpoints.append(
-                    HAProxyRouteTcpEndpoint(
-                        relation_id=tcp_requirer.relation_id,
-                        application_data=tcp_requirer.application_data,
-                    )
-                )
+                tcp_endpoints.append(cast(HAProxyRouteTcpEndpoint, tcp_requirer))
 
             return HaproxyRouteRequirersInformation(
                 # Sort backend by the max depth of the required path.
