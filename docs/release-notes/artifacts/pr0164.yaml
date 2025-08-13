@@ -4,7 +4,7 @@ schema_version: 1
 changes:
   - title: Added new field to the requirer application databag
     author: dimaqq
-    type: minor
+    type: major
     description: |
       The requirer application databag now has a "protocol" field to
       support HTTPS supstream servers.
@@ -13,4 +13,4 @@ changes:
       related_doc: 
       related_issue: 
     visibility: public
-    highlight: false
+    highlight: true

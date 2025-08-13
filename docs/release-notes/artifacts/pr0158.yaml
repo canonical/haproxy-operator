@@ -14,5 +14,5 @@ changes:
       pr: https://github.com/canonical/haproxy-operator/pull/158
       related_doc: 
       related_issue: 
-    visibility: public
+    visibility: internal
     highlight: false
