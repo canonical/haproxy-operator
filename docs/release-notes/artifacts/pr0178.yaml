@@ -1,0 +1,14 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+changes:
+  - title: Add changelog
+    author: swetha1654
+    type: minor
+    description:
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/178
+      related_doc: 
+      related_issue: 
+    visibility: hidden
+    highlight: false
