@@ -2,7 +2,7 @@
 
 schema_version: 1
 changes:
-  - title: Render retry configuration in template and remove retry_interval attribute
+  - title: Rendered `retry` configuration in template and remove `retry_interval` attribute
     author: Thanhphan1147
     type: minor
     description: |
