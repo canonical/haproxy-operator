@@ -1,0 +1,16 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+changes:
+  - title: Rendered `retry` configuration in template and remove `retry_interval` attribute
+    author: Thanhphan1147
+    type: minor
+    description: |
+      The `retry_interval` attribute has been removed since there's no way to configure that in HAproxy.
+      To configure the time between 2 retries we can use `timeout.connect`.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/166
+      related_doc: 
+      related_issue: 
+    visibility: public
+    highlight: false
