@@ -2,7 +2,7 @@
 
 schema_version: 1
 changes:
-  - title: fix typo
+  - title: Fixed a typo in the cookie fetch method in the load-balancing algorithm
     author: Thanhphan1147
     type: bugfix
     description: |

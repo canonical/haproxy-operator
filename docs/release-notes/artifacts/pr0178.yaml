@@ -8,7 +8,8 @@ changes:
     description:
     urls: 
       pr: https://github.com/canonical/haproxy-operator/pull/178
-      related_doc: 
+      related_doc: https://github.com/canonical/haproxy-operator/blob/main/docs/changelog.md
+
       related_issue: 
     visibility: hidden
     highlight: false

@@ -2,7 +2,8 @@
 
 schema_version: 1
 changes:
-  - title: Feat: Add http-server-close support
+  - title: Added http-server-close support
+
     author: alithethird
     type: minor
     description: |

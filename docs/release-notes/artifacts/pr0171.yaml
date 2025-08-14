@@ -6,7 +6,7 @@ changes:
     author: Thanhphan1147
     type: major
     description: |
-      Consistent hashing reduce redistribution of clients to another backend server when server is added/removed. On haproxy it will add 
+      Consistent hashing reduce redistribution of clients to another backend server when server is added/removed. On HAProxy it will add 
       ```
       hash-type consistent
       ```
