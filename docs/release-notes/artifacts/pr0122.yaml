@@ -10,5 +10,5 @@ changes:
       pr: https://github.com/canonical/haproxy-operator/pull/122
       related_doc: 
       related_issue: https://github.com/canonical/haproxy-operator/issues/69
-    visibility: public
+    visibility: internal
     highlight: false

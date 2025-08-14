@@ -4,7 +4,7 @@ schema_version: 1
 changes:
   - title: Updated library to add more attributes
     author: Thanhphan1147
-    type: minor
+    type: breaking
     description: The `subdomain` attribute has been replaced with the `hostname` and `additional_hostnames` attribute. The charm now sends an empty list as the `proxied_endpoints` when the requirer data is ignored.
     urls: 
       pr: https://github.com/canonical/haproxy-operator/pull/152
