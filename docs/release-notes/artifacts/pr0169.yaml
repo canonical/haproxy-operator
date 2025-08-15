@@ -2,7 +2,7 @@
 
 schema_version: 1
 changes:
-  - title: docs: external-hostname config is needed
+  - title: external-hostname config is needed
     author: dimaqq
     type: minor
     description: |

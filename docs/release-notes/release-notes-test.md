@@ -13,6 +13,8 @@ and "Main bug fixes", using past tense to describe each of the items
 -->
 
 Main features:
+* Added a new relation.
+* Added new field to the requirer application databag.
 
 
 Main bug fixes:
@@ -53,8 +55,21 @@ The subsection below shows the pattern for each feature. Include links to the re
 
 The following major and minor features were added in this release.
 
+### Add consistent hashing support
+Consistent hashing reduce redistribution of clients to another backend server when server is added/removed. On HAProxy it will add 
+```
+hash-type consistent
+```
+to the configuration.
+
+<Add more context and information about the entry>
+
+Relevant links:
+* [PR](https://github.com/canonical/haproxy-operator/pull/171)
+
+
 ### Allow customization to configure port for HTTP check
-Added `check-port` attribute to the requirer databag model, allowing users to customize the port used for `http-check`.
+You can now customize the port used for `http-check`.
 <Add more context and information about the entry>
 
 Relevant links:
@@ -62,7 +77,7 @@ Relevant links:
 
 
 ### Added hosts attribute to requirer data
-Requirer application data now includes a `hosts` attribute to allow for the requirer to override the unit IP addresses used to generate server entries in the HAProxy configuration.
+You can now override the unit IP addresses used to generate server entries in the HAProxy configuration.
 <Add more context and information about the entry>
 
 Relevant links:
@@ -70,7 +85,10 @@ Relevant links:
 
 
 ### Validated requirer relation data object
-Validation is now done on both the requirer and provider side to check for invalid characters. On the requirer an exception will be raised while on the provider the related service will be ignored.
+Validation is now done on both the requirer and provider side to check
+for invalid characters. On the requirer an exception will be raised
+while on the provider the related service will be ignored.
+
 <Add more context and information about the entry>
 
 Relevant links:
@@ -106,20 +124,14 @@ Relevant links:
 
 
 ### Added a new relation
-Added the `ingress-per-unit` relation to support reaching each unit separately for a Vault deployed behind an ingress.
+Added the `ingress-per-unit` relation to support reaching each
+unit separately for a Vault deployed behind an ingress.
+
 <Add more context and information about the entry>
 
 Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/153)
 * [Related issue](https://github.com/canonical/haproxy-operator/issues/88)
-
-
-### Updated library to add more attributes
-The `subdomain` attribute has been replaced with the `hostname` and `additional_hostnames` attribute. The charm now sends an empty list as the `proxied_endpoints` when the requirer data is ignored.
-<Add more context and information about the entry>
-
-Relevant links:
-* [PR](https://github.com/canonical/haproxy-operator/pull/152)
 
 
 ### Added new field to the requirer application databag
@@ -132,12 +144,42 @@ Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/164)
 
 
+### Added http-server-close support
+Added the `http-server-close` argument to the HAProxy configuration.
+When this argument is set, it closes the connection after the request.
+
+<Add more context and information about the entry>
+
+Relevant links:
+* [PR](https://github.com/canonical/haproxy-operator/pull/175)
+
+
+### Enforce health check fields to all be set
+To avoid any issue with partial health checks configuration, all related fields
+must be set for the configuration to be valid.
+
+<Add more context and information about the entry>
+
+Relevant links:
+* [PR](https://github.com/canonical/haproxy-operator/pull/170)
+
+
 ### Added first scenario test
 Added the first scenario test which kickstarts the transition process from Harness to Scenario.
 <Add more context and information about the entry>
 
 Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/108)
+
+
+### Rendered `retry` configuration in template and remove `retry_interval` attribute
+The `retry_interval` attribute has been removed since there's no way to configure that in HAProxy.
+To configure the time between 2 retries we can use `timeout.connect`.
+
+<Add more context and information about the entry>
+
+Relevant links:
+* [PR](https://github.com/canonical/haproxy-operator/pull/166)
 
 
 ### Added terraform charm and product module
@@ -159,6 +201,7 @@ Add a bulleted list of bug fixes here, with links to the relevant PR/commit.
 * Pinned the HAProxy version and prevented automatic updates ([PR](https://github.com/canonical/haproxy-operator/pull/136)).
 * Disabled sending host headers in `httpchk` so the charm doesn't refuse to proxy incoming requests ([PR](https://github.com/canonical/haproxy-operator/pull/111)).
 * Added checks before reloading the HAProxy service and set the charm to waiting if the validation fails ([PR](https://github.com/canonical/haproxy-operator/pull/122)).
+* Fixed a typo in the cookie fetch method in the load-balancing algorithm ([PR](https://github.com/canonical/haproxy-operator/pull/179)).
 * Added a new dependency to fix the linting step ([PR](https://github.com/canonical/haproxy-operator/pull/105)).
 * Added "s" suffix to timeout entries ([PR](https://github.com/canonical/haproxy-operator/pull/162)).
 * Fixed Jinja2 handling of newlines to prevent invalid configuration generation ([PR](https://github.com/canonical/haproxy-operator/pull/139)).
@@ -176,6 +219,16 @@ If there are no breaking changes, keep the section and write "No breaking change
 
 The following backwards-incompatible changes are included in this release.
 
+### Updated library to add more attributes
+The `subdomain` attribute has been replaced with the `hostname`
+and `additional_hostnames` attribute. The charm now sends an
+empty list as the `proxied_endpoints` when the requirer data
+is ignored.
+
+<Add more context and information about the entry>
+
+Relevant links:
+* [PR](https://github.com/canonical/haproxy-operator/pull/152)
 
 
 ## Deprecated
@@ -204,4 +257,4 @@ If there are no known issues, keep the section and write "No known issues".
 List of contributors based on PRs/commits. Remove this section if there are no contributors in this release.
 -->
 
-[yhaliaw](https://github.com/yhaliaw), [Thanhphan1147](https://github.com/Thanhphan1147), [erinecon](https://github.com/erinecon), [swetha1654](https://github.com/swetha1654), [dimaqq](https://github.com/dimaqq), [arturo-seijas](https://github.com/arturo-seijas)
+[Thanhphan1147](https://github.com/Thanhphan1147), [dimaqq](https://github.com/dimaqq), [yhaliaw](https://github.com/yhaliaw), [erinecon](https://github.com/erinecon), [swetha1654](https://github.com/swetha1654), [javierdelapuente](https://github.com/javierdelapuente), [alithethird](https://github.com/alithethird), [arturo-seijas](https://github.com/arturo-seijas)
