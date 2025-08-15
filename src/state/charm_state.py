@@ -13,6 +13,7 @@ from enum import StrEnum
 from subprocess import STDOUT, CalledProcessError, check_output  # nosec
 
 import ops
+from charms.haproxy.v0.haproxy_route_tcp import HaproxyRouteTcpProvider
 from charms.haproxy.v1.haproxy_route import HaproxyRouteProvider
 from charms.traefik_k8s.v1.ingress_per_unit import IngressPerUnitProvider
 from charms.traefik_k8s.v2.ingress import IngressPerAppProvider
@@ -105,6 +106,7 @@ class CharmState:
         ingress_provider: IngressPerAppProvider,
         ingress_per_unit_provider: IngressPerUnitProvider,
         haproxy_route_provider: HaproxyRouteProvider,
+        haproxy_route_tcp_provider: HaproxyRouteTcpProvider,
         reverseproxy_requirer: HTTPRequirer,
     ) -> ProxyMode:
         """Validate if all the necessary preconditions are fulfilled.
@@ -113,6 +115,7 @@ class CharmState:
             ingress_provider: The ingress provider.
             ingress_per_unit_provider: The ingress per unit provider.
             haproxy_route_provider: The haproxy route provider.
+            haproxy_route_tcp_provider: The haproxy-route-tcp provider.
             reverseproxy_requirer: The reverse proxy requirer.
 
         Raises:
@@ -125,7 +128,9 @@ class CharmState:
         is_ingress_related = bool(ingress_provider.relations)
         is_ingress_per_unit_related = bool(ingress_per_unit_provider.relations)
         is_legacy_related = bool(reverseproxy_requirer.relations)
-        is_haproxy_route_related = bool(haproxy_route_provider.relations)
+        is_haproxy_route_related = bool(
+            haproxy_route_provider.relations or haproxy_route_tcp_provider.relations
+        )
 
         if (
             is_ingress_per_unit_related
@@ -162,6 +167,7 @@ class CharmState:
         ingress_provider: IngressPerAppProvider,
         ingress_per_unit_provider: IngressPerUnitProvider,
         haproxy_route_provider: HaproxyRouteProvider,
+        haproxy_route_tcp_provider: HaproxyRouteTcpProvider,
         reverseproxy_requirer: HTTPRequirer,
     ) -> "CharmState":
         """Create a CharmState class from a charm instance.
@@ -170,7 +176,8 @@ class CharmState:
             charm: The haproxy charm.
             ingress_provider: The ingress provider.
             ingress_per_unit_provider: The ingress per unit provider.
-            haproxy_route_provider: The haproxy route provider.
+            haproxy_route_provider: The haproxy-route provider.
+            haproxy_route_tcp_provider: The haproxy-route-tcp provider.
             reverseproxy_requirer: The reverse proxy requirer.
 
         Raises:
@@ -186,6 +193,7 @@ class CharmState:
                     ingress_provider,
                     ingress_per_unit_provider,
                     haproxy_route_provider,
+                    haproxy_route_tcp_provider,
                     reverseproxy_requirer,
                 ),
                 global_max_connection=global_max_connection,
