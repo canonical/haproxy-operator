@@ -5,7 +5,9 @@ changes:
   - title: Added a new relation
     author: swetha1654
     type: major
-    description: Added the `ingress-per-unit` relation to support reaching each unit separately for a Vault deployed behind an ingress.
+    description: |
+      Added the `ingress-per-unit` relation to support reaching each
+      unit separately for a Vault deployed behind an ingress.
     urls: 
       pr: https://github.com/canonical/haproxy-operator/pull/153
       related_doc: 

@@ -6,7 +6,8 @@ changes:
     author: Thanhphan1147
     type: minor
     description: |
-      To avoid any issue with partial health checks configuration, all related fields must be set for the configuration to be valid.
+      To avoid any issue with partial health checks configuration, all related fields
+      must be set for the configuration to be valid.
     urls: 
       pr: https://github.com/canonical/haproxy-operator/pull/170
       related_doc: 

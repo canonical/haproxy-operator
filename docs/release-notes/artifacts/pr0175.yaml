@@ -7,7 +7,8 @@ changes:
     author: alithethird
     type: minor
     description: |
-      Adding the `http-server-close` argument to the haproxy config. When this argument is set it closes the connection after request.
+      Added the `http-server-close` argument to the HAProxy configuration.
+      When this argument is set, it closes the connection after the request.
     urls: 
       pr: https://github.com/canonical/haproxy-operator/pull/175
       related_doc: 

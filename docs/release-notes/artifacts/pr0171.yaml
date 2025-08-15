@@ -10,7 +10,7 @@ changes:
       ```
       hash-type consistent
       ```
-      to the configuration
+      to the configuration.
     urls: 
       pr: https://github.com/canonical/haproxy-operator/pull/171
       related_doc: 
