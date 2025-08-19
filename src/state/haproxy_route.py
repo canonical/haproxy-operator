@@ -20,7 +20,7 @@ from charms.haproxy.v1.haproxy_route import (
     RequirerApplicationData,
     ServerHealthCheck,
 )
-from pydantic import IPvAnyAddress, model_validator
+from pydantic import Field, IPvAnyAddress, model_validator
 from pydantic.dataclasses import dataclass
 from typing_extensions import Self
 
@@ -198,7 +198,7 @@ class HaproxyRouteRequirersInformation:
     peers: list[IPvAnyAddress]
     relation_ids_with_invalid_data: list[int]
     relation_ids_with_invalid_data_tcp: list[int]
-    tcp_endpoints: list[HAProxyRouteTcpEndpoint]
+    tcp_endpoints: list[HAProxyRouteTcpEndpoint] = Field(strict=False)
 
     @classmethod
     def from_provider(
@@ -262,7 +262,9 @@ class HaproxyRouteRequirersInformation:
                     logger.error("port 80 and 443 are not allowed if haproxy_route is present.")
                     relation_ids_with_invalid_data_tcp.append(tcp_requirer.relation_id)
                     continue
-                tcp_endpoints.append(cast(HAProxyRouteTcpEndpoint, tcp_requirer))
+                tcp_endpoints.append(
+                    HAProxyRouteTcpEndpoint.from_haproxy_route_tcp_requirer_data(tcp_requirer)
+                )
 
             return HaproxyRouteRequirersInformation(
                 # Sort backend by the max depth of the required path.

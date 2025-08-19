@@ -1,36 +1,37 @@
+{% extends 'haproxy_route.cfg.j2' %}
 {% macro render_server(server) -%}
     server
-    {{ server.server_name }}
-    {{ server.address }}:{{ server.port }}
+{{ server.server_name }}
+{{ server.address }}:{{ server.port }}
 {% if server.check %}
-    check
+check
+inter {{ server.check.interval }}s
+rise {{ server.check.rise }}
+fall {{ server.check.fall }}
 {% endif %}
-    inter {{ server.check.interval }}s
-    rise {{ server.check.rise }}
-    fall {{ server.check.fall }}
 {% if server.maxconn %}
-    maxconn {{ server.maxconn }}
+maxconn {{ server.maxconn }}
 {% endif %}
 {%- endmacro %}
 
-# Start of template
-{% extends 'haproxy_route.cfg.j2' %}
-{% block haroxy_route_tcp %}
+{% block haproxy_route_tcp %}
 {% for endpoint in tcp_endpoints %}
 frontend {{ endpoint.name }}
-    bind [::]:{{ endpoint.application_data.port }} v4v6 {% if endpoint.application_data.terminate_tls %} ssl crt {{ haproxy_crt_dir }} {% endif +%}
-{% if endpoint.enforce_tls %}
+    mode tcp
+    option tcplog
+    bind [::]:{{ endpoint.application_data.port }} v4v6 {% if endpoint.application_data.tls_terminate %} ssl crt {{ haproxy_crt_dir }} {% endif +%}
+{% if endpoint.application_data.enforce_tls %}
     tcp-request content accept if { req_ssl_hello_type 1 }
 {% endif %}
 
 {% if endpoint.application_data.sni %}
-    acl sni_{{ endpoint.application_data.port }} req_ssl_sni -i {{ endpoint.application_data.sni }}
+    acl sni_{{ endpoint.application_data.port }} {% if endpoint.application_data.tls_terminate %}ssl_fc_sni{% else %}req_ssl_sni{%endif%} -m str {{ endpoint.application_data.sni }}
     tcp-request content reject if !sni_{{ endpoint.application_data.port }}
 {% endif %}
 
 {% if endpoint.application_data.ip_deny_list %}
     acl {{ endpoint.name }}ip_deny_list src {% for deny_address in endpoint.application_data.ip_deny_list %}{{deny_address}} {% endfor +%}
-    tcp-request reject if {{ endpoint.name }}ip_deny_list
+    tcp-request content reject if {{ endpoint.name }}ip_deny_list
 {% endif %}
 
     default_backend {{ endpoint.name }}

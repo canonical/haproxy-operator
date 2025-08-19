@@ -132,19 +132,17 @@ def test_tcp_server_health_check_validation():
         interval=30,
         rise=3,
         fall=2,
-        check_type=TCPHealthCheckType.MYSQL,
-        send="SELECT 1",
-        expect="1",
-        db_user="health_check",
+        check_type=TCPHealthCheckType.GENERIC,
+        send="PING",
+        expect="PONG",
     )
 
     assert check.interval == 30
     assert check.rise == 3
     assert check.fall == 2
-    assert check.check_type == TCPHealthCheckType.MYSQL
-    assert check.send == "SELECT 1"
-    assert check.expect == "1"
-    assert check.db_user == "health_check"
+    assert check.check_type == TCPHealthCheckType.GENERIC
+    assert check.send == "PING"
+    assert check.expect == "PONG"
 
 
 def test_tcp_load_balancing_configuration_validation():
@@ -372,12 +370,8 @@ def test_tcp_health_check_types():
         rise=2,
         fall=3,
         check_type=TCPHealthCheckType.REDIS,
-        send="PING",
-        expect="PONG",
     )
     assert redis_check.check_type == TCPHealthCheckType.REDIS
-    assert redis_check.send == "PING"
-    assert redis_check.expect == "PONG"
 
     # Test SMTP health check
     smtp_check = TCPServerHealthCheck(
@@ -385,12 +379,8 @@ def test_tcp_health_check_types():
         rise=2,
         fall=3,
         check_type=TCPHealthCheckType.SMTP,
-        send="HELO test",
-        expect="250",
     )
     assert smtp_check.check_type == TCPHealthCheckType.SMTP
-    assert smtp_check.send == "HELO test"
-    assert smtp_check.expect == "250"
 
 
 def test_requirer_application_data_with_ip_deny_list():

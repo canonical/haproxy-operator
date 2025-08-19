@@ -304,15 +304,27 @@ class HAProxyCharm(ops.CharmBase):
 
     def _configure_haproxy_route(self, charm_state: CharmState) -> None:
         """Configure the haproxy route relation."""
-        tls_information = TLSInformation.from_charm(self, self.certificates)
-        self._tls.certificate_available(tls_information)
-
         haproxy_route_requirers_information = HaproxyRouteRequirersInformation.from_provider(
             self.haproxy_route_provider,
             self.haproxy_route_tcp_provider,
             typing.cast(typing.Optional[str], self.model.config.get("external-hostname")),
             self._get_peer_units_address(),
         )
+        # We ONLY allow the charm to run with no certificate requested if:
+        # 1. there's only haproxy-route-tcp relations
+        # AND
+        # 2. All requirers must have tls passthrough or disable TLS termination
+        allow_no_certificates = (
+            not haproxy_route_requirers_information.backends
+            and haproxy_route_requirers_information.tcp_endpoints
+            and all(
+                not endpoint.application_data.enforce_tls
+                or not endpoint.application_data.tls_terminate
+                for endpoint in haproxy_route_requirers_information.tcp_endpoints
+            )
+        )
+        tls_information = TLSInformation.from_charm(self, self.certificates, allow_no_certificates)
+        self._tls.certificate_available(tls_information)
         self.haproxy_service.reconcile_haproxy_route(
             charm_state, haproxy_route_requirers_information
         )
@@ -370,6 +382,13 @@ class HAProxyCharm(ops.CharmBase):
                     )
                     for backend in haproxy_route_requirer_information.backends
                     for hostname_acl in backend.hostname_acls
+                ] + [
+                    CertificateRequestAttributes(
+                        common_name=endpoint.application_data.sni,
+                        sans_dns=frozenset([endpoint.application_data.sni]),
+                    )
+                    for endpoint in haproxy_route_requirer_information.tcp_endpoints
+                    if endpoint.application_data.sni is not None
                 ]
         except (
             HaproxyRouteIntegrationDataValidationError,

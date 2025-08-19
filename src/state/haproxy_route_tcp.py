@@ -4,14 +4,14 @@
 """HAproxy route charm state component."""
 
 from functools import cached_property
-from typing import Optional, cast
+from typing import Optional, Self, cast
 
 from charms.haproxy.v0.haproxy_route_tcp import (
     HaproxyRouteTcpRequirerData,
     TCPHealthCheckType,
     TCPServerHealthCheck,
 )
-from pydantic import IPvAnyAddress
+from pydantic import IPvAnyAddress, RootModel
 from pydantic.dataclasses import dataclass
 
 
@@ -44,6 +44,18 @@ class HAProxyRouteTcpEndpoint(HaproxyRouteTcpRequirerData):
         name: Unique name for this TCP endpoint.
         tcp_check_options: TCP health check options for HAProxy configuration.
     """
+
+    @classmethod
+    def from_haproxy_route_tcp_requirer_data(cls, provider: HaproxyRouteTcpRequirerData) -> "Self":
+        """Instantiate a HAProxyRouteTcpEndpoint class from the parent class.
+
+        Args:
+            provider: parent class.
+
+        Returns:
+            Self: The instantiated HAProxyRouteTcpEndpoint class.
+        """
+        return cls(**RootModel[HaproxyRouteTcpRequirerData](provider).model_dump())
 
     @property
     def consistent_hashing(self) -> bool:
@@ -106,13 +118,17 @@ class HAProxyRouteTcpEndpoint(HaproxyRouteTcpRequirerData):
             list[str]: List of HAProxy TCP check configuration options.
         """
         if check := self.application_data.check:
+            if check.check_type is None:
+                return []
             if check.check_type == TCPHealthCheckType.GENERIC:
-                options = []
+                options = ["option tcp-check"]
                 if send := self.application_data.check.send:
-                    options.append(f"option tcp-check send '{send}'")
-                if expect := self.application_data.check.send:
-                    options.append(f"option tcp-check expect '{expect}'")
+                    options.append(f"tcp-check send {repr(send)}")
+                if expect := self.application_data.check.expect:
+                    options.append(f"tcp-check expect string {repr(expect)}")
                 return options
-            db_user = f" {check.db_user}" if check.db_user else ""
-            return [f"option {str(check.check_type)}{db_user}"]
+            if check.check_type in [TCPHealthCheckType.POSTGRES, TCPHealthCheckType.MYSQL]:
+                db_user = f" {check.db_user}" if check.db_user else ""
+                return [f"option {str(check.check_type)}{db_user}"]
+            return [f"option {str(check.check_type)}"]
         return []

@@ -1,4 +1,4 @@
-# pylint: disable=import-error
+# pylint: disable=import-error,duplicate-code
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
