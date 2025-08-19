@@ -138,7 +138,7 @@ class HAProxyRouteBackend:
         if self.application_data.load_balancing.algorithm == LoadBalancingAlgorithm.COOKIE:
             # The library ensures that if algorithm == cookie
             # then the cookie attribute must be not none
-            return f"hash req.cookie({cast(str, self.application_data.load_balancing.cookie)})"
+            return f"hash req.cook({cast(str, self.application_data.load_balancing.cookie)})"
         return str(self.application_data.load_balancing.algorithm.value)
 
     @property
