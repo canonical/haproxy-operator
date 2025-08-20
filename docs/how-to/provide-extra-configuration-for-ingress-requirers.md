@@ -46,7 +46,7 @@ juju integrate haproxy cert
 ```
 
 ## Configure integrations
-Interate the pollen charm with the ingress-configurator charm and the ingress-configurator charm with the haproxy charm:
+Interate the `pollen` charm with the `ingress-configurator` charm and the `ingress-configurator` charm with the `haproxy` charm:
 ```sh
 juju integrate haproxy ingress-configurator
 juju integrate ingress-configurator pollen
