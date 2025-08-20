@@ -1,7 +1,7 @@
 # HAProxy release notes – 2.8/stable
 
 These release notes cover new features and changes in HAProxy for revisions
-148-214 between the dates of 2025-04-30 and <latest date>.
+148-216 between the dates of 2025-04-30 and 2025-08-20.
 
 Main features:
 
