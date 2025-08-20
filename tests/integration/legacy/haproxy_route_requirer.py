@@ -57,3 +57,15 @@ class AnyCharm(AnyCharmBase):
             check_path="/",
             check_port=80,
         )
+
+    def update_relation_additional_configurations(self):
+        """Update relation details for haproxy-route with retry configuration."""
+        self._haproxy_route.provide_haproxy_route_requirements(
+            service="any_charm_with_retry",
+            ports=[80],
+            retry_count=3,
+            retry_redispatch=True,
+            load_balancing_algorithm="source",
+            load_balancing_consistent_hashing=True,
+            http_server_close=True,
+        )
