@@ -409,7 +409,7 @@ class TCPServerHealthCheck(BaseModel):
         """
         if (
             self.send is not None or self.expect is not None
-        ) and self.check_type == TCPHealthCheckType.GENERIC:
+        ) and self.check_type != TCPHealthCheckType.GENERIC:
             raise ValueError("send and expect can only be set if type is 'generic'")
         if self.db_user is not None and self.check_type not in [
             TCPHealthCheckType.MYSQL,
@@ -1245,10 +1245,9 @@ class HaproxyRouteTcpRequirer(Object):
             "backend_port": backend_port,
             "hosts": hosts,
             "sni": sni,
-            "load_balancing": {
-                "algorithm": load_balancing_algorithm,
-                "consistent_hashing": load_balancing_consistent_hashing,
-            },
+            "load_balancing": self._generate_load_balancing_configuration(
+                load_balancing_algorithm, load_balancing_consistent_hashing
+            ),
             "check": self._generate_server_health_check_configuration(
                 check_interval,
                 check_rise,
@@ -1311,7 +1310,7 @@ class HaproxyRouteTcpRequirer(Object):
             "interval": interval,
             "rise": rise,
             "fall": fall,
-            "type": check_type,
+            "check_type": check_type,
             "send": send,
             "expect": expect,
             "db_user": db_user,
@@ -1384,6 +1383,26 @@ class HaproxyRouteTcpRequirer(Object):
         return {
             "count": count,
             "redispatch": redispatch,
+        }
+
+    def _generate_load_balancing_configuration(
+        self, algorithm: Optional[LoadBalancingAlgorithm], consistent_hashing: bool
+    ) -> Optional[dict[str, Any]]:
+        """Generate load balancing configuration.
+
+        Args:
+            algorithm: The load balancing algorithm.
+            consistent_hashing: Whether to use consistent hashing.
+
+        Returns:
+            Optional[dict[str, Any]]: Load balancing configuration dictionary,
+                or None if required fields are not configured.
+        """
+        if not algorithm:
+            return None
+        return {
+            "algorithm": algorithm,
+            "consistent_hashing": consistent_hashing,
         }
 
     def update_relation_data(self) -> None:
