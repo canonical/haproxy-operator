@@ -1,5 +1,5 @@
 # How to provide extra configuration to ingress requirers
-This guide will show you how a charm implementing only the `ingress` integration can leverage the added functionalities of the `haproxy-route` integration with the help of the `ingress-configurator` charm.
+This guide will show you how a charm implementing only the `ingress` relation can leverage the added functionalities of the `haproxy-route` relation with the help of the `ingress-configurator` charm.
 
 ## Deploy the `ingress-configurator` charm
 ```sh
