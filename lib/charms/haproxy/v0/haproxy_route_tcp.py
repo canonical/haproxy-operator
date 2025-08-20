@@ -424,9 +424,9 @@ class TCPRateLimitPolicy(Enum):
     """Enum of possible rate limiting policies.
 
     Attrs:
-        REJECT: closes the connection immediately without sending a response.
+        REJECT: Send a TCP reset packet to close the connection.
         SILENT: disconnects immediately without notifying the client
-            that the connection has been closed.
+            that the connection has been closed (no packet sent).
     """
 
     REJECT = "reject"
