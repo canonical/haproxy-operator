@@ -19,8 +19,9 @@ juju deploy ingress-configurator --channel=edge
 We will spin up a juju machine without deploying a charm:
 ```sh
 juju add-machine
-created machine 4
 ```
+
+If successful, the terminal will output `created machine 4`.
 
 Take note of the machine ID, in this example it's `4`.
 
