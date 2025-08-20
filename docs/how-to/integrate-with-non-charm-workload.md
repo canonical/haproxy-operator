@@ -2,7 +2,7 @@
 This guide will show you how a charm implementing only the `ingress` integration can leverage the added functionalities of the `haproxy-route` integration with the help of the `ingress-configurator` charm.
 
 
-## Deploy and configure the haproxy charm
+## Deploy and configure the `haproxy` charm
 We will deploy the `haproxy` charm, the `self-signed-certificates` charm. Please refer to the [getting-started](../getting-started.md) section for a more detailed explanation:
 ```sh
 juju deploy haproxy --channel=2.8/edge --base=ubuntu@24.04
