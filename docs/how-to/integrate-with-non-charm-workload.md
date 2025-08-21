@@ -30,31 +30,15 @@ Next, we will install an `apache` server on the created juju unit:
 juju ssh 4 sudo apt install apache2
 ```
 
-Get the IP address of the created unit using `juju status --format=json | jq -r '.machines["4"].ip-addresses[0]'`. In this example, the unit IP address is `10.207.217.155`:
+Get the IP address of the created unit and Verify that the `apache` server is responding to requests:
+
 ```sh
-Model    Controller  Cloud/Region         Version  SLA          Timestamp
-haproxy  lxd         localhost/localhost  3.6.8    unsupported  17:11:16+02:00
-
-App                   Version  Status  Scale  Charm                     Channel      Rev  Exposed  Message
-cert                           active      1  self-signed-certificates  1/stable     317  no       
-haproxy                        active      1  haproxy                   2.8/edge     199  no       
-ingress-configurator           active      1  ingress-configurator      latest/edge    9  no       
-
-Unit                     Workload  Agent  Machine  Public address  Ports       Message
-cert/0*                  active    idle   1        10.207.217.216              
-haproxy/0*               active    idle   0        10.207.217.234  80,443/tcp  
-ingress-configurator/0*  active    idle   2        10.207.217.215              
-
-Machine  State    Address         Inst id        Base          AZ  Message
-0        started  10.207.217.234  juju-61cf18-0  ubuntu@24.04      Running
-1        started  10.207.217.216  juju-61cf18-1  ubuntu@24.04      Running
-2        started  10.207.217.215  juju-61cf18-2  ubuntu@24.04      Running
-4        started  10.207.217.155  juju-61cf18-4  ubuntu@24.04      Running
+APACHE_IP=$(juju status --format=json | jq -r '.machines["4"].ip-addresses[0]')
+curl $APACHE_IP -I
 ```
 
-Verify that the `apache` server is responding to requests:
-```sh
-curl 10.207.217.155 -I
+You should see the `apache` server's response in the terminal:
+```
 HTTP/1.1 200 OK
 Date: Fri, 25 Jul 2025 15:13:58 GMT
 Server: Apache/2.4.58 (Ubuntu)
@@ -66,7 +50,7 @@ Content-Type: text/html
 ```
 
 ## Configure integrations
-Integrate the pollen charm with the ingress-configurator charm and the ingress-configurator charm with the haproxy charm:
+Integrate the `ingress-configurator` charm with the `haproxy` charm:
 ```sh
 juju integrate haproxy ingress-configurator
 ```
@@ -79,7 +63,12 @@ juju config ingress-configurator hostname=apache.internal
 ## Verify that the requirer charm is reachable through `haproxy`
 Using `juju status`, note down the IP address of the haproxy charm unit, in this example it is `10.207.217.234`. Then, verify that we can reach the Apache server using `curl`:
 ```sh
-curl https://apache.internal -L --insecure --resolve apache.internal:443:10.207.217.234 -I
+HAPROXY_IP=$(juju status --format=json | jq '.applications["haproxy"].units["haproxy/0"]."public-address"')
+curl https://apache.internal -L --insecure --resolve apache.internal:443:$HAPROXY_IP -I
+```
+
+You should see the `apache` server's response in the terminal:
+```
 HTTP/2 200 
 date: Fri, 25 Jul 2025 15:19:21 GMT
 server: Apache/2.4.58 (Ubuntu)
