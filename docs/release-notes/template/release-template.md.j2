@@ -1,20 +1,22 @@
-<!-- Remember to update this file for your charm -- replace <charm-name> with the appropriate name,
-follow the release notes policy in the title, and fill in the relevant details. -->
+<!-- Remember to update this file for your charm!! -->
 
 # {{ charm_name }} release notes – {{ release_condition }}
 
-These release notes cover new features and changes in {{ charm_name }} for <release condition here>.
-
-<!--
-Add an introduction summarizing the most significant features and impactful changes
-outlined in this file. Organize this content in bulleted lists of "Main features"
-and "Main bug fixes", using past tense to describe each of the items
-(for instance, "Added support for X relation").
--->
+These release notes cover new features and changes in {{ charm_name }} for revisions
+{{ earliest_revision }}-{{ latest_revision }} between the dates of {{ earliest_date }} and {{ latest_date }}.
 
 Main features:
+
 {% for feat in changes -%}
 {%- if feat.highlight == true and (feat.visibility == "public" or (feat.visibility == "internal" and show_internal == true) ) and (feat.type == "major" or feat.type == "minor") -%}
+* {{ feat.title }}.
+{% endif -%}
+{% endfor %}
+
+Main breaking changes:
+
+{% for feat in changes -%}
+{%- if feat.highlight == true and (feat.visibility == "public" or (feat.visibility == "internal" and show_internal == true) ) and (feat.type == "breaking") -%}
 * {{ feat.title }}.
 {% endif -%}
 {% endfor %}
@@ -32,13 +34,10 @@ See our [Release policy and schedule](docs/release-notes/landing-page.md).
 
 <!--
 Specify the workload version; link to the workload's release notes if available.
-
 Add information about the requirements for this charm in the table
 below, for instance, a minimum Juju version. 
-
 If the user will need any specific upgrade instructions for this
 release, include those instructions here.
-
 -->
 
 The charm operates <workload name with version>.
@@ -54,16 +53,11 @@ The table below shows the required or supported versions of the software necessa
 | XXXX                    | XXXX             |
 
 ## Updates
-<!--
-Use this section to highlight major and minor features that were added in this release.
-The subsection below shows the pattern for each feature. Include links to the relevant PR or commit.
--->
 
 The following major and minor features were added in this release.
 
 {% for feat in changes %}
 {%- if (feat.type == "major" or feat.type == "minor") and (feat.visibility == "public" or (feat.visibility == "internal" and show_internal == true) ) -%}
-
 ### {{ feat.title }}
 {{ feat.description }}
 <Add more context and information about the entry>
@@ -80,26 +74,17 @@ Relevant links:
 {% endif -%}
 {% endfor %}
 
-## Bug fixes
-<!--
-Add a bulleted list of bug fixes here, with links to the relevant PR/commit.
--->
-
+{% set break = False %}
 {% for feat in changes -%}
-{%- if feat.type == "bugfix" and (feat.visibility == "public" or (feat.visibility == "internal" and show_internal == true) ) -%}
-* {{ feat.title }} ([PR]({{ feat.urls.pr }})).
-{% endif -%}
-{% endfor %}
-
+{% if not break -%}
+{%- if feat.type == "breaking" and (feat.visibility == "public" or (feat.visibility == "internal" and show_internal == true) ) -%}
 ## Breaking changes
 
-<!--
-Use this section to highlight any backwards-incompatible changes in this release.
-Include links to the relevant PR or commit.
-If there are no breaking changes, keep the section and write "No breaking changes".
--->
-
 The following backwards-incompatible changes are included in this release.
+{% set break = True %}
+{% endif -%}
+{% endif -%}
+{% endfor -%}
 
 {% for feat in changes -%}
 {%- if feat.type == "breaking" and (feat.visibility == "public" or (feat.visibility == "internal" and show_internal == true) ) -%}
@@ -119,15 +104,25 @@ Relevant links:
 {% endif -%}
 {% endfor %}
 
+## Bug fixes
+
+{% for feat in changes -%}
+{%- if feat.type == "bugfix" and (feat.visibility == "public" or (feat.visibility == "internal" and show_internal == true) ) -%}
+* {{ feat.title }} ([PR]({{ feat.urls.pr }})).
+{% endif -%}
+{% endfor %}
+
+{% set break = False %}
+{% for feat in changes -%}
+{% if not break -%}
+{%- if feat.type == "deprecated" and (feat.visibility == "public" or (feat.visibility == "internal" and show_internal == true) ) -%}
 ## Deprecated
 
-<!--
-Use this section to highlight any deprecated features in this release.
-Include links to the relevant PR or commit.
-If there are no deprecated features, keep the section and write "No deprecated features".
--->
-
 The following features have been deprecated.
+{% set break = True %}
+{% endif -%}
+{% endif -%}
+{% endfor -%}
 
 {% for feat in changes -%}
 {%- if feat.type == "deprecated" and (feat.visibility == "public" or (feat.visibility == "internal" and show_internal == true) ) -%}
@@ -148,6 +143,7 @@ Relevant links:
 {% endfor %}
 
 ## Known issues
+
 <!--
 Add a bulleted list with links to unresolved issues – the most important/pressing ones,
 the ones being worked on currently, or the ones with the most visibility/traffic.
@@ -157,6 +153,7 @@ If there are no known issues, keep the section and write "No known issues".
 -->
 
 ## Thanks to our contributors
+
 <!--
 List of contributors based on PRs/commits. Remove this section if there are no contributors in this release.
 -->
@@ -169,3 +166,4 @@ List of contributors based on PRs/commits. Remove this section if there are no c
 {% endfor %}
 
 {{ authors_in_list|join(', ') }}
+
