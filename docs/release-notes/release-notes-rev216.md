@@ -23,7 +23,7 @@ The table below shows the required or supported versions of the software necessa
 
 | Software                | Required version |
 |-------------------------|------------------|
-| Juju                    | 3.x.             |
+| Juju                    | 3.x              |
 | Terraform               | 1.6              |
 | Terraform Juju provider | 0.19             |
 | Ubuntu                  | 24.04            |
@@ -172,20 +172,6 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/98)
 
-## Bug fixes
-
-* Added missing new lines in haproxy-route j2 template and added missing `unit_address` in `provide_haproxy_route_requirements` helper method ([PR](https://github.com/canonical/haproxy-operator/pull/128)).
-* Pinned the HAProxy version and prevented automatic updates ([PR](https://github.com/canonical/haproxy-operator/pull/136)).
-* Disabled sending host headers in `httpchk` so the charm doesn't refuse to proxy incoming requests ([PR](https://github.com/canonical/haproxy-operator/pull/111)).
-* Added checks before reloading the HAProxy service and set the charm to waiting if the validation fails ([PR](https://github.com/canonical/haproxy-operator/pull/122)).
-* Fixed a typo in the cookie fetch method in the load-balancing algorithm ([PR](https://github.com/canonical/haproxy-operator/pull/179)).
-* Added a new dependency to fix the linting step ([PR](https://github.com/canonical/haproxy-operator/pull/105)).
-* Added "s" suffix to timeout entries ([PR](https://github.com/canonical/haproxy-operator/pull/162)).
-* Fixed Jinja2 handling of newlines to prevent invalid configuration generation ([PR](https://github.com/canonical/haproxy-operator/pull/139)).
-* Mitigated bug in Terraform provider by setting subordinate charm units to `1` ([PR](https://github.com/canonical/haproxy-operator/pull/135)).
-* Fixed an ambiguous endpoint in an integration test ([PR](https://github.com/canonical/haproxy-operator/pull/129)).
-
-
 ## Breaking changes
 
 The following backwards-incompatible changes are included in this release.
@@ -201,10 +187,19 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/152)
 
+## Bug fixes
 
-## Deprecated
+* Added missing new lines in haproxy-route j2 template and added missing `unit_address` in `provide_haproxy_route_requirements` helper method ([PR](https://github.com/canonical/haproxy-operator/pull/128)).
+* Pinned the HAProxy version and prevented automatic updates ([PR](https://github.com/canonical/haproxy-operator/pull/136)).
+* Disabled sending host headers in `httpchk` so the charm doesn't refuse to proxy incoming requests ([PR](https://github.com/canonical/haproxy-operator/pull/111)).
+* Added checks before reloading the HAProxy service and set the charm to waiting if the validation fails ([PR](https://github.com/canonical/haproxy-operator/pull/122)).
+* Fixed a typo in the cookie fetch method in the load-balancing algorithm ([PR](https://github.com/canonical/haproxy-operator/pull/179)).
+* Added a new dependency to fix the linting step ([PR](https://github.com/canonical/haproxy-operator/pull/105)).
+* Added "s" suffix to timeout entries ([PR](https://github.com/canonical/haproxy-operator/pull/162)).
+* Fixed Jinja2 handling of newlines to prevent invalid configuration generation ([PR](https://github.com/canonical/haproxy-operator/pull/139)).
+* Mitigated bug in Terraform provider by setting subordinate charm units to `1` ([PR](https://github.com/canonical/haproxy-operator/pull/135)).
+* Fixed an ambiguous endpoint in an integration test ([PR](https://github.com/canonical/haproxy-operator/pull/129)).
 
-No deprecated features in this release.
 
 ## Known issues
 
