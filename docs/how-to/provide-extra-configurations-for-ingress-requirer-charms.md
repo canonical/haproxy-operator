@@ -57,7 +57,7 @@ Send a request with `curl` to the `any-charm` unit:
 curl $(juju status --format=json | jq -r '.applications["any-charm"].units["any-charm/0"]."public-address"')
 ```
 
-You should see the Apache server replying with the unit's hostname:
+You should see the Apache server reply with the unit's hostname:
 ```sh
 juju-344909-3
 ```
