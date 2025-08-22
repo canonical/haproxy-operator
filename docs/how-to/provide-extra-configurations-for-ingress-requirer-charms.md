@@ -4,12 +4,12 @@ This guide will show you how a charm implementing only the `ingress` relation ca
 ## Deploy an ingress requirer charm
 Deploy `any-charm`:
 ```sh
-juju deploy any-charm --channel=beta
+juju deploy any-charm ingress-requirer --channel=beta
 ```
 
 Configure `any-charm` to use the ingress relation:
 ```sh
-juju config any-charm src-overwrite="$(cat << EOF | python3 -
+juju config ingress-requirer src-overwrite="$(cat << EOF | python3 -
 import json
 import textwrap
 
@@ -47,14 +47,14 @@ EOF
 
 Finally, start the web server on the `any-charm` unit:
 ```sh
-juju run any-charm/0 rpc method=start_server
+juju run ingress-requirer/0 rpc method=start_server
 ```
 
 
 # Verify that the requirer application is responding to requests
 Send a request with `curl` to the `any-charm` unit:
 ```sh
-curl $(juju status --format=json | jq -r '.applications["any-charm"].units["any-charm/0"]."public-address"')
+curl $(juju status --format=json | jq -r '.applications["ingress-requirer"].units["ingress-requirer/0"]."public-address"')
 ```
 
 You should see the Apache server reply with the unit's hostname:
@@ -79,7 +79,7 @@ juju deploy ingress-configurator --channel edge
 Integrate `any-charm` with the `ingress-configurator` charm and the `ingress-configurator` charm with the `haproxy` charm:
 ```sh
 juju integrate haproxy ingress-configurator
-juju integrate ingress-configurator any-charm:require-ingress
+juju integrate ingress-configurator ingress-requirer:require-ingress
 ```
 
 Then, configure a hostname for the requirer charm:
