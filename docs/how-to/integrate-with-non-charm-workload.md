@@ -1,5 +1,5 @@
 # How to integrate with non-charmed workloads
-This guide will show you how a charm implementing only the `ingress` integration can leverage the added functionalities of the `haproxy-route` integration with the help of the `ingress-configurator` charm.
+This guide will show you how non-charm applications can use the `haproxy` charm to load balance traffic with the help of the `ingress-configurator` charm.
 
 
 ## Deploy and configure the `haproxy` charm
