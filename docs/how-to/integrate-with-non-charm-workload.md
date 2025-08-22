@@ -3,7 +3,7 @@ This guide will show you how non-charm applications can use the `haproxy` charm 
 
 
 ## Deploy and configure the `haproxy` charm
-We will deploy the `haproxy` charm, the `self-signed-certificates` charm. Please refer to the [getting-started](../getting-started.md) section for a more detailed explanation:
+Deploy the `haproxy` and `self-signed-certificates` charms. Please refer to the [getting-started](../getting-started.md) section for a more detailed explanation.
 ```sh
 juju deploy haproxy --channel=2.8/edge --base=ubuntu@24.04
 juju deploy self-signed-certificates cert
@@ -16,7 +16,7 @@ juju deploy ingress-configurator --channel=edge
 ```
 
 ## Deploy a non-charm web server
-We will spin up a juju machine without deploying a charm:
+Spin up a Juju machine without deploying a charm:
 ```sh
 juju add-machine
 ```
@@ -25,12 +25,12 @@ If successful, the terminal will output `created machine 4`.
 
 Take note of the machine ID, in this example it's `4`.
 
-Next, we will install an `apache` server on the created juju unit:
+Next, install an `apache` server on the created Juju unit:
 ```sh
 juju ssh 4 sudo apt install apache2
 ```
 
-Get the IP address of the created unit and Verify that the `apache` server is responding to requests:
+Get the IP address of the created unit and verify that the `apache` server is responding to requests:
 
 ```sh
 APACHE_IP=$(juju status --format=json | jq -r '.machines["4"].ip-addresses[0]')
@@ -55,7 +55,7 @@ Integrate the `ingress-configurator` charm with the `haproxy` charm:
 juju integrate haproxy ingress-configurator
 ```
 
-Then, configure a hostname for the requirer charm:
+Configure a hostname for the requirer charm:
 ```sh
 juju config ingress-configurator hostname=apache.internal
 ```

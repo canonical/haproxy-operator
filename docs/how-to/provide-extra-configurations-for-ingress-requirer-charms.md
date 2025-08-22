@@ -7,7 +7,7 @@ Deploy `any-charm`:
 juju deploy any-charm --channel=beta
 ```
 
-Configure `any-charm` to use the ingress relation
+Configure `any-charm` to use the ingress relation:
 ```sh
 juju config any-charm src-overwrite="$(cat << EOF | python3 -
 import json
@@ -57,13 +57,13 @@ Send a request with `curl` to the `any-charm` unit:
 curl $(juju status --format=json | jq -r '.applications["any-charm"].units["any-charm/0"]."public-address"')
 ```
 
-You should see the Apache server replying with the unit's hostname:
+You should see the Apache server reply with the unit's hostname:
 ```sh
 juju-344909-3
 ```
 
-## Deploy and configure the haproxy charm
-We will deploy the `haproxy` and `self-signed-certificates` charms. Please refer to the [getting-started](../getting-started.md) section for a more detailed explanation:
+## Deploy and configure the `haproxy` charm
+Deploy the `haproxy` and `self-signed-certificates` charms. Please refer to the [getting-started](../getting-started.md) section for a more detailed explanation.
 ```sh
 juju deploy haproxy --channel=2.8/edge --base=ubuntu@24.04
 juju deploy self-signed-certificates cert
