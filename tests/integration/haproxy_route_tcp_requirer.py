@@ -11,6 +11,8 @@ import textwrap
 from pathlib import Path
 
 import ops
+# Ignoring here to make the linter happy as these modules will be available
+# only inside the anycharm unit.
 from any_charm_base import AnyCharmBase  # type: ignore
 from haproxy_route_tcp import HaproxyRouteTcpRequirer, TCPHealthCheckType  # type: ignore
 
