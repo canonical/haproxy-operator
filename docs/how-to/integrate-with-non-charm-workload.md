@@ -49,7 +49,7 @@ Content-Length: 14
 Content-Type: text/html
 ```
 
-## Configure integrations
+## Configure relations
 Integrate the `ingress-configurator` charm with the `haproxy` charm:
 ```sh
 juju integrate haproxy ingress-configurator
