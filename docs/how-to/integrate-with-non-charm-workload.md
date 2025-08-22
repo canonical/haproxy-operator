@@ -16,7 +16,7 @@ juju deploy ingress-configurator --channel=edge
 ```
 
 ## Deploy a non-charm web server
-We will spin up a juju machine without deploying a charm:
+Spin up a Juju machine without deploying a charm:
 ```sh
 juju add-machine
 ```
