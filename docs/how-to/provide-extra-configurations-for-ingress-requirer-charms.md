@@ -7,7 +7,7 @@ Deploy `any-charm`:
 juju deploy any-charm --channel=beta
 ```
 
-Configure `any-charm` to use the ingress relation
+Configure `any-charm` to use the ingress relation:
 ```sh
 juju config any-charm src-overwrite="$(cat << EOF | python3 -
 import json
