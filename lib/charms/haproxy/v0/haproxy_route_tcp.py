@@ -425,9 +425,9 @@ class TCPRateLimitPolicy(Enum):
     """Enum of possible rate limiting policies.
 
     Attrs:
-        REJECT: closes the connection immediately without sending a response.
+        REJECT: Send a TCP reset packet to close the connection.
         SILENT: disconnects immediately without notifying the client
-            that the connection has been closed.
+            that the connection has been closed (no packet sent).
     """
 
     REJECT = "reject"
@@ -975,7 +975,7 @@ class HaproxyRouteTcpRequirer(Object):
         Args:
             charm: The charm that is instantiating the library.
             relation_name: The name of the relation to bind to.
-            port: The name of the service to route traffic to.
+            port: The provider port.
             backend_port: List of ports the service is listening on.
             hosts: List of backend server addresses. Currently only support IP addresses.
             sni: List of URL paths to route to this service.
@@ -1099,7 +1099,7 @@ class HaproxyRouteTcpRequirer(Object):
         """Update haproxy-route requirements data in the relation.
 
         Args:
-            port: The name of the service to route traffic to.
+            port: The provider port.
             backend_port: List of ports the service is listening on.
             hosts: List of backend server addresses. Currently only support IP addresses.
             sni: List of URL paths to route to this service.
@@ -1196,7 +1196,7 @@ class HaproxyRouteTcpRequirer(Object):
         """Generate the complete application data structure.
 
         Args:
-            port: The name of the service to route traffic to.
+            port: The provider port.
             backend_port: List of ports the service is listening on.
             hosts: List of backend server addresses. Currently only support IP addresses.
             sni: List of URL paths to route to this service.
