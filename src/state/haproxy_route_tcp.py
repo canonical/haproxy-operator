@@ -61,7 +61,7 @@ class HAProxyRouteTcpEndpoint(HaproxyRouteTcpRequirerData):
     def consistent_hashing(self) -> bool:
         """Indicate if consistent hashing should be applied for this backend.
 
-        We make the assumption that the data have been validated by the library.
+        We make the assumption that the data has been validated by the library.
 
         Returns:
             bool: Whether consistent hashing should be applied.

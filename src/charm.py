@@ -313,7 +313,7 @@ class HAProxyCharm(ops.CharmBase):
         # We ONLY allow the charm to run with no certificate requested if:
         # 1. there's only haproxy-route-tcp relations
         # AND
-        # 2. All requirers must have tls passthrough or disable TLS termination
+        # 2. All requirers must enable TLS passthrough or disable TLS termination
         allow_no_certificates = (
             not haproxy_route_requirers_information.backends
             and haproxy_route_requirers_information.tcp_endpoints
