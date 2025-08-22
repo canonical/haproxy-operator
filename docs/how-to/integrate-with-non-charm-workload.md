@@ -55,7 +55,7 @@ Integrate the `ingress-configurator` charm with the `haproxy` charm:
 juju integrate haproxy ingress-configurator
 ```
 
-Then, configure a hostname for the requirer charm:
+Configure a hostname for the requirer charm:
 ```sh
 juju config ingress-configurator hostname=apache.internal
 ```
