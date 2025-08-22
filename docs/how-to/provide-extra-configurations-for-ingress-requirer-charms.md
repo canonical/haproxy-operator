@@ -75,7 +75,7 @@ juju integrate haproxy cert
 juju deploy ingress-configurator --channel edge
 ```
 
-## Configure integrations
+## Configure relations
 Integrate `any-charm` with the `ingress-configurator` charm and the `ingress-configurator` charm with the `haproxy` charm:
 ```sh
 juju integrate haproxy ingress-configurator
