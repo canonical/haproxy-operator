@@ -30,7 +30,7 @@ Next, we will install an `apache` server on the created juju unit:
 juju ssh 4 sudo apt install apache2
 ```
 
-Get the IP address of the created unit and Verify that the `apache` server is responding to requests:
+Get the IP address of the created unit and verify that the `apache` server is responding to requests:
 
 ```sh
 APACHE_IP=$(juju status --format=json | jq -r '.machines["4"].ip-addresses[0]')
