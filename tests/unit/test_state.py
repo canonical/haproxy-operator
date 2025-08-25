@@ -25,7 +25,10 @@ from charms.traefik_k8s.v1.ingress_per_unit import DataValidationError as V1Data
 from charms.traefik_k8s.v2.ingress import DataValidationError as V2DataValidationError
 
 from state.charm_state import CharmState, ProxyMode
-from state.haproxy_route import HaproxyRouteRequirersInformation
+from state.haproxy_route import (
+    HaproxyRouteIntegrationDataValidationError,
+    HaproxyRouteRequirersInformation,
+)
 from state.haproxy_route_tcp import HAProxyRouteTcpEndpoint
 from state.ingress import IngressIntegrationDataValidationError, IngressRequirersInformation
 from state.ingress_per_unit import (
@@ -75,25 +78,30 @@ def haproxy_route_tcp_relation_data_fixture() -> (
 
 
 @pytest.fixture(scope="module", name="haproxy_route_relation_data")
-def haproxy_route_relation_data_fixture() -> HaproxyRouteRequirersData:
+def haproxy_route_relation_data_fixture() -> typing.Callable[[str], HaproxyRouteRequirerData]:
     """Mock systemd lib methods."""
-    return HaproxyRouteRequirersData(
-        requirers_data=[
-            HaproxyRouteRequirerData(
-                relation_id=1,
-                application_data=typing.cast(
-                    RequirerApplicationData,
-                    RequirerApplicationData.from_dict({"service": "test", "ports": [80]}),
-                ),
-                units_data=[
-                    typing.cast(
-                        RequirerUnitData, RequirerUnitData.from_dict({"address": "10.0.0.1"})
-                    )
-                ],
-            )
-        ],
-        relation_ids_with_invalid_data=[],
-    )
+
+    def generate_requirer_data(service: str) -> HaproxyRouteRequirerData:
+        """Generate haproxy-route relation data with custom service name.
+
+        Args:
+            service: Service name.
+
+        Returns:
+            HaproxyRouteRequirerData: Generated relation data.
+        """
+        return HaproxyRouteRequirerData(
+            relation_id=1,
+            application_data=typing.cast(
+                RequirerApplicationData,
+                RequirerApplicationData.from_dict({"service": service, "ports": [80]}),
+            ),
+            units_data=[
+                typing.cast(RequirerUnitData, RequirerUnitData.from_dict({"address": "10.0.0.1"}))
+            ],
+        )
+
+    return generate_requirer_data
 
 
 def test_ingress_per_unit_from_provider():
@@ -201,7 +209,7 @@ def test_proxy_mode_tcp():
 
 def test_haproxy_route_requirer_information_reserved_ports(
     haproxy_route_tcp_relation_data: typing.Callable[[int], HaproxyRouteTcpRequirersData],
-    haproxy_route_relation_data: HaproxyRouteRequirersData,
+    haproxy_route_relation_data: typing.Callable[[str], HaproxyRouteRequirerData],
 ):
     """
     arrange: Setup mock haproxy-route and haproxy-route-tcp relation providers.
@@ -213,7 +221,14 @@ def test_haproxy_route_requirer_information_reserved_ports(
         return_value=haproxy_route_tcp_relation_data(80)
     )
     haproxy_route_provider_mock = MagicMock()
-    haproxy_route_provider_mock.get_data = MagicMock(return_value=haproxy_route_relation_data)
+    haproxy_route_provider_mock.get_data = MagicMock(
+        return_value=HaproxyRouteRequirersData(
+            requirers_data=[
+                haproxy_route_relation_data("test"),
+            ],
+            relation_ids_with_invalid_data=[],
+        )
+    )
     haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
         haproxy_route=haproxy_route_provider_mock,
         haproxy_route_tcp=haproxy_route_tcp_provider_mock,
@@ -226,7 +241,7 @@ def test_haproxy_route_requirer_information_reserved_ports(
 
 def test_haproxy_route_requirer_information(
     haproxy_route_tcp_relation_data: typing.Callable[[int], HaproxyRouteTcpRequirersData],
-    haproxy_route_relation_data: HaproxyRouteRequirersData,
+    haproxy_route_relation_data: typing.Callable[[str], HaproxyRouteRequirerData],
 ):
     """
     arrange: Setup all relation providers mock.
@@ -238,7 +253,14 @@ def test_haproxy_route_requirer_information(
         return_value=haproxy_route_tcp_relation_data(4000)
     )
     haproxy_route_provider_mock = MagicMock()
-    haproxy_route_provider_mock.get_data = MagicMock(return_value=haproxy_route_relation_data)
+    haproxy_route_provider_mock.get_data = MagicMock(
+        return_value=HaproxyRouteRequirersData(
+            requirers_data=[
+                haproxy_route_relation_data("test"),
+            ],
+            relation_ids_with_invalid_data=[],
+        )
+    )
     haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
         haproxy_route=haproxy_route_provider_mock,
         haproxy_route_tcp=haproxy_route_tcp_provider_mock,
