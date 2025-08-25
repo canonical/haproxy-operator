@@ -709,18 +709,13 @@ class HaproxyRouteTcpRequirersData:
         # Maybe the logic here can be optimized, we want to keep track of
         # the relation IDs that request overlapping ports to ignore them during
         # rendering of the haproxy configuration.
-        port_to_relation_ids: dict[int, list[int]] = defaultdict(list[int])
+        relation_ids_per_port: dict[int, list[int]] = defaultdict(list[int])
         for requirer_data in self.requirers_data:
-            if not port_to_relation_ids.get(requirer_data.application_data.port):
-                port_to_relation_ids[requirer_data.application_data.port] = [
-                    requirer_data.relation_id
-                ]
-                continue
-            port_to_relation_ids[requirer_data.application_data.port].append(
+            relation_ids_per_port[requirer_data.application_data.port].append(
                 requirer_data.relation_id
             )
 
-        for relation_ids in port_to_relation_ids.values():
+        for relation_ids in relation_ids_per_port.values():
             if len(relation_ids) > 1:
                 self.relation_ids_with_invalid_data.extend(relation_ids)
         return self
