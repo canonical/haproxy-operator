@@ -61,7 +61,7 @@ juju config ingress-configurator hostname=apache.internal
 ```
 
 ## Verify that the requirer charm is reachable through `haproxy`
-Verify that we can reach the Apache server through `HAproxy` using `curl`:
+Verify that we can reach the Apache server through `haproxy` using `curl`:
 ```sh
 HAPROXY_IP=$(juju status --format=json | jq -r '.applications["haproxy"].units["haproxy/0"]."public-address"')
 curl https://apache.internal -L --insecure --resolve apache.internal:443:$HAPROXY_IP -I
