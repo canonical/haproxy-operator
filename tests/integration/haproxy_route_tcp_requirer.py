@@ -5,12 +5,14 @@
 """haproxy-route requirer source."""
 
 import logging
+
 # Ignoring import subprocess warning as we're using it with no user inputs
 import subprocess  # nosec
 import textwrap
 from pathlib import Path
 
 import ops
+
 # Ignoring here to make the linter happy as these modules will be available
 # only inside the anycharm unit.
 from any_charm_base import AnyCharmBase  # type: ignore

@@ -145,6 +145,7 @@ class SomeCharm(CharmBase):
 
 import json
 import logging
+from collections import defaultdict
 from enum import Enum
 from typing import Annotated, Any, MutableMapping, Optional, cast
 
@@ -164,7 +165,6 @@ from pydantic import (
 )
 from pydantic.dataclasses import dataclass
 from typing_extensions import Self
-from collections import defaultdict
 
 # The unique Charmhub library identifier, never change it
 LIBID = "b1b5c0a6f1b5481c9923efa042846681"
