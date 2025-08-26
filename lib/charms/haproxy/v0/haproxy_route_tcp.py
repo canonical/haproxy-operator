@@ -780,7 +780,6 @@ class HaproxyRouteTcpProvider(Object):
         self.charm = charm
         self.raise_on_validation_error = raise_on_validation_error
         on = self.charm.on
-        self.framework.observe(on[self._relation_name].relation_created, self._configure)
         self.framework.observe(on[self._relation_name].relation_changed, self._configure)
         self.framework.observe(on[self._relation_name].relation_broken, self._on_endpoint_removed)
         self.framework.observe(
