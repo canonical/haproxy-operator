@@ -1,0 +1,14 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+changes:
+  - title: Mitigated bug in Terraform provider by setting subordinate charm units to `1`
+    author: Thanhphan1147
+    type: bugfix
+    description: Mitigated bug in Terraform provider by setting subordinate charm units to `1`.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/135
+      related_doc: 
+      related_issue: 
+    visibility: public
+    highlight: false

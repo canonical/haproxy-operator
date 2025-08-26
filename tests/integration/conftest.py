@@ -19,14 +19,17 @@ from .helper import pytestconfig_arg_no_deploy
 logger = logging.getLogger(__name__)
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
-HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/haproxy_route_requirer.py"
+HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/legacy/haproxy_route_requirer.py"
 HAPROXY_ROUTE_LIB_SRC = "lib/charms/haproxy/v1/haproxy_route.py"
 APT_LIB_SRC = "lib/charms/operator_libs_linux/v0/apt.py"
 ANY_CHARM_INGRESS_PER_UNIT_REQUIRER = "ingress-per-unit-requirer-any"
 ANY_CHARM_INGRESS_PER_UNIT_REQUIRER_SRC = "tests/integration/ingress_per_unit_requirer.py"
 JUJU_WAIT_TIMEOUT = 10 * 60  # 10 minutes
 SELF_SIGNED_CERTIFICATES_APP_NAME = "self-signed-certificates"
-INGRESS_CONFIGURATOR_APPLICATION = "ingress-configurator"
+ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION = "any-charm-haproxy-route-requirer"
+HAPROXY_ROUTE_TCP_REQUIRER_SRC = "tests/integration/haproxy_route_tcp_requirer.py"
+HAPROXY_ROUTE_TCP_LIB_SRC = "lib/charms/haproxy/v0/haproxy_route_tcp.py"
+ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION = "any-charm-haproxy-route-tcp-requirer"
 
 
 @pytest.fixture(scope="session", name="charm")
@@ -177,25 +180,75 @@ def any_charm_ingress_per_unit_requirer_fixture(
     return ANY_CHARM_INGRESS_PER_UNIT_REQUIRER
 
 
-@pytest.fixture(scope="function", name="ingress_configurator")
-@pytestconfig_arg_no_deploy(application=INGRESS_CONFIGURATOR_APPLICATION)
-def ingress_configurator_fixture(_pytestconfig: pytest.Config, juju: jubilant.Juju) -> str:
-    """Deploy any-charm and configure it to serve as a requirer for the haproxy-route interface."""
+@pytest.fixture(scope="function", name="any_charm_haproxy_route_requirer")
+@pytestconfig_arg_no_deploy(application=ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)
+def any_charm_haproxy_route_requirer_fixture(_pytestconfig: pytest.Config, juju: jubilant.Juju):
+    """Deploy any-charm and configure it to serve as a requirer for the haproxy-route
+    integration.
+    """
     juju.deploy(
-        INGRESS_CONFIGURATOR_APPLICATION,
-        app=INGRESS_CONFIGURATOR_APPLICATION,
-        channel="edge",
-        revision=10,
+        "any-charm",
+        app=ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION,
+        channel="beta",
         config={
-            "backend-addresses": "10.0.0.1",
-            "backend-ports": "80",
-            "hostname": "example.com",
+            "src-overwrite": json.dumps(
+                {
+                    "any_charm.py": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(
+                        encoding="utf-8"
+                    ),
+                    "haproxy_route.py": pathlib.Path(HAPROXY_ROUTE_LIB_SRC).read_text(
+                        encoding="utf-8"
+                    ),
+                    "apt.py": pathlib.Path(APT_LIB_SRC).read_text(encoding="utf-8"),
+                }
+            ),
+            "python-packages": "pydantic",
         },
     )
-
     juju.wait(
-        lambda status: (jubilant.all_blocked(status, INGRESS_CONFIGURATOR_APPLICATION)),
+        lambda status: (jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)),
         timeout=JUJU_WAIT_TIMEOUT,
     )
+    juju.run(
+        f"{ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION}/0", "rpc", {"method": "start_server"}
+    )
+    juju.wait(
+        lambda status: (jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)),
+        timeout=JUJU_WAIT_TIMEOUT,
+    )
+    return ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION
 
-    return INGRESS_CONFIGURATOR_APPLICATION
+
+@pytest.fixture(scope="function", name="any_charm_haproxy_route_tcp_requirer")
+@pytestconfig_arg_no_deploy(application=ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION)
+def any_charm_haproxy_route_tcp_requirer_fixture(
+    _pytestconfig: pytest.Config, juju: jubilant.Juju
+):
+    """Deploy any-charm and configure it to serve as a requirer for the haproxy-route
+    integration.
+    """
+    juju.deploy(
+        "any-charm",
+        app=ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION,
+        channel="beta",
+        config={
+            "src-overwrite": json.dumps(
+                {
+                    "any_charm.py": pathlib.Path(HAPROXY_ROUTE_TCP_REQUIRER_SRC).read_text(
+                        encoding="utf-8"
+                    ),
+                    "haproxy_route_tcp.py": pathlib.Path(HAPROXY_ROUTE_TCP_LIB_SRC).read_text(
+                        encoding="utf-8"
+                    ),
+                }
+            ),
+            "python-packages": "pydantic~=2.10",
+        },
+    )
+    juju.wait(
+        lambda status: (
+            jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION)
+        ),
+        timeout=JUJU_WAIT_TIMEOUT,
+    )
+    return ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION

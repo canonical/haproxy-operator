@@ -1,0 +1,14 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+changes:
+  - title: Added hosts attribute to requirer data 
+    author: Thanhphan1147
+    type: minor
+    description: You can now override the unit IP addresses used to generate server entries in the HAProxy configuration.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/149
+      related_doc: 
+      related_issue: 
+    visibility: public
+    highlight: false

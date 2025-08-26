@@ -17,6 +17,7 @@ from charms.certificate_transfer_interface.v1.certificate_transfer import (
     CertificateTransferRequires,
 )
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
+from charms.haproxy.v0.haproxy_route_tcp import HaproxyRouteTcpProvider
 from charms.haproxy.v1.haproxy_route import HaproxyRouteProvider
 from charms.tls_certificates_interface.v4.tls_certificates import (
     CertificateAvailableEvent,
@@ -109,6 +110,8 @@ class HAProxyCharm(ops.CharmBase):
         self._ingress_per_unit_provider = IngressPerUnitProvider(charm=self)
         self.reverseproxy_requirer = HTTPRequirer(self, REVERSE_PROXY_RELATION)
         self.haproxy_route_provider = HaproxyRouteProvider(self)
+        self.haproxy_route_tcp_provider = HaproxyRouteTcpProvider(self)
+
         self.certificates = TLSCertificatesRequiresV4(
             charm=self,
             relationship_name=TLS_CERT_RELATION,
@@ -173,6 +176,12 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(
             self.haproxy_route_provider.on.data_removed, self._on_config_changed
         )
+        self.framework.observe(
+            self.haproxy_route_tcp_provider.on.data_available, self._on_config_changed
+        )
+        self.framework.observe(
+            self.haproxy_route_tcp_provider.on.data_removed, self._on_config_changed
+        )
 
     @validate_config_and_tls(defer=False)
     def _on_install(self, _: typing.Any) -> None:
@@ -229,6 +238,7 @@ class HAProxyCharm(ops.CharmBase):
             self._ingress_provider,
             self._ingress_per_unit_provider,
             self.haproxy_route_provider,
+            self.haproxy_route_tcp_provider,
             self.reverseproxy_requirer,
         )
         proxy_mode = charm_state.mode
@@ -307,14 +317,27 @@ class HAProxyCharm(ops.CharmBase):
 
     def _configure_haproxy_route(self, charm_state: CharmState) -> None:
         """Configure the haproxy route relation."""
-        tls_information = TLSInformation.from_charm(self, self.certificates)
-        self._tls.certificate_available(tls_information)
-
         haproxy_route_requirers_information = HaproxyRouteRequirersInformation.from_provider(
             self.haproxy_route_provider,
+            self.haproxy_route_tcp_provider,
             typing.cast(typing.Optional[str], self.model.config.get("external-hostname")),
             self._get_peer_units_address(),
         )
+        # We ONLY allow the charm to run with no certificate requested if:
+        # 1. there's only haproxy-route-tcp relations
+        # AND
+        # 2. All requirers must enable TLS passthrough or disable TLS termination
+        allow_no_certificates = (
+            not haproxy_route_requirers_information.backends
+            and haproxy_route_requirers_information.tcp_endpoints
+            and all(
+                not endpoint.application_data.enforce_tls
+                or not endpoint.application_data.tls_terminate
+                for endpoint in haproxy_route_requirers_information.tcp_endpoints
+            )
+        )
+        tls_information = TLSInformation.from_charm(self, self.certificates, allow_no_certificates)
+        self._tls.certificate_available(tls_information)
         self.haproxy_service.reconcile_haproxy_route(
             charm_state, haproxy_route_requirers_information
         )
@@ -352,6 +375,7 @@ class HAProxyCharm(ops.CharmBase):
                 self._ingress_provider,
                 self._ingress_per_unit_provider,
                 self.haproxy_route_provider,
+                self.haproxy_route_tcp_provider,
                 self.reverseproxy_requirer,
             )
             proxy_mode = charm_state.mode
@@ -360,6 +384,7 @@ class HAProxyCharm(ops.CharmBase):
                 haproxy_route_requirer_information = (
                     HaproxyRouteRequirersInformation.from_provider(
                         self.haproxy_route_provider,
+                        self.haproxy_route_tcp_provider,
                         external_hostname,
                         self._get_peer_units_address(),
                     )
@@ -370,6 +395,13 @@ class HAProxyCharm(ops.CharmBase):
                     )
                     for backend in haproxy_route_requirer_information.backends
                     for hostname_acl in backend.hostname_acls
+                ] + [
+                    CertificateRequestAttributes(
+                        common_name=endpoint.application_data.sni,
+                        sans_dns=frozenset([endpoint.application_data.sni]),
+                    )
+                    for endpoint in haproxy_route_requirer_information.tcp_endpoints
+                    if endpoint.application_data.sni is not None
                 ]
         except (
             HaproxyRouteIntegrationDataValidationError,

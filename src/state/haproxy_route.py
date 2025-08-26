@@ -7,6 +7,10 @@ import logging
 from functools import cached_property
 from typing import Optional, cast
 
+from charms.haproxy.v0.haproxy_route_tcp import (
+    HaproxyRouteTcpProvider,
+    HaproxyRouteTcpRequirersData,
+)
 from charms.haproxy.v1.haproxy_route import (
     DataValidationError,
     HaproxyRewriteMethod,
@@ -16,11 +20,12 @@ from charms.haproxy.v1.haproxy_route import (
     RequirerApplicationData,
     ServerHealthCheck,
 )
-from pydantic import IPvAnyAddress, model_validator
+from pydantic import Field, IPvAnyAddress, model_validator
 from pydantic.dataclasses import dataclass
 from typing_extensions import Self
 
 from .exception import CharmStateValidationBaseError
+from .haproxy_route_tcp import HAProxyRouteTcpEndpoint
 
 HAPROXY_ROUTE_RELATION = "haproxy-route"
 HAPROXY_PEER_INTEGRATION = "haproxy-peers"
@@ -65,6 +70,8 @@ class HAProxyRouteBackend:
         rewrite_configurations: Rewrite configuration.
         path_acl_required: Indicate if path routing is required.
         deny_path_acl_required: Indicate if deny_path is required.
+        consistent_hashing: Use consistent hashing to avoid redirection
+            when servers are added/removed.
     """
 
     relation_id: int
@@ -131,8 +138,21 @@ class HAProxyRouteBackend:
         if self.application_data.load_balancing.algorithm == LoadBalancingAlgorithm.COOKIE:
             # The library ensures that if algorithm == cookie
             # then the cookie attribute must be not none
-            return f"hash req.cookie({cast(str, self.application_data.load_balancing.cookie)})"
+            return f"hash req.cook({cast(str, self.application_data.load_balancing.cookie)})"
         return str(self.application_data.load_balancing.algorithm.value)
+
+    @property
+    def consistent_hashing(self) -> bool:
+        """Indicate if consistent hashing should be applied for this backend.
+
+        Returns:
+            bool: Whether consistent hashing should be applied.
+        """
+        return (
+            self.application_data.load_balancing.consistent_hashing
+            and self.application_data.load_balancing.algorithm
+            in [LoadBalancingAlgorithm.COOKIE, LoadBalancingAlgorithm.SRCIP]
+        )
 
     @property
     def rewrite_configurations(self) -> list[str]:
@@ -157,6 +177,7 @@ class HAProxyRouteBackend:
         return rewrite_configurations
 
 
+# pylint: disable=too-many-locals
 @dataclass(frozen=True)
 class HaproxyRouteRequirersInformation:
     """A component of charm state containing haproxy-route requirers information.
@@ -165,18 +186,25 @@ class HaproxyRouteRequirersInformation:
         backends: The list of backends each corresponds to a requirer application.
         stick_table_entries: List of stick table entries in the haproxy "peer" section.
         peers: List of IP address of haproxy peer units.
-        relation_ids_with_invalid_data: List of relation ids that contains invalid data.
+        relation_ids_with_invalid_data: List of haproxy-route relation ids
+            that contains invalid data.
+        relation_ids_with_invalid_data_tcp: List of haproxy-route-tcp relation ids
+            that contains invalid data.
+        tcp_endpoints: List of frontend/backend pairs in TCP mode.
     """
 
     backends: list[HAProxyRouteBackend]
     stick_table_entries: list[str]
     peers: list[IPvAnyAddress]
     relation_ids_with_invalid_data: list[int]
+    relation_ids_with_invalid_data_tcp: list[int]
+    tcp_endpoints: list[HAProxyRouteTcpEndpoint] = Field(strict=False)
 
     @classmethod
     def from_provider(
         cls,
         haproxy_route: HaproxyRouteProvider,
+        haproxy_route_tcp: HaproxyRouteTcpProvider,
         external_hostname: Optional[str],
         peers: list[str],
     ) -> "HaproxyRouteRequirersInformation":
@@ -184,6 +212,7 @@ class HaproxyRouteRequirersInformation:
 
         Args:
             haproxy_route: The haproxy-route provider class.
+            haproxy_route_tcp: The haproxy-route-tcp provider class.
             external_hostname: The charm's configured hostname.
             peers: List of IP address of haproxy peer units.
 
@@ -223,6 +252,20 @@ class HaproxyRouteRequirersInformation:
 
                 backends.append(backend)
 
+            tcp_endpoints: list[HAProxyRouteTcpEndpoint] = []
+            tcp_requirers: HaproxyRouteTcpRequirersData = haproxy_route_tcp.get_data(
+                haproxy_route_tcp.relations
+            )
+            relation_ids_with_invalid_data_tcp = tcp_requirers.relation_ids_with_invalid_data
+            for tcp_requirer in tcp_requirers.requirers_data:
+                if haproxy_route.relations and tcp_requirer.application_data.port in [80, 443]:
+                    logger.error("port 80 and 443 are not allowed if haproxy_route is present.")
+                    relation_ids_with_invalid_data_tcp.append(tcp_requirer.relation_id)
+                    continue
+                tcp_endpoints.append(
+                    HAProxyRouteTcpEndpoint.from_haproxy_route_tcp_requirer_data(tcp_requirer)
+                )
+
             return HaproxyRouteRequirersInformation(
                 # Sort backend by the max depth of the required path.
                 # This is to ensure that backends with deeper path ACLs get routed first.
@@ -230,6 +273,8 @@ class HaproxyRouteRequirersInformation:
                 stick_table_entries=stick_table_entries,
                 peers=[cast(IPvAnyAddress, peer_address) for peer_address in peers],
                 relation_ids_with_invalid_data=relation_ids_with_invalid_data,
+                relation_ids_with_invalid_data_tcp=relation_ids_with_invalid_data_tcp,
+                tcp_endpoints=tcp_endpoints,
             )
         except DataValidationError as exc:
             # This exception is only raised if the provider has "raise_on_validation_error" set

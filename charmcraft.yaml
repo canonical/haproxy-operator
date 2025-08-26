@@ -70,7 +70,8 @@ provides:
     interface: http
   haproxy-route:
     interface: haproxy-route
-
+  haproxy-route-tcp:
+    interface: haproxy-route-tcp
 peers:
   haproxy-peers:
     interface: haproxy-peers
