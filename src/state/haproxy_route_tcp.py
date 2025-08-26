@@ -118,8 +118,6 @@ class HAProxyRouteTcpEndpoint(HaproxyRouteTcpRequirerData):
             list[str]: List of HAProxy TCP check configuration options.
         """
         if check := self.application_data.check:
-            if check.check_type is None:
-                return []
             if check.check_type == TCPHealthCheckType.GENERIC:
                 options = ["option tcp-check"]
                 if send := self.application_data.check.send:
@@ -130,5 +128,6 @@ class HAProxyRouteTcpEndpoint(HaproxyRouteTcpRequirerData):
             if check.check_type in [TCPHealthCheckType.POSTGRES, TCPHealthCheckType.MYSQL]:
                 db_user = f" {check.db_user}" if check.db_user else ""
                 return [f"option {str(check.check_type)}{db_user}"]
-            return [f"option {str(check.check_type)}"]
+            if check.check_type is not None:
+                return [f"option {str(check.check_type)}"]
         return []
