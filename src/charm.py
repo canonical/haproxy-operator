@@ -328,7 +328,14 @@ class HAProxyCharm(ops.CharmBase):
         self.haproxy_service.reconcile_haproxy_route(
             charm_state, haproxy_route_requirers_information
         )
-        self.unit.set_ports(80, 443)
+        self.unit.set_ports(
+            80,
+            443,
+            *(
+                tcp_endpoint.application_data.port
+                for tcp_endpoint in haproxy_route_requirers_information.tcp_endpoints
+            ),
+        )
         if self.unit.is_leader():
             for backend in haproxy_route_requirers_information.backends:
                 relation = self.model.get_relation(HAPROXY_ROUTE_RELATION, backend.relation_id)
