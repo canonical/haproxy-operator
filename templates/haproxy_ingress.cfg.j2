@@ -24,7 +24,6 @@ frontend ingress
 {% for backend in ingress_requirers_information.backends %}
 backend {{ backend.backend_name }}
     balance roundrobin
-{% if haproxy_cas_file is defined %} ca-file {{ haproxy_cas_file }}{% endif %}
 {% if backend.strip_prefix %}
     http-request replace-path /{{ backend.backend_name }}(/)?(.*) /\2
 {% endif %}
