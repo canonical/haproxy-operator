@@ -645,7 +645,7 @@ class TcpRequirerApplicationData(_DatabagModel):
             The validated model.
         """
         if not self.enforce_tls and self.sni is not None:
-            raise ValueError("setting sni and disabling TLS are mutually exclusive.")
+            raise ValueError("You can't set SNI and disable TLS at the same time.")
         return self
 
 
