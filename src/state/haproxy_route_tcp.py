@@ -11,7 +11,7 @@ from charms.haproxy.v0.haproxy_route_tcp import (
     TCPHealthCheckType,
     TCPServerHealthCheck,
 )
-from pydantic import IPvAnyAddress, RootModel
+from pydantic import IPvAnyAddress
 from pydantic.dataclasses import dataclass
 
 
@@ -55,7 +55,12 @@ class HAProxyRouteTcpEndpoint(HaproxyRouteTcpRequirerData):
         Returns:
             Self: The instantiated HAProxyRouteTcpEndpoint class.
         """
-        return cls(**RootModel[HaproxyRouteTcpRequirerData](provider).model_dump())
+        return cls(
+            relation_id=provider.relation_id,
+            application_data=provider.application_data,
+            application=provider.application,
+            units_data=provider.units_data,
+        )
 
     @property
     def consistent_hashing(self) -> bool:
