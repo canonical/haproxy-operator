@@ -44,18 +44,22 @@ class TLSInformation:
     """
 
     hostnames: list[str]
-    tls_cert_and_ca_chain: dict[str, tuple[str, list[Certificate]]]
+    tls_cert_and_ca_chain: dict[str, tuple[Certificate, list[Certificate]]]
     private_key: str
 
     @classmethod
     def from_charm(
-        cls, charm: ops.CharmBase, certificates: TLSCertificatesRequiresV4
+        cls,
+        charm: ops.CharmBase,
+        certificates: TLSCertificatesRequiresV4,
+        allow_no_certificates: bool = False,
     ) -> "TLSInformation":
         """Get TLS information from a charm instance.
 
         Args:
             charm: The haproxy charm.
             certificates: TLS certificates requirer class.
+            allow_no_certificates: If the charm can proceed without requesting any certificates.
 
         Raises:
             PrivateKeyNotGeneratedError: When waiting for the private key to be generated.
@@ -63,7 +67,7 @@ class TLSInformation:
         Returns:
             TLSInformation: Information about configured TLS certs.
         """
-        cls.validate(charm, certificates)
+        cls.validate(charm, certificates, allow_no_certificates)
 
         hostnames = [
             certificate_request.common_name
@@ -85,24 +89,33 @@ class TLSInformation:
         return cls(
             hostnames=hostnames,
             tls_cert_and_ca_chain=tls_cert_and_ca_chain,
-            private_key=private_key,
+            private_key=str(private_key),
         )
 
     # Validation is done in this method instead of using a pydantic model because
     # there are cases where we need to validate the state but we don't need the state instance.
     @classmethod
-    def validate(cls, charm: ops.CharmBase, certificates: TLSCertificatesRequiresV4) -> None:
+    def validate(
+        cls,
+        charm: ops.CharmBase,
+        certificates: TLSCertificatesRequiresV4,
+        allow_no_certificates: bool = False,
+    ) -> None:
         """Validate the precondition to initialize this state component.
 
         Args:
             charm: The haproxy charm.
             certificates: TLS certificates requirer class.
+            allow_no_certificates: If the charm can proceed without requesting any certificates.
 
         Raises:
             TLSNotReadyError: if the charm is not ready to handle TLS.
         """
         tls_requirer_integration = charm.model.get_relation(certificates.relationship_name)
-        if not certificates.certificate_requests:
+        if allow_no_certificates:
+            logger.warning("Allowing load balancing without requesting TLS certificates.")
+
+        if not certificates.certificate_requests and not allow_no_certificates:
             logger.error("The charm did not request any certificates.")
             raise TLSNotReadyError("The charm did not request any certificates.")
 
