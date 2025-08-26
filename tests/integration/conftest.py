@@ -120,7 +120,9 @@ def configured_application_with_tls_fixture(
     if pytestconfig.getoption("--no-deploy") and "haproxy" in juju.status().apps:
         return "haproxy"
     juju.config(application, {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
-    juju.integrate(application, certificate_provider_application)
+    juju.integrate(
+        f"{application}:certificates", f"{certificate_provider_application}:certificates"
+    )
     juju.wait(
         lambda status: (
             jubilant.all_active(status, application)
