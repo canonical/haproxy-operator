@@ -1,0 +1,14 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+changes:
+  - title: Allow customization to configure port for HTTP check
+    author: Thanhphan1147
+    type: minor
+    description: You can now customize the port used for `http-check`.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/119
+      related_doc: 
+      related_issue: 
+    visibility: public
+    highlight: false
