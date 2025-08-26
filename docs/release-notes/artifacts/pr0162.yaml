@@ -1,0 +1,14 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+changes:
+  - title: Added "s" suffix to timeout entries
+    author: Thanhphan1147
+    type: bugfix
+    description: Added "s" suffix to timeout entries.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/162
+      related_doc: 
+      related_issue: 
+    visibility: public
+    highlight: false
