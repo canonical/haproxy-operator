@@ -27,6 +27,9 @@ ANY_CHARM_INGRESS_PER_UNIT_REQUIRER_SRC = "tests/integration/ingress_per_unit_re
 JUJU_WAIT_TIMEOUT = 10 * 60  # 10 minutes
 SELF_SIGNED_CERTIFICATES_APP_NAME = "self-signed-certificates"
 ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION = "any-charm-haproxy-route-requirer"
+HAPROXY_ROUTE_TCP_REQUIRER_SRC = "tests/integration/haproxy_route_tcp_requirer.py"
+HAPROXY_ROUTE_TCP_LIB_SRC = "lib/charms/haproxy/v0/haproxy_route_tcp.py"
+ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION = "any-charm-haproxy-route-tcp-requirer"
 
 
 @pytest.fixture(scope="session", name="charm")
@@ -214,3 +217,38 @@ def any_charm_haproxy_route_requirer_fixture(_pytestconfig: pytest.Config, juju:
         timeout=JUJU_WAIT_TIMEOUT,
     )
     return ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION
+
+
+@pytest.fixture(scope="function", name="any_charm_haproxy_route_tcp_requirer")
+@pytestconfig_arg_no_deploy(application=ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION)
+def any_charm_haproxy_route_tcp_requirer_fixture(
+    _pytestconfig: pytest.Config, juju: jubilant.Juju
+):
+    """Deploy any-charm and configure it to serve as a requirer for the haproxy-route
+    integration.
+    """
+    juju.deploy(
+        "any-charm",
+        app=ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION,
+        channel="beta",
+        config={
+            "src-overwrite": json.dumps(
+                {
+                    "any_charm.py": pathlib.Path(HAPROXY_ROUTE_TCP_REQUIRER_SRC).read_text(
+                        encoding="utf-8"
+                    ),
+                    "haproxy_route_tcp.py": pathlib.Path(HAPROXY_ROUTE_TCP_LIB_SRC).read_text(
+                        encoding="utf-8"
+                    ),
+                }
+            ),
+            "python-packages": "pydantic~=2.10",
+        },
+    )
+    juju.wait(
+        lambda status: (
+            jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION)
+        ),
+        timeout=JUJU_WAIT_TIMEOUT,
+    )
+    return ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION
