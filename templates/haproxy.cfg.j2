@@ -3,9 +3,6 @@ global
     user haproxy
     group haproxy
     
-    # rsyslog is installed on ubuntu 24.04 by default
-    # We send logs to the syslog server at :514 UDP
-    # This is because grafana-agent wraps around Promtail and automatically configures it to scrape logs in /var/log. 
     log /dev/log local0
 
     # haproxy 2.8, intermediate config, OpenSSL 1.1.1k
