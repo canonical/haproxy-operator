@@ -8,6 +8,9 @@ import logging
 import typing
 from pathlib import Path
 
+from charms.certificate_transfer_interface.v1.certificate_transfer import (
+    CertificateTransferRequires,
+)
 from charms.tls_certificates_interface.v4.tls_certificates import (
     Certificate,
     PrivateKey,
@@ -17,9 +20,6 @@ from charms.tls_certificates_interface.v4.tls_certificates import (
 from ops.model import Model
 
 from haproxy import HAPROXY_CAS_DIR, HAPROXY_CAS_FILE, file_exists, read_file, render_file
-from lib.charms.certificate_transfer_interface.v1.certificate_transfer import (
-    CertificateTransferRequires,
-)
 from state.tls import TLSInformation
 
 TLS_CERT = "certificates"
