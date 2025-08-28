@@ -52,7 +52,8 @@ HAPROXY_ROUTE_TCP_CONFIG_TEMPLATE = "haproxy_route_tcp.cfg.j2"
 
 HAPROXY_DEFAULT_CONFIG_TEMPLATE = "haproxy.cfg.j2"
 HAPROXY_CERTS_DIR = Path("/var/lib/haproxy/certs")
-
+HAPROXY_CAS_DIR = Path("/var/lib/haproxy/cas")
+HAPROXY_CAS_FILE = Path(HAPROXY_CAS_DIR / "cas.pem")
 
 logger = logging.getLogger()
 

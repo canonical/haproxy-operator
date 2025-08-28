@@ -11,6 +11,11 @@ import logging
 import typing
 
 import ops
+from charms.certificate_transfer_interface.v1.certificate_transfer import (
+    CertificatesAvailableEvent,
+    CertificatesRemovedEvent,
+    CertificateTransferRequires,
+)
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.haproxy.v0.haproxy_route_tcp import HaproxyRouteTcpProvider
 from charms.haproxy.v1.haproxy_route import HaproxyRouteProvider
@@ -61,6 +66,7 @@ INGRESS_RELATION = "ingress"
 TLS_CERT_RELATION = "certificates"
 REVERSE_PROXY_RELATION = "reverseproxy"
 WEBSITE_RELATION = "website"
+RECV_CA_CERTS_RELATION = "receive-ca-certs"
 
 
 class HaproxyUnitAddressNotAvailableError(CharmStateValidationBaseError):
@@ -117,8 +123,9 @@ class HAProxyCharm(ops.CharmBase):
             ],
             mode=Mode.UNIT,
         )
+        self.recv_ca_certs = CertificateTransferRequires(self, RECV_CA_CERTS_RELATION)
 
-        self._tls = TLSRelationService(self.model, self.certificates)
+        self._tls = TLSRelationService(self.model, self.certificates, self.recv_ca_certs)
         self.website_requirer = HTTPProvider(self, WEBSITE_RELATION)
 
         self._grafana_agent = COSAgentProvider(
@@ -157,6 +164,12 @@ class HAProxyCharm(ops.CharmBase):
             self._ingress_per_unit_provider.on.data_removed, self._on_ingress_data_removed
         )
         self.framework.observe(self.hacluster.on.ha_ready, self._on_config_changed)
+        self.framework.observe(
+            self.recv_ca_certs.on.certificate_set_updated, self._on_ca_certificates_updated
+        )
+        self.framework.observe(
+            self.recv_ca_certs.on.certificates_removed, self._on_ca_certificates_removed
+        )
         self.framework.observe(
             self.haproxy_route_provider.on.data_available, self._on_config_changed
         )
@@ -418,6 +431,16 @@ class HAProxyCharm(ops.CharmBase):
                 common_name=external_hostname, sans_dns=frozenset([external_hostname])
             )
         ]
+
+    def _on_ca_certificates_updated(self, _: CertificatesAvailableEvent) -> None:
+        """Handle the CA certificates available event."""
+        self._tls.update_trusted_cas()
+        self._reconcile()
+
+    def _on_ca_certificates_removed(self, _: CertificatesRemovedEvent) -> None:
+        """Handle the CA certificates removed event."""
+        self._tls.remove_cas_from_unit()
+        self._reconcile()
 
     @validate_config_and_tls(defer=False)
     def _on_ingress_per_unit_data_provided(self, _: IngressDataReadyEvent) -> None:
