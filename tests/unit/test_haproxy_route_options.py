@@ -23,8 +23,8 @@ def mocks_external_procceses(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr("haproxy.HAProxyService._validate_haproxy_config", MagicMock())
 
 
-@pytest.fixture
-def established_certificate_relation():
+@pytest.fixture(name="established_certificate_relation")
+def established_certificate_relation_fixture():
     """tls_certificates relation data, with the exchange already produced."""
     csr = tls_certificates.generate_csr(
         tls_certificates.generate_private_key(), TEST_EXTERNAL_HOSTNAME_CONFIG
@@ -113,10 +113,10 @@ def test_protocol_https(monkeypatch: pytest.MonkeyPatch, established_certificate
 
     assert (
         "server haproxy-tutorial-ingress-configurator_443_0 10.12.97.153:443"
-        " ssl ca-file @system-ca\n" in haproxy_conf_contents
+        " ssl ca-file /var/lib/haproxy/cas/cas.pem\n" in haproxy_conf_contents
     )
     assert (
         "server haproxy-tutorial-ingress-configurator_443_1 10.12.97.154:443"
-        " ssl ca-file @system-ca\n" in haproxy_conf_contents
+        " ssl ca-file /var/lib/haproxy/cas/cas.pem\n" in haproxy_conf_contents
     )
     assert out.app_status == ActiveStatus("")
