@@ -56,8 +56,7 @@ requires:
     interface: hacluster
   receive-ca-certs:
     interface: certificate_transfer
-    description: |
-      Receive a CA certs for haproxy to trust.
+    description: Receive a CA certs for haproxy to trust.
 
 provides:
   ingress:

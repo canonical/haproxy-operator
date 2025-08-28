@@ -94,7 +94,7 @@ class TLSRelationService:
                     private_key=tls_information.private_key,
                 )
 
-    def cas_to_trust_updated(self) -> None:
+    def update_trusted_cas(self) -> None:
         """Handle the change in the set of CAs to trust."""
         self.write_cas_to_unit(self.recv_ca_cert.get_all_certificates())
 
@@ -164,6 +164,5 @@ class TLSRelationService:
 
     def remove_cas_from_unit(self) -> None:
         """Remove CA bundle from workload."""
-        if HAPROXY_CAS_FILE.exists():
-            HAPROXY_CAS_FILE.unlink()
-            logger.info("CA bundle removed: %r", HAPROXY_CAS_FILE)
+        logger.info("Removing CA bundle: %r", HAPROXY_CAS_FILE)
+        HAPROXY_CAS_FILE.unlink(missing_ok=True)
