@@ -1,0 +1,14 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+changes:
+  - title: Added first scenario test
+    author: Thanhphan1147
+    type: major
+    description: Added the first scenario test which kickstarts the transition process from Harness to Scenario.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/108
+      related_doc: 
+      related_issue: 
+    visibility: internal
+    highlight: false

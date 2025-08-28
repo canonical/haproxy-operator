@@ -1,0 +1,14 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+changes:
+  - title: Update tutorial to use ingress-configurator and local app
+    author: javierdelapuente
+    type: minor
+    description: |
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/176
+      related_doc: https://github.com/canonical/haproxy-operator/blob/main/docs/getting-started.md
+      related_issue: 
+    visibility: hidden
+    highlight: false

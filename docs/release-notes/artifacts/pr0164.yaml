@@ -1,0 +1,16 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+changes:
+  - title: Added new field to the requirer application databag
+    author: dimaqq
+    type: major
+    description: |
+      The requirer application databag now has a "protocol" field to
+      support HTTPS supstream servers.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/164
+      related_doc: 
+      related_issue: 
+    visibility: public
+    highlight: true

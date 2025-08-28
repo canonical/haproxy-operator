@@ -81,7 +81,9 @@ async def configured_application_with_tls_fixture(
 ):
     """The haproxy charm configured and integrated with tls provider."""
     await application.set_config({"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
-    await application.model.add_relation(application.name, certificate_provider_application.name)
+    await application.model.add_relation(
+        f"{application.name}:certificates", f"{certificate_provider_application.name}:certificates"
+    )
     await application.model.wait_for_idle(
         apps=[certificate_provider_application.name, application.name],
         idle_period=30,

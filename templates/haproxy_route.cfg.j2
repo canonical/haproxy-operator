@@ -1,11 +1,13 @@
 {% extends 'haproxy.cfg.j2' %}
 {% block proxy_configuration %}
+{% if backends %}
 frontend haproxy
     mode http
     bind [::]:80 v4v6
     bind [::]:443 v4v6 ssl crt {{ haproxy_crt_dir }}
     # Redirect HTTP to HTTPS
     http-request redirect scheme https unless { ssl_fc }
+{% endif %}
 
 {% for backend in backends %}
 {% if backend.path_acl_required %}
@@ -44,6 +46,10 @@ backend {{ backend.backend_name }}
 {% endif %}
 {% endif %}
 
+{% if backend.application_data.http_server_close %}
+    option http-server-close
+{% endif %}
+
     option httpchk {% if backend.application_data.check.path %}GET {{ backend.application_data.check.path }}{% endif +%}
 {% if backend.application_data.check.port %}
     http-check connect port {{ backend.application_data.check.port }}
@@ -68,6 +74,7 @@ backend {{ backend.backend_name }}
 {% for server in backend.servers %}
     server {{ server.server_name }} {{ server.address }}:{{ server.port }}{% if server.check %} check inter {{ server.check.interval }}s rise {{ server.check.rise }} fall {{ server.check.fall }}{% endif +%}{% if server.protocol == "https" %} ssl ca-file @system-ca{% endif +%}
 {% endfor %}
-
 {% endfor %}
+
+{% block haproxy_route_tcp %}{% endblock %}
 {% endblock %}

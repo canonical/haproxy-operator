@@ -1,0 +1,18 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+changes:
+  - title: Refactored source code and tests
+    author: swetha1654
+    type: minor
+    description: |
+      Several changes to the source code, integration tests, and unit tests.
+      The reconcile function was broken into smaller modules, mode validation is
+      now performed in a state in the charm class, some tests were migrated to jubilant,
+      and other tests were moved to different directories.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/158
+      related_doc: 
+      related_issue: 
+    visibility: internal
+    highlight: false

@@ -1,0 +1,19 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+changes:
+  - title: Add consistent hashing support
+    author: Thanhphan1147
+    type: major
+    description: |
+      Consistent hashing reduce redistribution of clients to another backend server when server is added/removed. On HAProxy it will add 
+      ```
+      hash-type consistent
+      ```
+      to the configuration.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/171
+      related_doc: 
+      related_issue: 
+    visibility: public
+    highlight: false

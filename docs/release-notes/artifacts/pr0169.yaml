@@ -1,0 +1,15 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+changes:
+  - title: external-hostname config is needed
+    author: dimaqq
+    type: minor
+    description: |
+      Fix setup instructions to fix #167
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/169
+      related_doc: 
+      related_issue: 
+    visibility: hidden
+    highlight: false

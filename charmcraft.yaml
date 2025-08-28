@@ -54,6 +54,9 @@ requires:
     interface: http
   ha:
     interface: hacluster
+  receive-ca-certs:
+    interface: certificate_transfer
+    description: Receive a CA certs for haproxy to trust.
 
 provides:
   ingress:
@@ -66,7 +69,8 @@ provides:
     interface: http
   haproxy-route:
     interface: haproxy-route
-
+  haproxy-route-tcp:
+    interface: haproxy-route-tcp
 peers:
   haproxy-peers:
     interface: haproxy-peers

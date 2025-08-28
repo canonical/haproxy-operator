@@ -1,0 +1,15 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+changes:
+  - title: Updated documentation
+    author: yhaliaw
+    type: minor
+    description: |
+      Several updates to the documentation to fix errors raised by Vale.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/159
+      related_doc: 
+      related_issue: 
+    visibility: hidden
+    highlight: false
