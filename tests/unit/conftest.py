@@ -2,14 +2,21 @@
 # See LICENSE file for licensing details.
 
 """Fixtures for haproxy-operator unit tests."""
+import json
 import typing
+from datetime import timedelta
 from ipaddress import IPv4Address
 from unittest.mock import MagicMock, patch
 
 import pytest
 import scenario
 from charms.haproxy.v1.haproxy_route import RequirerApplicationData, RequirerUnitData
-from charms.tls_certificates_interface.v4.tls_certificates import Certificate, PrivateKey
+from charms.tls_certificates_interface.v4.tls_certificates import (
+    Certificate,
+    PrivateKey,
+    generate_ca,
+    generate_private_key,
+)
 from ops.testing import Context
 
 from charm import HAProxyCharm
@@ -24,6 +31,12 @@ def systemd_mock_fixture(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(
         "charms.operator_libs_linux.v1.systemd.service_running", MagicMock(return_value=True)
     )
+
+
+@pytest.fixture(scope="function", name="mocks_external_calls")
+def mocks_external_calls_fixture(monkeypatch: pytest.MonkeyPatch):
+    """Mock external calls."""
+    monkeypatch.setattr("haproxy.HAProxyService._validate_haproxy_config", MagicMock())
 
 
 @pytest.fixture(scope="function", name="certificates_relation_data")
@@ -196,6 +209,35 @@ def certificates_integration_fixture(certificates_relation_data):
         endpoint="certificates",
         remote_app_name="provider",
         remote_app_data=certificates_relation_data,
+    )
+
+
+@pytest.fixture(scope="function", name="ca_certificate")
+def ca_certificate_fixture() -> Certificate:
+    """Generate a CA certificate.
+
+    Returns: CA certificate.
+    """
+    return generate_ca(generate_private_key(), timedelta(days=10), "ca")
+
+
+@pytest.fixture(name="receive_ca_certs_relation")
+def receive_ca_certs_relation_fixture(ca_certificate):
+    """Receive ca certs relation fixture.
+
+    Args:
+        ca_certificate: The ca certificate for the relation.
+
+    Returns: The modeled relation.
+    """
+    return scenario.Relation(
+        endpoint="receive-ca-certs",
+        interface="certificate_transfer",
+        remote_app_name="self-signed-certificates",
+        remote_app_data={
+            "certificates": json.dumps([ca_certificate.raw]),
+            "version": "1",
+        },
     )
 
 

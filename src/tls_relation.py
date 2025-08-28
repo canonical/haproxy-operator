@@ -154,8 +154,7 @@ class TLSRelationService:
         Args:
             cas: Set of CA certificates to store and trust.
         """
-        if not HAPROXY_CAS_DIR.exists():
-            HAPROXY_CAS_DIR.mkdir(exist_ok=True, parents=True)
+        HAPROXY_CAS_DIR.mkdir(exist_ok=True, parents=True)
 
         new_certs = sorted(cas)
         new_content = "\n".join(new_certs) + "\n"
