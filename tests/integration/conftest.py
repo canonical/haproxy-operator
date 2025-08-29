@@ -191,15 +191,11 @@ def any_charm_haproxy_route_requirer_fixture(_pytestconfig: pytest.Config, juju:
     """
     src_overwrite = json.dumps(
         {
-            "any_charm.py": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(
-                encoding="utf-8"
-            ),
-            "haproxy_route.py": pathlib.Path(HAPROXY_ROUTE_LIB_SRC).read_text(
-                encoding="utf-8"
-            ),
-            "tls_certificates.py": pathlib.Path("lib/charms/tls_certificates_interface/v4/tls_certificates.py").read_text(
-                encoding="utf-8"
-            ),
+            "any_charm.py": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(encoding="utf-8"),
+            "haproxy_route.py": pathlib.Path(HAPROXY_ROUTE_LIB_SRC).read_text(encoding="utf-8"),
+            "tls_certificates.py": pathlib.Path(
+                "lib/charms/tls_certificates_interface/v4/tls_certificates.py"
+            ).read_text(encoding="utf-8"),
             "apt.py": pathlib.Path(APT_LIB_SRC).read_text(encoding="utf-8"),
         }
     )
@@ -214,7 +210,7 @@ def any_charm_haproxy_route_requirer_fixture(_pytestconfig: pytest.Config, juju:
                 "src-overwrite": f"@{tf.name}",
                 "python-packages": "pydantic\ncryptography==45.0.6",
             },
-    )
+        )
     juju.wait(
         lambda status: (jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)),
         timeout=JUJU_WAIT_TIMEOUT,

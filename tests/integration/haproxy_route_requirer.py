@@ -1,34 +1,36 @@
-# pylint: disable=import-error,duplicate-code
+# pylint: disable=import-error,duplicate-code,wrong-import-position
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """haproxy-route requirer source."""
 
 import sys
+
 # The last one is the dynamic modules. That way we get the new criptography
 # library, not the system one.
 sys.path.insert(0, sys.path[-1])
 
-import logging
-import pathlib
-import subprocess
-from subprocess import CalledProcessError
+import logging  # noqa: E402
+import pathlib  # noqa: E402
+import subprocess  # noqa: E402
+from subprocess import CalledProcessError  # noqa: E402
 
-import apt  # type: ignore
-import ops
-from any_charm_base import AnyCharmBase  # type: ignore
-from haproxy_route import HaproxyRouteRequirer  # type: ignore
-from tls_certificates import (
-    CertificateAvailableEvent,
+import apt  # noqa: E402
+import ops  # noqa: E402
+from any_charm_base import AnyCharmBase  # noqa: E402
+from haproxy_route import HaproxyRouteRequirer  # noqa: E402
+from tls_certificates import (  # noqa: E402
     CertificateRequestAttributes,
     Mode,
     TLSCertificatesRequiresV4,
 )
+
 HAPROXY_ROUTE_RELATION = "require-haproxy-route"
 TLS_CERT_RELATION = "require-tls-certificates"
 
 SSL_CERT_FILE = pathlib.Path("/etc/ssl/certs/ssl-cert-anycharm.pem")
 SSL_PRIVATE_KEY_FILE = pathlib.Path("/etc/ssl/private/ssl-cert-anycharm.key")
+
 
 class AnyCharm(AnyCharmBase):
     """haproxy-route requirer charm."""
@@ -42,30 +44,21 @@ class AnyCharm(AnyCharmBase):
         self.certificates = TLSCertificatesRequiresV4(
             charm=self,
             relationship_name=TLS_CERT_RELATION,
-            certificate_requests=[CertificateRequestAttributes(
-                common_name="any-charm-haproxy-route-requirer",
-                sans_dns=frozenset(["any-charm-haproxy-route-requirer", str(bind_address)])
-            )],
-            refresh_events=[
-                self.on.config_changed
+            certificate_requests=[
+                CertificateRequestAttributes(
+                    common_name="any-charm-haproxy-route-requirer",
+                    sans_dns=frozenset(["any-charm-haproxy-route-requirer", str(bind_address)]),
+                )
             ],
+            refresh_events=[self.on.config_changed],
             mode=Mode.UNIT,
         )
 
         provider_certificates, private_key = self.certificates.get_assigned_certificates()
         if provider_certificates:
             SSL_PRIVATE_KEY_FILE.write_text(str(private_key), encoding="utf-8")
-            logging.warning("assigned certificates JAVI %s", self.certificates.get_assigned_certificates())
-            logging.warning(" private_key %s", str(private_key))
             for provider_certificate in provider_certificates:
                 SSL_CERT_FILE.write_text(str(provider_certificate.certificate), encoding="utf-8")
-                logging.warning(" common_name %s", provider_certificate.certificate.common_name)
-                logging.warning(" certificate %s", str(provider_certificate.certificate))
-                logging.warning(" chain %s", provider_certificate.chain)
-            network_binding = self.model.get_binding(TLS_CERT_RELATION)
-            bind_address = network_binding.network.bind_address
-            logging.warning(" bind address %s", str(bind_address))
-
 
     def start_server(self):
         """Start apache2 webserver."""
@@ -86,15 +79,15 @@ class AnyCharm(AnyCharmBase):
         file_path.parent.mkdir(exist_ok=True)
         file_path.write_text("ok!")
 
-        ssl_host = """
+        ssl_host = f"""
         <VirtualHost *:443>
                 ServerAdmin webmaster@localhost
                 DocumentRoot /var/www/html
                 ErrorLog ${{APACHE_LOG_DIR}}/error.log
                 CustomLog ${{APACHE_LOG_DIR}}/access.log combined
                 SSLEngine on
-                SSLCertificateFile      {certfile}
-                SSLCertificateKeyFile   {privatekeyfile}
+                SSLCertificateFile      {str(SSL_CERT_FILE)}
+                SSLCertificateKeyFile   {str(SSL_PRIVATE_KEY_FILE)}
                 <FilesMatch "\\.(?:cgi|shtml|phtml|php)$">
                         SSLOptions +StdEnvVars
                 </FilesMatch>
@@ -102,15 +95,30 @@ class AnyCharm(AnyCharmBase):
                         SSLOptions +StdEnvVars
                 </Directory>
         </VirtualHost>
-        """.format(certfile=str(SSL_CERT_FILE), privatekeyfile=str(SSL_PRIVATE_KEY_FILE))
+
+        # This easier that editing an apache config file to comment the "Listen 80" line.
+        <VirtualHost *:80>
+                RewriteEngine On
+                RewriteRule .* - [R=503,L]
+        </VirtualHost>
+        """
         ssl_site_file = pathlib.Path("/etc/apache2/sites-available/anycharm-ssl.conf")
         ssl_site_file.write_text(ssl_host, encoding="utf-8")
-        self.run_subcommand(["a2ensite", "anycharm-ssl"])
-        self.run_subcommand(["a2enmod", "ssl"])
-        self.run_subcommand(["systemctl", "restart", "apache2"])
-        self.unit.status = ops.ActiveStatus("Server ready")
+        self.run_subprocess(["a2dissite", "000-default"])
+        self.run_subprocess(["a2ensite", "anycharm-ssl"])
+        self.run_subprocess(["a2enmod", "ssl", "rewrite"])
+        self.run_subprocess(["systemctl", "restart", "apache2"])
+        self.unit.status = ops.ActiveStatus("SSL Server ready")
 
-    def run_subcommand(self, cmd: list[str]):
+    def _run_subprocess(self, cmd: list[str]):
+        """Run a subprocess command.
+
+        Args:
+          cmd: command to execute
+
+        Raises:
+          CalledProcessError: Error running the command.
+        """
         try:
             subprocess.run(cmd, capture_output=True, check=True)
         except CalledProcessError as e:
@@ -123,5 +131,9 @@ class AnyCharm(AnyCharmBase):
             raise
 
     def update_relation(self, haproxy_route_params: dict[str, str]):
-        """Update relation details for haproxy-route."""
+        """Update relation details for haproxy-route.
+
+        Args:
+          haproxy_route_params: arguments to pass relation.
+        """
         self._haproxy_route.provide_haproxy_route_requirements(**haproxy_route_params)
