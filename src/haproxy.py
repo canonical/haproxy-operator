@@ -162,6 +162,7 @@ class HAProxyService:
             "stick_table_entries": haproxy_route_requirers_information.stick_table_entries,
             "peer_units_address": haproxy_route_requirers_information.peers,
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
+            "haproxy_cas_file": HAPROXY_CAS_FILE,
         }
         template = (
             HAPROXY_ROUTE_TCP_CONFIG_TEMPLATE
