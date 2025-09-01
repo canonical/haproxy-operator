@@ -105,13 +105,14 @@ def test_haproxy_route(context_with_reconcile_mock, base_state_haproxy_route):
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
 def test_ca_certificates_available(
-    monkeypatch: pytest.MonkeyPatch, receive_ca_certs_relation, ca_certificate
+    monkeypatch: pytest.MonkeyPatch, receive_ca_certs_relation, ca_certificate_and_key
 ):
     """
     arrange: Prepare a state with the receive-ca-cert.
     act: Run relation_changed for the receive-ca-cert relation.
     assert: The unit is active and the certificate in the relation was written to the file.
     """
+    ca_certificate, _ = ca_certificate_and_key
     render_file_mock = MagicMock()
     monkeypatch.setattr("tls_relation.render_file", render_file_mock)
     monkeypatch.setattr("haproxy.render_file", render_file_mock)

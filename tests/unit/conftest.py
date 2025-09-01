@@ -13,8 +13,11 @@ import scenario
 from charms.haproxy.v1.haproxy_route import RequirerApplicationData, RequirerUnitData
 from charms.tls_certificates_interface.v4.tls_certificates import (
     Certificate,
+    CertificateSigningRequest,
     PrivateKey,
     generate_ca,
+    generate_certificate,
+    generate_csr,
     generate_private_key,
 )
 from ops.testing import Context
@@ -40,33 +43,60 @@ def mocks_external_calls_fixture(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr("haproxy.pin_haproxy_package_version", MagicMock())
 
 
+@pytest.fixture(scope="function", name="ca_certificate_and_key")
+def ca_certificate_and_key_fixture() -> typing.Tuple[Certificate, PrivateKey]:
+    """Ca Certificate and private key."""
+    private_key_ca = generate_private_key()
+    ca = generate_ca(generate_private_key(), timedelta(days=10), "caname")
+    return ca, private_key_ca
+
+
+@pytest.fixture(scope="function", name="csr_certificate_and_key")
+def csr_certificate_and_key_fixture(
+    ca_certificate_and_key,
+) -> typing.Tuple[CertificateSigningRequest, Certificate, PrivateKey]:
+    """Ca Certificate and private key."""
+    ca, private_key_ca = ca_certificate_and_key
+    private_key = generate_private_key()
+    csr = generate_csr(private_key, TEST_EXTERNAL_HOSTNAME_CONFIG)
+    certificate = generate_certificate(csr, ca, private_key_ca, timedelta(days=5))
+    return csr, certificate, private_key
+
+
 @pytest.fixture(scope="function", name="certificates_relation_data")
 def certificates_relation_data_fixture(
-    mock_certificate_and_key: typing.Tuple[Certificate, PrivateKey],
+    csr_certificate_and_key,
+    ca_certificate_and_key,
 ) -> dict[str, str]:
     """Mock tls_certificates relation data."""
-    cert, _ = mock_certificate_and_key
+    csr, cert, _ = csr_certificate_and_key
+    ca_cert, _ = ca_certificate_and_key
     return {
-        f"csr-{TEST_EXTERNAL_HOSTNAME_CONFIG}": "whatever",
-        f"certificate-{TEST_EXTERNAL_HOSTNAME_CONFIG}": str(cert),
-        f"ca-{TEST_EXTERNAL_HOSTNAME_CONFIG}": "whatever",
-        f"chain-{TEST_EXTERNAL_HOSTNAME_CONFIG}": "whatever",
+        "certificates": json.dumps(
+            [
+                {
+                    "ca": ca_cert.raw,
+                    "certificate_signing_request": csr.raw,
+                    "certificate": cert.raw,
+                    "chain": [
+                        cert.raw,
+                        ca_cert.raw,
+                    ],
+                },
+            ]
+        )
     }
 
 
 @pytest.fixture(scope="function", name="mock_certificate_and_key")
 def mock_certificate_fixture(
     monkeypatch: pytest.MonkeyPatch,
+    csr_certificate_and_key,
 ) -> typing.Tuple[Certificate, PrivateKey]:
     """Mock tls certificate from a tls provider charm."""
-    with open("tests/unit/cert.pem", encoding="utf-8") as f:
-        cert = f.read()
-    with open("tests/unit/key.pem", encoding="utf-8") as f:
-        key = f.read()
+    _, certificate, private_key = csr_certificate_and_key
 
     provider_cert_mock = MagicMock()
-    private_key = PrivateKey.from_string(key)
-    certificate = Certificate.from_string(cert)
     provider_cert_mock.certificate = certificate
     monkeypatch.setattr(
         (
@@ -201,36 +231,38 @@ def ingress_integration_fixture(ingress_requirer_application_data, ingress_requi
 
 
 @pytest.fixture(name="certificates_integration")
-def certificates_integration_fixture(certificates_relation_data):
+def certificates_integration_fixture(certificates_relation_data, csr_certificate_and_key):
     """Certificates integration fixture.
 
     Returns: The modeled ingress integration.
     """
+    csr, _, _ = csr_certificate_and_key
     return scenario.Relation(
         endpoint="certificates",
-        remote_app_name="provider",
         remote_app_data=certificates_relation_data,
+        local_unit_data={
+            "certificate_signing_requests": json.dumps(
+                [
+                    {
+                        "certificate_signing_request": csr.raw,
+                        "ca": False,
+                    },
+                ]
+            )
+        },
     )
 
 
-@pytest.fixture(scope="function", name="ca_certificate")
-def ca_certificate_fixture() -> Certificate:
-    """Generate a CA certificate.
-
-    Returns: CA certificate.
-    """
-    return generate_ca(generate_private_key(), timedelta(days=10), "ca")
-
-
 @pytest.fixture(name="receive_ca_certs_relation")
-def receive_ca_certs_relation_fixture(ca_certificate):
+def receive_ca_certs_relation_fixture(ca_certificate_and_key):
     """Receive ca certs relation fixture.
 
     Args:
-        ca_certificate: The ca certificate for the relation.
+        ca_certificate_and_key: The ca certificate for the relation.
 
     Returns: The modeled relation.
     """
+    ca_certificate, _ = ca_certificate_and_key
     return scenario.Relation(
         endpoint="receive-ca-certs",
         interface="certificate_transfer",

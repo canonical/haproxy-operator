@@ -80,7 +80,7 @@ def test_haproxy_route_protocol_https(
     juju: jubilant.Juju,
     certificate_provider_application: str,
 ):
-    """Deploy the charm with anycharm haproxy route requirer that installs apache2 withs ssl.
+    """Deploy the charm with anycharm haproxy route requirer that installs apache2 with ssl.
     Integrate haproxy with certificates and ca transfer.
 
     Assert that the requirer endpoints can be accessed using https.
