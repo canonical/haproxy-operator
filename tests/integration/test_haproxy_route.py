@@ -146,6 +146,6 @@ def test_haproxy_route_protocol_https(
         f"https://{haproxy_ip_address}",
         headers={"Host": TEST_EXTERNAL_HOSTNAME_CONFIG},
         timeout=5,
-        verify=False,
+        verify=False,  # nosec: B501
     )
     assert response.text == "ok!"

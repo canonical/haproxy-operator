@@ -12,8 +12,8 @@ sys.path.insert(0, sys.path[-1])
 
 import logging  # noqa: E402
 import pathlib  # noqa: E402
-import subprocess  # noqa: E402
-from subprocess import CalledProcessError  # noqa: E402
+import subprocess  # noqa: E402  # nosec: B404
+from subprocess import CalledProcessError  # noqa: E402  # nosec: B404
 
 import apt  # noqa: E402
 import ops  # noqa: E402
@@ -120,7 +120,7 @@ class AnyCharm(AnyCharmBase):
           CalledProcessError: Error running the command.
         """
         try:
-            subprocess.run(cmd, capture_output=True, check=True)
+            subprocess.run(cmd, capture_output=True, check=True)  # nosec: B603
         except CalledProcessError as e:
             logging.error(
                 "%s:\nstdout:\n%s\nstderr:\n%s",
