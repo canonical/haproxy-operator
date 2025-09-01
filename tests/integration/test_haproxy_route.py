@@ -16,7 +16,7 @@ from .helper import get_unit_ip_address
 
 
 @pytest.mark.abort_on_fail
-async def test_haproxy_route_any_charm_requirer(
+def test_haproxy_route_any_charm_requirer(
     configured_application_with_tls: str,
     any_charm_haproxy_route_requirer: str,
     juju: jubilant.Juju,
@@ -71,7 +71,7 @@ async def test_haproxy_route_any_charm_requirer(
 
 
 @pytest.mark.abort_on_fail
-async def test_haproxy_route_protocol_https(
+def test_haproxy_route_protocol_https(
     configured_application_with_tls: str,
     any_charm_haproxy_route_requirer: str,
     juju: jubilant.Juju,

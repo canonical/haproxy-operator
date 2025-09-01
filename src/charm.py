@@ -39,7 +39,7 @@ from interface_hacluster.ops_ha_interface import HAServiceRequires
 from ops.charm import ActionEvent
 from ops.model import Port
 
-from haproxy import HAPROXY_SERVICE, HAProxyService
+from haproxy import HAPROXY_CAS_FILE, HAPROXY_SERVICE, HAProxyService
 from http_interface import (
     HTTPBackendAvailableEvent,
     HTTPBackendRemovedEvent,
@@ -318,10 +318,13 @@ class HAProxyCharm(ops.CharmBase):
     def _configure_haproxy_route(self, charm_state: CharmState) -> None:
         """Configure the haproxy route relation."""
         haproxy_route_requirers_information = HaproxyRouteRequirersInformation.from_provider(
-            self.haproxy_route_provider,
-            self.haproxy_route_tcp_provider,
-            typing.cast(typing.Optional[str], self.model.config.get("external-hostname")),
-            self._get_peer_units_address(),
+            haproxy_route=self.haproxy_route_provider,
+            haproxy_route_tcp=self.haproxy_route_tcp_provider,
+            external_hostname=typing.cast(
+                typing.Optional[str], self.model.config.get("external-hostname")
+            ),
+            peers=self._get_peer_units_address(),
+            ca_certs_configured=HAPROXY_CAS_FILE.exists(),
         )
         # We ONLY allow the charm to run with no certificate requested if:
         # 1. there's only haproxy-route-tcp relations
@@ -390,10 +393,11 @@ class HAProxyCharm(ops.CharmBase):
             if proxy_mode == ProxyMode.HAPROXY_ROUTE:
                 haproxy_route_requirer_information = (
                     HaproxyRouteRequirersInformation.from_provider(
-                        self.haproxy_route_provider,
-                        self.haproxy_route_tcp_provider,
-                        external_hostname,
-                        self._get_peer_units_address(),
+                        haproxy_route=self.haproxy_route_provider,
+                        haproxy_route_tcp=self.haproxy_route_tcp_provider,
+                        external_hostname=external_hostname,
+                        peers=self._get_peer_units_address(),
+                        ca_certs_configured=HAPROXY_CAS_FILE.exists(),
                     )
                 )
                 return [

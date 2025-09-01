@@ -203,12 +203,14 @@ class HaproxyRouteRequirersInformation:
     tcp_endpoints: list[HAProxyRouteTcpEndpoint] = Field(strict=False)
 
     @classmethod
-    def from_provider(
+    def from_provider(  # pylint: disable=too-many-arguments
         cls,
+        *,
         haproxy_route: HaproxyRouteProvider,
         haproxy_route_tcp: HaproxyRouteTcpProvider,
         external_hostname: Optional[str],
         peers: list[str],
+        ca_certs_configured: bool,
     ) -> "HaproxyRouteRequirersInformation":
         """Initialize the HaproxyRouteRequirersInformation state component.
 
@@ -217,6 +219,7 @@ class HaproxyRouteRequirersInformation:
             haproxy_route_tcp: The haproxy-route-tcp provider class.
             external_hostname: The charm's configured hostname.
             peers: List of IP address of haproxy peer units.
+            ca_certs_configured: If ca certificates are configured for haproxy backends.
 
         Raises:
             HaproxyRouteIntegrationDataValidationError: When data validation failed.
@@ -249,6 +252,14 @@ class HaproxyRouteRequirersInformation:
                 )
 
                 if not backend.hostname_acls:
+                    relation_ids_with_invalid_data.append(requirer.relation_id)
+                    continue
+
+                if (
+                    backend.servers
+                    and backend.servers[0].protocol == "https"
+                    and not ca_certs_configured
+                ):
                     relation_ids_with_invalid_data.append(requirer.relation_id)
                     continue
 
