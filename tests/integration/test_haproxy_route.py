@@ -80,17 +80,22 @@ def test_haproxy_route_protocol_https(
     juju: jubilant.Juju,
     certificate_provider_application: str,
 ):
-    """Deploy the charm with anycharm ingress per unit requirer that installs apache2.
+    """Deploy the charm with anycharm haproxy route requirer that installs apache2 withs ssl.
+    Integrate haproxy with certificates and ca transfer.
 
-    Assert that the requirer endpoints are available.
+    Assert that the requirer endpoints can be accessed using https.
     """
-    # give anycharm a certificate
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, any_charm_haproxy_route_requirer
+        )
+    )
+
     juju.integrate(
         f"{any_charm_haproxy_route_requirer}:require-tls-certificates",
         f"{certificate_provider_application}:certificates",
     )
 
-    # Start apache in ssl mode.
     for _ in range(5):
         try:
             juju.run(
@@ -103,7 +108,6 @@ def test_haproxy_route_protocol_https(
     else:
         raise AssertionError("Could not start anycharm ssl server")
 
-    # give haproxy the ca certificates
     juju.integrate(
         f"{configured_application_with_tls}:receive-ca-certs",
         f"{certificate_provider_application}:send-ca-cert",
@@ -113,8 +117,6 @@ def test_haproxy_route_protocol_https(
         f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
     )
 
-    # We set the removed retry-interval config option here as
-    # ingress-configurator is not yet synced with the updated lib. This will be removed.
     juju.run(
         f"{any_charm_haproxy_route_requirer}/0",
         "rpc",

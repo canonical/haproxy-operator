@@ -88,12 +88,6 @@ class AnyCharm(AnyCharmBase):
                 SSLEngine on
                 SSLCertificateFile      {str(SSL_CERT_FILE)}
                 SSLCertificateKeyFile   {str(SSL_PRIVATE_KEY_FILE)}
-                <FilesMatch "\\.(?:cgi|shtml|phtml|php)$">
-                        SSLOptions +StdEnvVars
-                </FilesMatch>
-                <Directory /usr/lib/cgi-bin>
-                        SSLOptions +StdEnvVars
-                </Directory>
         </VirtualHost>
 
         # This easier that editing an apache config file to comment the "Listen 80" line.

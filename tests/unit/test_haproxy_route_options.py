@@ -16,13 +16,6 @@ from charm import HAPROXY_CAS_FILE, HAProxyCharm
 from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
-@pytest.fixture
-def mocks_external_procceses(monkeypatch: pytest.MonkeyPatch):
-    """Mock all external processes calls not relevant for the unit test."""
-    monkeypatch.setattr("haproxy.pin_haproxy_package_version", MagicMock())
-    monkeypatch.setattr("haproxy.HAProxyService._validate_haproxy_config", MagicMock())
-
-
 @pytest.fixture(name="established_certificate_relation")
 def established_certificate_relation_fixture():
     """tls_certificates relation data, with the exchange already produced."""
@@ -64,7 +57,7 @@ def established_certificate_relation_fixture():
     )
 
 
-@pytest.mark.usefixtures("systemd_mock", "mocks_external_procceses")
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
 def test_protocol_https(monkeypatch: pytest.MonkeyPatch, established_certificate_relation):
     """
     arrange: prepare the state with the haproxy-route relation and protocol https
@@ -128,7 +121,7 @@ def test_protocol_https(monkeypatch: pytest.MonkeyPatch, established_certificate
     assert out.app_status == ActiveStatus("")
 
 
-@pytest.mark.usefixtures("systemd_mock", "mocks_external_procceses")
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
 def test_protocol_https_no_ca(monkeypatch: pytest.MonkeyPatch, established_certificate_relation):
     """
     arrange: prepare the state with the haproxy-route relation and protocol https

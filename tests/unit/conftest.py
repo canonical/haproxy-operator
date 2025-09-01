@@ -37,6 +37,7 @@ def systemd_mock_fixture(monkeypatch: pytest.MonkeyPatch):
 def mocks_external_calls_fixture(monkeypatch: pytest.MonkeyPatch):
     """Mock external calls."""
     monkeypatch.setattr("haproxy.HAProxyService._validate_haproxy_config", MagicMock())
+    monkeypatch.setattr("haproxy.pin_haproxy_package_version", MagicMock())
 
 
 @pytest.fixture(scope="function", name="certificates_relation_data")
