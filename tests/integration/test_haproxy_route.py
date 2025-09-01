@@ -68,6 +68,9 @@ def test_haproxy_route_any_charm_requirer(
             "hash-type consistent",
         ]
     )
+    juju.remove_relation(
+        f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
+    )
 
 
 @pytest.mark.abort_on_fail

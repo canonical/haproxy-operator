@@ -183,7 +183,7 @@ def any_charm_ingress_per_unit_requirer_fixture(
     return ANY_CHARM_INGRESS_PER_UNIT_REQUIRER
 
 
-@pytest.fixture(scope="function", name="any_charm_haproxy_route_requirer")
+@pytest.fixture(scope="module", name="any_charm_haproxy_route_requirer")
 @pytestconfig_arg_no_deploy(application=ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)
 def any_charm_haproxy_route_requirer_fixture(_pytestconfig: pytest.Config, juju: jubilant.Juju):
     """Deploy any-charm and configure it to serve as a requirer for the haproxy-route
