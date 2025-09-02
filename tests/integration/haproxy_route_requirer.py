@@ -6,7 +6,7 @@
 
 import sys
 
-# The last one is the dynamic modules. That way we get the new criptography
+# The last one is the dynamic modules. That way we get the new cryptography
 # library, not the system one.
 sys.path.insert(0, sys.path[-1])
 
