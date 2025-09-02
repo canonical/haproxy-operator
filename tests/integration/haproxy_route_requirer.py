@@ -98,10 +98,14 @@ class AnyCharm(AnyCharmBase):
         """
         ssl_site_file = pathlib.Path("/etc/apache2/sites-available/anycharm-ssl.conf")
         ssl_site_file.write_text(ssl_host, encoding="utf-8")
-        self._run_subprocess(["a2dissite", "000-default"])
-        self._run_subprocess(["a2ensite", "anycharm-ssl"])
-        self._run_subprocess(["a2enmod", "ssl", "rewrite"])
-        self._run_subprocess(["systemctl", "restart", "apache2"])
+        commands = [
+            ["a2dissite", "000-default"],
+            ["a2ensite", "anycharm-ssl"],
+            ["a2enmod", "ssl", "rewrite"],
+            ["systemctl", "restart", "apache2"],
+        ]
+        for command in commands:
+            self._run_subprocess(command)
         self.unit.status = ops.ActiveStatus("SSL Server ready")
 
     def _run_subprocess(self, cmd: list[str]):
