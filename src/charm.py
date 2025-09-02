@@ -436,11 +436,13 @@ class HAProxyCharm(ops.CharmBase):
             )
         ]
 
+    @validate_config_and_tls(defer=True)
     def _on_ca_certificates_updated(self, _: CertificatesAvailableEvent) -> None:
         """Handle the CA certificates available event."""
         self._tls.update_trusted_cas()
         self._reconcile()
 
+    @validate_config_and_tls(defer=True)
     def _on_ca_certificates_removed(self, _: CertificatesRemovedEvent) -> None:
         """Handle the CA certificates removed event."""
         self._tls.remove_cas_from_unit()
