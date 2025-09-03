@@ -112,6 +112,7 @@ class HAProxyCharm(ops.CharmBase):
         self.haproxy_route_provider = HaproxyRouteProvider(self)
         self.haproxy_route_tcp_provider = HaproxyRouteTcpProvider(self)
 
+        self.recv_ca_certs = CertificateTransferRequires(self, RECV_CA_CERTS_RELATION)
         self.certificates = TLSCertificatesRequiresV4(
             charm=self,
             relationship_name=TLS_CERT_RELATION,
@@ -123,7 +124,6 @@ class HAProxyCharm(ops.CharmBase):
             ],
             mode=Mode.UNIT,
         )
-        self.recv_ca_certs = CertificateTransferRequires(self, RECV_CA_CERTS_RELATION)
 
         self._tls = TLSRelationService(self.model, self.certificates, self.recv_ca_certs)
         self.website_requirer = HTTPProvider(self, WEBSITE_RELATION)
@@ -318,10 +318,13 @@ class HAProxyCharm(ops.CharmBase):
     def _configure_haproxy_route(self, charm_state: CharmState) -> None:
         """Configure the haproxy route relation."""
         haproxy_route_requirers_information = HaproxyRouteRequirersInformation.from_provider(
-            self.haproxy_route_provider,
-            self.haproxy_route_tcp_provider,
-            typing.cast(typing.Optional[str], self.model.config.get("external-hostname")),
-            self._get_peer_units_address(),
+            haproxy_route=self.haproxy_route_provider,
+            haproxy_route_tcp=self.haproxy_route_tcp_provider,
+            external_hostname=typing.cast(
+                typing.Optional[str], self.model.config.get("external-hostname")
+            ),
+            peers=self._get_peer_units_address(),
+            ca_certs_configured=bool(self.recv_ca_certs.get_all_certificates()),
         )
         # We ONLY allow the charm to run with no certificate requested if:
         # 1. there's only haproxy-route-tcp relations
@@ -390,10 +393,11 @@ class HAProxyCharm(ops.CharmBase):
             if proxy_mode == ProxyMode.HAPROXY_ROUTE:
                 haproxy_route_requirer_information = (
                     HaproxyRouteRequirersInformation.from_provider(
-                        self.haproxy_route_provider,
-                        self.haproxy_route_tcp_provider,
-                        external_hostname,
-                        self._get_peer_units_address(),
+                        haproxy_route=self.haproxy_route_provider,
+                        haproxy_route_tcp=self.haproxy_route_tcp_provider,
+                        external_hostname=external_hostname,
+                        peers=self._get_peer_units_address(),
+                        ca_certs_configured=bool(self.recv_ca_certs.get_all_certificates()),
                     )
                 )
                 return [
@@ -432,11 +436,13 @@ class HAProxyCharm(ops.CharmBase):
             )
         ]
 
+    @validate_config_and_tls(defer=True)
     def _on_ca_certificates_updated(self, _: CertificatesAvailableEvent) -> None:
         """Handle the CA certificates available event."""
         self._tls.update_trusted_cas()
         self._reconcile()
 
+    @validate_config_and_tls(defer=True)
     def _on_ca_certificates_removed(self, _: CertificatesRemovedEvent) -> None:
         """Handle the CA certificates removed event."""
         self._tls.remove_cas_from_unit()

@@ -44,6 +44,7 @@ class HAProxyRouteServer:
         server_name: The name of the unit with invalid characters replaced.
         address: The IP address of the requirer unit.
         port: The port that the requirer application wishes to be exposed.
+        protocol: The protocol that the backend service speaks. "http" (default) or "https".
         check: Health check configuration.
         maxconn: Maximum allowed connections before requests are queued.
     """
@@ -51,6 +52,7 @@ class HAProxyRouteServer:
     server_name: str
     address: IPvAnyAddress
     port: int
+    protocol: str
     check: Optional[ServerHealthCheck]
     maxconn: Optional[int]
 
@@ -201,12 +203,14 @@ class HaproxyRouteRequirersInformation:
     tcp_endpoints: list[HAProxyRouteTcpEndpoint] = Field(strict=False)
 
     @classmethod
-    def from_provider(
+    def from_provider(  # pylint: disable=too-many-arguments
         cls,
+        *,
         haproxy_route: HaproxyRouteProvider,
         haproxy_route_tcp: HaproxyRouteTcpProvider,
         external_hostname: Optional[str],
         peers: list[str],
+        ca_certs_configured: bool,
     ) -> "HaproxyRouteRequirersInformation":
         """Initialize the HaproxyRouteRequirersInformation state component.
 
@@ -215,6 +219,7 @@ class HaproxyRouteRequirersInformation:
             haproxy_route_tcp: The haproxy-route-tcp provider class.
             external_hostname: The charm's configured hostname.
             peers: List of IP address of haproxy peer units.
+            ca_certs_configured: If ca certificates are configured for haproxy backends.
 
         Raises:
             HaproxyRouteIntegrationDataValidationError: When data validation failed.
@@ -247,6 +252,14 @@ class HaproxyRouteRequirersInformation:
                 )
 
                 if not backend.hostname_acls:
+                    relation_ids_with_invalid_data.append(requirer.relation_id)
+                    continue
+
+                if (
+                    backend.servers
+                    and backend.servers[0].protocol == "https"
+                    and not ca_certs_configured
+                ):
                     relation_ids_with_invalid_data.append(requirer.relation_id)
                     continue
 
@@ -336,6 +349,7 @@ def get_servers_definition_from_requirer_data(
                     server_name=f"{requirer.application_data.service}_{port}_{i}",
                     address=server_address,
                     port=port,
+                    protocol=requirer.application_data.protocol,
                     check=requirer.application_data.check,
                     maxconn=requirer.application_data.server_maxconn,
                 )

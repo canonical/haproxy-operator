@@ -231,6 +231,7 @@ def test_haproxy_route_requirer_information_reserved_ports(
         haproxy_route_tcp=haproxy_route_tcp_provider_mock,
         external_hostname=None,
         peers=[],
+        ca_certs_configured=False,
     )
     assert not haproxy_route_information.tcp_endpoints
     assert len(haproxy_route_information.relation_ids_with_invalid_data_tcp) == 1
@@ -263,6 +264,7 @@ def test_haproxy_route_requirer_information(
         haproxy_route_tcp=haproxy_route_tcp_provider_mock,
         external_hostname=None,
         peers=[],
+        ca_certs_configured=False,
     )
     assert len(haproxy_route_information.tcp_endpoints) == 1
 
