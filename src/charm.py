@@ -39,7 +39,7 @@ from interface_hacluster.ops_ha_interface import HAServiceRequires
 from ops.charm import ActionEvent
 from ops.model import Port
 
-from haproxy import HAPROXY_CAS_FILE, HAPROXY_SERVICE, HAProxyService
+from haproxy import HAPROXY_SERVICE, HAProxyService
 from http_interface import (
     HTTPBackendAvailableEvent,
     HTTPBackendRemovedEvent,
@@ -112,6 +112,7 @@ class HAProxyCharm(ops.CharmBase):
         self.haproxy_route_provider = HaproxyRouteProvider(self)
         self.haproxy_route_tcp_provider = HaproxyRouteTcpProvider(self)
 
+        self.recv_ca_certs = CertificateTransferRequires(self, RECV_CA_CERTS_RELATION)
         self.certificates = TLSCertificatesRequiresV4(
             charm=self,
             relationship_name=TLS_CERT_RELATION,
@@ -123,7 +124,6 @@ class HAProxyCharm(ops.CharmBase):
             ],
             mode=Mode.UNIT,
         )
-        self.recv_ca_certs = CertificateTransferRequires(self, RECV_CA_CERTS_RELATION)
 
         self._tls = TLSRelationService(self.model, self.certificates, self.recv_ca_certs)
         self.website_requirer = HTTPProvider(self, WEBSITE_RELATION)
@@ -324,7 +324,7 @@ class HAProxyCharm(ops.CharmBase):
                 typing.Optional[str], self.model.config.get("external-hostname")
             ),
             peers=self._get_peer_units_address(),
-            ca_certs_configured=HAPROXY_CAS_FILE.exists(),
+            ca_certs_configured=bool(self.recv_ca_certs.get_all_certificates()),
         )
         # We ONLY allow the charm to run with no certificate requested if:
         # 1. there's only haproxy-route-tcp relations
@@ -397,7 +397,7 @@ class HAProxyCharm(ops.CharmBase):
                         haproxy_route_tcp=self.haproxy_route_tcp_provider,
                         external_hostname=external_hostname,
                         peers=self._get_peer_units_address(),
-                        ca_certs_configured=HAPROXY_CAS_FILE.exists(),
+                        ca_certs_configured=bool(self.recv_ca_certs.get_all_certificates()),
                     )
                 )
                 return [

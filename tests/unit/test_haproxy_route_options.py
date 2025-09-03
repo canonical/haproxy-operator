@@ -9,23 +9,25 @@ from unittest.mock import MagicMock
 import pytest
 from ops.testing import ActiveStatus, Context, Model, Relation, State
 
-from charm import HAPROXY_CAS_FILE, HAProxyCharm
+from charm import HAProxyCharm
 
 from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
-def test_protocol_https(monkeypatch: pytest.MonkeyPatch, certificates_integration):
+def test_protocol_https(
+    monkeypatch: pytest.MonkeyPatch, certificates_integration, receive_ca_certs_relation
+):
     """
     arrange: prepare the state with the haproxy-route relation and protocol https
     act: run relation_changed for the haproxy-route relation
     assert: the unit is active and the the haproxy file was written with ssl and the ca-file
     """
-    cas_file_mock = MagicMock()
-    cas_file_mock.exists.return_value = True
-    cas_file_mock.__str__.return_value = str(HAPROXY_CAS_FILE)  # type: ignore[attr-defined]
-    monkeypatch.setattr("charm.HAPROXY_CAS_FILE", cas_file_mock)
-    monkeypatch.setattr("haproxy.HAPROXY_CAS_FILE", cas_file_mock)
+    # cas_file_mock = MagicMock()
+    # cas_file_mock.exists.return_value = True
+    # cas_file_mock.__str__.return_value = str(HAPROXY_CAS_FILE)  # type: ignore[attr-defined]
+    # monkeypatch.setattr("charm.HAPROXY_CAS_FILE", cas_file_mock)
+    # monkeypatch.setattr("haproxy.HAPROXY_CAS_FILE", cas_file_mock)
     render_file_mock = MagicMock()
     monkeypatch.setattr("haproxy.render_file", render_file_mock)
     haproxy_route_relation = Relation(
@@ -43,6 +45,7 @@ def test_protocol_https(monkeypatch: pytest.MonkeyPatch, certificates_integratio
     state = State(
         relations=frozenset(
             {
+                receive_ca_certs_relation,
                 haproxy_route_relation,
                 certificates_integration,
             }
@@ -81,11 +84,6 @@ def test_protocol_https_no_ca(monkeypatch: pytest.MonkeyPatch, certificates_inte
     assert: The unit is active, the the data is not in the config file and the relation.
        contains [] which means there is an error.
     """
-    cas_file_mock = MagicMock()
-    cas_file_mock.exists.return_value = False
-    cas_file_mock.__str__.return_value = str(HAPROXY_CAS_FILE)  # type: ignore[attr-defined]
-    monkeypatch.setattr("charm.HAPROXY_CAS_FILE", cas_file_mock)
-    monkeypatch.setattr("haproxy.HAPROXY_CAS_FILE", cas_file_mock)
     render_file_mock = MagicMock()
     monkeypatch.setattr("haproxy.render_file", render_file_mock)
     haproxy_route_relation = Relation(
