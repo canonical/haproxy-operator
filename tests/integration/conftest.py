@@ -7,6 +7,7 @@
 import json
 import logging
 import pathlib
+import tempfile
 import typing
 from pathlib import Path
 
@@ -19,7 +20,7 @@ from .helper import pytestconfig_arg_no_deploy
 logger = logging.getLogger(__name__)
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
-HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/legacy/haproxy_route_requirer.py"
+HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/haproxy_route_requirer.py"
 HAPROXY_ROUTE_LIB_SRC = "lib/charms/haproxy/v1/haproxy_route.py"
 APT_LIB_SRC = "lib/charms/operator_libs_linux/v0/apt.py"
 ANY_CHARM_INGRESS_PER_UNIT_REQUIRER = "ingress-per-unit-requirer-any"
@@ -182,31 +183,34 @@ def any_charm_ingress_per_unit_requirer_fixture(
     return ANY_CHARM_INGRESS_PER_UNIT_REQUIRER
 
 
-@pytest.fixture(scope="function", name="any_charm_haproxy_route_requirer")
+@pytest.fixture(scope="module", name="any_charm_haproxy_route_requirer")
 @pytestconfig_arg_no_deploy(application=ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)
 def any_charm_haproxy_route_requirer_fixture(_pytestconfig: pytest.Config, juju: jubilant.Juju):
     """Deploy any-charm and configure it to serve as a requirer for the haproxy-route
     integration.
     """
-    juju.deploy(
-        "any-charm",
-        app=ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION,
-        channel="beta",
-        config={
-            "src-overwrite": json.dumps(
-                {
-                    "any_charm.py": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(
-                        encoding="utf-8"
-                    ),
-                    "haproxy_route.py": pathlib.Path(HAPROXY_ROUTE_LIB_SRC).read_text(
-                        encoding="utf-8"
-                    ),
-                    "apt.py": pathlib.Path(APT_LIB_SRC).read_text(encoding="utf-8"),
-                }
-            ),
-            "python-packages": "pydantic",
-        },
+    src_overwrite = json.dumps(
+        {
+            "any_charm.py": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(encoding="utf-8"),
+            "haproxy_route.py": pathlib.Path(HAPROXY_ROUTE_LIB_SRC).read_text(encoding="utf-8"),
+            "tls_certificates.py": pathlib.Path(
+                "lib/charms/tls_certificates_interface/v4/tls_certificates.py"
+            ).read_text(encoding="utf-8"),
+            "apt.py": pathlib.Path(APT_LIB_SRC).read_text(encoding="utf-8"),
+        }
     )
+    with tempfile.NamedTemporaryFile(dir=".") as tf:
+        tf.write(src_overwrite.encode("utf-8"))
+        tf.flush()
+        juju.deploy(
+            "any-charm",
+            app=ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION,
+            channel="beta",
+            config={
+                "src-overwrite": f"@{tf.name}",
+                "python-packages": "pydantic\ncryptography==45.0.6",
+            },
+        )
     juju.wait(
         lambda status: (jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)),
         timeout=JUJU_WAIT_TIMEOUT,
