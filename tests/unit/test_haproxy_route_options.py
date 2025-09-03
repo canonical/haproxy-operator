@@ -23,11 +23,6 @@ def test_protocol_https(
     act: run relation_changed for the haproxy-route relation
     assert: the unit is active and the the haproxy file was written with ssl and the ca-file
     """
-    # cas_file_mock = MagicMock()
-    # cas_file_mock.exists.return_value = True
-    # cas_file_mock.__str__.return_value = str(HAPROXY_CAS_FILE)  # type: ignore[attr-defined]
-    # monkeypatch.setattr("charm.HAPROXY_CAS_FILE", cas_file_mock)
-    # monkeypatch.setattr("haproxy.HAPROXY_CAS_FILE", cas_file_mock)
     render_file_mock = MagicMock()
     monkeypatch.setattr("haproxy.render_file", render_file_mock)
     haproxy_route_relation = Relation(
