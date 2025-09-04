@@ -1,14 +1,17 @@
-# --- Release notes artifact ----
+# --- Information about release ----
 
-schema_version: 1
-changes:
-  - title: ""
-    author: ""
-    type: ""
-    description: ""
-    urls: 
-      pr: ""
-      related_doc: ""
-      related_issue: ""
-    visibility: public
-    highlight: false
+# list of change artifacts included in the release
+included_changes:
+
+# earliest revision included in the release
+earliest_revision:
+
+# latest revision included in the release
+latest_revision:
+
+# earliest date included in the release
+earliest_date:
+
+# latest date included in the release 
+latest_date:
+
