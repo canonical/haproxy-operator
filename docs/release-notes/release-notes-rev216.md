@@ -13,7 +13,7 @@ Main bug fixes:
 * Fixed a typo in the cookie fetch method in the load-balancing algorithm ([PR](https://github.com/canonical/haproxy-operator/pull/179)).
 * Fixed an ambiguous endpoint in an integration test ([PR](https://github.com/canonical/haproxy-operator/pull/129)).
 
-See our [Release policy and schedule](docs/release-notes/landing-page.md).
+See our [Release policy and schedule](landing-page.md).
 
 ## Requirements and compatibility
 
@@ -125,7 +125,7 @@ Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/164)
 
 
-### Added http-server-close support
+### Added `http-server-close` support
 
 Added the `http-server-close` argument to the HAProxy configuration.
 When this argument is set, it closes the connection after the request.

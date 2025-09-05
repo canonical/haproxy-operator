@@ -1,20 +1,12 @@
 # Contributing
 
-To make contributions to this charm, you'll need a working [development setup](https://juju.is/docs/sdk/dev-setup).
+To make contributions to this charm, you'll need a working [development setup](https://documentation.ubuntu.com/juju/3.6/howto/manage-your-juju-deployment/set-up-your-juju-deployment-local-testing-and-development/).
 
 You can create an environment for development with `tox`:
 
 ```shell
 tox devenv -e integration
 source venv/bin/activate
-```
-
-## Generating src docs for every commit
-
-Run the following command:
-
-```bash
-chmod +x .git/hooks/pre-commit
 ```
 
 ## Testing
