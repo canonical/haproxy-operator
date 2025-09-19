@@ -1,0 +1,13 @@
+schema_version: 1
+changes:
+  - title: Added new GitHub workflows for documentation checks
+    author: erinecon
+    type: minor
+    description: |
+       
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/193
+      related_doc: 
+      related_issue: 
+    visibility: hidden
+    highlight: false
