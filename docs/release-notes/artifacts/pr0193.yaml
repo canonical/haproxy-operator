@@ -4,7 +4,9 @@ changes:
     author: erinecon
     type: minor
     description: |
-       
+       Now the code repository contains Makefiles and GitHub workflows
+       to check the README, contributing guide, and user documentation
+       for style guide compliance and broken links.
     urls: 
       pr: https://github.com/canonical/haproxy-operator/pull/193
       related_doc: 
