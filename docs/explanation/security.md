@@ -1,4 +1,4 @@
-# Security in HAProxy charm
+# Security
 
 This document describes the security design of the HAProxy charm.
 The charm manages an [HAProxy](https://www.haproxy.org/) as an ingress proxy.
@@ -24,21 +24,23 @@ Using the latest version of Juju will ensure the latest security fix for Juju is
 
 This type of attack refers to an attacker intercepting messages and pretending to be the intended recipient of the message.
 For example, if an user tries to access `ubuntu.com`, an attacker might intercept the packets and pretend to be `ubuntu.com`, and trick the user into reveal their password.
-The way to prevent this would be using TLS certificates to validate the identity of the recipient.
+Prevent this attack by using TLS certificates to validate the identity of the recipient.
 
 As an ingress proxy, clients would be sending requests to the charm.
 Encrypting these requests would help to prevent any machine-in-the-middle attack.
 
 ### Good practices
 
-Encryption can be achieved by giving a TLS certificate to the charm, configuring it to accept HTTPS request over the unencrypted HTTP request.
+Encryption can be achieved by giving a TLS certificate to the charm, configuring it to accept an HTTPS request over an unencrypted HTTP request.
 TLS certificate can be provided via the [`certificates` integration](https://charmhub.io/haproxy/integrations?channel=2.8/edge#certificates) to the HAProxy charm.
 
 ### Summary
 
 - Use TLS certificates to encrypt traffic.
 
+<!-- vale Canonical.007-Headings-sentence-case = NO -->
 ## Denial-of-service (DoS) attack
+<!-- vale Canonical.007-Headings-sentence-case = YES -->
 
 This type of attack refers to attackers overloading a service by issuing many requests in a short period of time.
 Attackers hope to exhaust the service's resources, e.g., memory and CPU cycles.
@@ -48,7 +50,7 @@ While it does not prevent all DoS attacks depending on the scale of the attack, 
 
 ### Good practices
 
-The charm offers configuration to set the maximum concurrent connection. This can prevent the charm from crashing due to high loads.
+The charm offers a configuration to set the maximum concurrent connection. This can prevent the charm from crashing due to high loads.
 
 ### Summary
 
