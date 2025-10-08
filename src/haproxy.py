@@ -22,7 +22,7 @@ from state.haproxy_route import HaproxyRouteRequirersInformation
 from state.ingress import IngressRequirersInformation
 from state.ingress_per_unit import IngressPerUnitRequirersInformation
 
-APT_PACKAGE_VERSION = "2.8.5-1ubuntu3.3"
+APT_PACKAGE_VERSION = "2.8.5-1ubuntu3.4"
 APT_PACKAGE_NAME = "haproxy"
 HAPROXY_CONFIG_DIR = Path("/etc/haproxy")
 HAPROXY_CONFIG = Path(HAPROXY_CONFIG_DIR / "haproxy.cfg")
