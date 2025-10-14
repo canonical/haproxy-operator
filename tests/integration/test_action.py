@@ -1,3 +1,4 @@
+# pylint: disable=duplicate-code
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
@@ -47,38 +48,31 @@ def test_get_proxied_endpoints_action(
             status, configured_application_with_tls, any_charm_haproxy_route_requirer
         )
     )
+
+    expected_endpoints = json.dumps(
+        [
+            "https://ok.haproxy.internal/v1",
+            "https://ok.haproxy.internal/v2",
+            "https://ok2.haproxy.internal/v1",
+            "https://ok2.haproxy.internal/v2",
+            "https://ok3.haproxy.internal/v1",
+            "https://ok3.haproxy.internal/v2",
+        ]
+    )
+
+    # Test without backend param
     task = juju.run(f"{configured_application_with_tls}/0", "get-proxied-endpoints")
 
-    assert task.results == {
-        "endpoints": json.dumps(
-            [
-                "https://ok.haproxy.internal/v1",
-                "https://ok.haproxy.internal/v2",
-                "https://ok2.haproxy.internal/v1",
-                "https://ok2.haproxy.internal/v2",
-                "https://ok3.haproxy.internal/v1",
-                "https://ok3.haproxy.internal/v2",
-            ]
-        )
-    }, task.results
+    assert task.results == {"endpoints": expected_endpoints}, task.results
 
+    # Test with backend param
     task = juju.run(
         f"{configured_application_with_tls}/0", "get-proxied-endpoints", {"backend": "any_charm"}
     )
 
-    assert task.results == {
-        "endpoints": json.dumps(
-            [
-                "https://ok.haproxy.internal/v1",
-                "https://ok.haproxy.internal/v2",
-                "https://ok2.haproxy.internal/v1",
-                "https://ok2.haproxy.internal/v2",
-                "https://ok3.haproxy.internal/v1",
-                "https://ok3.haproxy.internal/v2",
-            ]
-        )
-    }, task.results
+    assert task.results == {"endpoints": expected_endpoints}, task.results
 
+    # Test with backend param with non existing backend
     with pytest.raises(jubilant.TaskError) as excinfo:
         task = juju.run(
             f"{configured_application_with_tls}/0",
