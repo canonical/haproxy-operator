@@ -7,6 +7,7 @@
 
 """haproxy-operator charm file."""
 
+import json
 import logging
 import typing
 
@@ -51,6 +52,7 @@ from state.exception import CharmStateValidationBaseError
 from state.ha import HACLUSTER_INTEGRATION, HAPROXY_PEER_INTEGRATION, HAInformation
 from state.haproxy_route import (
     HAPROXY_ROUTE_RELATION,
+    HAProxyRouteBackend,
     HaproxyRouteIntegrationDataValidationError,
     HaproxyRouteRequirersInformation,
 )
@@ -181,6 +183,9 @@ class HAProxyCharm(ops.CharmBase):
         )
         self.framework.observe(
             self.haproxy_route_tcp_provider.on.data_removed, self._on_config_changed
+        )
+        self.framework.observe(
+            self.on.get_proxied_endpoints_action, self._on_get_proxied_endpoints_action
         )
 
     @validate_config_and_tls(defer=False)
@@ -357,14 +362,9 @@ class HAProxyCharm(ops.CharmBase):
                 relation = self.model.get_relation(HAPROXY_ROUTE_RELATION, backend.relation_id)
                 if not relation:
                     logger.error("Relation does not exist, skipping.")
-                    break
-                paths = backend.application_data.paths if backend.path_acl_required else [""]
+                    continue
                 self.haproxy_route_provider.publish_proxied_endpoints(
-                    [
-                        f"https://{hostname}/{path}"
-                        for hostname in backend.hostname_acls
-                        for path in paths
-                    ],
+                    self._get_backend_proxied_endpoints(backend),
                     relation,
                 )
             for relation_id in haproxy_route_requirers_information.relation_ids_with_invalid_data:
@@ -561,6 +561,39 @@ class HAProxyCharm(ops.CharmBase):
         ):
             return str(bind_address)
         return None
+
+    def _get_backend_proxied_endpoints(self, backend: HAProxyRouteBackend) -> list[str]:
+        paths = backend.application_data.paths if backend.path_acl_required else [""]
+        return [
+            f"https://{hostname}/{path}" for hostname in backend.hostname_acls for path in paths
+        ]
+
+    def _on_get_proxied_endpoints_action(self, event: ActionEvent) -> None:
+        backend_name = event.params.get("backend")
+        haproxy_route_requirers_information = HaproxyRouteRequirersInformation.from_provider(
+            haproxy_route=self.haproxy_route_provider,
+            haproxy_route_tcp=self.haproxy_route_tcp_provider,
+            external_hostname=typing.cast("str | None", self.config.get("external-hostname")),
+            peers=self._get_peer_units_address(),
+            ca_certs_configured=bool(self.recv_ca_certs.get_all_certificates()),
+        )
+
+        if backend_name is not None:
+            for backend in haproxy_route_requirers_information.backends:
+                if backend_name == backend.backend_name:
+                    event.set_results(
+                        {"endpoints": json.dumps(self._get_backend_proxied_endpoints(backend))}
+                    )
+                    return
+            event.fail(f'No backend with name "{backend_name}"')
+            return
+
+        proxied_endpoints: list[str] = [
+            proxied_endpoint
+            for backend in haproxy_route_requirers_information.backends
+            for proxied_endpoint in self._get_backend_proxied_endpoints(backend)
+        ]
+        event.set_results({"endpoints": json.dumps(proxied_endpoints)})
 
 
 if __name__ == "__main__":  # pragma: nocover
