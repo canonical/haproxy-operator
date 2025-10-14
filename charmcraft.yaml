@@ -103,7 +103,7 @@ actions:
   get-proxied-endpoints:
     description: |
       Return a list of endpoints 
-      based on route definitions (backends) provided through `haproxy-route` relation.
+      based on route definitions (backends) provided through the `haproxy-route` relation.
       If no `backend` is provided, endpoints for all backends are returned.
     params:
       backend:
