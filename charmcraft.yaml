@@ -100,6 +100,13 @@ actions:
         description: Hostname to extract certs from.
     required:
       - hostname
+  get-proxied-endpoints:
+    description: |
+      Return a list of endpoints proxied by haproxy.
+    params:
+      backend:
+        type: string
+        description: Backend from which to get the proxied endpoints.
 
 charm-libs:
   - lib: traefik_k8s.ingress_per_unit
