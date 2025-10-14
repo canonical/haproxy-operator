@@ -87,12 +87,16 @@ class HAProxyRouteTcpEndpoint(HaproxyRouteTcpRequirerData):
             list[HaproxyRouteTcpServer]: List of configured backend servers.
         """
         servers = []
-        for i, unit_data in enumerate(self.units_data):
+        backend_addresses = self.application_data.hosts
+        if not backend_addresses:
+            backend_addresses = [unit_data.address for unit_data in self.units_data]
+
+        for i, address in enumerate(backend_addresses):
             servers.append(
                 HaproxyRouteTcpServer(
                     server_name=f"{self.application}-{i}",
                     port=cast(int, self.application_data.backend_port),
-                    address=unit_data.address,
+                    address=address,
                     check=self.application_data.check,
                     maxconn=self.application_data.server_maxconn,
                 )
