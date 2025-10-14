@@ -563,12 +563,22 @@ class HAProxyCharm(ops.CharmBase):
         return None
 
     def _get_backend_proxied_endpoints(self, backend: HAProxyRouteBackend) -> list[str]:
+        """Get the list of proxied endpoints for a given backend.
+
+        Args:
+            backend: The HAProxyRouteBackend instance.
+        """
         paths = backend.application_data.paths if backend.path_acl_required else [""]
         return [
             f"https://{hostname}/{path}" for hostname in backend.hostname_acls for path in paths
         ]
 
     def _on_get_proxied_endpoints_action(self, event: ActionEvent) -> None:
+        """Triggered when users run the `get-proxied-endpoints` Juju action.
+
+        Args:
+            event: Juju event
+        """
         backend_name = event.params.get("backend")
         haproxy_route_requirers_information = HaproxyRouteRequirersInformation.from_provider(
             haproxy_route=self.haproxy_route_provider,
