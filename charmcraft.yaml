@@ -102,11 +102,13 @@ actions:
       - hostname
   get-proxied-endpoints:
     description: |
-      Return a list of endpoints proxied by haproxy.
+      Return a list of endpoints 
+      based on route definitions (backends) provided through `haproxy-route` relation.
+      If no `backend` is provided, endpoints for all backends are returned.
     params:
       backend:
         type: string
-        description: Backend from which to get the proxied endpoints.
+        description: The name of the backend for which to get the endpoints.
 
 charm-libs:
   - lib: traefik_k8s.ingress_per_unit
