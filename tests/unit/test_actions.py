@@ -5,12 +5,11 @@
 
 import json
 from unittest.mock import MagicMock
-import ops
+
+import ops.testing
 import pytest
 
 from charm import HAProxyCharm
-import ops.testing
-
 from tests.unit.conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
@@ -20,7 +19,7 @@ class TestGetProxiedEndpointsAction:
 
     def test_no_backend_filter(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """
-        arrange: create state with one haproxy-route relation containing 
+        arrange: create state with one haproxy-route relation containing
             hostname, additional_hostnames, and paths.
         act: trigger the get-proxied-endpoints action without a backend filter.
         assert: returns a list of all proxied endpoints for every hostname/path combination.
@@ -32,7 +31,12 @@ class TestGetProxiedEndpointsAction:
             "haproxy-route",
             remote_app_data={
                 "hostname": f'"{TEST_EXTERNAL_HOSTNAME_CONFIG}"',
-                "additional_hostnames": f'["ok2.{TEST_EXTERNAL_HOSTNAME_CONFIG}", "ok3.{TEST_EXTERNAL_HOSTNAME_CONFIG}"]',
+                "additional_hostnames": json.dumps(
+                    [
+                        f"ok2.{TEST_EXTERNAL_HOSTNAME_CONFIG}",
+                        f"ok3.{TEST_EXTERNAL_HOSTNAME_CONFIG}",
+                    ]
+                ),
                 "paths": '["v1", "v2"]',
                 "ports": "[443]",
                 "protocol": '"http"',
@@ -92,7 +96,6 @@ class TestGetProxiedEndpointsAction:
         act: trigger the get-proxied-endpoints action with the backend filter.
         assert: returns a list containing the endpoint for that backend.
         """
-
         service_name = "haproxy-tutorial-ingress-configurator"
         context = ops.testing.Context(HAProxyCharm)
         render_file_mock = MagicMock()
@@ -131,7 +134,6 @@ class TestGetProxiedEndpointsAction:
         act: trigger the get-proxied-endpoints action with a non-existing backend name.
         assert: raises ActionFailed indicating the backend does not exist.
         """
-
         service_name = "haproxy-tutorial-ingress-configurator"
         context = ops.testing.Context(HAProxyCharm)
         render_file_mock = MagicMock()
