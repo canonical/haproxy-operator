@@ -587,22 +587,23 @@ class HAProxyCharm(ops.CharmBase):
             peers=self._get_peer_units_address(),
             ca_certs_configured=bool(self.recv_ca_certs.get_all_certificates()),
         )
-
+        backends = []
         if backend_name is not None:
-            for backend in haproxy_route_requirers_information.backends:
-                if backend_name == backend.backend_name:
-                    event.set_results(
-                        {"endpoints": json.dumps(self._get_backend_proxied_endpoints(backend))}
-                    )
-                    return
-            event.fail(f'No backend with name "{backend_name}"')
-            return
+            backends = [
+                backend
+                for backend in haproxy_route_requirers_information.backends
+                if backend.backend_name == backend_name
+            ]
+            if not backends:
+                event.fail(f'No backend with name "{backend_name}"')
+                return
+        else:
+            backends = haproxy_route_requirers_information.backends
 
-        proxied_endpoints: list[str] = [
-            proxied_endpoint
-            for backend in haproxy_route_requirers_information.backends
-            for proxied_endpoint in self._get_backend_proxied_endpoints(backend)
-        ]
+        proxied_endpoints = []
+        for backend in backends:
+            proxied_endpoints.extend(self._get_backend_proxied_endpoints(backend))
+
         event.set_results({"endpoints": json.dumps(proxied_endpoints)})
 
 
