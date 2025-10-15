@@ -1,8 +1,8 @@
-# pylint: disable=duplicate-code
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
+# pylint: disable=duplicate-code
 
-"""Integration tests for the ingress per unit relation."""
+"""Integration tests for haproxy charm actions."""
 
 
 import json
