@@ -206,8 +206,8 @@ class TestGetProxiedEndpointsAction:
             relations=[haproxy_route_relation],
             leader=True,
             model=ops.testing.Model(name="haproxy-tutorial"),
-            app_status=ops.testing.ActiveStatus(""),
-            unit_status=ops.testing.ActiveStatus(""),
+            app_status=ops.testing.ActiveStatus(),
+            unit_status=ops.testing.ActiveStatus(),
         )
         context.run(context.on.action("get-proxied-endpoints"), charm_state)
 
@@ -237,8 +237,8 @@ class TestGetProxiedEndpointsAction:
             relations=[],
             leader=True,
             model=ops.testing.Model(name="haproxy-tutorial"),
-            app_status=ops.testing.ActiveStatus(""),
-            unit_status=ops.testing.ActiveStatus(""),
+            app_status=ops.testing.ActiveStatus(),
+            unit_status=ops.testing.ActiveStatus(),
         )
         context.run(context.on.action("get-proxied-endpoints"), charm_state)
 
@@ -268,8 +268,8 @@ class TestGetProxiedEndpointsAction:
             relations=[haproxy_route_relation],
             leader=True,
             model=ops.testing.Model(name="haproxy-tutorial"),
-            app_status=ops.testing.ActiveStatus(""),
-            unit_status=ops.testing.ActiveStatus(""),
+            app_status=ops.testing.ActiveStatus(),
+            unit_status=ops.testing.ActiveStatus(),
         )
         context.run(
             context.on.action("get-proxied-endpoints", params={"backend": service_name}),
@@ -302,12 +302,15 @@ class TestGetProxiedEndpointsAction:
             relations=[haproxy_route_relation],
             leader=True,
             model=ops.testing.Model(name="haproxy-tutorial"),
-            app_status=ops.testing.ActiveStatus(""),
-            unit_status=ops.testing.ActiveStatus(""),
+            app_status=ops.testing.ActiveStatus(),
+            unit_status=ops.testing.ActiveStatus(),
         )
-        with pytest.raises(ops.testing.ActionFailed) as excinfo:
-            context.run(
-                context.on.action("get-proxied-endpoints", params={"backend": "random_name"}),
-                charm_state,
-            )
-        assert str(excinfo.value) == 'No backend with name "random_name"'
+
+        context.run(
+            context.on.action("get-proxied-endpoints", params={"backend": "random_name"}),
+            charm_state,
+        )
+
+        out = context.action_results
+
+        assert out == {"endpoints": "[]"}
