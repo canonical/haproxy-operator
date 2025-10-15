@@ -600,9 +600,11 @@ class HAProxyCharm(ops.CharmBase):
         else:
             backends = haproxy_route_requirers_information.backends
 
-        proxied_endpoints = []
-        for backend in backends:
-            proxied_endpoints.extend(self._get_backend_proxied_endpoints(backend))
+        proxied_endpoints = [
+            proxied_endpoint
+            for backend in backends
+            for proxied_endpoint in self._get_backend_proxied_endpoints(backend)
+        ]
 
         event.set_results({"endpoints": json.dumps(proxied_endpoints)})
 
