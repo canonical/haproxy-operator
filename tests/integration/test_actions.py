@@ -17,9 +17,9 @@ def test_get_proxied_endpoints_action(
     any_charm_haproxy_route_requirer: str,
     juju: jubilant.Juju,
 ):
-    """Deploy the charm with anycharm ingress per unit requirer that installs apache2.
-
-    Assert that the requirer endpoints are available.
+    """arrange: Deploy the charm integrated with any_charm haproxy-route.
+    act: Trigger the action 'get-proxied-endpoints.
+    assert: The correct proxied endpoints are returned.
     """
     juju.integrate(
         f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
@@ -73,13 +73,12 @@ def test_get_proxied_endpoints_action(
     assert task.results == {"endpoints": expected_endpoints}, task.results
 
     # Test with backend param with non existing backend
-    with pytest.raises(jubilant.TaskError) as excinfo:
-        task = juju.run(
-            f"{configured_application_with_tls}/0",
-            "get-proxied-endpoints",
-            {"backend": "other_charm"},
-        )
-    assert 'No backend with name "other_charm"' in str(excinfo.value)
+    task = juju.run(
+        f"{configured_application_with_tls}/0",
+        "get-proxied-endpoints",
+        {"backend": "other_charm"},
+    )
+    assert task.results == {"endpoints": "[]"}, task.results
 
     juju.remove_relation(
         f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
