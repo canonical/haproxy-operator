@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2025-10-14
+
+- Added action `get-proxied-endpoints`.
+
 ## 2025-10-08
 
 - Upgrading HAproxy apt package to `2.8.5-1ubuntu3.4`.
