@@ -151,7 +151,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 7
+LIBPATCH = 8
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -1453,7 +1453,7 @@ class HaproxyRouteRequirer(Object):
         """
         address = self._unit_address
         if not address:
-            network_binding = self.charm.model.get_binding("juju-info")
+            network_binding = self.charm.model.get_binding(self._relation_name)
             if (
                 network_binding is not None
                 and (bind_address := network_binding.network.bind_address) is not None
