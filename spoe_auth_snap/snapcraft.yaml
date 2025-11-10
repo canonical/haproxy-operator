@@ -1,0 +1,40 @@
+name: haproxy-spoe-auth
+title: HAProxy SPOE Authentication Agent
+base: core22
+version: '0.0.1'
+summary: HAProxy SPOE authentication agent
+description: |
+  A SPOE (Stream Processing Offload Engine) agent for HAProxy that provides
+  authentication capabilities.
+
+grade: stable
+confinement: strict
+parts:
+  haproxy-spoe-auth:
+    plugin: dump
+    source: https://github.com/Thanhphan1147/haproxy-spoe-auth.git
+    source-type: git
+    build-snaps:
+      - go/1.22/stable
+    override-build: |
+      (cd cmd/haproxy-spoe-auth; go build )
+      craftctl default
+    organize:
+      cmd/haproxy-spoe-auth/haproxy-spoe-auth: bin/agent
+    stage:
+      - bin/agent
+  hooks:
+    plugin: dump
+    source: hooks
+    organize:
+      bin/: snap/hooks/
+
+apps:
+  haproxy-spoe-auth:
+    command: bin/agent --config config.yaml
+    daemon: simple
+    restart-delay: 10s
+    plugs:
+      - network-bind
+      - home
+      - network
