@@ -3,7 +3,6 @@
 
 """Integration tests for the ingress per unit relation."""
 
-
 import socket
 import ssl
 
