@@ -1,0 +1,111 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+[project]
+name = "haproxy-spoe-auth-operator"
+version = "0.0.0"
+description = "HAProxy SPOE authentication agent"
+readme = "README.md"
+requires-python = ">=3.12"
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+  "jinja2==3.1.6",
+  "ops==3.3.1",
+  "pydantic==2.12.4",
+]
+
+[dependency-groups]
+fmt = [ "ruff" ]
+lint = [
+  "codespell",
+  "mypy",
+  "ops[testing]",
+  "pytest",
+  "ruff",
+  "types-pyyaml",
+]
+unit = [ "coverage[toml]", "ops[testing]", "pytest" ]
+coverage-report = [ "coverage[toml]", "pytest" ]
+static = [ "bandit[toml]" ]
+integration = [
+  "jubilant==1.1.1",
+  "juju==3.6.1.0",
+  "pytest",
+  "pytest-asyncio",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+target-version = "py310"
+line-length = 99
+
+lint.select = [ "A", "B", "C", "CPY", "D", "E", "F", "I", "N", "RUF", "S", "SIM", "TC", "UP", "W" ]
+lint.ignore = [
+  "B904",
+  "D107",
+  "D203",
+  "D204",
+  "D205",
+  "D213",
+  "D215",
+  "D400",
+  "D404",
+  "D406",
+  "D407",
+  "D408",
+  "D409",
+  "D413",
+  "E501",
+  "S105",
+  "S603",
+  "S607",
+  "TC002",
+  "TC006",
+  "UP006",
+  "UP007",
+  "UP035",
+  "UP045",
+]
+lint.per-file-ignores."tests/*" = [ "B011", "D100", "D101", "D102", "D103", "D104", "D212", "D415", "D417", "S" ]
+lint.flake8-copyright.author = "Canonical Ltd."
+lint.flake8-copyright.min-file-size = 1
+lint.flake8-copyright.notice-rgx = "Copyright\\s\\d{4}([-,]\\d{4})*\\s+"
+lint.mccabe.max-complexity = 10
+lint.pydocstyle.convention = "google"
+
+[tool.codespell]
+skip = "build,lib,venv,icon.svg,.tox,.git,.mypy_cache,.ruff_cache,.coverage,htmlcov,uv.lock"
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+log_cli_level = "INFO"
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+
+[tool.mypy]
+check_untyped_defs = true
+disallow_untyped_defs = true
+explicit_package_bases = true
+ignore_missing_imports = true
+namespace_packages = true
+
+[[tool.mypy.overrides]]
+disallow_untyped_defs = false
+module = "tests.*"
+
+[tool.bandit]
+exclude_dirs = [ "/venv/" ]
+
+[tool.bandit.assert_used]
+skips = [ "*/*test.py", "*/test_*.py", "*tests/*.py" ]

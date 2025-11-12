@@ -1,0 +1,13 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+# HAProxy SPOE Auth Configuration
+spoe:
+  address: {{ spoe_address }}
+
+{% if oauth_enabled %}
+oauth:
+  client_id: {{ oauth_data.client_id }}
+  client_secret: {{ oauth_data.client_secret }}
+  provider_url: {{ oauth_data.provider_url }}
+{% endif %}
