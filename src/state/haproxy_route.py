@@ -125,7 +125,7 @@ class HAProxyRouteBackend:
 
             return [self.external_hostname]
 
-        return [self.application_data.hostname] + self.application_data.additional_hostnames
+        return [self.application_data.hostname, *self.application_data.additional_hostnames]
 
     # We disable no-member here because pylint doesn't know that
     # self.application_data.load_balancing Has a default value set
