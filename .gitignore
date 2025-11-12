@@ -24,3 +24,4 @@ __pycache__/
 !.vale/styles/config/vocabularies/local
 # END VALE WORKFLOW IGNORE
 
+**/*.snap
