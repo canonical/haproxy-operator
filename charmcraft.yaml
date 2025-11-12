@@ -13,6 +13,8 @@ parts:
     plugin: uv
     build-snaps:
     - astral-uv
+    build-packages:
+    - git
   dump:
     plugin: dump
     source: .
