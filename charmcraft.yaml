@@ -15,7 +15,7 @@ parts:
     - astral-uv
     build-packages:
     - git
-  dump:
+  templates:
     plugin: dump
     source: .
     stage:
