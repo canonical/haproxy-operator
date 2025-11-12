@@ -25,7 +25,7 @@ class OAuthData:
     Attributes:
         client_id: The OAuth client ID.
         client_secret: The OAuth client secret.
-        provider_url: The OAuth provider URL.
+        provider_url: The OAuth provider URL (issuer_url from the library).
     """
 
     client_id: str = Field(min_length=1)
@@ -56,6 +56,20 @@ class OAuthInformation:
         Raises:
             OAuthDataValidationError: When OAuth data validation fails.
         """
+        # Once the OAuth library is added, this will use the requirer object
+        # Example:
+        # if not charm.oauth.is_client_created():
+        #     return cls(oauth_data=None)
+        #
+        # oauth_info = charm.oauth.get_client_config()
+        # oauth_data = OAuthData(
+        #     client_id=oauth_info.client_id,
+        #     client_secret=oauth_info.client_secret,
+        #     provider_url=oauth_info.issuer_url,
+        # )
+        # return cls(oauth_data=oauth_data)
+
+        # Temporary implementation until library is added
         oauth_relation = charm.model.get_relation("oauth")
         if not oauth_relation:
             return cls(oauth_data=None)

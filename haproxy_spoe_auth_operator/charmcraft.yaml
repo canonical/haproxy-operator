@@ -54,3 +54,7 @@ config:
       default: "127.0.0.1:3000"
       type: string
       description: Address for SPOE agent to listen on
+
+charm-libs:
+- lib: hydra.oauth
+  version: "0"

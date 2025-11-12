@@ -36,6 +36,9 @@ class HaproxySpoeAuthCharm(ops.CharmBase):
         super().__init__(*args)
         self.service = SpoeAuthService()
 
+        # OAuth requirer will be added here once the library is fetched
+        # Example: self.oauth = OAuthRequirer(self, relation_name=OAUTH_RELATION)
+
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(
