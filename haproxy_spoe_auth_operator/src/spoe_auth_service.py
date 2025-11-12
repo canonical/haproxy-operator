@@ -44,7 +44,7 @@ class SpoeAuthService:
             # Import here to avoid issues when snap module is not available
             import subprocess  # nosec B404
 
-            subprocess.run(  # nosec B603
+            subprocess.run(  # nosec B603 B607
                 ["snap", "install", SNAP_NAME, "--edge"],
                 check=True,
                 capture_output=True,
@@ -65,7 +65,7 @@ class SpoeAuthService:
         try:
             import subprocess  # nosec B404
 
-            result = subprocess.run(  # nosec B603
+            result = subprocess.run(  # nosec B603 B607
                 ["snap", "services", SNAP_NAME],
                 check=True,
                 capture_output=True,
@@ -120,7 +120,7 @@ class SpoeAuthService:
         """Restart the service."""
         import subprocess  # nosec B404
 
-        subprocess.run(  # nosec B603
+        subprocess.run(  # nosec B603 B607
             ["snap", "restart", SNAP_NAME],
             check=True,
             capture_output=True,

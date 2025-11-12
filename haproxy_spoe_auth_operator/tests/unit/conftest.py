@@ -3,7 +3,7 @@
 
 """Unit test fixtures for haproxy-spoe-auth-operator."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import ops.testing
 import pytest
@@ -52,13 +52,13 @@ def fixture_base_state() -> dict:
 @pytest.fixture(name="context_with_mocks")
 def fixture_context_with_mocks(
     context: ops.testing.Context,
-) -> tuple[ops.testing.Context, tuple[MagicMock, MagicMock]]:
+):  # type: ignore[misc]
     """Create a context with mocked service methods.
 
     Args:
         context: The testing context.
 
-    Returns:
+    Yields:
         A tuple of the context and mocked methods.
     """
     with (

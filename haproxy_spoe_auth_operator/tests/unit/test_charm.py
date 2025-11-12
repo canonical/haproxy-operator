@@ -81,32 +81,28 @@ def test_oauth_relation_broken(context_with_mocks, base_state):
     reconcile_mock.assert_called_once()
 
 
-def test_charm_state_without_oauth(context, base_state):
-    """Test charm state when oauth is not configured.
+def test_charm_state_without_oauth(context_with_mocks, base_state):
+    """Test charm status when oauth is not configured.
 
     arrange: prepare base state without oauth
-    act: get charm state
-    assert: mode is NOAUTH
+    act: trigger config changed
+    assert: charm is active without authentication
     """
-    from state.charm_state import ProxyMode
-
+    context, (_, reconcile_mock) = context_with_mocks
     state = ops.testing.State(**base_state)
-    with context.manager(context.on.config_changed(), state) as mgr:
-        charm = mgr.charm
-        charm_state = charm._get_charm_state()  # type: ignore[attr-defined]
-        assert charm_state.mode == ProxyMode.NOAUTH
-        assert charm_state.spoe_address == "127.0.0.1:3000"
+    out = context.run(context.on.config_changed(), state)
+    reconcile_mock.assert_called_once()
+    assert out.unit_status == ops.testing.ActiveStatus("Service running without authentication")
 
 
-def test_charm_state_with_oauth(context, base_state):
-    """Test charm state when oauth is configured.
+def test_charm_state_with_oauth(context_with_mocks, base_state):
+    """Test charm status when oauth is configured.
 
     arrange: prepare state with oauth relation
-    act: get charm state
-    assert: mode is OAUTH
+    act: trigger config changed
+    assert: charm is active with oauth
     """
-    from state.charm_state import ProxyMode
-
+    context, (_, reconcile_mock) = context_with_mocks
     oauth_relation = ops.testing.Relation(
         endpoint="oauth",
         remote_app_name="oauth-provider",
@@ -117,7 +113,6 @@ def test_charm_state_with_oauth(context, base_state):
         },
     )
     state = ops.testing.State(relations=[oauth_relation], **base_state)
-    with context.manager(context.on.config_changed(), state) as mgr:
-        charm = mgr.charm
-        charm_state = charm._get_charm_state()  # type: ignore[attr-defined]
-        assert charm_state.mode == ProxyMode.OAUTH
+    out = context.run(context.on.config_changed(), state)
+    reconcile_mock.assert_called_once()
+    assert out.unit_status == ops.testing.ActiveStatus("OAuth authentication enabled")
