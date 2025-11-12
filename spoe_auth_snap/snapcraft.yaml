@@ -1,7 +1,10 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
 name: haproxy-spoe-auth
 title: HAProxy SPOE Authentication Agent
-base: core22
-version: '0.0.1'
+base: core24
+version: '0.1'
 summary: HAProxy SPOE authentication agent
 description: |
   A SPOE (Stream Processing Offload Engine) agent for HAProxy that provides
@@ -36,5 +39,4 @@ apps:
     restart-delay: 10s
     plugs:
       - network-bind
-      - home
       - network
