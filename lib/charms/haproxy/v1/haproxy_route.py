@@ -151,7 +151,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 7
+LIBPATCH = 8
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -875,9 +875,9 @@ class HaproxyRouteProvider(Object):
             endpoints: The list of proxied endpoints to publish.
             relation: The relation with the requirer application.
         """
-        HaproxyRouteProviderAppData(
-            endpoints=list(map(lambda x: cast(AnyHttpUrl, x), endpoints))
-        ).dump(relation.data[self.charm.app], clear=True)
+        HaproxyRouteProviderAppData(endpoints=[cast(AnyHttpUrl, e) for e in endpoints]).dump(
+            relation.data[self.charm.app], clear=True
+        )
 
 
 class HaproxyRouteEnpointsReadyEvent(EventBase):

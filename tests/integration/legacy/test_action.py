@@ -35,6 +35,6 @@ async def test_get_certificate_action(
 
     # The action should fail
     # when we run the get-certificate action without the required hostname parameter.
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017
         action = await configured_application_with_tls.units[0].run_action("get-certificate")
         await action.wait()
