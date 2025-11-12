@@ -1460,7 +1460,7 @@ class HaproxyRouteTcpRequirer(Object):
         """
         address = self._unit_address
         if not address:
-            network_binding = self.charm.model.get_binding("juju-info")
+            network_binding = self.charm.model.get_binding(self._relation_name)
             if (
                 network_binding is not None
                 and (bind_address := network_binding.network.bind_address) is not None
