@@ -1,4 +1,8 @@
 #!/bin/bash
+
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
 cat << EOF > $SNAP_DATA/config.yaml
 server:
   # The address the server will listen on
