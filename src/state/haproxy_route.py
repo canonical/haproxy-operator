@@ -172,10 +172,10 @@ class HAProxyRouteBackend:
         for rewrite in self.application_data.rewrites:
             if rewrite.method == HaproxyRewriteMethod.SET_HEADER:
                 rewrite_configurations.append(
-                    f"{str(rewrite.method)} {rewrite.header} {rewrite.expression}"
+                    f"{rewrite.method!s} {rewrite.header} {rewrite.expression}"
                 )
                 continue
-            rewrite_configurations.append(f"{str(rewrite.method.value)} {rewrite.expression}")
+            rewrite_configurations.append(f"{rewrite.method.value!s} {rewrite.expression}")
         return rewrite_configurations
 
 
@@ -309,18 +309,14 @@ class HaproxyRouteRequirersInformation:
 
         if len(requirers_paths) != len(set(requirers_paths)):
             logger.warning(
-                (
-                    "Requirers defined path(s) that map to multiple backends."
-                    "This can cause unintended behaviours."
-                )
+                "Requirers defined path(s) that map to multiple backends."
+                "This can cause unintended behaviours."
             )
 
         if len(requirers_hostnames) != len(set(requirers_hostnames)):
             logger.warning(
-                (
-                    "Requirers defined hostname(s) that map to multiple backends."
-                    "This can cause unintended behaviours."
-                )
+                "Requirers defined hostname(s) that map to multiple backends."
+                "This can cause unintended behaviours."
             )
         return self
 

@@ -126,9 +126,9 @@ async def get_unit_address(application: Application) -> str:
         The unit address
     """
     unit_ip_address = await get_unit_ip_address(application)
-    url = f"http://{str(unit_ip_address)}"
+    url = f"http://{unit_ip_address!s}"
     if isinstance(unit_ip_address, ipaddress.IPv6Address):
-        url = f"http://[{str(unit_ip_address)}]"
+        url = f"http://[{unit_ip_address!s}]"
     return url
 
 
