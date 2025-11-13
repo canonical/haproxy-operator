@@ -37,9 +37,9 @@ from state.tls import TLSInformation
 
 
 @pytest.fixture(scope="module", name="haproxy_route_tcp_relation_data")
-def haproxy_route_tcp_relation_data_fixture() -> (
-    typing.Callable[[int], HaproxyRouteTcpRequirersData]
-):
+def haproxy_route_tcp_relation_data_fixture() -> typing.Callable[
+    [int], HaproxyRouteTcpRequirersData
+]:
     """Mock systemd lib methods."""
 
     def generate_requirer_data(port: int) -> HaproxyRouteTcpRequirersData:

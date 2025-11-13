@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Unit tests for charm file."""
+
 from unittest.mock import MagicMock
 
 import pytest

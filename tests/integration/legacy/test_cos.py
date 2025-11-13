@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Integration test for haproxy charm."""
+
 from juju.application import Application
 from pytest_operator.plugin import OpsTest
 
