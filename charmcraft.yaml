@@ -57,6 +57,10 @@ requires:
   receive-ca-certs:
     interface: certificate_transfer
     description: Receive a CA certs for haproxy to trust.
+  spoe-auth:
+    interface: spoe-auth
+    description: Relation to provide authentication proxy to HAProxy.
+    limit: 1
 
 provides:
   ingress:
