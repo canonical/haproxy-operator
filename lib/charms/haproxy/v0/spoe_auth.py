@@ -95,6 +95,7 @@ class SpoeAuthCharm(CharmBase):
 
 import json
 import logging
+import re
 from enum import StrEnum
 from typing import Annotated, MutableMapping, Optional, cast
 
@@ -117,10 +118,11 @@ LIBPATCH = 1
 logger = logging.getLogger(__name__)
 SPOE_AUTH_RELATION_NAME = "spoe-auth"
 HAPROXY_CONFIG_INVALID_CHARACTERS = "\n\t#\\'\"\r$ "
-# Definition of a hostname according to RFC 1123
-# https://stackoverflow.com/a/2063247
-HOSTNAME_REGEXP = r"^(?![0-9]+$)(?!-)[a-zA-Z0-9-]{,63}(?<!-)$"
-
+# RFC-1034 and RFC-2181 compliance REGEX for validating FQDNs
+HOSTNAME_REGEX = (
+    r"(?=.{1,253})(?!.*--.*)(?:(?!-)(?![0-9])[a-zA-Z0-9-]"
+    r"{1,63}(?<!-)\.){1,}(?:(?!-)[a-zA-Z0-9-]{1,63}(?<!-))"
+)
 
 def value_contains_invalid_characters(value: Optional[str]) -> Optional[str]:
     """Validate if value contains invalid haproxy config characters.
@@ -139,6 +141,20 @@ def value_contains_invalid_characters(value: Optional[str]) -> Optional[str]:
 
     if [char for char in value if char in HAPROXY_CONFIG_INVALID_CHARACTERS]:
         raise ValueError(f"Relation data contains invalid character(s) {value}")
+    return value
+
+
+def validate_hostname(value: str) -> str:
+    """Validate if value is a valid hostname per RFC 1123.
+
+    Args:
+        value: The value to validate.
+
+    Raises:
+        ValueError: When value is not a valid hostname.
+    """
+    if not re.match(HOSTNAME_REGEX, value):
+        raise ValueError(f"Invalid hostname: {value}")
     return value
 
 
@@ -228,18 +244,20 @@ class _DatabagModel(BaseModel):
         if nest_under:
             databag[nest_under] = self.model_dump_json(
                 by_alias=True,
-                # skip keys whose values are default
-                exclude_defaults=True,
             )
             return databag
 
-        dct = self.model_dump(mode="json", by_alias=True, exclude_defaults=True)
+        dct = self.model_dump(mode="json", by_alias=True)
         databag.update({k: json.dumps(v) for k, v in dct.items()})
         return databag
 
 
 class HaproxyEvent(StrEnum):
-    """Enumeration of HAProxy SPOE events."""
+    """Enumeration of HAProxy SPOE events.
+
+    Attributes:
+        ON_FRONTEND_HTTP_REQUEST: Event triggered on frontend HTTP request.
+    """
 
     ON_FRONTEND_HTTP_REQUEST = "on-frontend-http-request"
 
@@ -280,13 +298,11 @@ class SpoeAuthProviderAppData(_DatabagModel):
     cookie_name: VALIDSTR = Field(
         description="Name of the authentication cookie used by the SPOE agent.",
     )
-    oidc_callback_path: VALIDSTR = Field(
-        description="Path for OIDC callback.",
-        default="/oauth2/callback",
+    oidc_callback_path: Optional[VALIDSTR] = Field(
+        description="Path for OIDC callback.", default="/oauth2/callback"
     )
-    oidc_callback_hostname: str = Field(
+    oidc_callback_hostname: Annotated[str, BeforeValidator(validate_hostname)] = Field(
         description="The hostname HAProxy should route OIDC callbacks to.",
-        pattern=HOSTNAME_REGEXP,
     )
 
 
@@ -304,7 +320,6 @@ class SpoeAuthProvider(Object):
     """SPOE auth interface provider implementation.
 
     Attributes:
-        on: Custom events of the provider.
         relations: Related applications.
     """
 
@@ -449,9 +464,8 @@ class SpoeAuthRequirer(Object):
         self.charm = charm
         self.relation_name = relation_name
 
-        self.framework.observe(
-            self.charm.on[self.relation_name].relation_changed, self._on_relation_changed
-        )
+        self.framework.observe(self.charm.on[self.relation_name].relation_created, self._configure)
+        self.framework.observe(self.charm.on[self.relation_name].relation_changed, self._configure)
         self.framework.observe(
             self.charm.on[self.relation_name].relation_broken, self._on_relation_broken
         )
@@ -466,7 +480,7 @@ class SpoeAuthRequirer(Object):
         relations = self.charm.model.relations[self.relation_name]
         return relations[0] if relations else None
 
-    def _on_relation_changed(self, _: EventBase) -> None:
+    def _configure(self, _: EventBase) -> None:
         """Handle relation changed events."""
         if self.is_available():
             self.on.available.emit()
