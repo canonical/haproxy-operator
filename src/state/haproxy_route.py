@@ -310,13 +310,13 @@ class HaproxyRouteRequirersInformation:
         if len(requirers_paths) != len(set(requirers_paths)):
             logger.warning(
                 "Requirers defined path(s) that map to multiple backends."
-                "This can cause unintended behaviours."
+                "This can cause unintended behaviors."
             )
 
         if len(requirers_hostnames) != len(set(requirers_hostnames)):
             logger.warning(
                 "Requirers defined hostname(s) that map to multiple backends."
-                "This can cause unintended behaviours."
+                "This can cause unintended behaviors."
             )
         return self
 
