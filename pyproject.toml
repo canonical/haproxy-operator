@@ -29,7 +29,7 @@ select = ["E", "W", "F", "C", "N", "R", "D", "H"]
 # Ignore D107 Missing docstring in __init__
 ignore = ["W503", "E501", "D107"]
 # D100, D101, D102, D103: Ignore missing docstrings in tests
-per-file-ignores = ["tests/*:D100,D101,D102,D103,D104,D205,D212,D415"]
+per-file-ignores = ["tests/*:D100,D101,D102,D103,D104,D205,D212,D415", "haproxy_spoe_auth_operator/tests/*:D100,D101,D102,D103,D104,D205,D212,D415"]
 docstring-convention = "google"
 
 [tool.isort]
@@ -46,7 +46,7 @@ namespace_packages = true
 
 [[tool.mypy.overrides]]
 disallow_untyped_defs = false
-module = "tests.*"
+module = ["tests.*", "haproxy_spoe_auth_operator.tests.*"]
 
 [tool.pylint]
 disable = "wrong-import-order"
@@ -74,7 +74,7 @@ extend-ignore = [
 ]
 ignore = ["E501", "D107"]
 extend-exclude = ["__pycache__", "*.egg_info"]
-per-file-ignores = {"tests/*" = ["D100","D101","D102","D103","D104"]}
+per-file-ignores = {"tests/*" = ["D100","D101","D102","D103","D104"], "haproxy_spoe_auth_operator/tests/*" = ["D100","D101","D102","D103","D104"]}
 
 [tool.ruff.mccabe]
 max-complexity = 10
