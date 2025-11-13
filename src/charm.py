@@ -418,7 +418,6 @@ class HAProxyCharm(ops.CharmBase):
             HaproxyRouteIntegrationDataValidationError,
             TLSNotReadyError,
             CharmStateValidationBaseError,
-            HaproxyRouteIntegrationDataValidationError,
         ):
             # We are handling errors here and not re-raising/setting charm status as
             # this method is called during charm initialization

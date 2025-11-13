@@ -33,7 +33,7 @@ class AnyCharm(AnyCharmBase):
 
     def __init__(self, *args, **kwargs):
         # We don't need to include *args and *kwargs in the docstring here.
-        """Initialize the requirer charm."""  # noqa
+        """Initialize the requirer charm."""
         super().__init__(*args, **kwargs)
         self._haproxy_route_tcp = HaproxyRouteTcpRequirer(self, HAPROXY_ROUTE_TCP_RELATION)
         self.framework.observe(self.on.config_changed, self.install)
@@ -77,9 +77,7 @@ class AnyCharm(AnyCharmBase):
     def start_tcp(self):
         """Start server in plaintext mode."""
         # Ignoring subprocess warnings as we're using it with no user inputs
-        subprocess.check_output(
-            ["/bin/bash", "-c", "snap unset ping-pong-tcp tls.cer tls.key"]
-        )  # nosec
+        subprocess.check_output(["/bin/bash", "-c", "snap unset ping-pong-tcp tls.cer tls.key"])  # nosec
         self.unit.status = ops.ActiveStatus("TCP server ready (TCP).")
 
     def update_relation(self):

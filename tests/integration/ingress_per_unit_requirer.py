@@ -3,6 +3,7 @@
 # pylint: disable=duplicate-code,import-error,too-few-public-methods
 
 """Ingress per unit requirer any charm."""
+
 import pathlib
 
 import apt

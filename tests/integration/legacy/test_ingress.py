@@ -42,9 +42,9 @@ async def test_ingress_integration(
     session = Session()
     session.mount("https://", DNSResolverHTTPSAdapter(ingress_url.netloc, str(unit_ip_address)))
 
-    requirer_url = f"http://{str(unit_ip_address)}/{ingress_url.path}ok"
+    requirer_url = f"http://{unit_ip_address!s}/{ingress_url.path}ok"
     if isinstance(unit_ip_address, ipaddress.IPv6Address):
-        requirer_url = f"http://[{str(unit_ip_address)}]/{ingress_url.path}ok"
+        requirer_url = f"http://[{unit_ip_address!s}]/{ingress_url.path}ok"
     response = session.get(
         requirer_url,
         headers={"Host": ingress_url.netloc},
