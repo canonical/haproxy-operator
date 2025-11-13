@@ -116,7 +116,7 @@ LIBAPI = 0
 LIBPATCH = 1
 
 logger = logging.getLogger(__name__)
-SPOE_AUTH_RELATION_NAME = "spoe-auth"
+SPOE_AUTH_DEFAULT_RELATION_NAME = "spoe-auth"
 HAPROXY_CONFIG_INVALID_CHARACTERS = "\n\t#\\'\"\r$ "
 # RFC-1034 and RFC-2181 compliance REGEX for validating FQDNs
 HOSTNAME_REGEX = (
@@ -324,7 +324,7 @@ class SpoeAuthProvider(Object):
         relations: Related applications.
     """
 
-    def __init__(self, charm: CharmBase, relation_name: str = SPOE_AUTH_RELATION_NAME) -> None:
+    def __init__(self, charm: CharmBase, relation_name: str = SPOE_AUTH_DEFAULT_RELATION_NAME) -> None:
         """Initialize the SpoeAuthProvider.
 
         Args:
@@ -454,7 +454,7 @@ class SpoeAuthRequirer(Object):
     # Ignore this for pylance
     on = SpoeAuthRequirerEvents()  # type: ignore
 
-    def __init__(self, charm: CharmBase, relation_name: str = SPOE_AUTH_RELATION_NAME) -> None:
+    def __init__(self, charm: CharmBase, relation_name: str = SPOE_AUTH_DEFAULT_RELATION_NAME) -> None:
         """Initialize the SpoeAuthRequirer.
 
         Args:
