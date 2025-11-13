@@ -14,6 +14,7 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
+  "charmlibs-interfaces-haproxy-spoe-auth",
   "charmlibs-snap==1.0.0",
   "jinja2==3.1.6",
   "ops==3.3.1",
@@ -42,6 +43,9 @@ integration = [
 
 [tool.uv]
 package = false
+
+[tool.uv.sources]
+charmlibs-interfaces-haproxy-spoe-auth = { git = "https://github.com/Thanhphan1147/charmlibs", subdirectory = "interfaces/haproxy_spoe_auth", rev = "feat/add-spoe-auth-lib" }
 
 [tool.ruff]
 target-version = "py310"

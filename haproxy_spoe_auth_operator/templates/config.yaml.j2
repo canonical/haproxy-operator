@@ -1,14 +1,36 @@
-# Copyright 2025 Canonical Ltd.
-# See LICENSE file for licensing details.
-
 # HAProxy SPOE Auth Configuration
 spoe:
-  address: {{ spoe_address }}
+  address: 8081
 
-{% if oauth_enabled %}
+oidc:
+  # The URL to the OpenID Connect provider. This is the URL hosting the discovery endpoint
+  provider_url: {{ issuer_url }}
+
+  # The callback the OIDC server will redirect the user to once authentication is done
+  oauth2_callback_path: /oauth2/callback
+
+  # The path to the logout endpoint to redirect the user to.
+  oauth2_logout_path: /oauth2/logout
+
+  # The path the oidc client uses for a healthcheck
+  oauth2_healthcheck_path: /health
+
+  # The SPOE agent will open a dedicated port for the HTTP server handling the callback. This is the address the server listens on
+  callback_addr: ":5000"
+
+  # Various properties of the cookie holding the ID Token of the user
+  cookie_name: authsession
+  cookie_secure: true
+  # If not set, then uses ID token expire timestamp
+  cookie_ttl_seconds: 3600
+
+  # The secret used to sign the state parameter
+  signature_secret: {{ signature_secret }}
+  # The secret used to encrypt the cookie in order to guarantee the privacy of the data in case of leak
+  encryption_secret: {{ encryption_secret }}
+
 oauth:
   {{ hostname }}:
-    client_id: {{ oauth_data.client_id }}
-    client_secret: {{ oauth_data.client_secret }}
-    provider_url: {{ oauth_data.provider_url }}
-{% endif %}
+    client_id: {{ client_id }}
+    client_secret: {{ client_secret }}
+    redirect_url: https://{{ hostname }}/oauth2/callback

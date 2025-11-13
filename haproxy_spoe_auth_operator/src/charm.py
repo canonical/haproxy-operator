@@ -9,18 +9,25 @@ import logging
 import typing
 
 import ops
+from charmlibs.interfaces.haproxy_spoe_auth import HaproxyEvent, SpoeAuthProvider
+from haproxy_spoe_auth_operator.lib.charms.hydra.v0.oauth import ClientConfig, OAuthRequirer
 from haproxy_spoe_auth_operator.src.haproxy_spoe_auth_service import (
     SpoeAuthService,
     SpoeAuthServiceConfigError,
 )
 
-from state.charm_state import CharmState, InvalidCharmConfigError, ProxyMode
-from state.exception import CharmStateValidationBaseError
-from state.oauth import OAuthInformation
+from .state import CharmState, InvalidCharmConfigError, OauthInformation
 
 logger = logging.getLogger(__name__)
 
 OAUTH_RELATION = "oauth"
+OIDC_CALLBACK_PATH = "/oauth2/callback"
+SPOP_PORT = 8081
+OIDC_CALLBACK_PORT = 5000
+OIDC_SCOPE = "openid email profile"
+VAR_AUTHENTICATED = "sess.auth.is_authenticated"
+VAR_REDIRECT_URL = "sess.auth.redirect_url"
+COOKIE_NAME = "authsession"
 
 
 class HaproxySpoeAuthCharm(ops.CharmBase):
@@ -34,38 +41,47 @@ class HaproxySpoeAuthCharm(ops.CharmBase):
         """
         super().__init__(*args)
         self.service = SpoeAuthService()
-
-        # OAuth requirer will be added here once the library is fetched
-        # Example: self.oauth = OAuthRequirer(self, relation_name=OAUTH_RELATION)
+        self._spoe_auth_provider = SpoeAuthProvider(self, relation_name="spoe-auth")
+        self._oauth = OAuthRequirer(self, relation_name=OAUTH_RELATION)
 
         self.framework.observe(self.on.install, self._reconcile)
         self.framework.observe(self.on.config_changed, self._reconcile)
-        self.framework.observe(
-            self.on[OAUTH_RELATION].relation_changed, self._reconcile
-        )
-        self.framework.observe(
-            self.on[OAUTH_RELATION].relation_broken, self._reconcile
-        )
-
+        self.framework.observe(self._oauth.on.oauth_info_changed, self._reconcile)
+        self.framework.observe(self._oauth.on.oauth_info_removed, self._reconcile)
 
     def _reconcile(self, _: ops.EventBase) -> None:
         """Reconcile the charm state and service configuration."""
         try:
-            charm_state = self._get_charm_state()
-            oauth_info = OAuthInformation.from_charm(self)
+            state = CharmState.from_charm(self)
 
-            self.service.reconcile(charm_state, oauth_info)
+            self._oauth.update_client_config(
+                client_config=ClientConfig(
+                    redirect_uri=f"https://{state.hostname}{OIDC_CALLBACK_PATH}",
+                    scope=OIDC_SCOPE,
+                    grant_types=["authorization_code"],
+                )
+            )
+            oauth_information = OauthInformation.from_charm(self, self._oauth)
+            self._spoe_auth_provider.provide_spoe_auth_requirements(
+                relation=oauth_information.spoe_auth_relation,
+                spop_port=SPOP_PORT,
+                event=HaproxyEvent.ON_FRONTEND_HTTP_REQUEST,
+                oidc_callback_port=OIDC_CALLBACK_PORT,
+                var_authenticated=VAR_AUTHENTICATED,
+                var_redirect_url=VAR_REDIRECT_URL,
+                cookie_name=COOKIE_NAME,
+                oidc_callback_hostname=state.hostname,
+                oidc_callback_path=OIDC_CALLBACK_PATH,
+            )
+            self.service.reconcile(charm_state=state, oauth_information=oauth_information)
+            self.unit.status = ops.ActiveStatus()
 
-        except CharmStateValidationBaseError as exc:
+        except InvalidCharmConfigError as exc:
             logger.exception("Charm state validation failed")
             self.unit.status = ops.BlockedStatus(f"Configuration error: {exc}")
         except SpoeAuthServiceConfigError as exc:
             logger.exception("Service configuration failed")
             self.unit.status = ops.BlockedStatus(f"Service configuration failed: {exc}")
-        except Exception as exc:
-            logger.exception("Unexpected error during reconciliation")
-            self.unit.status = ops.BlockedStatus(f"Unexpected error: {exc}")
-
 
 if __name__ == "__main__":  # pragma: nocover
     ops.main(HaproxySpoeAuthCharm)

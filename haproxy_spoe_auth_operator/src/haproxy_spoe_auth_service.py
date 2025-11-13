@@ -9,8 +9,7 @@ from pathlib import Path
 from charmlibs import snap
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from state.charm_state import CharmState
-from state.oauth import OAuthInformation
+from .state import CharmState, OauthInformation
 
 SNAP_NAME = "haproxy-spoe-auth"
 CONFIG_PATH = Path("/var/snap/haproxy-spoe-auth/current/config.yaml")
@@ -49,43 +48,45 @@ class SpoeAuthService:
         except snap.SnapError as e:
             logger.error("An exception occurred when installing charmcraft. Reason: %s", e.message)
 
-
-    def reconcile(self, charm_state: CharmState, oauth_info: OAuthInformation) -> None:
+    def reconcile(self, charm_state: CharmState, oauth_information: OauthInformation) -> None:
         """Reconcile the service configuration.
 
         Args:
-            charm_state: The current charm state.
-            oauth_info: OAuth integration information.
+            charm_state: The charm state.
+            oauth_information: OAuth integration information.
 
         Raises:
             SpoeAuthServiceConfigError: When configuration fails.
         """
         try:
-            self._render_config(charm_state, oauth_info)
+            self._render_config(charm_state, oauth_information)
             self.haproxy_spoe_auth_snap.restart(reload=True)
         except Exception as exc:
             raise SpoeAuthServiceConfigError(f"Failed to reconcile service: {exc}") from exc
 
-    def _render_config(self, charm_state: CharmState, oauth_info: OAuthInformation) -> None:
+    def _render_config(self, charm_state: CharmState, oauth_information: OauthInformation) -> None:
         """Render the configuration file.
 
         Args:
-            charm_state: The current charm state.
-            oauth_info: OAuth integration information.
+            charm_state: The charm state.
+            oauth_information: OAuth integration information.
         """
         env = Environment(
-            loader=FileSystemLoader(str(self._template_dir)),
+            loader=FileSystemLoader("templates"),
             autoescape=select_autoescape(),
+            keep_trailing_newline=True,
+            trim_blocks=True,
+            lstrip_blocks=True,
         )
         template = env.get_template(CONFIG_TEMPLATE)
-
         config_content = template.render(
-            spoe_address=charm_state.spoe_address,
-            oauth_enabled=oauth_info.oauth_data is not None,
-            oauth_data=oauth_info.oauth_data if oauth_info.oauth_data else {},
+            hostname=charm_state.hostname,
+            issuer_url=oauth_information.issuer_url,
+            client_id=oauth_information.client_id,
+            client_secret=oauth_information.client_secret,
+            signature_secret=charm_state.signature_secret,
+            encryption_secret=charm_state.encryption_secret,
         )
 
         # Ensure parent directory exists
-        CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
         CONFIG_PATH.write_text(config_content, encoding="utf-8")
-        logger.info("Configuration written to %s", CONFIG_PATH)
