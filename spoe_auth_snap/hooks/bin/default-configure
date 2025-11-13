@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+cat << EOF > $SNAP_DATA/config.yaml
+server:
+  # The address the server will listen on
+  addr: :8081
+  # The verbosity of the logs: info or debug
+  log_level: info
+
+# If set, the OpenID Connect authenticator is enabled
+oidc:
+EOF
