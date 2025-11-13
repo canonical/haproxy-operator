@@ -27,4 +27,5 @@ header:
     - 'src/loki_alert_rules/*.rule'
     - 'docs/release-notes/**/*.yaml'
     - '**/*.md.j2'
+    - '**/lib/**'
   comment: on-failure
