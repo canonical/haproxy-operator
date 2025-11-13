@@ -1,6 +1,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+# pylint: disable=duplicate-code
 """SPOE-auth interface library.
 
 ## Getting Started
@@ -44,10 +45,9 @@ class HaproxyCharm(CharmBase):
 
     def _on_spoe_auth_available(self, event):
         # The SPOE auth configuration is available
-        if self.spoe_auth.is_available():
-            application_data = self.spoe_auth.get_provider_application_data()
-            unit_data = self.spoe_auth.get_provider_unit_data()
-            ...
+        application_data = self.spoe_auth.get_provider_application_data()
+        unit_data = self.spoe_auth.get_provider_unit_data()
+        ...
 
     def _on_spoe_auth_removed(self, event):
         # Handle relation broken event
@@ -124,7 +124,8 @@ HOSTNAME_REGEX = (
     r"{1,63}(?<!-)\.){1,}(?:(?!-)[a-zA-Z0-9-]{1,63}(?<!-))"
 )
 
-def value_contains_invalid_characters(value: Optional[str]) -> Optional[str]:
+
+def value_contains_invalid_characters(value: str) -> str:
     """Validate if value contains invalid haproxy config characters.
 
     Args:
@@ -136,9 +137,6 @@ def value_contains_invalid_characters(value: Optional[str]) -> Optional[str]:
     Returns:
         The validated value.
     """
-    if value is None:
-        return value
-
     if [char for char in value if char in HAPROXY_CONFIG_INVALID_CHARACTERS]:
         raise ValueError(f"Relation data contains invalid character(s) {value}")
     return value
@@ -152,6 +150,9 @@ def validate_hostname(value: str) -> str:
 
     Raises:
         ValueError: When value is not a valid hostname.
+
+    Returns:
+        The validated value.
     """
     if not re.match(HOSTNAME_REGEX, value):
         raise ValueError(f"Invalid hostname: {value}")
@@ -298,7 +299,7 @@ class SpoeAuthProviderAppData(_DatabagModel):
     cookie_name: VALIDSTR = Field(
         description="Name of the authentication cookie used by the SPOE agent.",
     )
-    oidc_callback_path: Optional[VALIDSTR] = Field(
+    oidc_callback_path: VALIDSTR = Field(
         description="Path for OIDC callback.", default="/oauth2/callback"
     )
     oidc_callback_hostname: Annotated[str, BeforeValidator(validate_hostname)] = Field(
