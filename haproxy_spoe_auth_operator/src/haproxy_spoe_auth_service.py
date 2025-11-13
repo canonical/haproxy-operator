@@ -6,13 +6,13 @@
 import logging
 from pathlib import Path
 
+from charmlibs import snap
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from state.charm_state import CharmState
 from state.oauth import OAuthInformation
 
 SNAP_NAME = "haproxy-spoe-auth"
-SERVICE_NAME = "haproxy-spoe-auth"
 CONFIG_PATH = Path("/var/snap/haproxy-spoe-auth/current/config.yaml")
 CONFIG_TEMPLATE = "config.yaml.j2"
 
@@ -33,6 +33,8 @@ class SpoeAuthService:
     def __init__(self) -> None:
         """Initialize the service."""
         self._template_dir = Path(__file__).parent.parent / "templates"
+        cache = snap.SnapCache()
+        self.haproxy_spoe_auth_snap = cache[SNAP_NAME]
 
     def install(self) -> None:
         """Install the haproxy-spoe-auth snap.
@@ -41,39 +43,12 @@ class SpoeAuthService:
             SpoeAuthServiceInstallError: When snap installation fails.
         """
         try:
-            # Import here to avoid issues when snap module is not available
-            import subprocess  # nosec B404
+            if not self.haproxy_spoe_auth_snap.present:
+                self.haproxy_spoe_auth_snap.ensure(snap.SnapState.Latest, channel="edege")
+            self.haproxy_spoe_auth_snap.restart(reload=True)
+        except snap.SnapError as e:
+            logger.error("An exception occurred when installing charmcraft. Reason: %s", e.message)
 
-            subprocess.run(  # nosec B603 B607
-                ["snap", "install", SNAP_NAME, "--edge"],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-            logger.info("Successfully installed %s snap", SNAP_NAME)
-        except Exception as exc:
-            raise SpoeAuthServiceInstallError(
-                f"Failed to install {SNAP_NAME} snap: {exc}"
-            ) from exc
-
-    def is_active(self) -> bool:
-        """Check if the service is active.
-
-        Returns:
-            True if the service is running, False otherwise.
-        """
-        try:
-            import subprocess  # nosec B404
-
-            result = subprocess.run(  # nosec B603 B607
-                ["snap", "services", SNAP_NAME],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-            return "active" in result.stdout
-        except Exception:
-            return False
 
     def reconcile(self, charm_state: CharmState, oauth_info: OAuthInformation) -> None:
         """Reconcile the service configuration.
@@ -87,8 +62,7 @@ class SpoeAuthService:
         """
         try:
             self._render_config(charm_state, oauth_info)
-            self._restart_service()
-            logger.info("Successfully reconciled %s service", SERVICE_NAME)
+            self.haproxy_spoe_auth_snap.restart(reload=True)
         except Exception as exc:
             raise SpoeAuthServiceConfigError(f"Failed to reconcile service: {exc}") from exc
 
@@ -115,15 +89,3 @@ class SpoeAuthService:
         CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
         CONFIG_PATH.write_text(config_content, encoding="utf-8")
         logger.info("Configuration written to %s", CONFIG_PATH)
-
-    def _restart_service(self) -> None:
-        """Restart the service."""
-        import subprocess  # nosec B404
-
-        subprocess.run(  # nosec B603 B607
-            ["snap", "restart", SNAP_NAME],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        logger.info("Service %s restarted", SERVICE_NAME)

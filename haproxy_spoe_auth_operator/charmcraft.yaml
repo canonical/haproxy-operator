@@ -47,13 +47,18 @@ requires:
   oauth:
     interface: oauth
     description: OAuth authentication provider integration
+provides:
+  spoe-auth:
+    interface: spoe-auth
+    description: Relation to provide authentication proxy to HAProxy.
+    limit: 1
 
 config:
-  options:
-    spoe-address:
-      default: "127.0.0.1:3000"
-      type: string
-      description: Address for SPOE agent to listen on
+  hostname:
+    type: string
+    description: |
+      Public hostname of the agent. Used to store client credentials
+      and to build the redirect URI
 
 charm-libs:
 - lib: hydra.oauth

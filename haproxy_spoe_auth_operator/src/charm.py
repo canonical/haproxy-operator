@@ -9,12 +9,11 @@ import logging
 import typing
 
 import ops
-
-from spoe_auth_service import (
+from haproxy_spoe_auth_operator.src.haproxy_spoe_auth_service import (
     SpoeAuthService,
     SpoeAuthServiceConfigError,
-    SpoeAuthServiceInstallError,
 )
+
 from state.charm_state import CharmState, InvalidCharmConfigError, ProxyMode
 from state.exception import CharmStateValidationBaseError
 from state.oauth import OAuthInformation
@@ -39,67 +38,23 @@ class HaproxySpoeAuthCharm(ops.CharmBase):
         # OAuth requirer will be added here once the library is fetched
         # Example: self.oauth = OAuthRequirer(self, relation_name=OAUTH_RELATION)
 
-        self.framework.observe(self.on.install, self._on_install)
-        self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on.install, self._reconcile)
+        self.framework.observe(self.on.config_changed, self._reconcile)
         self.framework.observe(
-            self.on[OAUTH_RELATION].relation_changed, self._on_oauth_relation_changed
+            self.on[OAUTH_RELATION].relation_changed, self._reconcile
         )
         self.framework.observe(
-            self.on[OAUTH_RELATION].relation_broken, self._on_oauth_relation_broken
+            self.on[OAUTH_RELATION].relation_broken, self._reconcile
         )
 
-    def _on_install(self, _event: ops.InstallEvent) -> None:
-        """Handle install event.
 
-        Args:
-            _event: The install event.
-        """
-        try:
-            self.service.install()
-            self.unit.status = ops.MaintenanceStatus("Service installed")
-        except SpoeAuthServiceInstallError as exc:
-            logger.exception("Failed to install service")
-            self.unit.status = ops.BlockedStatus(f"Installation failed: {exc}")
-            return
-
-        self._reconcile()
-
-    def _on_config_changed(self, _event: ops.ConfigChangedEvent) -> None:
-        """Handle config changed event.
-
-        Args:
-            _event: The config changed event.
-        """
-        self._reconcile()
-
-    def _on_oauth_relation_changed(self, _event: ops.RelationChangedEvent) -> None:
-        """Handle oauth relation changed event.
-
-        Args:
-            _event: The relation changed event.
-        """
-        self._reconcile()
-
-    def _on_oauth_relation_broken(self, _event: ops.RelationBrokenEvent) -> None:
-        """Handle oauth relation broken event.
-
-        Args:
-            _event: The relation broken event.
-        """
-        self._reconcile()
-
-    def _reconcile(self) -> None:
+    def _reconcile(self, _: ops.EventBase) -> None:
         """Reconcile the charm state and service configuration."""
         try:
             charm_state = self._get_charm_state()
             oauth_info = OAuthInformation.from_charm(self)
 
             self.service.reconcile(charm_state, oauth_info)
-
-            if charm_state.mode == ProxyMode.OAUTH:
-                self.unit.status = ops.ActiveStatus("OAuth authentication enabled")
-            else:
-                self.unit.status = ops.ActiveStatus("Service running without authentication")
 
         except CharmStateValidationBaseError as exc:
             logger.exception("Charm state validation failed")
@@ -110,25 +65,6 @@ class HaproxySpoeAuthCharm(ops.CharmBase):
         except Exception as exc:
             logger.exception("Unexpected error during reconciliation")
             self.unit.status = ops.BlockedStatus(f"Unexpected error: {exc}")
-
-    def _get_charm_state(self) -> CharmState:
-        """Get the current charm state.
-
-        Returns:
-            CharmState: The current charm state.
-
-        Raises:
-            InvalidCharmConfigError: When the charm configuration is invalid.
-        """
-        try:
-            oauth_relation = self.model.get_relation(OAUTH_RELATION)
-            mode = ProxyMode.OAUTH if oauth_relation else ProxyMode.NOAUTH
-
-            spoe_address = self.config.get("spoe-address", "127.0.0.1:3000")
-
-            return CharmState(mode=mode, spoe_address=spoe_address)
-        except Exception as exc:
-            raise InvalidCharmConfigError(f"Invalid charm configuration: {exc}") from exc
 
 
 if __name__ == "__main__":  # pragma: nocover

@@ -7,7 +7,8 @@ spoe:
 
 {% if oauth_enabled %}
 oauth:
-  client_id: {{ oauth_data.client_id }}
-  client_secret: {{ oauth_data.client_secret }}
-  provider_url: {{ oauth_data.provider_url }}
+  {{ hostname }}:
+    client_id: {{ oauth_data.client_id }}
+    client_secret: {{ oauth_data.client_secret }}
+    provider_url: {{ oauth_data.provider_url }}
 {% endif %}

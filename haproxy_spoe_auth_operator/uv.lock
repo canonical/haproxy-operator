@@ -168,6 +168,18 @@ wheels = [
 ]
 
 [[package]]
+name = "charmlibs-snap"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "opentelemetry-api" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fb/19/1d726478bddd55686ab99faa54d5772744c00f36e5ea97479d5f7be9662d/charmlibs_snap-1.0.0.tar.gz", hash = "sha256:eba3cb8cec766d138df732a9ddcb9a902f5d987ecc156c51d3244d1b3f5116e4", size = 29102, upload-time = "2025-09-23T00:47:45.764Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ca/8b/51ebbd3f652db426a6caed0b4762f3a197e99a6113ab568a25cb947a34d6/charmlibs_snap-1.0.0-py3-none-any.whl", hash = "sha256:ea0dd74b75719b8bbfc475e2d1157500cf4872b7cf4ba4e3f792d9aa5726277e", size = 15336, upload-time = "2025-09-23T00:47:44.36Z" },
+]
+
+[[package]]
 name = "charset-normalizer"
 version = "3.4.4"
 source = { registry = "https://pypi.org/simple" }
@@ -391,6 +403,7 @@ name = "haproxy-spoe-auth-operator"
 version = "0.0.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "charmlibs-snap" },
     { name = "jinja2" },
     { name = "ops" },
     { name = "pydantic" },
@@ -429,6 +442,7 @@ unit = [
 
 [package.metadata]
 requires-dist = [
+    { name = "charmlibs-snap", specifier = "==1.0.0" },
     { name = "jinja2", specifier = "==3.1.6" },
     { name = "ops", specifier = "==3.3.1" },
     { name = "pydantic", specifier = "==2.12.4" },
