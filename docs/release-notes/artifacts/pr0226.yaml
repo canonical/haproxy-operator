@@ -9,5 +9,5 @@ changes:
       pr: https://github.com/canonical/haproxy-operator/pull/226
       related_doc: 
       related_issue: 
-    visibility: public
+    visibility: hidden
     highlight: false
