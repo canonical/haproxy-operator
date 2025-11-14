@@ -1,0 +1,14 @@
+schema_version: 1
+changes:
+  - title: Upgraded HAProxy apt package
+    author: gregory-schiano
+    type: minor
+    description: |
+       To fix an issue where the `install` hook was failing,
+       the charm now uses `2.8.5-1ubuntu3.4` of the HAProxy apt package.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/209
+      related_doc: 
+      related_issue: 
+    visibility: public
+    highlight: false

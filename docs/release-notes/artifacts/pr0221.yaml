@@ -1,0 +1,13 @@
+schema_version: 1
+changes:
+  - title: Enabled Allue for integration tests
+    author: swetha1654
+    type: minor
+    description: |
+       Now the integration tests use Allure.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/221
+      related_doc: 
+      related_issue: 
+    visibility: hidden
+    highlight: false
