@@ -1,13 +1,14 @@
 schema_version: 1
 changes:
-  - title: Added security documentation
-    author: yhaliaw
+  - title: Updated the release notes artifact process
+    author: erinecon
     type: minor
     description: |
-       The documentation now contains an explanation page on the risks
-       and best practices for operating the charm.
+       The repository was caught up on change artifacts for past
+       pull requests, and now there's a GitHub workflow to check
+       whether future pull requests include a release notes artifact.
     urls: 
-      pr: https://github.com/canonical/haproxy-operator/pull/201
+      pr: https://github.com/canonical/haproxy-operator/pull/226
       related_doc: 
       related_issue: 
     visibility: hidden
