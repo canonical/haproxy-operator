@@ -134,6 +134,6 @@ class TLSInformation:
         if (
             tls_requirer_integration is None
             or tls_requirer_integration.data.get(charm.app) is None
-        ):
+        ) and not allow_no_certificates:
             logger.error("Relation or relation data not ready.")
             raise TLSNotReadyError("Certificates relation or relation data not ready.")

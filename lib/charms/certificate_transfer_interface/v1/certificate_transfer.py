@@ -124,11 +124,13 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 10
+LIBPATCH = 13
 
 logger = logging.getLogger(__name__)
 
 PYDEPS = ["pydantic"]
+
+IS_PYDANTIC_V1 = int(pydantic.version.VERSION.split(".")[0]) < 2
 
 
 class TLSCertificatesError(Exception):
@@ -139,10 +141,13 @@ class DataValidationError(TLSCertificatesError):
     """Raised when data validation fails."""
 
 
-if int(pydantic.version.VERSION.split(".")[0]) < 2:
+class DatabagModel(pydantic.BaseModel):
+    """Base databag model.
 
-    class DatabagModel(pydantic.BaseModel):  # type: ignore
-        """Base databag model."""
+    Supports both pydantic v1 and v2.
+    """
+
+    if IS_PYDANTIC_V1:
 
         class Config:
             """Pydantic config."""
@@ -155,121 +160,116 @@ if int(pydantic.version.VERSION.split(".")[0]) < 2:
 
         _NEST_UNDER = None
 
-        @classmethod
-        def load(cls, databag: MutableMapping):
-            """Load this model from a Juju databag."""
-            if cls._NEST_UNDER:
-                return cls.parse_obj(json.loads(databag[cls._NEST_UNDER]))
+    model_config = pydantic.ConfigDict(
+        # tolerate additional keys in databag
+        extra="ignore",
+        # Allow instantiating this class by field name (instead of forcing alias).
+        populate_by_name=True,
+        # Custom config key: whether to nest the whole datastructure (as json)
+        # under a field or spread it out at the toplevel.
+        _NEST_UNDER=None,
+    )  # type: ignore
+    """Pydantic config."""
 
-            try:
-                data = {
-                    k: json.loads(v)
-                    for k, v in databag.items()
-                    # Don't attempt to parse model-external values
-                    if k in {f.alias for f in cls.__fields__.values()}
-                }
-            except json.JSONDecodeError as e:
-                msg = f"invalid databag contents: expecting json. {databag}"
-                logger.error(msg)
-                raise DataValidationError(msg) from e
+    @classmethod
+    def load(cls, databag: MutableMapping):
+        """Load this model from a Juju databag."""
+        if IS_PYDANTIC_V1:
+            return cls._load_v1(databag)
+        nest_under = cls.model_config.get("_NEST_UNDER")
+        if nest_under:
+            return cls.model_validate(json.loads(databag[nest_under]))
 
-            try:
-                return cls.parse_raw(json.dumps(data))  # type: ignore
-            except pydantic.ValidationError as e:
-                msg = f"failed to validate databag: {databag}"
-                logger.debug(msg, exc_info=True)
-                raise DataValidationError(msg) from e
+        try:
+            data = {
+                k: json.loads(v)
+                for k, v in databag.items()
+                # Don't attempt to parse model-external values
+                if k in {(f.alias or n) for n, f in cls.model_fields.items()}
+            }
+        except json.JSONDecodeError as e:
+            msg = f"invalid databag contents: expecting json. {databag}"
+            logger.error(msg)
+            raise DataValidationError(msg) from e
 
-        def dump(self, databag: Optional[MutableMapping] = None, clear: bool = True):
-            """Write the contents of this model to Juju databag.
+        try:
+            return cls.model_validate_json(json.dumps(data))
+        except pydantic.ValidationError as e:
+            msg = f"failed to validate databag: {databag}"
+            logger.debug(msg, exc_info=True)
+            raise DataValidationError(msg) from e
 
-            :param databag: the databag to write the data to.
-            :param clear: ensure the databag is cleared before writing it.
-            """
-            if clear and databag:
-                databag.clear()
+    @classmethod
+    def _load_v1(cls, databag: MutableMapping):
+        """Load implementation for pydantic v1."""
+        if cls._NEST_UNDER:
+            return cls.parse_obj(json.loads(databag[cls._NEST_UNDER]))
 
-            if databag is None:
-                databag = {}
+        try:
+            data = {
+                k: json.loads(v)
+                for k, v in databag.items()
+                # Don't attempt to parse model-external values
+                if k in {f.alias for f in cls.__fields__.values()}
+            }
+        except json.JSONDecodeError as e:
+            msg = f"invalid databag contents: expecting json. {databag}"
+            logger.error(msg)
+            raise DataValidationError(msg) from e
 
-            if self._NEST_UNDER:
-                databag[self._NEST_UNDER] = self.json(by_alias=True, exclude_defaults=False)
-                return databag
+        try:
+            return cls.parse_raw(json.dumps(data))  # type: ignore
+        except pydantic.ValidationError as e:
+            msg = f"failed to validate databag: {databag}"
+            logger.debug(msg, exc_info=True)
+            raise DataValidationError(msg) from e
 
-            dct = json.loads(self.json(by_alias=True, exclude_defaults=False))
-            databag.update({k: json.dumps(v) for k, v in dct.items()})
+    def dump(self, databag: Optional[MutableMapping] = None, clear: bool = True):
+        """Write the contents of this model to Juju databag.
 
+        Args:
+            databag: The databag to write to.
+            clear: Whether to clear the databag before writing.
+
+        Returns:
+            MutableMapping: The databag.
+        """
+        if IS_PYDANTIC_V1:
+            return self._dump_v1(databag, clear)
+        if clear and databag:
+            databag.clear()
+
+        if databag is None:
+            databag = {}
+        nest_under = self.model_config.get("_NEST_UNDER")
+        if nest_under:
+            databag[nest_under] = self.model_dump_json(
+                by_alias=True,
+                # skip keys whose values are default
+                exclude_defaults=True,
+            )
             return databag
 
-else:
+        dct = self.model_dump(mode="json", by_alias=True, exclude_defaults=False)
+        databag.update({k: json.dumps(v) for k, v in dct.items()})
+        return databag
 
-    class DatabagModel(pydantic.BaseModel):
-        """Base databag model."""
+    def _dump_v1(self, databag: Optional[MutableMapping] = None, clear: bool = True):
+        """Dump implementation for pydantic v1."""
+        if clear and databag:
+            databag.clear()
 
-        model_config = pydantic.ConfigDict(
-            # tolerate additional keys in databag
-            extra="ignore",
-            # Allow instantiating this class by field name (instead of forcing alias).
-            populate_by_name=True,
-            # Custom config key: whether to nest the whole datastructure (as json)
-            # under a field or spread it out at the toplevel.
-            _NEST_UNDER=None,
-        )  # type: ignore
-        """Pydantic config."""
+        if databag is None:
+            databag = {}
 
-        @classmethod
-        def load(cls, databag: MutableMapping):
-            """Load this model from a Juju databag."""
-            nest_under = cls.model_config.get("_NEST_UNDER")
-            if nest_under:
-                return cls.model_validate(json.loads(databag[nest_under]))
-
-            try:
-                data = {
-                    k: json.loads(v)
-                    for k, v in databag.items()
-                    # Don't attempt to parse model-external values
-                    if k in {(f.alias or n) for n, f in cls.model_fields.items()}
-                }
-            except json.JSONDecodeError as e:
-                msg = f"invalid databag contents: expecting json. {databag}"
-                logger.error(msg)
-                raise DataValidationError(msg) from e
-
-            try:
-                return cls.model_validate_json(json.dumps(data))
-            except pydantic.ValidationError as e:
-                msg = f"failed to validate databag: {databag}"
-                logger.debug(msg, exc_info=True)
-                raise DataValidationError(msg) from e
-
-        def dump(self, databag: Optional[MutableMapping] = None, clear: bool = True):
-            """Write the contents of this model to Juju databag.
-
-            Args:
-                databag: The databag to write to.
-                clear: Whether to clear the databag before writing.
-
-            Returns:
-                MutableMapping: The databag.
-            """
-            if clear and databag:
-                databag.clear()
-
-            if databag is None:
-                databag = {}
-            nest_under = self.model_config.get("_NEST_UNDER")
-            if nest_under:
-                databag[nest_under] = self.model_dump_json(
-                    by_alias=True,
-                    # skip keys whose values are default
-                    exclude_defaults=True,
-                )
-                return databag
-
-            dct = self.model_dump(mode="json", by_alias=True, exclude_defaults=False)
-            databag.update({k: json.dumps(v) for k, v in dct.items()})
+        if self._NEST_UNDER:
+            databag[self._NEST_UNDER] = self.json(by_alias=True, exclude_defaults=False)
             return databag
+
+        dct = json.loads(self.json(by_alias=True, exclude_defaults=False))
+        databag.update({k: json.dumps(v) for k, v in dct.items()})
+
+        return databag
 
 
 class ProviderApplicationData(DatabagModel):
@@ -291,8 +291,8 @@ class ProviderApplicationData(DatabagModel):
     )
 
 
-class _Certificate(pydantic.BaseModel):
-    """Certificate model."""
+class ProviderUnitDataV0(DatabagModel):
+    """Provider Unit databag v0 model."""
 
     ca: str
     certificate: str
@@ -301,12 +301,6 @@ class _Certificate(pydantic.BaseModel):
         description="Version of the interface used in this databag",
         default=0,
     )
-
-
-class ProviderUnitDataV0(DatabagModel):
-    """Provider Unit databag v0 model."""
-
-    certificates: List[_Certificate] = []
 
 
 class RequirerApplicationData(DatabagModel):
@@ -341,12 +335,18 @@ class CertificateTransferProvides(Object):
         if not self.charm.unit.is_leader():
             logger.warning("Only the leader unit can add certificates to this relation")
             return
-        relations = self._get_relevant_relations(relation_id)
+        relations = self._get_active_relations(relation_id)
         if not relations:
-            logger.warning(
-                "At least 1 matching relation ID not found with the relation name '%s'",
-                self.relationship_name,
-            )
+            if relation_id is not None:
+                logger.warning(
+                    "At least 1 matching relation ID not found with the relation name '%s'",
+                    self.relationship_name,
+                )
+            else:
+                logger.debug(
+                    "No active relations found with the relation name '%s'",
+                    self.relationship_name,
+                )
             return
 
         for relation in relations:
@@ -368,12 +368,18 @@ class CertificateTransferProvides(Object):
         if not self.charm.unit.is_leader():
             logger.warning("Only the leader unit can add certificates to this relation")
             return
-        relations = self._get_relevant_relations(relation_id)
+        relations = self._get_active_relations(relation_id)
         if not relations:
-            logger.warning(
-                "At least 1 matching relation ID not found with the relation name '%s'",
-                self.relationship_name,
-            )
+            if relation_id is not None:
+                logger.warning(
+                    "At least 1 matching relation ID not found with the relation name '%s'",
+                    self.relationship_name,
+                )
+            else:
+                logger.debug(
+                    "No active relations found with the relation name '%s'",
+                    self.relationship_name,
+                )
             return
 
         for relation in relations:
@@ -398,12 +404,18 @@ class CertificateTransferProvides(Object):
         if not self.charm.unit.is_leader():
             logger.warning("Only the leader unit can add certificates to this relation")
             return
-        relations = self._get_relevant_relations(relation_id)
+        relations = self._get_active_relations(relation_id)
         if not relations:
-            logger.warning(
-                "At least 1 matching relation ID not found with the relation name '%s'",
-                self.relationship_name,
-            )
+            if relation_id is not None:
+                logger.warning(
+                    "At least 1 matching relation ID not found with the relation name '%s'",
+                    self.relationship_name,
+                )
+            else:
+                logger.debug(
+                    "No active relations found with the relation name '%s'",
+                    self.relationship_name,
+                )
             return
 
         for relation in relations:
@@ -411,8 +423,8 @@ class CertificateTransferProvides(Object):
             existing_data.discard(certificate)
             self._set_relation_data(relation, existing_data)
 
-    def _get_relevant_relations(self, relation_id: Optional[int] = None) -> List[Relation]:
-        """Get the relevant relation if relation_id is given, all relations otherwise."""
+    def _get_active_relations(self, relation_id: Optional[int] = None) -> List[Relation]:
+        """Get the relation if relation_id is given and the relation is active, all active relations otherwise."""
         if relation_id is not None:
             relation = self.model.get_relation(
                 relation_name=self.relationship_name, relation_id=relation_id
@@ -421,7 +433,11 @@ class CertificateTransferProvides(Object):
                 return [relation]
             return []
 
-        return list(self.model.relations[self.relationship_name])
+        return [
+            relation
+            for relation in self.model.relations[self.relationship_name]
+            if relation.active
+        ]
 
     def _set_relation_data(self, relation: Relation, data: Set[str]) -> None:
         """Set the given relation data."""
@@ -452,8 +468,11 @@ class CertificateTransferProvides(Object):
                 )
 
             databag = relation.data[self.model.unit]
-            certificates = [_Certificate(ca=cert, certificate=cert, chain=[cert]) for cert in data]
-            ProviderUnitDataV0(certificates=certificates).dump(databag, True)
+            if data:
+                certificates = list(data)
+                ProviderUnitDataV0(
+                    ca=certificates[0], certificate=certificates[0], chain=certificates
+                ).dump(databag, True)
 
     def _get_relation_data(self, relation: Relation) -> Set[str]:
         """Get the given relation data."""
@@ -463,7 +482,10 @@ class CertificateTransferProvides(Object):
                 return ProviderApplicationData().load(databag).certificates
             else:
                 databag = relation.data[self.model.unit]
-                return {cert.ca for cert in ProviderUnitDataV0().load(databag).certificates}
+                certs = ProviderUnitDataV0.load(databag).chain
+                if certs is None:
+                    return set()
+                return set(certs)
         except DataValidationError as e:
             logger.error(
                 (
@@ -605,7 +627,7 @@ class CertificateTransferRequires(Object):
         Args:
             relation_id: The id of the relation to get the certificates from.
         """
-        relations = self._get_relevant_relations(relation_id)
+        relations = self._get_active_relations(relation_id)
         result = set()
         for relation in relations:
             data = self._get_relation_data(relation)
@@ -628,7 +650,10 @@ class CertificateTransferRequires(Object):
             certificates = ProviderApplicationData().load(databag).certificates
             if not certificates and relation.units:
                 databag = relation.data.get(relation.units.pop(), {})
-                return {cert.ca for cert in ProviderUnitDataV0().load(databag).certificates}
+                certs = ProviderUnitDataV0.load(databag).chain
+                if certs is None:
+                    return set()
+                return set(certs)
             return certificates
         except DataValidationError as e:
             logger.error(
@@ -642,11 +667,15 @@ class CertificateTransferRequires(Object):
             )
             return set()
 
-    def _get_relevant_relations(self, relation_id: Optional[int] = None) -> List[Relation]:
-        """Get the relevant relation if relation_id is given, all relations otherwise."""
+    def _get_active_relations(self, relation_id: Optional[int] = None) -> List[Relation]:
+        """Get the active relation if relation_id is given, all active relations otherwise."""
         if relation_id is not None:
             if relation := self.model.get_relation(
                 relation_name=self.relationship_name, relation_id=relation_id
             ):
                 return [relation]
-        return list(self.model.relations[self.relationship_name])
+        return [
+            relation
+            for relation in self.model.relations[self.relationship_name]
+            if relation.active
+        ]
