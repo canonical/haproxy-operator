@@ -1,11 +1,32 @@
 # Contributing
 
+## Developing
+
 To make contributions to this charm, you'll need a working [development setup](https://documentation.ubuntu.com/juju/3.6/howto/manage-your-juju-deployment/set-up-your-juju-deployment-local-testing-and-development/).
 
-You can create an environment for development with `tox`:
+The code for this charm can be downloaded as follows:
+
+```
+git clone https://github.com/canonical/haproxy-operator
+```
+
+Make sure to install [uv](https://docs.astral.sh/uv/), for example:
+
+```sh
+sudo snap install astral-uv --classic
+```
+
+Then install `tox` with extensions, as well as a range of Python versions:
+
+```sh
+uv tool install tox --with tox-uv
+uv tool update-shell
+```
+
+To create an environment for development, use:
 
 ```shell
-tox devenv -e integration
+uv sync --all-groups
 source venv/bin/activate
 ```
 
