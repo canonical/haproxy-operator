@@ -4,8 +4,9 @@
 """haproxy-spoe-auth-operator charm state."""
 
 import logging
-import typing
 import secrets
+import typing
+
 import ops
 from pydantic import Field, ValidationError
 from pydantic.dataclasses import dataclass

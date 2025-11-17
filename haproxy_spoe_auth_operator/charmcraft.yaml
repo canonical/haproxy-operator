@@ -57,11 +57,12 @@ provides:
     optional: false
 
 config:
-  hostname:
-    type: string
-    description: |
-      Public hostname of the agent. Used to store client credentials
-      and to build the redirect URI
+  options:
+    hostname:
+      type: string
+      description: |
+        Public hostname of the agent. Used to store client credentials
+        and to build the redirect URI
 
 charm-libs:
 - lib: hydra.oauth

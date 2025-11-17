@@ -3,44 +3,73 @@
 
 """Integration test fixtures for haproxy-spoe-auth-operator."""
 
+import logging
 import pathlib
+import typing
 
 import jubilant
 import pytest
+import yaml
+
+logger = logging.getLogger(__name__)
+
+JUJU_WAIT_TIMEOUT = 10 * 60  # 10 minutes
 
 
-@pytest.fixture(name="juju", scope="module")
-def fixture_juju() -> jubilant.Juju:
-    """Create a Juju instance for integration testing.
-
-    Returns:
-        A Juju instance.
-    """
-    return jubilant.Juju(model_config={"logging-config": "<root>=INFO"})
+@pytest.fixture(scope="session", name="charm")
+def charm_fixture(pytestconfig: pytest.Config):
+    """Pytest fixture that packs the charm and returns the filename, or --charm-file if set."""
+    charm = pytestconfig.getoption("--charm-file")
+    assert charm, "--charm-file must be set"
+    return charm
 
 
-@pytest.fixture(name="charm_path", scope="module")
-def fixture_charm_path() -> str:
-    """Return the path to the charm directory.
+@pytest.fixture(scope="module", name="juju")
+def juju_fixture(request: pytest.FixtureRequest):
+    """Pytest fixture that wraps :meth:`jubilant.with_model`."""
 
-    Returns:
-        Path to the charm directory.
-    """
-    return str(pathlib.Path(__file__).parent.parent.parent)
+    def show_debug_log(juju: jubilant.Juju):
+        """Show the debug log if tests failed.
+
+        Args:
+            juju: Jubilant juju instance.
+        """
+        if request.session.testsfailed:
+            log = juju.debug_log(limit=1000)
+            print(log, end="")
+
+    model = request.config.getoption("--model")
+    if model:
+        juju = jubilant.Juju(model=model)
+        juju.wait_timeout = JUJU_WAIT_TIMEOUT
+        yield juju
+        show_debug_log(juju)
+        return
+
+    keep_models = typing.cast(bool, request.config.getoption("--keep-models"))
+    with jubilant.temp_model(keep=keep_models) as juju:
+        juju.wait_timeout = JUJU_WAIT_TIMEOUT
+        yield juju
 
 
-@pytest.fixture(name="application", scope="module")
-def fixture_application(juju: jubilant.Juju, charm_path: str) -> str:
-    """Deploy the haproxy-spoe-auth charm.
+@pytest.fixture(scope="module", name="application")
+def application_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju, charm: str):
+    """Deploy the haproxy application.
 
     Args:
-        juju: The Juju instance.
-        charm_path: Path to the charm.
+        juju: Jubilant juju fixture.
+        charm_file: Path to the packed charm file.
 
     Returns:
-        The application name.
+        The haproxy app name.
     """
-    app_name = "haproxy-spoe-auth"
-    juju.deploy(charm_path, app_name)
-    juju.wait(lambda status: jubilant.all_active(status, app_name))
+    metadata = yaml.safe_load(pathlib.Path("./charmcraft.yaml").read_text(encoding="UTF-8"))
+    app_name = metadata["name"]
+    if pytestconfig.getoption("--no-deploy") and app_name in juju.status().apps:
+        return app_name
+    juju.deploy(
+        charm=charm,
+        app=app_name,
+        base="ubuntu@24.04",
+    )
     return app_name

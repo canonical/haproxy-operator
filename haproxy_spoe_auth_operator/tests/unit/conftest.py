@@ -5,64 +5,25 @@
 
 from unittest.mock import patch
 
-import ops.testing
 import pytest
+from haproxy_spoe_auth_operator.src.charm import HaproxySpoeAuthCharm
+from ops.testing import Context
 
 
-@pytest.fixture(name="context")
-def fixture_context() -> ops.testing.Context:
-    """Create a testing context for the charm.
+@pytest.fixture(name="context_with_install_mock")
+def context_with_install_mock_fixture():
+    """Context relation fixture.
 
-    Returns:
-        A Context object for testing.
-    """
-    from charm import HaproxySpoeAuthCharm
-
-    return ops.testing.Context(
-        HaproxySpoeAuthCharm,
-        meta={
-            "name": "haproxy-spoe-auth",
-            "requires": {
-                "oauth": {"interface": "oauth"},
-            },
-        },
-        config={
-            "options": {
-                "spoe-address": {
-                    "default": "127.0.0.1:3000",
-                    "type": "string",
-                }
-            }
-        },
-    )
-
-
-@pytest.fixture(name="base_state")
-def fixture_base_state() -> dict:
-    """Create a base state for testing.
-
-    Returns:
-        A dictionary representing the base state.
-    """
-    return {
-        "config": {"spoe-address": "127.0.0.1:3000"},
-    }
-
-
-@pytest.fixture(name="context_with_mocks")
-def fixture_context_with_mocks(
-    context: ops.testing.Context,
-):  # type: ignore[misc]
-    """Create a context with mocked service methods.
-
-    Args:
-        context: The testing context.
-
-    Yields:
-        A tuple of the context and mocked methods.
+    Yield: The modeled haproxy-peers relation.
     """
     with (
-        patch("charm.SpoeAuthService.install") as install_mock,
-        patch("charm.SpoeAuthService.reconcile") as reconcile_mock,
+        patch(
+            "haproxy_spoe_auth_operator.src.haproxy_spoe_auth_service.SpoeAuthService.install"
+        ) as install_mock,
     ):
-        yield context, (install_mock, reconcile_mock)
+        yield (
+            Context(
+                charm_type=HaproxySpoeAuthCharm,
+            ),
+            (install_mock,),
+        )
