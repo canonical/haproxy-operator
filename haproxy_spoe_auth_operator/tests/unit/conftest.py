@@ -18,9 +18,7 @@ def context_with_install_mock_fixture():
     Yield: The modeled haproxy-peers relation.
     """
     with (
-        patch(
-            "haproxy_spoe_auth_service.SpoeAuthService.install"
-        ) as install_mock,
+        patch("haproxy_spoe_auth_service.SpoeAuthService.install") as install_mock,
     ):
         yield (
             Context(
