@@ -19,12 +19,12 @@ def context_with_install_mock_fixture():
     """
     with (
         patch(
-            "haproxy_spoe_auth_operator.src.haproxy_spoe_auth_service.SpoeAuthService.install"
+            "haproxy_spoe_auth_service.SpoeAuthService.install"
         ) as install_mock,
     ):
         yield (
             Context(
                 charm_type=HaproxySpoeAuthCharm,
             ),
-            (install_mock,),
+            install_mock,
         )

@@ -15,6 +15,7 @@ from charms.hydra.v0.oauth import ClientConfig, OAuthRequirer
 from haproxy_spoe_auth_service import (
     SpoeAuthService,
     SpoeAuthServiceConfigError,
+    SpoeAuthServiceInstallError
 )
 from state import CharmState, InvalidCharmConfigError, OauthInformation
 
@@ -53,6 +54,7 @@ class HaproxySpoeAuthCharm(ops.CharmBase):
     def _reconcile(self, _: ops.EventBase) -> None:
         """Reconcile the charm state and service configuration."""
         try:
+            self.service.install()
             state = CharmState.from_charm(self)
 
             self._oauth.update_client_config(
@@ -83,8 +85,8 @@ class HaproxySpoeAuthCharm(ops.CharmBase):
         except InvalidCharmConfigError as exc:
             logger.exception("Charm state validation failed")
             self.unit.status = ops.BlockedStatus(f"Configuration error: {exc}")
-        except SpoeAuthServiceConfigError as exc:
-            logger.exception("Service configuration failed")
+        except (SpoeAuthServiceInstallError, SpoeAuthServiceConfigError) as exc:
+            logger.exception("Error configuring the haproxy-spoe-auth service.")
             self.unit.status = ops.BlockedStatus(f"Service configuration failed: {exc}")
 
 
