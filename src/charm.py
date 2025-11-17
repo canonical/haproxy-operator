@@ -58,6 +58,7 @@ from state.haproxy_route import (
 )
 from state.ingress import IngressRequirersInformation
 from state.ingress_per_unit import IngressPerUnitRequirersInformation
+from state.spoe_auth import SPOE_AUTH_RELATION, SpoeAuthInformation
 from state.tls import TLSInformation, TLSNotReadyError
 from state.validation import validate_config_and_tls
 from tls_relation import TLSRelationService
@@ -183,6 +184,12 @@ class HAProxyCharm(ops.CharmBase):
         )
         self.framework.observe(
             self.haproxy_route_tcp_provider.on.data_removed, self._on_config_changed
+        )
+        self.framework.observe(
+            self.on[SPOE_AUTH_RELATION].relation_changed, self._on_config_changed
+        )
+        self.framework.observe(
+            self.on[SPOE_AUTH_RELATION].relation_broken, self._on_config_changed
         )
         self.framework.observe(
             self.on.get_proxied_endpoints_action, self._on_get_proxied_endpoints_action
@@ -346,8 +353,16 @@ class HAProxyCharm(ops.CharmBase):
         )
         tls_information = TLSInformation.from_charm(self, self.certificates, allow_no_certificates)
         self._tls.certificate_available(tls_information)
+        
+        # Get SPOE authentication information
+        spoe_auth_info = SpoeAuthInformation.from_charm(self)
+        
         self.haproxy_service.reconcile_haproxy_route(
-            charm_state, haproxy_route_requirers_information
+            charm_state,
+            haproxy_route_requirers_information,
+            spoe_auth_enabled=spoe_auth_info.enabled,
+            spoe_auth_agent_address=spoe_auth_info.agent_address or "",
+            spoe_auth_agent_port=spoe_auth_info.agent_port or 0,
         )
         self.unit.set_ports(
             80,

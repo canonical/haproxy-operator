@@ -54,6 +54,8 @@ HAPROXY_DEFAULT_CONFIG_TEMPLATE = "haproxy.cfg.j2"
 HAPROXY_CERTS_DIR = Path("/var/lib/haproxy/certs")
 HAPROXY_CAS_DIR = Path("/var/lib/haproxy/cas")
 HAPROXY_CAS_FILE = Path(HAPROXY_CAS_DIR / "cas.pem")
+HAPROXY_SPOE_CONFIG = Path(HAPROXY_CONFIG_DIR / "spoe_auth.conf")
+HAPROXY_SPOE_CONFIG_TEMPLATE = "spoe_auth.conf.j2"
 
 logger = logging.getLogger()
 
@@ -148,12 +150,18 @@ class HAProxyService:
         self,
         charm_state: CharmState,
         haproxy_route_requirers_information: HaproxyRouteRequirersInformation,
+        spoe_auth_enabled: bool = False,
+        spoe_auth_agent_address: str = "",
+        spoe_auth_agent_port: int = 0,
     ) -> None:
         """Render the haproxy config for haproxy-route.
 
         Args:
             charm_state: The charm state component.
             haproxy_route_requirers_information: HaproxyRouteRequirersInformation state component.
+            spoe_auth_enabled: Whether SPOE authentication is enabled.
+            spoe_auth_agent_address: Address of the SPOE authentication agent.
+            spoe_auth_agent_port: Port of the SPOE authentication agent.
         """
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
@@ -163,7 +171,16 @@ class HAProxyService:
             "peer_units_address": haproxy_route_requirers_information.peers,
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
             "haproxy_cas_file": HAPROXY_CAS_FILE,
+            "spoe_auth_enabled": spoe_auth_enabled,
+            "spoe_config_path": HAPROXY_SPOE_CONFIG,
+            "spoe_auth_agent_address": spoe_auth_agent_address,
+            "spoe_auth_agent_port": spoe_auth_agent_port,
         }
+        
+        # Render SPOE configuration if enabled
+        if spoe_auth_enabled and spoe_auth_agent_address and spoe_auth_agent_port:
+            self._render_spoe_config(haproxy_route_requirers_information.backends)
+        
         template = (
             HAPROXY_ROUTE_TCP_CONFIG_TEMPLATE
             if haproxy_route_requirers_information.tcp_endpoints
@@ -237,6 +254,24 @@ class HAProxyService:
                 exc.stderr.decode(),
             )
             raise HaproxyValidateConfigError("Failed validating the HAProxy config.") from exc
+
+    def _render_spoe_config(self, backends: list) -> None:
+        """Render the SPOE configuration file.
+
+        Args:
+            backends: List of backend configurations.
+        """
+        env = Environment(
+            loader=FileSystemLoader("templates"),
+            autoescape=select_autoescape(),
+            keep_trailing_newline=True,
+            trim_blocks=True,
+            lstrip_blocks=True,
+        )
+        template = env.get_template(HAPROXY_SPOE_CONFIG_TEMPLATE)
+        context = {"backends": backends}
+        rendered = template.render(context)
+        render_file(HAPROXY_SPOE_CONFIG, rendered, 0o644)
 
 
 def render_file(path: Path, content: str, mode: int) -> None:

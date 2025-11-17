@@ -7,6 +7,10 @@ frontend haproxy
     bind [::]:443 v4v6 ssl crt {{ haproxy_crt_dir }}
     # Redirect HTTP to HTTPS
     http-request redirect scheme https unless { ssl_fc }
+{% if spoe_auth_enabled %}
+    # SPOE filter for authentication
+    filter spoe engine haproxy-spoe-auth config {{ spoe_config_path }}
+{% endif %}
 {% endif %}
 
 {% for backend in backends %}
@@ -35,6 +39,10 @@ backend {{ backend.backend_name }}
     balance {{ backend.load_balancing_configuration }}
 {% if backend.consistent_hashing %}
     hash-type consistent
+{% endif %}
+{% if spoe_auth_enabled %}
+    # Set backend prefix for SPOE authentication
+    http-request set-var(txn.backend_prefix) str({{ backend.backend_name }})
 {% endif %}
     timeout server {{ backend.application_data.timeout.server }}s
     timeout connect {{ backend.application_data.timeout.connect }}s
@@ -75,6 +83,15 @@ backend {{ backend.backend_name }}
     server {{ server.server_name }} {{ server.address }}:{{ server.port }}{% if server.check %} check inter {{ server.check.interval }}s rise {{ server.check.rise }} fall {{ server.check.fall }}{% endif +%}{% if server.protocol == "https" %} ssl ca-file {{ haproxy_cas_file }}{% endif +%}
 {% endfor %}
 {% endfor %}
+
+{% if spoe_auth_enabled %}
+# SPOE backend for authentication
+backend spoe-auth-backend
+    mode tcp
+    timeout connect 5s
+    timeout server 3m
+    server spoe-auth-server {{ spoe_auth_agent_address }}:{{ spoe_auth_agent_port }}
+{% endif %}
 
 {% block haproxy_route_tcp %}{% endblock %}
 {% endblock %}
