@@ -10,7 +10,7 @@ import typing
 
 import ops
 from charmlibs.interfaces.haproxy_spoe_auth import HaproxyEvent, SpoeAuthProvider
-from haproxy_spoe_auth_operator.lib.charms.hydra.v0.oauth import ClientConfig, OAuthRequirer
+from charms.hydra.v0.oauth import ClientConfig, OAuthRequirer
 from haproxy_spoe_auth_operator.src.haproxy_spoe_auth_service import (
     SpoeAuthService,
     SpoeAuthServiceConfigError,
@@ -82,6 +82,7 @@ class HaproxySpoeAuthCharm(ops.CharmBase):
         except SpoeAuthServiceConfigError as exc:
             logger.exception("Service configuration failed")
             self.unit.status = ops.BlockedStatus(f"Service configuration failed: {exc}")
+
 
 if __name__ == "__main__":  # pragma: nocover
     ops.main(HaproxySpoeAuthCharm)

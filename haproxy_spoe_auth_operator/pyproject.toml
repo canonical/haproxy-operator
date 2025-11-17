@@ -3,7 +3,7 @@
 
 [project]
 name = "haproxy-spoe-auth-operator"
-version = "0.0.0"
+version = "0.0.1"
 description = "HAProxy SPOE authentication agent"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -17,29 +17,18 @@ dependencies = [
   "charmlibs-interfaces-haproxy-spoe-auth",
   "charmlibs-snap==1.0.0",
   "jinja2==3.1.6",
+  "jsonschema==4.25.1",
   "ops==3.3.1",
   "pydantic==2.12.4",
 ]
 
 [dependency-groups]
-fmt = [ "ruff" ]
-lint = [
-  "codespell",
-  "mypy",
-  "ops[testing]",
-  "pytest",
-  "ruff",
-  "types-pyyaml",
-]
-unit = [ "coverage[toml]", "ops[testing]", "pytest" ]
-coverage-report = [ "coverage[toml]", "pytest" ]
-static = [ "bandit[toml]" ]
-integration = [
-  "jubilant==1.1.1",
-  "juju==3.6.1.0",
-  "pytest",
-  "pytest-asyncio",
-]
+fmt = ["ruff"]
+lint = ["codespell", "mypy", "ops[testing]", "pytest", "ruff", "types-pyyaml"]
+unit = ["coverage[toml]", "ops[testing]", "pytest"]
+coverage-report = ["coverage[toml]", "pytest"]
+static = ["bandit[toml]"]
+integration = ["jubilant==1.1.1", "juju==3.6.1.0", "pytest", "pytest-asyncio"]
 
 [tool.uv]
 package = false
@@ -51,7 +40,23 @@ charmlibs-interfaces-haproxy-spoe-auth = { git = "https://github.com/Thanhphan11
 target-version = "py310"
 line-length = 99
 
-lint.select = [ "A", "B", "C", "CPY", "D", "E", "F", "I", "N", "RUF", "S", "SIM", "TC", "UP", "W" ]
+lint.select = [
+  "A",
+  "B",
+  "C",
+  "CPY",
+  "D",
+  "E",
+  "F",
+  "I",
+  "N",
+  "RUF",
+  "S",
+  "SIM",
+  "TC",
+  "UP",
+  "W",
+]
 lint.ignore = [
   "B904",
   "D107",
@@ -78,7 +83,18 @@ lint.ignore = [
   "UP035",
   "UP045",
 ]
-lint.per-file-ignores."tests/*" = [ "B011", "D100", "D101", "D102", "D103", "D104", "D212", "D415", "D417", "S" ]
+lint.per-file-ignores."tests/*" = [
+  "B011",
+  "D100",
+  "D101",
+  "D102",
+  "D103",
+  "D104",
+  "D212",
+  "D415",
+  "D417",
+  "S",
+]
 lint.flake8-copyright.author = "Canonical Ltd."
 lint.flake8-copyright.min-file-size = 1
 lint.flake8-copyright.notice-rgx = "Copyright\\s\\d{4}([-,]\\d{4})*\\s+"
@@ -104,13 +120,14 @@ disallow_untyped_defs = true
 explicit_package_bases = true
 ignore_missing_imports = true
 namespace_packages = true
+follow_imports = "skip"
 
 [[tool.mypy.overrides]]
 disallow_untyped_defs = false
 module = "tests.*"
 
 [tool.bandit]
-exclude_dirs = [ "/venv/" ]
+exclude_dirs = ["/venv/"]
 
 [tool.bandit.assert_used]
-skips = [ "*/*test.py", "*/test_*.py", "*tests/*.py" ]
+skips = ["*/*test.py", "*/test_*.py", "*tests/*.py"]

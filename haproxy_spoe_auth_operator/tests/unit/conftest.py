@@ -6,8 +6,9 @@
 from unittest.mock import patch
 
 import pytest
-from haproxy_spoe_auth_operator.src.charm import HaproxySpoeAuthCharm
 from ops.testing import Context
+
+from charm import HaproxySpoeAuthCharm
 
 
 @pytest.fixture(name="context_with_install_mock")
