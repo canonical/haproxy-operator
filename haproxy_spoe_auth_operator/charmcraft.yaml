@@ -47,11 +47,14 @@ requires:
   oauth:
     interface: oauth
     description: OAuth authentication provider integration
+    limit: 1
+    optional: false
 provides:
   spoe-auth:
     interface: spoe-auth
     description: Relation to provide authentication proxy to HAProxy.
     limit: 1
+    optional: false
 
 config:
   hostname:
