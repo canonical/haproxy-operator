@@ -11,7 +11,8 @@ import typing
 import ops
 from charmlibs.interfaces.haproxy_spoe_auth import HaproxyEvent, SpoeAuthProvider
 from charms.hydra.v0.oauth import ClientConfig, OAuthRequirer
-from haproxy_spoe_auth_operator.src.haproxy_spoe_auth_service import (
+
+from haproxy_spoe_auth_service import (
     SpoeAuthService,
     SpoeAuthServiceConfigError,
 )
