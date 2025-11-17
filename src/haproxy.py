@@ -176,11 +176,11 @@ class HAProxyService:
             "spoe_auth_agent_address": spoe_auth_agent_address,
             "spoe_auth_agent_port": spoe_auth_agent_port,
         }
-        
+
         # Render SPOE configuration if enabled
         if spoe_auth_enabled and spoe_auth_agent_address and spoe_auth_agent_port:
             self._render_spoe_config(haproxy_route_requirers_information.backends)
-        
+
         template = (
             HAPROXY_ROUTE_TCP_CONFIG_TEMPLATE
             if haproxy_route_requirers_information.tcp_endpoints

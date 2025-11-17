@@ -53,13 +53,11 @@ class SpoeAuthInformation:
             unit_data = relation.data[unit]
             agent_address = unit_data.get("agent-address")
             agent_port_str = unit_data.get("agent-port")
-            
+
             if agent_address and agent_port_str:
                 try:
                     agent_port = int(agent_port_str)
-                    logger.info(
-                        "SPOE auth agent configured at %s:%s", agent_address, agent_port
-                    )
+                    logger.info("SPOE auth agent configured at %s:%s", agent_address, agent_port)
                     return cls(
                         enabled=True,
                         agent_address=agent_address,

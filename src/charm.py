@@ -353,10 +353,10 @@ class HAProxyCharm(ops.CharmBase):
         )
         tls_information = TLSInformation.from_charm(self, self.certificates, allow_no_certificates)
         self._tls.certificate_available(tls_information)
-        
+
         # Get SPOE authentication information
         spoe_auth_info = SpoeAuthInformation.from_charm(self)
-        
+
         self.haproxy_service.reconcile_haproxy_route(
             charm_state,
             haproxy_route_requirers_information,
