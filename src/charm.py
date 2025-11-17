@@ -550,10 +550,10 @@ class HAProxyCharm(ops.CharmBase):
         """Get the current unit's address.
 
         Returns:
-            Optional[str]: The unit's address from juju-info binding,
+            Optional[str]: The unit's address from haproxy-peers binding,
                 or None if the address cannot be fetched
         """
-        network_binding = self.model.get_binding("juju-info")
+        network_binding = self.model.get_binding("haproxy-peers")
         if (
             network_binding is not None
             and (bind_address := network_binding.network.bind_address) is not None
