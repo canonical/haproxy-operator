@@ -18,3 +18,13 @@ jobs:
     needs:
       - integration-tests
     uses: canonical/operator-workflows/.github/workflows/allure_report.yaml@main
+  haproxy-spoe-auth-operator:
+    name: Integration tests for the haproxy-spoe-auth-operator charm
+    uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+    secrets: inherit
+    with:
+      juju-channel: '3/stable'
+      provider: lxd
+      working-directory: ./haproxy_spoe_auth_operator
+      with-uv: True
+      modules: '["test_charm.py",]'
