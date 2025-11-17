@@ -15,7 +15,7 @@ from charms.hydra.v0.oauth import ClientConfig, OAuthRequirer
 from haproxy_spoe_auth_service import (
     SpoeAuthService,
     SpoeAuthServiceConfigError,
-    SpoeAuthServiceInstallError
+    SpoeAuthServiceInstallError,
 )
 from state import CharmState, InvalidCharmConfigError, OauthInformation
 
