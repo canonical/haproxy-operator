@@ -360,9 +360,7 @@ class HAProxyCharm(ops.CharmBase):
         self.haproxy_service.reconcile_haproxy_route(
             charm_state,
             haproxy_route_requirers_information,
-            spoe_auth_enabled=spoe_auth_info.enabled,
-            spoe_auth_agent_address=spoe_auth_info.agent_address or "",
-            spoe_auth_agent_port=spoe_auth_info.agent_port or 0,
+            spoe_auth_info=spoe_auth_info if spoe_auth_info.enabled else None,
         )
         self.unit.set_ports(
             80,

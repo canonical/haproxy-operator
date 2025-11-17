@@ -7,9 +7,19 @@ frontend haproxy
     bind [::]:443 v4v6 ssl crt {{ haproxy_crt_dir }}
     # Redirect HTTP to HTTPS
     http-request redirect scheme https unless { ssl_fc }
-{% if spoe_auth_enabled %}
-    # SPOE filter for authentication
-    filter spoe engine haproxy-spoe-auth config {{ spoe_config_path }}
+{% if spoe_auth_info and spoe_auth_info.enabled %}
+
+    # Immediately forward OIDC responses to the callback URL
+    acl oidc_callback_path path_beg -i {{ spoe_auth_info.oidc_callback_path }}
+    acl oidc_callback_host req.hdr(Host) -m str {{ spoe_auth_info.oidc_callback_hostname }}
+    use_backend spoe_oidc_callback if oidc_callback_path oidc_callback_host
+
+    # Call the SPOE agent
+    filter spoe engine spoe-auth config {{ spoe_auth_info.spoe_config_path }}
+
+    # Fetch the authenticated flag set with the SPOP response, redirect to IDP if not authenticated
+    acl authenticated var({{ spoe_auth_info.var_authenticated }}) -m bool
+    use_backend backend_redirect if !authenticated
 {% endif %}
 {% endif %}
 
@@ -39,10 +49,6 @@ backend {{ backend.backend_name }}
     balance {{ backend.load_balancing_configuration }}
 {% if backend.consistent_hashing %}
     hash-type consistent
-{% endif %}
-{% if spoe_auth_enabled %}
-    # Set backend prefix for SPOE authentication
-    http-request set-var(txn.backend_prefix) str({{ backend.backend_name }})
 {% endif %}
     timeout server {{ backend.application_data.timeout.server }}s
     timeout connect {{ backend.application_data.timeout.connect }}s
@@ -84,13 +90,27 @@ backend {{ backend.backend_name }}
 {% endfor %}
 {% endfor %}
 
-{% if spoe_auth_enabled %}
-# SPOE backend for authentication
-backend spoe-auth-backend
+{% if spoe_auth_info and spoe_auth_info.enabled %}
+# SPOE redirect backend
+backend backend_redirect
+    mode http
+    balance roundrobin
+    http-request redirect location %[var({{ spoe_auth_info.var_redirect_url }})]
+
+# SPOE OIDC callback backend
+backend spoe_oidc_callback
+{% for agent in spoe_auth_info.agents %}
+    server {{ agent.name }} {{ agent.address }}:{{ agent.oidc_callback_port }} check
+{% endfor %}
+
+# SPOP authentication backend
+backend spop_auth
     mode tcp
-    timeout connect 5s
-    timeout server 3m
-    server spoe-auth-server {{ spoe_auth_agent_address }}:{{ spoe_auth_agent_port }}
+    balance roundrobin
+    option spop-check
+{% for agent in spoe_auth_info.agents %}
+    server {{ agent.name }} {{ agent.address }}:{{ agent.spop_port }} check
+{% endfor %}
 {% endif %}
 
 {% block haproxy_route_tcp %}{% endblock %}
