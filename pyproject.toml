@@ -16,12 +16,12 @@ classifiers = [
 dependencies = [
   "cosl==1.3.1",
   "cryptography==46.0.3",
-  "haproxy-spoe-auth @ git+https://github.com/Thanhphan1147/charmlibs@feat/add-spoe-auth-lib#subdirectory=interfaces/haproxy_spoe_auth",
+  "charmlibs-interfaces-haproxy-spoe-auth @ git+https://github.com/Thanhphan1147/charmlibs@feat/add-spoe-auth-lib#subdirectory=interfaces/haproxy_spoe_auth",
   "interface-hacluster @ git+https://github.com/charmed-kubernetes/charm-interface-hacluster@1.32+ck2",
   "jsonschema==4.25.1",
   "opentelemetry-api==1.38",
   "ops==3.3.1",
-  "pydantic==2.12.2",
+  "pydantic==2.12.4",
 ]
 
 [dependency-groups]
