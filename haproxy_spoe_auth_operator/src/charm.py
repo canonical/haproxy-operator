@@ -16,8 +16,7 @@ from haproxy_spoe_auth_service import (
     SpoeAuthService,
     SpoeAuthServiceConfigError,
 )
-
-from .state import CharmState, InvalidCharmConfigError, OauthInformation
+from state import CharmState, InvalidCharmConfigError, OauthInformation
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +28,7 @@ OIDC_SCOPE = "openid email profile"
 VAR_AUTHENTICATED = "sess.auth.is_authenticated"
 VAR_REDIRECT_URL = "sess.auth.redirect_url"
 COOKIE_NAME = "authsession"
+SPOE_AUTH_RELATION = "spoe-auth"
 
 
 class HaproxySpoeAuthCharm(ops.CharmBase):
@@ -42,7 +42,7 @@ class HaproxySpoeAuthCharm(ops.CharmBase):
         """
         super().__init__(*args)
         self.service = SpoeAuthService()
-        self._spoe_auth_provider = SpoeAuthProvider(self, relation_name="spoe-auth")
+        self._spoe_auth_provider = SpoeAuthProvider(self, relation_name=SPOE_AUTH_RELATION)
         self._oauth = OAuthRequirer(self, relation_name=OAUTH_RELATION)
 
         self.framework.observe(self.on.install, self._reconcile)
@@ -63,17 +63,20 @@ class HaproxySpoeAuthCharm(ops.CharmBase):
                 )
             )
             oauth_information = OauthInformation.from_charm(self, self._oauth)
-            self._spoe_auth_provider.provide_spoe_auth_requirements(
-                relation=oauth_information.spoe_auth_relation,
-                spop_port=SPOP_PORT,
-                event=HaproxyEvent.ON_FRONTEND_HTTP_REQUEST,
-                oidc_callback_port=OIDC_CALLBACK_PORT,
-                var_authenticated=VAR_AUTHENTICATED,
-                var_redirect_url=VAR_REDIRECT_URL,
-                cookie_name=COOKIE_NAME,
-                oidc_callback_hostname=state.hostname,
-                oidc_callback_path=OIDC_CALLBACK_PATH,
-            )
+            if relation := self.model.get_relation(
+                SPOE_AUTH_RELATION, oauth_information.spoe_auth_relation_id
+            ):
+                self._spoe_auth_provider.provide_spoe_auth_requirements(
+                    relation=relation,
+                    spop_port=SPOP_PORT,
+                    event=HaproxyEvent.ON_FRONTEND_HTTP_REQUEST,
+                    oidc_callback_port=OIDC_CALLBACK_PORT,
+                    var_authenticated=VAR_AUTHENTICATED,
+                    var_redirect_url=VAR_REDIRECT_URL,
+                    cookie_name=COOKIE_NAME,
+                    oidc_callback_hostname=state.hostname,
+                    oidc_callback_path=OIDC_CALLBACK_PATH,
+                )
             self.service.reconcile(charm_state=state, oauth_information=oauth_information)
             self.unit.status = ops.ActiveStatus()
 

@@ -8,10 +8,9 @@ import secrets
 import typing
 
 import ops
+from charms.hydra.v0.oauth import OAuthRequirer
 from pydantic import Field, ValidationError
 from pydantic.dataclasses import dataclass
-
-from lib.charms.hydra.v0.oauth import OAuthRequirer
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +28,8 @@ class CharmState:
 
     Attributes:
         hostname: The hostname of the charm.
-        client_id: The OAuth client ID.
-        client_secret: The OAuth client secret.
-        issuer_url: The OAuth issuer URL.
+        signature_secret: The SPOE agent signature secret.
+        encryption_secret: The SPOE agent encryption secret.
     """
 
     hostname: str = Field(description="The hostname part of the redirect URL.")
@@ -64,15 +62,15 @@ class CharmState:
         try:
             secret = charm.model.get_secret(label=AGENT_SECRETS_LABEL)
             signing_and_encryption_secrets = secret.get_content(refresh=True)
-            signature_secret = signing_and_encryption_secrets.get("signature_secret")
-            encryption_secret = signing_and_encryption_secrets.get("encryption_secret")
+            signature_secret = signing_and_encryption_secrets.get("signature-secret")
+            encryption_secret = signing_and_encryption_secrets.get("encryption-secret")
         except ops.SecretNotFoundError:
             signature_secret = secrets.token_urlsafe(32)
             encryption_secret = secrets.token_urlsafe(32)
             secret = charm.model.app.add_secret(
                 content={
-                    "signature_secret": signature_secret,
-                    "encryption_secret": encryption_secret,
+                    "signature-secret": signature_secret,
+                    "encryption-secret": encryption_secret,
                 },
                 label=AGENT_SECRETS_LABEL,
             )
@@ -104,7 +102,7 @@ class OauthInformation:
     issuer_url: str = Field(description="The OAuth issuer URL.", min_length=1)
     client_id: str = Field(description="The OAuth client ID.", min_length=1)
     client_secret: str = Field(description="The OAuth client secret.", min_length=1)
-    spoe_auth_relation: ops.Relation = Field(description="The spoe-auth relation.")
+    spoe_auth_relation_id: int = Field(description="The spoe-auth relation ID.")
 
     @classmethod
     def from_charm(
@@ -142,7 +140,7 @@ class OauthInformation:
                 issuer_url=oauth_provider_information.issuer_url,
                 client_id=oauth_provider_information.client_id,
                 client_secret=oauth_provider_information.client_secret,
-                spoe_auth_relation=spoe_auth_relation,
+                spoe_auth_relation_id=spoe_auth_relation.id,
             )
         except ValidationError as exc:
             raise InvalidCharmConfigError("Invalid configuration") from exc

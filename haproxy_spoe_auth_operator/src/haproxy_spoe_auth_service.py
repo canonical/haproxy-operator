@@ -9,7 +9,7 @@ from pathlib import Path
 from charmlibs import snap
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from .state import CharmState, OauthInformation
+from state import CharmState, OauthInformation
 
 SNAP_NAME = "haproxy-spoe-auth"
 CONFIG_PATH = Path("/var/snap/haproxy-spoe-auth/current/config.yaml")
