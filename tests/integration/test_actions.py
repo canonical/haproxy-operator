@@ -4,7 +4,6 @@
 
 """Integration tests for haproxy charm actions."""
 
-
 import json
 
 import jubilant

@@ -35,9 +35,7 @@ class DNSResolverHTTPSAdapter(HTTPAdapter):
         )
 
     # Ignore pylint rule as this is the parent method signature
-    def send(
-        self, request, stream=False, timeout=None, verify=True, cert=None, proxies=None
-    ):  # pylint: disable=too-many-arguments, too-many-positional-arguments
+    def send(self, request, stream=False, timeout=None, verify=True, cert=None, proxies=None):  # pylint: disable=too-many-arguments, too-many-positional-arguments
         """Wrap HTTPAdapter send to modify the outbound request.
 
         Args:

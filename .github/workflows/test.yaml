@@ -11,6 +11,7 @@ jobs:
       self-hosted-runner: true
       self-hosted-runner-image: "noble"
       charmcraft-channel: latest/edge
+      with-uv: true
   haproxy-spoe-auth-operator:
     name: Unit tests for the haproxy-spoe-auth-operator charm
     uses: canonical/operator-workflows/.github/workflows/test.yaml@main

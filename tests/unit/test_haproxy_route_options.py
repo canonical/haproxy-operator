@@ -129,11 +129,11 @@ def test_protocol_https_no_ca(monkeypatch: pytest.MonkeyPatch, certificates_inte
     haproxy_conf_contents = render_file_mock.call_args_list[0].args[1]
     assert "10.12.97.153:443" not in haproxy_conf_contents
     assert "10.12.97.154:443" not in haproxy_conf_contents
-    protocol_https_relation = [
+    protocol_https_relation = next(
         rel
         for rel in out.relations
         if rel.endpoint == "haproxy-route" and rel.remote_app_data["protocol"] == '"https"'
-    ][0]
+    )
     # The relation data is invalid
     assert protocol_https_relation.local_app_data["endpoints"] == "[]"  # type: ignore
     assert out.app_status == ActiveStatus("")

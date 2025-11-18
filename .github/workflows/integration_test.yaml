@@ -5,18 +5,21 @@ on:
 
 jobs:
   integration-tests:
-    uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+    uses: 
+      canonical/operator-workflows/.github/workflows/integration_test.yaml@main
     secrets: inherit
     with:
       provider: lxd
       juju-channel: 3/stable
       self-hosted-runner: true
       charmcraft-channel: latest/edge
-      modules: '["test_action.py","test_actions.py","test_charm.py","test_config.py","test_cos.py","test_ha.py","test_haproxy_route.py","test_http_interface.py","test_ingress.py", "test_ingress_per_unit.py", "test_haproxy_route_tcp.py"]'
+      modules: '["test_action.py","test_actions.py","test_charm.py","test_config.py","test_cos.py","test_ha.py","test_haproxy_route.py","test_http_interface.py","test_ingress.py",
+        "test_ingress_per_unit.py", "test_haproxy_route_tcp.py"]'
+      with-uv: true
   allure-report:
     if: always() && !cancelled()
     needs:
-      - integration-tests
+    - integration-tests
     uses: canonical/operator-workflows/.github/workflows/allure_report.yaml@main
   haproxy-spoe-auth-operator:
     name: Integration tests for the haproxy-spoe-auth-operator charm
