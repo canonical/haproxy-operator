@@ -28,4 +28,6 @@ header:
     - 'docs/release-notes/**/*.yaml'
     - '**/*.md.j2'
     - '**/lib/**'
+    - '**/uv.lock'
+    - '**/templates/**'
   comment: on-failure
