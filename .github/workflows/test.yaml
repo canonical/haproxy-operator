@@ -11,3 +11,4 @@ jobs:
       self-hosted-runner: true
       self-hosted-runner-image: "noble"
       charmcraft-channel: latest/edge
+      with-uv: true

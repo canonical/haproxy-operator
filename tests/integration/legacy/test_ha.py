@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Integration test for haproxy charm."""
+
 import requests
 from juju.application import Application
 

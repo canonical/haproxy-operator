@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Fixtures for haproxy-operator unit tests."""
+
 import json
 import typing
 from datetime import timedelta
