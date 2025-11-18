@@ -18,7 +18,7 @@ class AnyCharm(AnyCharmBase):
     """haproxy-route requirer charm."""
 
     def __init__(self, *args, **kwargs):
-        """Initialize the requirer charm."""  # noqa
+        """Initialize the requirer charm."""
         super().__init__(*args, **kwargs)
         self._haproxy_route = HaproxyRouteRequirer(self, HAPROXY_ROUTE_RELATION)
 

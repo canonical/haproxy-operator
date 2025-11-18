@@ -10,16 +10,16 @@ import sys
 # library, not the system one.
 sys.path.insert(0, sys.path[-1])
 
-import logging  # noqa: E402
-import pathlib  # noqa: E402
-import subprocess  # noqa: E402  # nosec: B404
-from subprocess import CalledProcessError  # noqa: E402  # nosec: B404
+import logging
+import pathlib
+import subprocess  # nosec: B404
+from subprocess import CalledProcessError  # nosec: B404
 
-import apt  # noqa: E402
-import ops  # noqa: E402
-from any_charm_base import AnyCharmBase  # noqa: E402
-from haproxy_route import HaproxyRouteRequirer  # noqa: E402
-from tls_certificates import (  # noqa: E402
+import apt
+import ops
+from any_charm_base import AnyCharmBase
+from haproxy_route import HaproxyRouteRequirer
+from tls_certificates import (
     CertificateRequestAttributes,
     Mode,
     TLSCertificatesRequiresV4,
@@ -36,7 +36,7 @@ class AnyCharm(AnyCharmBase):
     """haproxy-route requirer charm."""
 
     def __init__(self, *args, **kwargs):
-        """Initialize the requirer charm."""  # noqa
+        """Initialize the requirer charm."""
         super().__init__(*args, **kwargs)
         self._haproxy_route = HaproxyRouteRequirer(self, HAPROXY_ROUTE_RELATION)
         network_binding = self.model.get_binding(TLS_CERT_RELATION)
@@ -86,8 +86,8 @@ class AnyCharm(AnyCharmBase):
                 ErrorLog ${{APACHE_LOG_DIR}}/error.log
                 CustomLog ${{APACHE_LOG_DIR}}/access.log combined
                 SSLEngine on
-                SSLCertificateFile      {str(SSL_CERT_FILE)}
-                SSLCertificateKeyFile   {str(SSL_PRIVATE_KEY_FILE)}
+                SSLCertificateFile      {SSL_CERT_FILE!s}
+                SSLCertificateKeyFile   {SSL_PRIVATE_KEY_FILE!s}
         </VirtualHost>
 
         # This easier that editing an apache config file to comment the "Listen 80" line.
