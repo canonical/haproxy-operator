@@ -5,9 +5,9 @@ changes:
     type: minor
     description: |
        First integration test for the terraform product.
-    urls: 
+    urls:
       pr: https://github.com/canonical/haproxy-operator/pull/246
-      related_doc: 
+      related_doc:
       related_issue: 
     visibility: hidden
     highlight: false
