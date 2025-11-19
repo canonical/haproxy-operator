@@ -53,11 +53,14 @@ requires:
     interface: http
   ha:
     interface: hacluster
-  receive-ca-certs:
+  receive-ca-certs :
     interface: certificate_transfer
     description: Receive a CA certs for haproxy to trust.
+    envarmapping:
+      thing1: "dfas"
+      thing2: "dfas"
   spoe-auth:
-    interface: haproxy_spoe_auth
+    interface: spoe-auth
     limit: 1
 
 provides:
@@ -77,12 +80,16 @@ peers:
   haproxy-peers:
     interface: haproxy-peers
 
+paas:
+  whatever: "whatever"
+
 config:
   options:
     external-hostname:
       default: ""
       type: string
       description: Hostname of HAProxy.
+      envvarname: "name_of_the_var"
     global-maxconn:
       default: 4096
       type: int
