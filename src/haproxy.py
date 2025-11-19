@@ -10,6 +10,7 @@ import pwd
 # We silence this rule because subprocess call is only for validating the haproxy config
 # and no user input is parsed
 import subprocess  # nosec B404
+import typing
 from pathlib import Path
 from subprocess import CalledProcessError, run  # nosec
 
@@ -21,6 +22,9 @@ from state.charm_state import CharmState
 from state.haproxy_route import HaproxyRouteRequirersInformation
 from state.ingress import IngressRequirersInformation
 from state.ingress_per_unit import IngressPerUnitRequirersInformation
+
+if typing.TYPE_CHECKING:
+    from state.spoe_auth import SpoeAuthInformation
 
 APT_PACKAGE_VERSION = "2.8.5-1ubuntu3.4"
 APT_PACKAGE_NAME = "haproxy"
@@ -148,12 +152,14 @@ class HAProxyService:
         self,
         charm_state: CharmState,
         haproxy_route_requirers_information: HaproxyRouteRequirersInformation,
+        spoe_auth_info: typing.Optional["SpoeAuthInformation"] = None,
     ) -> None:
         """Render the haproxy config for haproxy-route.
 
         Args:
             charm_state: The charm state component.
             haproxy_route_requirers_information: HaproxyRouteRequirersInformation state component.
+            spoe_auth_info: SPOE authentication information.
         """
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
@@ -163,7 +169,9 @@ class HAProxyService:
             "peer_units_address": haproxy_route_requirers_information.peers,
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
             "haproxy_cas_file": HAPROXY_CAS_FILE,
+            "spoe_auth_info": spoe_auth_info,
         }
+
         template = (
             HAPROXY_ROUTE_TCP_CONFIG_TEMPLATE
             if haproxy_route_requirers_information.tcp_endpoints

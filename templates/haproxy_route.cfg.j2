@@ -7,6 +7,20 @@ frontend haproxy
     bind [::]:443 v4v6 ssl crt {{ haproxy_crt_dir }}
     # Redirect HTTP to HTTPS
     http-request redirect scheme https unless { ssl_fc }
+{% if spoe_auth_info and spoe_auth_info.enabled %}
+
+    # Immediately forward OIDC responses to the callback URL
+    acl oidc_callback_path path_beg -i {{ spoe_auth_info.oidc_callback_path }}
+    acl oidc_callback_host req.hdr(Host) -m str {{ spoe_auth_info.oidc_callback_hostname }}
+    use_backend spoe_oidc_callback if oidc_callback_path oidc_callback_host
+
+    # Call the SPOE agent
+    filter spoe engine spoe-auth config {{ spoe_auth_info.spoe_config_path }}
+
+    # Fetch the authenticated flag set with the SPOP response, redirect to IDP if not authenticated
+    acl authenticated var({{ spoe_auth_info.var_authenticated }}) -m bool
+    use_backend backend_redirect if !authenticated
+{% endif %}
 {% endif %}
 
 {% for backend in backends %}
@@ -75,6 +89,29 @@ backend {{ backend.backend_name }}
     server {{ server.server_name }} {{ server.address }}:{{ server.port }}{% if server.check %} check inter {{ server.check.interval }}s rise {{ server.check.rise }} fall {{ server.check.fall }}{% endif +%}{% if server.protocol == "https" %} ssl ca-file {{ haproxy_cas_file }}{% endif +%}
 {% endfor %}
 {% endfor %}
+
+{% if spoe_auth_info and spoe_auth_info.enabled %}
+# SPOE redirect backend
+backend backend_redirect
+    mode http
+    balance roundrobin
+    http-request redirect location %[var({{ spoe_auth_info.var_redirect_url }})]
+
+# SPOE OIDC callback backend
+backend spoe_oidc_callback
+{% for agent in spoe_auth_info.agents %}
+    server {{ agent.name }} {{ agent.address }}:{{ agent.oidc_callback_port }} check
+{% endfor %}
+
+# SPOP authentication backend
+backend spop_auth
+    mode tcp
+    balance roundrobin
+    option spop-check
+{% for agent in spoe_auth_info.agents %}
+    server {{ agent.name }} {{ agent.address }}:{{ agent.spop_port }} check
+{% endfor %}
+{% endif %}
 
 {% block haproxy_route_tcp %}{% endblock %}
 {% endblock %}
