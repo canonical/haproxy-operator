@@ -30,7 +30,7 @@ variable "hacluster" {
 
 variable "grafana_agent" {
   type = object({
-    channel  = optional(string, "latest/stable")
+    channel  = optional(string, "2/stable")
     config   = optional(map(string), {})
     revision = optional(number, null)
   })
