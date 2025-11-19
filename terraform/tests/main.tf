@@ -26,8 +26,5 @@ provider "juju" {}
 
 module "haproxy-product" {
   source   = "../product"
-  # app_name = "__charm_name__"
-  # channel  = var.channel
   model    = "prod-haproxy-example"
-  # revision = var.revision
 }
