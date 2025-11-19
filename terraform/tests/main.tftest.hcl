@@ -8,6 +8,6 @@ variables {
 run "basic_deploy" {
   assert {
     condition     = module.haproxy-product.grafana_agent == "grafana-agent"
-    error_message = "haproxy app_name did not match expected"
+    error_message = "grafana_agent app_name did not match expected"
   }
 }
