@@ -2,15 +2,23 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-data "juju_model" "haproxy" {
-  name = var.model
+data "juju_model" "model" {
+  # Don't fetch the model if model_uuid is provided
+  count = var.model_uuid != "" ? 0 : 1
+  name  = var.model
+  owner = var.model_owner
+}
+
+locals {
+  model_uuid     = var.model_uuid != "" ? var.model_uuid : element(concat(data.juju_model.model.*.id, tolist([""])), 0)
+  use_hacluster  = var.hacluster != null
+  use_keepalived = var.keepalived != null
 }
 
 module "haproxy" {
   source = "../charm"
 
-  model = data.juju_model.haproxy.name
-
+  model_uuid  = local.model_uuid
   app_name    = var.haproxy.app_name
   channel     = var.haproxy.channel
   revision    = var.haproxy.revision
@@ -19,16 +27,21 @@ module "haproxy" {
   constraints = var.haproxy.constraints
   config      = var.haproxy.config
 
-  use_hacluster            = true
-  hacluster_charm_channel  = var.hacluster.channel
-  hacluster_charm_revision = var.hacluster.revision
-  hacluster_config         = var.hacluster.config
+  use_hacluster            = local.use_hacluster
+  hacluster_charm_channel  = local.use_hacluster ? var.hacluster.channel : null
+  hacluster_charm_revision = local.use_hacluster ? var.hacluster.revision : null
+  hacluster_config         = local.use_hacluster ? var.hacluster.config : {}
+
+  use_keepalived            = local.use_keepalived
+  keepalived_charm_channel  = local.use_keepalived ? var.keepalived.channel : null
+  keepalived_charm_revision = local.use_keepalived ? var.keepalived.revision : null
+  keepalived_config         = local.use_keepalived ? var.keepalived.config : {}
 }
 
 resource "juju_application" "grafana_agent" {
-  name  = "grafana-agent"
-  model = data.juju_model.haproxy.name
-  units = 1
+  name       = "grafana-agent"
+  model_uuid = local.model_uuid
+  units      = 1
 
   charm {
     name     = "grafana-agent"
@@ -41,7 +54,7 @@ resource "juju_application" "grafana_agent" {
 }
 
 resource "juju_integration" "grafana_agent" {
-  model = data.juju_model.haproxy.name
+  model_uuid = local.model_uuid
 
   application {
     name     = module.haproxy.app_name

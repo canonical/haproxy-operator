@@ -25,8 +25,8 @@ variable "constraints" {
   default     = "arch=amd64"
 }
 
-variable "model" {
-  description = "Name of the juju model."
+variable "model_uuid" {
+  description = "ID of the Juju model to deploy to."
   type        = string
   default     = null
 }
@@ -49,11 +49,22 @@ variable "base" {
   default     = "ubuntu@24.04"
 }
 
-# hacluster
+# HA
 variable "use_hacluster" {
   description = "Whether to use hacluster for active/passive."
   type        = bool
   default     = false
+}
+
+variable "use_keepalived" {
+  description = "Whether to use keepalived for active/passive."
+  type        = bool
+  default     = false
+
+  validation {
+    condition     = (!var.use_hacluster || !var.use_keepalived)
+    error_message = "use_hacluster and use_keepalived cannot both be set."
+  }
 }
 
 variable "hacluster_app_name" {
@@ -76,6 +87,30 @@ variable "hacluster_charm_channel" {
 
 variable "hacluster_config" {
   description = "Hacluster charm config."
+  type        = map(string)
+  default     = {}
+}
+
+variable "keepalived_app_name" {
+  description = "Application name of the keepalived charm."
+  type        = string
+  default     = "keepalived"
+}
+
+variable "keepalived_charm_revision" {
+  description = "Revision of the keepalived charm."
+  type        = number
+  default     = null
+}
+
+variable "keepalived_charm_channel" {
+  description = "Channel of the keepalived charm."
+  type        = string
+  default     = "latest/edge"
+}
+
+variable "keepalived_config" {
+  description = "Keepalived charm config."
   type        = map(string)
   default     = {}
 }
