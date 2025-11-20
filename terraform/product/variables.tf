@@ -1,9 +1,9 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
-
-variable "model" {
-  description = "Reference to the Juju model to deploy application to."
+variable "model_uuid" {
+  description = "ID of the model to deploy to"
   type        = string
+  default     = ""
 }
 
 variable "haproxy" {
@@ -25,12 +25,25 @@ variable "hacluster" {
     config   = optional(map(string), {})
     revision = optional(number, null)
   })
-  default = {}
+  default = null
+}
+
+variable "keepalived" {
+  type = object({
+    channel  = optional(string, "latest/edge")
+    config   = optional(map(string), {})
+    revision = optional(number, null)
+  })
+  default = null
+  validation {
+    condition     = (var.hacluster == null || var.keepalived == null)
+    error_message = "hacluster and keepalived cannot both be set."
+  }
 }
 
 variable "grafana_agent" {
   type = object({
-    channel  = optional(string, "latest/stable")
+    channel  = optional(string, "2/stable")
     config   = optional(map(string), {})
     revision = optional(number, null)
   })

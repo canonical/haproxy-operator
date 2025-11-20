@@ -25,3 +25,6 @@ __pycache__/
 # END VALE WORKFLOW IGNORE
 
 **/*.snap
+terraform/**/.terraform*
+terraform/**/.tfvars
+terraform/**/*.tfstate*
