@@ -36,7 +36,7 @@ No modules.
 | <a name="input_hacluster_charm_channel"></a> [hacluster\_charm\_channel](#input\_hacluster\_charm\_channel) | Channel of the hacluster charm. | `string` | `"2.4/edge"` | no |
 | <a name="input_hacluster_charm_revision"></a> [hacluster\_charm\_revision](#input\_hacluster\_charm\_revision) | Revision of the hacluster charm. | `number` | `null` | no |
 | <a name="input_hacluster_config"></a> [hacluster\_config](#input\_hacluster\_config) | Hacluster charm config. | `map(string)` | `{}` | no |
-| <a name="input_modeluuid"></a> [model\_uuid](#input\_model\_uuid) | UUID of the juju model. | `string` | `null` | no |
+| <a name="input_model_uuid"></a> [model\_uuid](#input\_model\_uuid) | UUID of the juju model. | `string` | `null` | no |
 | <a name="input_revision"></a> [revision](#input\_revision) | Revision of the haproxy charm. | `number` | `null` | no |
 | <a name="input_units"></a> [units](#input\_units) | Number of haproxy units. If hacluster is enabled, it is recommended to use a value > 3 to ensure a quorum. | `number` | `1` | no |
 | <a name="input_use_hacluster"></a> [use\_hacluster](#input\_use\_hacluster) | Whether to use hacluster for active/passive. | `bool` | `false` | no |
