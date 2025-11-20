@@ -12,7 +12,12 @@ terraform {
 
 provider "juju" {}
 
+data "juju_model" "model" {
+  name  = "prod-haproxy-example"
+  owner = "admin"
+}
+
 module "haproxy-product" {
-  source   = "../product"
-  model    = "prod-haproxy-example"
+  source     = "../product"
+  model_uuid = data.juju_model.model.uuid
 }

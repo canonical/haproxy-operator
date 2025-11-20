@@ -1,9 +1,10 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-variable "model" {
-  description = "Reference to the Juju model to deploy application to."
+variable "model_uuid" {
+  description = "UUID of the model to deploy to"
   type        = string
+  default     = ""
 }
 
 variable "haproxy" {

@@ -1,14 +1,10 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-data "juju_model" "haproxy" {
-  name = var.model
-}
-
 module "haproxy" {
   source = "../charm"
 
-  model = data.juju_model.haproxy.name
+  model_uuid = var.model_uuid
 
   app_name    = var.haproxy.app_name
   channel     = var.haproxy.channel
@@ -25,9 +21,9 @@ module "haproxy" {
 }
 
 resource "juju_application" "grafana_agent" {
-  name  = "grafana-agent"
-  model = data.juju_model.haproxy.name
-  units = 1
+  name       = "grafana-agent"
+  model_uuid = var.model_uuid
+  units      = 1
 
   charm {
     name     = "grafana-agent"
@@ -40,7 +36,7 @@ resource "juju_application" "grafana_agent" {
 }
 
 resource "juju_integration" "grafana_agent" {
-  model = data.juju_model.haproxy.name
+  model_uuid = var.model_uuid
 
   application {
     name     = module.haproxy.app_name

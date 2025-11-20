@@ -5,15 +5,15 @@ terraform {
   required_providers {
     juju = {
       source  = "juju/juju"
-      version = ">= 0.19.0"
+      version = "~> 1.0"
     }
   }
 }
 
 resource "juju_application" "haproxy" {
-  name  = var.app_name
-  model = var.model
-  units = var.units
+  name       = var.app_name
+  model_uuid = var.model_uuid
+  units      = var.units
 
   charm {
     name     = "haproxy"
@@ -28,10 +28,10 @@ resource "juju_application" "haproxy" {
 }
 
 resource "juju_application" "hacluster" {
-  count = var.use_hacluster ? 1 : 0
-  name  = var.hacluster_app_name
-  model = var.model
-  units = 1
+  count      = var.use_hacluster ? 1 : 0
+  name       = var.hacluster_app_name
+  model_uuid = var.model_uuid
+  units      = 1
 
   charm {
     name     = "hacluster"
@@ -44,8 +44,8 @@ resource "juju_application" "hacluster" {
 }
 
 resource "juju_integration" "ha" {
-  count = var.use_hacluster ? 1 : 0
-  model = var.model
+  count      = var.use_hacluster ? 1 : 0
+  model_uuid = var.model_uuid
 
   application {
     name     = juju_application.haproxy.name
