@@ -117,9 +117,9 @@ class TLSInformation:
 
         if not certificates.certificate_requests and not allow_no_certificates:
             logger.error(
-                "The charm did not request any certificates.",
-                "You need to either set the `external-hostname` config or request a hostname from",
-                "one of the requirer databag.",
+                "The charm did not request any certificates."
+                "You need to either set the `external-hostname` config or request a hostname from"
+                "one of the requirer databag."
             )
             raise TLSNotReadyError(
                 "No hostname configured or requested. See juju debug-log for details."
