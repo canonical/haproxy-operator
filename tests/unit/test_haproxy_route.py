@@ -3,6 +3,7 @@
 
 """Unit tests for haproxy-route interface library HaproxyRouteRequirerData."""
 
+import ipaddress
 import typing
 from unittest.mock import MagicMock
 
@@ -24,8 +25,43 @@ def mock_requirer_app_data_with_allow_http_fixture():
     return RequirerApplicationData(
         service="test-service",
         ports=[8080],
-        hosts=["10.0.0.1"],
+        hosts=[ipaddress.ip_address("10.0.0.1")],
         allow_http=True,
+    )
+
+
+@pytest.fixture(name="mock_haproxy_route_requirer_data")
+def mock_haproxy_route_requirer_data_fixture():
+    """Create mock requirer application data with allow_http enabled."""
+    return HaproxyRouteRequirerData(
+        relation_id=1,
+        application_data=typing.cast(
+            RequirerApplicationData,
+            RequirerApplicationData.from_dict(
+                {
+                    "service": "service",
+                    "ports": [80],
+                    "allow_http": True,
+                    "hostname": "example.com",
+                    "paths": ["/path"],
+                    "deny_paths": ["/private"],
+                }
+            ),
+        ),
+        units_data=[
+            typing.cast(RequirerUnitData, RequirerUnitData.from_dict({"address": "10.0.0.1"}))
+        ],
+    )
+
+
+@pytest.fixture(name="mock_haproxy_route_relation_data")
+def mock_haproxy_route_relation_data_fixture(
+    mock_haproxy_route_requirer_data: HaproxyRouteRequirerData,
+) -> HaproxyRouteRequirersData:
+    """Create mock requirer application data with allow_http enabled."""
+    return HaproxyRouteRequirersData(
+        requirers_data=[mock_haproxy_route_requirer_data],
+        relation_ids_with_invalid_data=[],
     )
 
 
@@ -52,13 +88,15 @@ def test_haproxy_route_requirer_data_with_allow_http_true(mock_requirer_app_data
     requirer_data = HaproxyRouteRequirerData(
         relation_id=2,
         application_data=mock_requirer_app_data_with_allow_http,
-        units_data=[RequirerUnitData(address="10.0.0.1")],
+        units_data=[RequirerUnitData(address=ipaddress.ip_address("10.0.0.1"))],
     )
 
     assert requirer_data.application_data.allow_http is True
 
 
-def test_haproxy_route_requirer_information():
+def test_haproxy_route_requirer_information(
+    mock_haproxy_route_relation_data: HaproxyRouteRequirersData,
+):
     """
     arrange: Setup all relation providers mock.
     act: Initialize the charm state.
@@ -70,36 +108,8 @@ def test_haproxy_route_requirer_information():
             requirers_data=[], relation_ids_with_invalid_data=[]
         )
     )
-    mock_hostname = "example.com"
     haproxy_route_provider_mock = MagicMock()
-    haproxy_route_provider_mock.get_data = MagicMock(
-        return_value=HaproxyRouteRequirersData(
-            requirers_data=[
-                HaproxyRouteRequirerData(
-                    relation_id=1,
-                    application_data=typing.cast(
-                        RequirerApplicationData,
-                        RequirerApplicationData.from_dict(
-                            {
-                                "service": "service",
-                                "ports": [80],
-                                "allow_http": True,
-                                "hostname": mock_hostname,
-                                "paths": ["/path"],
-                                "deny_paths": ["/private"],
-                            }
-                        ),
-                    ),
-                    units_data=[
-                        typing.cast(
-                            RequirerUnitData, RequirerUnitData.from_dict({"address": "10.0.0.1"})
-                        )
-                    ],
-                ),
-            ],
-            relation_ids_with_invalid_data=[],
-        )
-    )
+    haproxy_route_provider_mock.get_data = MagicMock(return_value=mock_haproxy_route_relation_data)
     haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
         haproxy_route=haproxy_route_provider_mock,
         haproxy_route_tcp=haproxy_route_tcp_provider_mock,
@@ -108,6 +118,5 @@ def test_haproxy_route_requirer_information():
         ca_certs_configured=False,
     )
     assert haproxy_route_information.allow_http_acls == [
-        f"{{ req.hdr(Host) -m str {mock_hostname} }} "
-        "{ path_beg -i /path } !{ path_beg -i /private }"
+        "{ req.hdr(Host) -m str example.com } { path_beg -i /path } !{ path_beg -i /private }"
     ]
