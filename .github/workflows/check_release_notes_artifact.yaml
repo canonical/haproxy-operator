@@ -1,0 +1,38 @@
+name: Check for release notes artifact
+
+on:
+  pull_request:
+
+jobs:
+  check-release-note-artifact:
+    # run only for PRs not opened by a bot
+    if: ${{ github.event.pull_request.user.type != 'Bot' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v5.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Fail if no new artifact in docs/release-notes/artifacts
+        run: |
+          set -euo pipefail
+
+          BASE_SHA=${{ github.event.pull_request.base.sha }}
+          HEAD_SHA=${{ github.event.pull_request.head.sha }}
+
+          # List added files between base and head
+          ADDED_FILES=$(git diff --name-status "${BASE_SHA}" "${HEAD_SHA}" | awk '$1 == "A" { print $2 }' || true)
+
+          # Filter for YAML files under docs/release-notes/artifacts/
+          MATCHING=$(printf "%s\n" "${ADDED_FILES}" | grep -E '^docs/release-notes/artifacts/.*\.yaml$' || true)
+
+          if [ -z "${MATCHING}" ]; then
+            echo "ERROR: No new YAML file added under docs/release-notes/artifacts/ in this PR."
+            echo "Please add a change artifact file that summarizes your pull request under docs/release-notes/artifacts/."
+            exit 1
+          fi
+
+          echo "Found the following release-notes artifact(s) in this PR:"
+          printf "%s\n" "${MATCHING}"
+

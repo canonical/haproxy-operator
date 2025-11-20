@@ -1,0 +1,14 @@
+schema_version: 1
+changes:
+  - title: Added security documentation
+    author: yhaliaw
+    type: minor
+    description: |
+       The documentation now contains an explanation page on the risks
+       and best practices for operating the charm.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/201
+      related_doc: 
+      related_issue: 
+    visibility: hidden
+    highlight: false
