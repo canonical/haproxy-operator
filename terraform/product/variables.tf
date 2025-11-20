@@ -1,7 +1,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 variable "model_uuid" {
-  description = "ID of the model to deploy to, takes priority over model + model_owner"
+  description = "ID of the model to deploy to"
   type        = string
   default     = ""
 }
