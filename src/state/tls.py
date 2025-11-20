@@ -131,11 +131,13 @@ class TLSInformation:
             if not re.match(HOSTNAME_REGEX, certificate_request.common_name)
         ]:
             logger.error(
-                "Some requested hostname(s) (%s) does not match regex: %s",
+                (
+                    "Some requested hostname(s) (%s) are not valid."
+                    " Hostnames must be RFC-1034 and RFC-2181 compliance."
+                ),
                 ",".join(invalid_hostname),
-                HOSTNAME_REGEX,
             )
-            raise TLSNotReadyError("Some requested hostname(s) are invalid.")
+            raise TLSNotReadyError("Some requested hostname(s) are not valid.")
 
         if (
             tls_requirer_integration is None
