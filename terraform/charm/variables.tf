@@ -28,7 +28,6 @@ variable "constraints" {
 variable "model_uuid" {
   description = "UUID of the model to deploy to"
   type        = string
-  default     = null
 }
 
 variable "revision" {

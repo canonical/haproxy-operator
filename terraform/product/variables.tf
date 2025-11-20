@@ -4,7 +4,6 @@
 variable "model_uuid" {
   description = "UUID of the model to deploy to"
   type        = string
-  default     = ""
 }
 
 variable "haproxy" {
