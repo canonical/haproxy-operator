@@ -133,7 +133,7 @@ class TLSInformation:
             logger.error(
                 (
                     "Some requested hostname(s) (%s) are not valid."
-                    " Hostnames must be RFC-1034 and RFC-2181 compliance."
+                    " Hostnames must be RFC-1034 and RFC-2181 compliant."
                 ),
                 ",".join(invalid_hostname),
             )
