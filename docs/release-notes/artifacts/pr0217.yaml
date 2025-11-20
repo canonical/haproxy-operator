@@ -1,0 +1,15 @@
+schema_version: 1
+changes:
+  - title: Added upgrade documentation
+    author: Thanhphan1147
+    type: minor
+    description: |
+       Now the documentation contains a new how-to guide,
+       "How to upgrade", clarifying the process for upgrading the charm
+       to a new revision.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/217
+      related_doc: 
+      related_issue: 
+    visibility: hidden
+    highlight: false
