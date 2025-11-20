@@ -6,18 +6,6 @@ variable "model_uuid" {
   default     = ""
 }
 
-variable "model" {
-  description = "Reference to the Juju model to deploy application to."
-  type        = string
-  default     = ""
-}
-
-variable "model_owner" {
-  description = "ID of the model owner, used in conjunction with model name."
-  type        = string
-  default     = "admin"
-}
-
 variable "haproxy" {
   type = object({
     app_name    = optional(string, "haproxy")

@@ -1,16 +1,7 @@
 
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
-
-data "juju_model" "model" {
-  # Don't fetch the model if model_uuid is provided
-  count = var.model_uuid != "" ? 0 : 1
-  name  = var.model
-  owner = var.model_owner
-}
-
 locals {
-  model_uuid     = var.model_uuid != "" ? var.model_uuid : element(concat(data.juju_model.model.*.id, tolist([""])), 0)
   use_hacluster  = var.hacluster != null
   use_keepalived = var.keepalived != null
 }
@@ -18,7 +9,7 @@ locals {
 module "haproxy" {
   source = "../charm"
 
-  model_uuid  = local.model_uuid
+  model_uuid  = var.model_uuid
   app_name    = var.haproxy.app_name
   channel     = var.haproxy.channel
   revision    = var.haproxy.revision
@@ -40,7 +31,7 @@ module "haproxy" {
 
 resource "juju_application" "grafana_agent" {
   name       = "grafana-agent"
-  model_uuid = local.model_uuid
+  model_uuid = var.model_uuid
   units      = 1
 
   charm {
@@ -54,7 +45,7 @@ resource "juju_application" "grafana_agent" {
 }
 
 resource "juju_integration" "grafana_agent" {
-  model_uuid = local.model_uuid
+  model_uuid = var.model_uuid
 
   application {
     name     = module.haproxy.app_name
