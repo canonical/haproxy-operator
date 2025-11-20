@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2025-11-14
+
+- Added GitHub workflow that checks whether a pull request contains a change artifact.
+
 ## 2025-11-12
 
 - Updated the haproxy-route library to add the `allow_http` attribute.

@@ -1,0 +1,14 @@
+schema_version: 1
+changes:
+  - title: Added `get-proxied-endpoints` action
+    author: f-atwi
+    type: major
+    description: |
+       Now the charm has a new action, `get-proxied-endpoints`, that
+       gets the endpoints proxied by HAProxy.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/214
+      related_doc: https://charmhub.io/haproxy/actions?channel=2.8/edge#get-proxied-endpoints
+      related_issue: https://github.com/canonical/haproxy-operator/issues/80
+    visibility: public
+    highlight: false
