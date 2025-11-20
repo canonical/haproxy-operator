@@ -121,7 +121,9 @@ class TLSInformation:
                 "You need to either set the `external-hostname` config or request a hostname from",
                 "one of the requirer databag.",
             )
-            raise TLSNotReadyError("No hostname configured or requested.")
+            raise TLSNotReadyError(
+                "No hostname configured or requested. See juju debug-log for details."
+            )
 
         if invalid_hostname := [
             certificate_request.common_name
