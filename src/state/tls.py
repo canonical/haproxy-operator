@@ -116,8 +116,12 @@ class TLSInformation:
             logger.warning("Allowing load balancing without requesting TLS certificates.")
 
         if not certificates.certificate_requests and not allow_no_certificates:
-            logger.error("The charm did not request any certificates.")
-            raise TLSNotReadyError("The charm did not request any certificates.")
+            logger.error(
+                "The charm did not request any certificates.",
+                "You need to either set the `external-hostname` config or request a hostname from",
+                "one of the requirer databag.",
+            )
+            raise TLSNotReadyError("No hostname configured or requested.")
 
         if invalid_hostname := [
             certificate_request.common_name
