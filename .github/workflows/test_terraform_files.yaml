@@ -5,8 +5,6 @@ name: Terraform files test
 
 on:
   pull_request:
-    paths:
-      - 'terraform/**'
 
 permissions:
   contents: read
