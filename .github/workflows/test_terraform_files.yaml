@@ -21,7 +21,7 @@ jobs:
 
       - name: Prepare juju tf provider environment
         run: |
-        sudo snap install --classic terraform tflint
+          sudo snap install --classic terraform tflint
 
       - name: Run terraform fmt
         run: terraform fmt -check -recursive
