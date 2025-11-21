@@ -1,0 +1,214 @@
+[33mWARNING [0m juju.client.connection:connection.py:861 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:762 Adding model github-pr-87ef9-lxd:test-haproxy-route-87j1 on cloud localhost
+[33mWARNING [0m juju.client.connection:connection.py:861 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:861 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:861 unexpected facade SSHTunneler received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:haproxy-0
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  haproxy/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  haproxy/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/self-signed-certificates-446
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/0 [allocating] waiting: waiting for machine
+  haproxy/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/0 [allocating] waiting: waiting for machine
+  haproxy/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/0 [idle] active: 
+  haproxy/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/any-charm-100
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  haproxy-route-requirer/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  haproxy-route-requirer/0 [allocating] waiting: agent initialising
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  haproxy/0 [executing] blocked: No hostname configured or requested. See juju debug-log for details.
+  haproxy-route-requirer/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  haproxy/0 [idle] active: 
+  haproxy-route-requirer/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model                    Controller           Cloud/Region         Version  SLA          Timestamp
+test-haproxy-route-87j1  github-pr-87ef9-lxd  localhost/localhost  3.6.11   unsupported  12:49:51Z
+
+App                       Version  Status  Scale  Charm                     Channel      Rev  Exposed  Message
+haproxy                            active      1  haproxy                                  0  no       
+haproxy-route-requirer             active      1  any-charm                 latest/beta  100  no       
+self-signed-certificates           active      1  self-signed-certificates  1/edge       446  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports       Message
+haproxy-route-requirer/0*    active    idle   2        10.211.21.191               
+haproxy/0*                   active    idle   0        10.211.21.162   80,443/tcp  
+self-signed-certificates/0*  active    idle   1        10.211.21.232               
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.211.21.162  juju-966d63-0  ubuntu@24.04  github-runner  Running
+1        started  10.211.21.232  juju-966d63-1  ubuntu@24.04  github-runner  Running
+2        started  10.211.21.191  juju-966d63-2  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+machine-0: 12:46:27 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 12:46:27 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 12:47:30 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 12:47:30 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 12:48:44 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 12:48:44 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-haproxy-route-requirer-0: 12:49:09 ERROR unit.haproxy-route-requirer/0.juju-log apt-get update --error-on=any:
+stdout:
+Get:1 http://security.ubuntu.com/ubuntu noble-security InRelease [126 kB]
+Hit:2 http://archive.ubuntu.com/ubuntu noble InRelease
+Hit:3 http://archive.ubuntu.com/ubuntu noble-updates InRelease
+Hit:4 http://archive.ubuntu.com/ubuntu noble-backports InRelease
+Get:5 http://security.ubuntu.com/ubuntu noble-security/main amd64 Components [21.5 kB]
+Ign:6 http://security.ubuntu.com/ubuntu noble-security/universe amd64 Components
+Get:7 http://security.ubuntu.com/ubuntu noble-security/restricted amd64 Components [212 B]
+Ign:8 http://security.ubuntu.com/ubuntu noble-security/multiverse amd64 Components
+Get:6 http://security.ubuntu.com/ubuntu noble-security/universe amd64 Components [52.2 kB]
+Err:6 http://security.ubuntu.com/ubuntu noble-security/universe amd64 Components
+  File has unexpected size (52208 != 52236). Mirror sync in progress? [IP: 91.189.91.81 80]
+  Hashes of expected file:
+   - Filesize:52236 [weak]
+   - SHA256:e431ea9883296c92645c4796a5f4a3b96f3db9ab6675632b412ad6355892f2f0
+   - SHA1:23368120294c4130fda616ed8f8b4ab150c7c595 [weak]
+   - MD5Sum:db2024e0c436888f99dfcdda2fc9f98d [weak]
+  Release file created at: Fri, 21 Nov 2025 10:57:14 +0000
+Get:8 http://security.ubuntu.com/ubuntu noble-security/multiverse amd64 Components [212 B]
+Fetched 148 kB in 1s (190 kB/s)
+Reading package lists...
+
+stderr:
+E: Failed to fetch http://security.ubuntu.com/ubuntu/dists/noble-security/universe/dep11/Components-amd64.yml.xz  File has unexpected size (52208 != 52236). Mirror sync in progress? [IP: 91.189.91.81 80]
+   Hashes of expected file:
+    - Filesize:52236 [weak]
+    - SHA256:e431ea9883296c92645c4796a5f4a3b96f3db9ab6675632b412ad6355892f2f0
+    - SHA1:23368120294c4130fda616ed8f8b4ab150c7c595 [weak]
+    - MD5Sum:db2024e0c436888f99dfcdda2fc9f98d [weak]
+   Release file created at: Fri, 21 Nov 2025 10:57:14 +0000
+E: Some index files failed to download. They have been ignored, or old ones used instead.
+
+unit-haproxy-route-requirer-0: 12:49:09 ERROR unit.haproxy-route-requirer/0.juju-log error while handling rpc action
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-haproxy-route-requirer-0/charm/src/any_charm_base.py", line 74, in _rpc_
+    result = getattr(self, method)(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-haproxy-route-requirer-0/charm/src/any_charm.py", line 27, in start_server
+    apt.update()
+  File "/var/lib/juju/agents/unit-haproxy-route-requirer-0/charm/src/apt.py", line 916, in update
+    subprocess.run(cmd, capture_output=True, check=True)
+  File "/usr/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['apt-get', 'update', '--error-on=any']' returned non-zero exit status 100.
+unit-haproxy-0: 12:49:10 ERROR unit.haproxy/0.juju-log haproxy-route:3: 2 validation errors for RequirerApplicationData
+service
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+ports
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/lib/charms/haproxy/v1/haproxy_route.py", line 240, in load
+    return cls.model_validate_json(json.dumps(data))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/venv/lib/python3.12/site-packages/pydantic/main.py", line 766, in model_validate_json
+    return cls.__pydantic_validator__.validate_json(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pydantic_core._pydantic_core.ValidationError: 2 validation errors for RequirerApplicationData
+service
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+ports
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+unit-haproxy-0: 12:49:10 ERROR unit.haproxy/0.juju-log haproxy-route:3: Invalid requirer application data for haproxy-route-requirer
+unit-haproxy-0: 12:49:10 ERROR unit.haproxy/0.juju-log haproxy-route:3: 2 validation errors for RequirerApplicationData
+service
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+ports
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/lib/charms/haproxy/v1/haproxy_route.py", line 240, in load
+    return cls.model_validate_json(json.dumps(data))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/venv/lib/python3.12/site-packages/pydantic/main.py", line 766, in model_validate_json
+    return cls.__pydantic_validator__.validate_json(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pydantic_core._pydantic_core.ValidationError: 2 validation errors for RequirerApplicationData
+service
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+ports
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+unit-haproxy-0: 12:49:10 ERROR unit.haproxy/0.juju-log haproxy-route:3: Invalid requirer application data for haproxy-route-requirer
+unit-haproxy-0: 12:49:11 ERROR unit.haproxy/0.juju-log haproxy-route:3: 2 validation errors for RequirerApplicationData
+service
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+ports
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/lib/charms/haproxy/v1/haproxy_route.py", line 240, in load
+    return cls.model_validate_json(json.dumps(data))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/venv/lib/python3.12/site-packages/pydantic/main.py", line 766, in model_validate_json
+    return cls.__pydantic_validator__.validate_json(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pydantic_core._pydantic_core.ValidationError: 2 validation errors for RequirerApplicationData
+service
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+ports
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+unit-haproxy-0: 12:49:11 ERROR unit.haproxy/0.juju-log haproxy-route:3: Invalid requirer application data for haproxy-route-requirer
+unit-haproxy-0: 12:49:11 ERROR unit.haproxy/0.juju-log haproxy-route:3: The charm did not request any certificates.You need to either set the `external-hostname` config or request a hostname fromone of the requirer databag.
+unit-haproxy-0: 12:49:11 ERROR unit.haproxy/0.juju-log haproxy-route:3: Not ready to handle TLS.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/src/state/validation.py", line 63, in wrapper
+    return method(instance, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/src/charm.py", line 200, in _on_config_changed
+    self._reconcile()
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/src/charm.py", line 266, in _reconcile
+    self._configure_haproxy_route(charm_state)
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/src/charm.py", line 347, in _configure_haproxy_route
+    tls_information = TLSInformation.from_charm(self, self.certificates, allow_no_certificates)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/src/state/tls.py", line 70, in from_charm
+    cls.validate(charm, certificates, allow_no_certificates)
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/src/state/tls.py", line 124, in validate
+    raise TLSNotReadyError(
+state.tls.TLSNotReadyError: No hostname configured or requested. See juju debug-log for details.
+unit-haproxy-0: 12:49:11 ERROR unit.haproxy/0.juju-log haproxy-route:3: 2 validation errors for RequirerApplicationData
+service
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+ports
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/lib/charms/haproxy/v1/haproxy_route.py", line 240, in load
+    return cls.model_validate_json(json.dumps(data))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/venv/lib/python3.12/site-packages/pydantic/main.py", line 766, in model_validate_json
+    return cls.__pydantic_validator__.validate_json(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pydantic_core._pydantic_core.ValidationError: 2 validation errors for RequirerApplicationData
+service
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+ports
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+unit-haproxy-0: 12:49:11 ERROR unit.haproxy/0.juju-log haproxy-route:3: Invalid requirer application data for haproxy-route-requirer
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
