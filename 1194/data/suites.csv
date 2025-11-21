@@ -1,0 +1,61 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"
+    arrange: deploy the chrony charm.
+    act: request chrony_exporter metrics endpoint.
+    assert: confirm that metrics are scraped.
+    ","755","test_metrics","tests.integration.legacy","2025-11-21","passed","2025-11-21","","test_cos","",""
+"
+    arrange: Deploy the charm with valid config and tls integration.
+    act: Run the get-certificate action and run a sh command to check
+    the cert location on the unit.
+    assert: The output of both operations are valid.
+    ","2054","test_get_certificate_action","tests.integration.legacy","2025-11-21","passed","2025-11-21","","test_action","",""
+"Deploy the charm with valid config and tls integration.
+
+    Assert on valid output of get-certificate.
+    ","70211","test_reverseproxy_relation","tests.integration.legacy","2025-11-21","passed","2025-11-21","","test_http_interface","",""
+"Deploy the charm with anycharm haproxy route requirer that installs apache2 with ssl.
+    Integrate haproxy with certificates and ca transfer.
+
+    Assert that the requirer endpoints can be accessed using https.
+    ","54922","test_haproxy_route_protocol_https","tests.integration","2025-11-21","passed","2025-11-21","","test_haproxy_route","",""
+"
+    arrange: deploy the chrony charm.
+    act: request chrony_exporter metrics endpoint.
+    assert: confirm that metrics are scraped.
+    ","194606","test_ha","tests.integration.legacy","2025-11-21","passed","2025-11-21","","test_ha","",""
+"
+    arrange: Deploy the charm.
+    act: Send a GET request to the unit's ip address.
+    assert: The charm correctly response with the default page.
+    ","14","test_deploy","tests.integration.legacy","2025-11-21","passed","2025-11-21","","test_charm","",""
+"Deploy the charm with anycharm ingress per unit requirer that installs apache2.
+
+    Assert that the requirer endpoints are available.
+    ","0","test_ingress_per_unit_integration","tests.integration","2025-11-21","broken","2025-11-21","","test_ingress_per_unit","",""
+"Deploy the charm with anycharm ingress requirer that installs apache2.
+
+    Assert that the requirer endpoint is available.
+    ","37395","test_ingress_integration","tests.integration.legacy","2025-11-21","passed","2025-11-21","","test_ingress","",""
+"Deploy the charm with anycharm haproxy-route requirer that installs apache2.
+
+    Assert that the requirer endpoint is available.
+    ","0","test_haproxy_route_integration","tests.integration.legacy","2025-11-21","broken","2025-11-21","","test_haproxy_route","",""
+"
+    arrange: Deploy the charm.
+    act: Update the charm config to an invalid value and then a valid value.
+    assert: The charm correctly blocks the first time and write the configured
+    value to haproxy.cfg the second time.
+    ","23569","test_config","tests.integration.legacy","2025-11-21","passed","2025-11-21","","test_config","",""
+"Deploy the charm with anycharm ingress per unit requirer that installs apache2.
+
+    Assert that the requirer endpoints are available.
+    ","14241","test_haproxy_route_any_charm_requirer","tests.integration","2025-11-21","passed","2025-11-21","","test_haproxy_route","",""
+"Deploy the charm with anycharm ingress per unit requirer that installs apache2.
+
+    Assert that the requirer endpoints are available.
+    ","6802","test_haproxy_route_tcp","tests.integration","2025-11-21","passed","2025-11-21","","test_haproxy_route_tcp","",""
+"arrange: Deploy the charm integrated with any_charm haproxy-route.
+    act: Trigger the action 'get-proxied-endpoints.
+    assert: The correct proxied endpoints are returned.
+    ","17038","test_get_proxied_endpoints_action","tests.integration","2025-11-21","passed","2025-11-21","","test_actions","",""
