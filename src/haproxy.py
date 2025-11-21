@@ -233,10 +233,7 @@ class HAProxyService:
             # Ignore bandit rule as we're not parsing user input
             subprocess.run(validate_config_command, capture_output=True, check=True)  # nosec B603
         except subprocess.CalledProcessError as exc:
-            logger.error(
-                "Failed validation the HAProxy config: %s",
-                exc.stderr.decode(),
-            )
+            logger.error("Failed validating the HAProxy config")
             raise HaproxyValidateConfigError("Failed validating the HAProxy config.") from exc
 
 
