@@ -1,0 +1,63 @@
+[33mWARNING [0m juju.client.connection:connection.py:861 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:762 Adding model github-pr-045a5-lxd:test-ingress-ce36 on cloud localhost
+[33mWARNING [0m juju.client.connection:connection.py:861 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:861 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:861 unexpected facade SSHTunneler received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:haproxy-0
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  haproxy/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  haproxy/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  haproxy/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/self-signed-certificates-446
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/0 [allocating] waiting: waiting for machine
+  haproxy/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/0 [allocating] waiting: agent initialising
+  haproxy/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates/0 [idle] active: 
+  haproxy/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/any-charm-100
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  any-charm-ingress-requirer/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  any-charm-ingress-requirer/0 [allocating] waiting: waiting for machine
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  haproxy/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  haproxy/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model              Controller           Cloud/Region         Version  SLA          Timestamp
+test-ingress-ce36  github-pr-045a5-lxd  localhost/localhost  3.6.11   unsupported  13:25:06Z
+
+App                         Version  Status  Scale  Charm                     Channel      Rev  Exposed  Message
+any-charm-ingress-requirer           active      1  any-charm                 latest/beta  100  no       Server ready
+haproxy                              active      1  haproxy                                  0  no       
+self-signed-certificates             active      1  self-signed-certificates  1/edge       446  no       
+
+Unit                           Workload  Agent  Machine  Public address  Ports       Message
+any-charm-ingress-requirer/0*  active    idle   2        10.157.171.85               Server ready
+haproxy/0*                     active    idle   0        10.157.171.149  80,443/tcp  
+self-signed-certificates/0*    active    idle   1        10.157.171.140              
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.157.171.149  juju-6755ff-0  ubuntu@24.04  github-runner  Running
+1        started  10.157.171.140  juju-6755ff-1  ubuntu@24.04  github-runner  Running
+2        started  10.157.171.85   juju-6755ff-2  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+machine-0: 13:21:37 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 13:21:37 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 13:22:37 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 13:22:37 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 13:24:00 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 13:24:00 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
