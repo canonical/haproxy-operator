@@ -1,0 +1,14 @@
+schema_version: 1
+changes:
+  - title: Allow enabling http for haproxy route backend.
+    author: tphan025
+    type: minor
+    description: |
+      Add a new allow_http attribute to allow disabling mandatory HTTPS redirection for backends.
+      Add logic to build the required ACL and rendering logic in the j2 template.
+    urls:
+      pr: https://github.com/canonical/haproxy-operator/pull/230
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false
