@@ -1,0 +1,36 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: Terraform files test
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-terraform:
+    name: Validate terraform configuration files
+    runs-on: ubuntu-latest
+    env:
+      WORKING_DIR: 'terraform'
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5.0.1
+
+      - name: Prepare juju tf provider environment
+        run: |
+          sudo snap install --classic terraform
+          sudo snap install --classic tflint
+
+      - name: Run terraform fmt
+        run: terraform fmt -check -recursive
+        working-directory: ${{env.WORKING_DIR}}
+
+      - name: Run tflint
+        run: |
+          tflint --version
+          tflint --init
+          tflint -f compact --recursive
+        working-directory: ${{env.WORKING_DIR}}
