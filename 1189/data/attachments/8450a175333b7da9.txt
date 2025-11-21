@@ -1,0 +1,83 @@
+[33mWARNING [0m juju.client.connection:connection.py:861 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:762 Adding model github-pr-b3d0a-lxd:test-config-w30h on cloud localhost
+[33mWARNING [0m juju.client.connection:connection.py:861 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:861 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:861 unexpected facade SSHTunneler received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:haproxy-0
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  haproxy/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  haproxy/0 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  haproxy/0 [idle] active:
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  haproxy/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  haproxy/0 [idle] blocked: invalid configuration: global_max_connection
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model             Controller           Cloud/Region         Version  SLA          Timestamp
+test-config-w30h  github-pr-b3d0a-lxd  localhost/localhost  3.6.11   unsupported  13:21:05Z
+
+App      Version  Status  Scale  Charm    Channel  Rev  Exposed  Message
+haproxy           active      1  haproxy             0  no       
+
+Unit        Workload  Agent  Machine  Public address  Ports   Message
+haproxy/0*  active    idle   0        10.53.122.101   80/tcp  
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.53.122.101  juju-f5805f-0  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+machine-0: 13:20:09 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 13:20:09 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-haproxy-0: 13:20:42 ERROR unit.haproxy/0.juju-log haproxy-route information not ready, skipping certificate request.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/src/state/charm_state.py", line 191, in from_charm
+    return cls(
+           ^^^^
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/venv/lib/python3.12/site-packages/pydantic/_internal/_dataclasses.py", line 121, in __init__
+    s.__pydantic_validator__.validate_python(ArgsKwargs(args, kwargs), self_instance=s)
+pydantic_core._pydantic_core.ValidationError: 1 validation error for CharmState
+global_max_connection
+  Input should be greater than 0 [type=greater_than, input_value=-1, input_type=int]
+    For further information visit https://errors.pydantic.dev/2.12/v/greater_than
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/src/charm.py", line 385, in _get_certificate_requests
+    charm_state = CharmState.from_charm(
+                  ^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/src/state/charm_state.py", line 203, in from_charm
+    raise InvalidCharmConfigError(f"invalid configuration: {error_field_str}") from exc
+state.charm_state.InvalidCharmConfigError: invalid configuration: global_max_connection
+unit-haproxy-0: 13:20:42 ERROR unit.haproxy/0.juju-log Error setting up charm state.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/src/state/charm_state.py", line 191, in from_charm
+    return cls(
+           ^^^^
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/venv/lib/python3.12/site-packages/pydantic/_internal/_dataclasses.py", line 121, in __init__
+    s.__pydantic_validator__.validate_python(ArgsKwargs(args, kwargs), self_instance=s)
+pydantic_core._pydantic_core.ValidationError: 1 validation error for CharmState
+global_max_connection
+  Input should be greater than 0 [type=greater_than, input_value=-1, input_type=int]
+    For further information visit https://errors.pydantic.dev/2.12/v/greater_than
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/src/state/validation.py", line 63, in wrapper
+    return method(instance, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/src/charm.py", line 200, in _on_config_changed
+    self._reconcile()
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/src/charm.py", line 241, in _reconcile
+    charm_state = CharmState.from_charm(
+                  ^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-haproxy-0/charm/src/state/charm_state.py", line 203, in from_charm
+    raise InvalidCharmConfigError(f"invalid configuration: {error_field_str}") from exc
+state.charm_state.InvalidCharmConfigError: invalid configuration: global_max_connection
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
