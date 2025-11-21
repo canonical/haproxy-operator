@@ -37,7 +37,7 @@ lint = [
   "pytest-operator",
   "requests",
   "ruff",
-  "snowballstemmer<3",
+  "snowballstemmer<4",
   "types-pyyaml",
   "types-requests",
 ]
