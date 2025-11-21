@@ -116,8 +116,14 @@ class TLSInformation:
             logger.warning("Allowing load balancing without requesting TLS certificates.")
 
         if not certificates.certificate_requests and not allow_no_certificates:
-            logger.error("The charm did not request any certificates.")
-            raise TLSNotReadyError("The charm did not request any certificates.")
+            logger.error(
+                "The charm did not request any certificates."
+                "You need to either set the `external-hostname` config or request a hostname from"
+                "one of the requirer databag."
+            )
+            raise TLSNotReadyError(
+                "No hostname configured or requested. See juju debug-log for details."
+            )
 
         if invalid_hostname := [
             certificate_request.common_name
@@ -125,11 +131,13 @@ class TLSInformation:
             if not re.match(HOSTNAME_REGEX, certificate_request.common_name)
         ]:
             logger.error(
-                "Some requested hostname(s) (%s) does not match regex: %s",
+                (
+                    "Some requested hostname(s) (%s) are not valid."
+                    " Hostnames must be RFC-1034 and RFC-2181 compliant."
+                ),
                 ",".join(invalid_hostname),
-                HOSTNAME_REGEX,
             )
-            raise TLSNotReadyError("Some requested hostname(s) are invalid.")
+            raise TLSNotReadyError("Some requested hostname(s) are not valid.")
 
         if (
             tls_requirer_integration is None
