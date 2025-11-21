@@ -54,7 +54,7 @@ integration = [
   "pytest",
   "pytest-asyncio",
   "pytest-operator",
-  "websockets<14",
+  "websockets<16",
 ]
 
 [tool.uv]
