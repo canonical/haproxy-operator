@@ -12,7 +12,7 @@ passenv = [ "PYTHONPATH", "CHARM_BUILD_DIR", "MODEL_SETTINGS" ]
 runner = "uv-venv-lock-runner"
 
 [env_run_base.setenv]
-PYTHONPATH = "{toxinidir}:{toxinidir}/lib:{[vars]src_path}"
+PYTHONPATH = "{toxinidir}/src:{toxinidir}/lib"
 PYTHONBREAKPOINT = "ipdb.set_trace"
 PY_COLORS = "1"
 
@@ -23,8 +23,7 @@ commands = [
     "ruff",
     "check",
     "--fix",
-    "--select",
-    "I",
+    "--fix-only",
     { replace = "ref", of = [
       "vars",
       "all_path",
@@ -82,11 +81,10 @@ commands = [
   [
     "coverage",
     "run",
-    "--source={[vars]src_path},{toxinidir}/lib/charms/haproxy/v1/,{[vars]src_path},{toxinidir}/lib/charms/haproxy/v0/",
+    "--source={[vars]src_path}",
     "-m",
     "pytest",
     "--ignore={[vars]tst_path}integration",
-    "--ignore={toxinidir}/haproxy_spoe_auth_operator",
     "-v",
     "--tb",
     "native",
@@ -120,7 +118,6 @@ commands = [
     "--tb",
     "native",
     "--ignore={[vars]tst_path}unit",
-    "--ignore={toxinidir}/haproxy_spoe_auth_operator",
     "--log-cli-level=INFO",
     "-s",
     { replace = "posargs", extend = "true" },
@@ -128,28 +125,10 @@ commands = [
 ]
 dependency_groups = [ "integration" ]
 
-[env.lint-fix]
-description = "Apply coding style standards to code"
-commands = [
-  [
-    "ruff",
-    "check",
-    "--fix",
-    "--fix-only",
-    { replace = "ref", of = [
-      "vars",
-      "all_path",
-    ], extend = true },
-  ],
-]
-dependency_groups = [ "lint" ]
-
 [vars]
 src_path = "{toxinidir}/src/"
 tst_path = "{toxinidir}/tests/"
 all_path = [
   "{toxinidir}/src/",
   "{toxinidir}/tests/",
-  "{toxinidir}/lib/charms/haproxy/v1",
-  "{toxinidir}/lib/charms/haproxy/v0",
 ]
