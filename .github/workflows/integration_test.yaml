@@ -19,7 +19,7 @@ jobs:
         "test_ingress_per_unit.py", "test_haproxy_route_tcp.py"]'
       with-uv: true
   allure-report:
-    if: ${{ always() && !cancelled() && github.event_name == 'schedule' }}
+    if: ${{ (success() || failure()) && github.event_name == 'schedule' }}
     needs:
     - integration-tests
     uses: canonical/operator-workflows/.github/workflows/allure_report.yaml@main
