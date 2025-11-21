@@ -1,11 +1,14 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
+locals {
+  use_hacluster  = var.hacluster != null
+  use_keepalived = var.keepalived != null
+}
 
 module "haproxy" {
   source = "../charm"
 
-  model_uuid = var.model_uuid
-
+  model_uuid  = var.model_uuid
   app_name    = var.haproxy.app_name
   channel     = var.haproxy.channel
   revision    = var.haproxy.revision
@@ -14,10 +17,15 @@ module "haproxy" {
   constraints = var.haproxy.constraints
   config      = var.haproxy.config
 
-  use_hacluster            = true
-  hacluster_charm_channel  = var.hacluster.channel
-  hacluster_charm_revision = var.hacluster.revision
-  hacluster_config         = var.hacluster.config
+  use_hacluster            = local.use_hacluster
+  hacluster_charm_channel  = local.use_hacluster ? var.hacluster.channel : null
+  hacluster_charm_revision = local.use_hacluster ? var.hacluster.revision : null
+  hacluster_config         = local.use_hacluster ? var.hacluster.config : {}
+
+  use_keepalived            = local.use_keepalived
+  keepalived_charm_channel  = local.use_keepalived ? var.keepalived.channel : null
+  keepalived_charm_revision = local.use_keepalived ? var.keepalived.revision : null
+  keepalived_config         = local.use_keepalived ? var.keepalived.config : {}
 }
 
 resource "juju_application" "grafana_agent" {

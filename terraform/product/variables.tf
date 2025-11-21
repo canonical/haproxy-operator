@@ -2,8 +2,9 @@
 # See LICENSE file for licensing details.
 
 variable "model_uuid" {
-  description = "UUID of the model to deploy to"
+  description = "ID of the model to deploy to"
   type        = string
+  default     = ""
 }
 
 variable "haproxy" {
@@ -25,7 +26,20 @@ variable "hacluster" {
     config   = optional(map(string), {})
     revision = optional(number, null)
   })
-  default = {}
+  default = null
+}
+
+variable "keepalived" {
+  type = object({
+    channel  = optional(string, "latest/edge")
+    config   = optional(map(string), {})
+    revision = optional(number, null)
+  })
+  default = null
+  validation {
+    condition     = (var.hacluster == null || var.keepalived == null)
+    error_message = "hacluster and keepalived cannot both be set."
+  }
 }
 
 variable "grafana_agent" {

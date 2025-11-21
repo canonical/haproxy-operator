@@ -361,7 +361,9 @@ class HAProxyCharm(ops.CharmBase):
             for backend in haproxy_route_requirers_information.backends:
                 relation = self.model.get_relation(HAPROXY_ROUTE_RELATION, backend.relation_id)
                 if not relation:
-                    logger.error("Relation does not exist, skipping.")
+                    logger.error(
+                        "The haproxy-route relation does not exist for this backend, skipping."
+                    )
                     continue
                 self.haproxy_route_provider.publish_proxied_endpoints(
                     self._get_backend_proxied_endpoints(backend),
