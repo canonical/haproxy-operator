@@ -1,0 +1,30 @@
+[33mWARNING [0m juju.client.connection:connection.py:861 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:762 Adding model github-pr-ddf0b-lxd:test-action-urcf on cloud localhost
+[33mWARNING [0m juju.client.connection:connection.py:861 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:861 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:861 unexpected facade SSHTunneler received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:haproxy-0
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  haproxy/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  haproxy/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model             Controller           Cloud/Region         Version  SLA          Timestamp
+test-action-urcf  github-pr-ddf0b-lxd  localhost/localhost  3.6.11   unsupported  12:58:11Z
+
+App      Version  Status  Scale  Charm    Channel  Rev  Exposed  Message
+haproxy           error       1  haproxy             0  no       hook failed: "install"
+
+Unit        Workload  Agent  Machine  Public address  Ports  Message
+haproxy/0*  error     idle   0        10.70.203.100          hook failed: "install"
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.70.203.100  juju-eaf992-0  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+machine-0: 12:58:02 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 12:58:02 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
