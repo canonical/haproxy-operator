@@ -265,9 +265,10 @@ class HAProxyCharm(ops.CharmBase):
             case ProxyMode.HAPROXY_ROUTE:
                 self._configure_haproxy_route(charm_state)
             case _:
-                if self.model.get_relation(TLS_CERT_RELATION):
-                    # Reconcile certificates in case the certificates relation is present
-                    tls_information = TLSInformation.from_charm(self, self.certificates)
+                # Reconcile certificates in case the certificates relation is present
+                if (
+                    tls_information := TLSInformation.from_charm(self, self.certificates)
+                ) and self.model.get_relation(TLS_CERT_RELATION):
                     self._tls.certificate_available(tls_information)
 
                 self.unit.set_ports(80)
@@ -280,25 +281,26 @@ class HAProxyCharm(ops.CharmBase):
         requirer_class: IngressRequirersInformation | IngressPerUnitRequirersInformation,
     ) -> None:
         """Configure the ingress or ingress-per-unit relation."""
-        tls_information = TLSInformation.from_charm(self, self.certificates)
-        self._tls.certificate_available(tls_information)
+        if tls_information := TLSInformation.from_charm(self, self.certificates):
+            self._tls.certificate_available(tls_information)
 
-        ingress_provider = (
-            self._ingress_provider
-            if requirer_class is IngressRequirersInformation
-            else self._ingress_per_unit_provider
-        )
-        ingress_requirers_information = requirer_class.from_provider(ingress_provider)
-        self.unit.set_ports(80, 443)
-        self.haproxy_service.reconcile_ingress(
-            charm_state, ingress_requirers_information, tls_information.hostnames[0]
-        )
+            ingress_provider = (
+                self._ingress_provider
+                if requirer_class is IngressRequirersInformation
+                else self._ingress_per_unit_provider
+            )
+            ingress_requirers_information = requirer_class.from_provider(ingress_provider)
+            self.unit.set_ports(80, 443)
+            self.haproxy_service.reconcile_ingress(
+                charm_state, ingress_requirers_information, tls_information.hostnames[0]
+            )
 
     def _configure_legacy(self, charm_state: CharmState) -> None:
         """Configure the legacy mode."""
-        if self.model.get_relation(TLS_CERT_RELATION):
+        if self.model.get_relation(TLS_CERT_RELATION) and (
+            tls_information := TLSInformation.from_charm(self, self.certificates)
+        ):
             # Reconcile certificates in case the certificates relation is present
-            tls_information = TLSInformation.from_charm(self, self.certificates)
             self._tls.certificate_available(tls_information)
 
         legacy_invalid_requested_port: list[str] = []
@@ -335,7 +337,7 @@ class HAProxyCharm(ops.CharmBase):
         # 1. there's only haproxy-route-tcp relations
         # AND
         # 2. All requirers must enable TLS passthrough or disable TLS termination
-        allow_no_certificates = (
+        allow_no_certificates = bool(
             not haproxy_route_requirers_information.backends
             and haproxy_route_requirers_information.tcp_endpoints
             and all(
@@ -344,8 +346,10 @@ class HAProxyCharm(ops.CharmBase):
                 for endpoint in haproxy_route_requirers_information.tcp_endpoints
             )
         )
-        tls_information = TLSInformation.from_charm(self, self.certificates, allow_no_certificates)
-        self._tls.certificate_available(tls_information)
+        if tls_information := TLSInformation.from_charm(
+            self, self.certificates, allow_no_certificates
+        ):
+            self._tls.certificate_available(tls_information)
         self.haproxy_service.reconcile_haproxy_route(
             charm_state, haproxy_route_requirers_information
         )
@@ -453,8 +457,9 @@ class HAProxyCharm(ops.CharmBase):
     def _on_ingress_per_unit_data_provided(self, _: IngressDataReadyEvent) -> None:
         """Handle the data-provided event for ingress-per-unit."""
         self._reconcile()
-        if self.unit.is_leader():
-            tls_information = TLSInformation.from_charm(self, self.certificates)
+        if self.unit.is_leader() and (
+            tls_information := TLSInformation.from_charm(self, self.certificates)
+        ):
             for relation in self._ingress_per_unit_provider.relations:
                 for unit in relation.units:
                     if not self._ingress_per_unit_provider.is_unit_ready(relation, unit):
@@ -479,8 +484,9 @@ class HAProxyCharm(ops.CharmBase):
             event: Juju event.
         """
         self._reconcile()
-        if self.unit.is_leader():
-            tls_information = TLSInformation.from_charm(self, self.certificates)
+        if self.unit.is_leader() and (
+            tls_information := TLSInformation.from_charm(self, self.certificates)
+        ):
             integration_data = self._ingress_provider.get_data(event.relation)
             path_prefix = f"{integration_data.app.model}-{integration_data.app.name}"
             self._ingress_provider.publish_url(

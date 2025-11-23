@@ -288,6 +288,7 @@ def test_tls_allow_no_certificate():
     tls_information = TLSInformation.from_charm(
         charm_mock, certificate_requirer_mock, allow_no_certificates=True
     )
+    assert tls_information is not None
     assert not tls_information.hostnames
     assert tls_information.private_key == "mock private key"
 
