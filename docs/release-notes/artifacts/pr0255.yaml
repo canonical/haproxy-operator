@@ -1,7 +1,7 @@
 schema_version: 1
 changes:
   - title: Handle optional TLS information in charm and state
-    author: Phan Trung Thanh
+    author: tphan025
     type: bugfix
     description: |
       Allow TLSInformation.from_charm to return None when certificates are not required,
