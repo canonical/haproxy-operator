@@ -164,10 +164,6 @@ def test_haproxy_route_protocol_https(
     )
     assert response.text == "ok!"
 
-    juju.remove_relation(
-        f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
-    )
-
 
 @pytest.mark.abort_on_fail
 def test_haproxy_route_https_with_different_transport_protocols(
