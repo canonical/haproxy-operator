@@ -4,6 +4,7 @@
 """Integration tests for the ingress per unit relation."""
 
 import json
+import re
 import time
 
 import httpx
@@ -12,7 +13,7 @@ import pytest
 import requests
 
 from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
-from .helper import get_unit_ip_address
+from .helper import get_http_version_from_apache2_logs, get_unit_ip_address
 
 
 @pytest.mark.abort_on_fail
@@ -226,14 +227,81 @@ def test_haproxy_route_https_with_http2(
 
     haproxy_ip_address = get_unit_ip_address(juju, configured_application_with_tls)
 
-    with httpx.Client(http2=True, verify=False) as client:
+    # Test HTTP/1.1
+    with httpx.Client(http2=False, verify=False) as client:
         response = client.get(
             f"https://{haproxy_ip_address}",
-            headers={"Host": TEST_EXTERNAL_HOSTNAME_CONFIG},
+            headers={
+                "Host": TEST_EXTERNAL_HOSTNAME_CONFIG,
+            },
             timeout=5.0,
         )
         assert response.status_code == httpx.codes.OK
-        assert response.http_version == "HTTP/2", f"Expected HTTP/2, got {response.http_version}"
+        assert response.http_version == "HTTP/1.1", (
+            f"[frontend <-> haproxy] Expected HTTP/1.1, got {response.http_version} "
+        )
+
+    http_transport_version = get_http_version_from_apache2_logs(
+        juju, any_charm_haproxy_route_requirer
+    )
+    assert http_transport_version == "HTTP/1.1", (
+        f"[haproxy <-> backend] Expected HTTP/1.1, got {http_transport_version}"
+    )
+
+    # Test HTTP/2 without http/2 support on backend
+    with httpx.Client(http2=True, verify=False) as client:
+        response = client.get(
+            f"https://{haproxy_ip_address}",
+            headers={
+                "Host": TEST_EXTERNAL_HOSTNAME_CONFIG,
+            },
+            timeout=5.0,
+        )
+        assert response.status_code == httpx.codes.OK
+        assert response.http_version == "HTTP/2", (
+            f"[frontend <-> haproxy] Expected HTTP/2, got {response.http_version}"
+        )
+
+    http_transport_version = get_http_version_from_apache2_logs(
+        juju, any_charm_haproxy_route_requirer
+    )
+    assert http_transport_version == "HTTP/1.1", (
+        f"[haproxy <-> backend] Expected HTTP/1.1, got {http_transport_version}"
+    )
+
+    # Test HTTP/2 with http/2 support on backend
+    juju.ssh(
+        f"{any_charm_haproxy_route_requirer}/0",
+        "sudo a2enmod http2 && sudo systemctl restart apache2",
+    )
+
+    with httpx.Client(http2=True, verify=False) as client:
+        response = client.get(
+            f"https://{haproxy_ip_address}",
+            headers={
+                "Host": TEST_EXTERNAL_HOSTNAME_CONFIG,
+            },
+            timeout=5.0,
+        )
+        assert response.status_code == httpx.codes.OK
+        assert response.http_version == "HTTP/2", (
+            f"[frontend <-> haproxy] Expected HTTP/2, got {response.http_version}"
+        )
+
+    http_transport_version = get_http_version_from_apache2_logs(
+        juju, any_charm_haproxy_route_requirer
+    )
+    assert http_transport_version == "HTTP/2.0", (
+        f"[haproxy <-> backend] Expected HTTP/2, got {http_transport_version}"
+    )
+
+    # Test HTTP/1.1 without http/1.1 support on backend
+    apache2_any_charm_conf = "/etc/apache2/sites-available/anycharm-ssl.conf"
+    juju.ssh(
+        f"{any_charm_haproxy_route_requirer}/0",
+        rf"sudo sed -i '/<VirtualHost \*:443>/a\                Protocols h2' {apache2_any_charm_conf} &&"
+        "sudo systemctl restart apache2",
+    )
 
     with httpx.Client(http2=False, verify=False) as client:
         response = client.get(
@@ -241,5 +309,14 @@ def test_haproxy_route_https_with_http2(
             headers={"Host": TEST_EXTERNAL_HOSTNAME_CONFIG},
             timeout=5.0,
         )
-        assert response.status_code == httpx.codes.OK
-        assert response.http_version == "HTTP/1.1", f"Expected HTTP/1.1, got {response.http_version}"
+        assert response.status_code == httpx.codes.OK, "HTTP/1.1 request failed"
+        assert response.http_version == "HTTP/1.1", (
+            f"[frontend <-> haproxy] Expected HTTP/1.1, got {response.http_version}"
+        )
+
+    http_transport_version = get_http_version_from_apache2_logs(
+        juju, any_charm_haproxy_route_requirer
+    )
+    assert http_transport_version == "HTTP/2.0", (
+        f"[haproxy <-> backend] Expected HTTP/2, got {http_transport_version}"
+    )

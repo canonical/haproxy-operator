@@ -6,6 +6,7 @@
 
 import ipaddress
 import json
+import re
 import typing
 from urllib.parse import ParseResult, urlparse
 
@@ -13,6 +14,8 @@ import jubilant
 import pytest
 import yaml
 from requests.adapters import DEFAULT_POOLBLOCK, DEFAULT_POOLSIZE, DEFAULT_RETRIES, HTTPAdapter
+
+HTTP_TRANSPORT_VERSION_PATTERN = re.compile(r'HTTP/[^"]+')
 
 
 class DNSResolverHTTPSAdapter(HTTPAdapter):
@@ -176,3 +179,29 @@ def pytestconfig_arg_no_deploy(application: str) -> typing.Callable:
         return wrapper
 
     return decorator
+
+
+def get_http_version_from_apache2_logs(
+    juju: jubilant.Juju, app_name: str, pattern: re.Pattern = HTTP_TRANSPORT_VERSION_PATTERN
+) -> str:
+    """
+    Extract the HTTP transport version from the apache2 access logs of a given application unit.
+
+    Args:
+        juju: Jubilant Juju client.
+        app_name: The name of the application whose logs to check.
+        pattern: The regex pattern to extract the HTTP version.
+
+    Returns:
+        The extracted HTTP version string.
+    """
+    last_httpx_log_entry = juju.ssh(
+        f"{app_name}/0",
+        "grep 'python-httpx' /var/log/apache2/access.log | tail -n 1",
+    )
+
+    match = pattern.search(last_httpx_log_entry)
+    if not match:
+        raise RuntimeError("Unexpected Error: No HTTP version found in log entry")
+
+    return match.group(0)
