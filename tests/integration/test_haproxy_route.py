@@ -227,7 +227,7 @@ def test_haproxy_route_https_with_http2(
     haproxy_ip_address = get_unit_ip_address(juju, configured_application_with_tls)
 
     # Test HTTP/1.1
-    with httpx.Client(http2=False, verify=False) as client:
+    with httpx.Client(http2=False, verify=False) as client:  # nosec: B501
         response = client.get(
             f"https://{haproxy_ip_address}",
             headers={
@@ -248,7 +248,7 @@ def test_haproxy_route_https_with_http2(
     )
 
     # Test HTTP/2 without http/2 support on backend
-    with httpx.Client(http2=True, verify=False) as client:
+    with httpx.Client(http2=True, verify=False) as client:  # nosec: B501
         response = client.get(
             f"https://{haproxy_ip_address}",
             headers={
@@ -274,7 +274,7 @@ def test_haproxy_route_https_with_http2(
         "sudo a2enmod http2 && sudo systemctl restart apache2",
     )
 
-    with httpx.Client(http2=True, verify=False) as client:
+    with httpx.Client(http2=True, verify=False) as client:  # nosec: B501
         response = client.get(
             f"https://{haproxy_ip_address}",
             headers={
@@ -302,7 +302,7 @@ def test_haproxy_route_https_with_http2(
         "sudo systemctl restart apache2",
     )
 
-    with httpx.Client(http2=False, verify=False) as client:
+    with httpx.Client(http2=False, verify=False) as client:  # nosec: B501
         response = client.get(
             f"https://{haproxy_ip_address}",
             headers={"Host": TEST_EXTERNAL_HOSTNAME_CONFIG},
