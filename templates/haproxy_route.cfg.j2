@@ -6,7 +6,7 @@ frontend haproxy
     bind [::]:80 v4v6
     bind [::]:443 v4v6 ssl crt {{ haproxy_crt_dir }}
     # Redirect HTTP to HTTPS
-    http-request redirect scheme https unless { ssl_fc }
+    http-request redirect scheme https unless { ssl_fc } {% for acl in acls_for_allow_http %} || {{ acl }}{% endfor %}
 {% endif %}
 
 {% for backend in backends %}
