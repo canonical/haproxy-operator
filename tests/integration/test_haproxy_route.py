@@ -157,7 +157,7 @@ def test_haproxy_route_protocol_https(
 
 
 @pytest.mark.abort_on_fail
-def test_haproxy_route_https_with_http2(
+def test_haproxy_route_https_with_different_transport_protocols(
     configured_application_with_tls: str,
     any_charm_haproxy_route_requirer: str,
     juju: jubilant.Juju,
@@ -166,7 +166,8 @@ def test_haproxy_route_https_with_http2(
     """Deploy the charm with anycharm haproxy route requirer that installs apache2 with ssl.
     Integrate haproxy with certificates and ca transfer.
 
-    Assert that the requirer endpoints can be accessed using https with http2 and http1.1.
+    Assert that the communication between frontend<->haproxy and haproxy<->backend
+        supports both http/2 and http/1.1 transport protocols.
     """
     juju.wait(
         lambda status: jubilant.all_active(
