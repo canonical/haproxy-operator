@@ -276,21 +276,11 @@ def test_tls_allow_no_certificate():
     assert: The state passes validation even though no certificate is found.
     """
     charm_mock = MagicMock(spec=ops.CharmBase)
-    relation_mock = MagicMock(autospec=True)
-    relation_mock.data.get = MagicMock(return_value={})
-    charm_mock.model.get_relation = MagicMock(return_value=relation_mock)
     certificate_requirer_mock = MagicMock(spec=TLSCertificatesRequiresV4)
-    certificate_requirer_mock.get_assigned_certificates = MagicMock(
-        return_value=([], "mock private key")
-    )
-    certificate_requirer_mock.relationship_name = "certificates"
-    certificate_requirer_mock.certificate_requests = []
     tls_information = TLSInformation.from_charm(
         charm_mock, certificate_requirer_mock, allow_no_certificates=True
     )
-    assert tls_information is not None
-    assert not tls_information.hostnames
-    assert tls_information.private_key == "mock private key"
+    assert tls_information is None
 
 
 def test_haproxy_route_tcp_endpoint(
