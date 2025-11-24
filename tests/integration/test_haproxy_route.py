@@ -133,6 +133,7 @@ def test_haproxy_route_protocol_https(
                         "load_balancing_consistent_hashing": True,
                         "http_server_close": True,
                         "protocol": "https",
+                        "allow_http": True,
                     }
                 ]
             ),
@@ -152,6 +153,14 @@ def test_haproxy_route_protocol_https(
         headers={"Host": TEST_EXTERNAL_HOSTNAME_CONFIG},
         timeout=5,
         verify=False,  # nosec: B501
+    )
+    assert response.text == "ok!"
+
+    # Make HTTP request to verify allow_http works
+    response = requests.get(
+        f"http://{haproxy_ip_address}",
+        headers={"Host": TEST_EXTERNAL_HOSTNAME_CONFIG},
+        timeout=5,
     )
     assert response.text == "ok!"
 

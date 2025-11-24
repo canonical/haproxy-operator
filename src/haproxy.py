@@ -163,6 +163,7 @@ class HAProxyService:
             "peer_units_address": haproxy_route_requirers_information.peers,
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
             "haproxy_cas_file": HAPROXY_CAS_FILE,
+            "acls_for_allow_http": haproxy_route_requirers_information.acls_for_allow_http,
         }
         template = (
             HAPROXY_ROUTE_TCP_CONFIG_TEMPLATE
