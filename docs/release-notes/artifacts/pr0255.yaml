@@ -1,0 +1,14 @@
+schema_version: 1
+changes:
+  - title: Handle optional TLS information in charm and state
+    author: Phan Trung Thanh
+    type: bugfix
+    description: |
+      Allow TLSInformation.from_charm to return None when certificates are not required,
+      and handle this case in the charm code to avoid errors.
+    urls:
+      pr: https://github.com/canonical/haproxy-operator/pull/255
+      related_doc:
+      related_issue:
+    visibility: hidden
+    highlight: false
