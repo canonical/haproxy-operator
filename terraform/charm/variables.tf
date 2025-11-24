@@ -28,7 +28,6 @@ variable "constraints" {
 variable "model_uuid" {
   description = "ID of the Juju model to deploy to."
   type        = string
-  default     = null
 }
 
 variable "revision" {
