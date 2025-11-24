@@ -321,7 +321,7 @@ class HaproxyRouteRequirersInformation:
         return self
 
     @property
-    def allow_http_acls(self) -> list[str]:
+    def acls_for_allow_http(self) -> list[str]:
         """Get the list of all allow_http ACLs from all backends.
 
         Returns:

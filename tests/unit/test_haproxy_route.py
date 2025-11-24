@@ -117,6 +117,6 @@ def test_haproxy_route_requirer_information(
         peers=[],
         ca_certs_configured=False,
     )
-    assert haproxy_route_information.allow_http_acls == [
+    assert haproxy_route_information.acls_for_allow_http == [
         "{ req.hdr(Host) -m str example.com } { path_beg -i /path } !{ path_beg -i /private }"
     ]
