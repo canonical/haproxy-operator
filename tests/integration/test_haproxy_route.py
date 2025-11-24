@@ -184,6 +184,35 @@ def test_haproxy_route_https_with_different_transport_protocols(
         )
     )
 
+    juju.run(
+        f"{any_charm_haproxy_route_requirer}/0",
+        "rpc",
+        {
+            "method": "update_relation",
+            "args": json.dumps(
+                [
+                    {
+                        "service": "any_charm_with_retry",
+                        "ports": [443],
+                        "retry_count": 3,
+                        "retry_redispatch": True,
+                        "load_balancing_algorithm": "source",
+                        "load_balancing_consistent_hashing": True,
+                        "http_server_close": True,
+                        "protocol": "https",
+                    }
+                ]
+            ),
+        },
+    )
+
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, any_charm_haproxy_route_requirer
+        ),
+        delay=5,
+    )
+
     haproxy_ip_address = get_unit_ip_address(juju, configured_application_with_tls)
 
     # Test HTTP/1.1
