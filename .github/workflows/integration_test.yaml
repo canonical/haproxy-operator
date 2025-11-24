@@ -2,6 +2,8 @@ name: Integration tests
 
 on:
   pull_request:
+  schedule:
+  - cron: "0 15 * * SAT"
 
 jobs:
   integration-tests:
@@ -17,7 +19,7 @@ jobs:
         "test_ingress_per_unit.py", "test_haproxy_route_tcp.py"]'
       with-uv: true
   allure-report:
-    if: always() && !cancelled()
+    if: ${{ !cancelled() && github.event_name == 'schedule' }}
     needs:
     - integration-tests
     uses: canonical/operator-workflows/.github/workflows/allure_report.yaml@main
