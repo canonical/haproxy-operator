@@ -155,6 +155,10 @@ def test_haproxy_route_protocol_https(
     )
     assert response.text == "ok!"
 
+    juju.remove_relation(
+        f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
+    )
+
 
 @pytest.mark.abort_on_fail
 def test_haproxy_route_https_with_different_transport_protocols(
@@ -173,56 +177,6 @@ def test_haproxy_route_https_with_different_transport_protocols(
         lambda status: jubilant.all_active(
             status, configured_application_with_tls, any_charm_haproxy_route_requirer
         )
-    )
-
-    juju.integrate(
-        f"{any_charm_haproxy_route_requirer}:require-tls-certificates",
-        f"{certificate_provider_application}:certificates",
-    )
-
-    for _ in range(5):
-        try:
-            juju.run(
-                f"{any_charm_haproxy_route_requirer}/0", "rpc", {"method": "start_ssl_server"}
-            )
-        except jubilant.TaskError:
-            time.sleep(5)
-            continue
-        break
-    else:
-        raise AssertionError("Could not start anycharm ssl server")
-
-    juju.integrate(
-        f"{configured_application_with_tls}:receive-ca-certs",
-        f"{certificate_provider_application}:send-ca-cert",
-    )
-
-    juju.integrate(
-        f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
-    )
-
-    juju.run(
-        f"{any_charm_haproxy_route_requirer}/0",
-        "rpc",
-        {
-            "method": "update_relation",
-            "args": json.dumps(
-                [
-                    {
-                        "service": "http2_backend",
-                        "ports": [443],
-                        "protocol": "https",
-                    }
-                ]
-            ),
-        },
-    )
-
-    juju.wait(
-        lambda status: jubilant.all_active(
-            status, configured_application_with_tls, any_charm_haproxy_route_requirer
-        ),
-        delay=5,
     )
 
     haproxy_ip_address = get_unit_ip_address(juju, configured_application_with_tls)
