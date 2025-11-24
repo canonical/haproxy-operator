@@ -1,5 +1,3 @@
-# --- Release notes change artifact ----
-
 schema_version: 1
 changes:
   - title: "Add HTTP/2 support to HAProxy"
