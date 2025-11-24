@@ -1,0 +1,13 @@
+schema_version: 1
+changes:
+  - title: Integration test for terraform product.
+    author: javierdelapuente
+    type: minor
+    description: |
+       First integration test for the terraform product.
+    urls:
+      pr: https://github.com/canonical/haproxy-operator/pull/246
+      related_doc:
+      related_issue:
+    visibility: hidden
+    highlight: false
