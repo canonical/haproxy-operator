@@ -266,9 +266,9 @@ class HAProxyCharm(ops.CharmBase):
                 self._configure_haproxy_route(charm_state)
             case _:
                 # Reconcile certificates in case the certificates relation is present
-                if (
+                if self.model.get_relation(TLS_CERT_RELATION) and (
                     tls_information := TLSInformation.from_charm(self, self.certificates)
-                ) and self.model.get_relation(TLS_CERT_RELATION):
+                ):
                     self._tls.certificate_available(tls_information)
 
                 self.unit.set_ports(80)
