@@ -4,7 +4,6 @@
 """Integration tests for the ingress per unit relation."""
 
 import json
-import re
 import time
 
 import httpx
