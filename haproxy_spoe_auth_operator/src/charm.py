@@ -30,6 +30,7 @@ VAR_AUTHENTICATED = "sess.auth.is_authenticated"
 VAR_REDIRECT_URL = "sess.auth.redirect_url"
 COOKIE_NAME = "authsession"
 SPOE_AUTH_RELATION = "spoe-auth"
+SPOE_AUTH_MESSAGE_NAME = "try-auth-oidc"
 
 
 class HaproxySpoeAuthCharm(ops.CharmBase):
@@ -72,11 +73,12 @@ class HaproxySpoeAuthCharm(ops.CharmBase):
                     relation=relation,
                     spop_port=SPOP_PORT,
                     event=HaproxyEvent.ON_FRONTEND_HTTP_REQUEST,
+                    message_name=SPOE_AUTH_MESSAGE_NAME,
                     oidc_callback_port=OIDC_CALLBACK_PORT,
                     var_authenticated=VAR_AUTHENTICATED,
                     var_redirect_url=VAR_REDIRECT_URL,
                     cookie_name=COOKIE_NAME,
-                    oidc_callback_hostname=state.hostname,
+                    hostname=state.hostname,
                     oidc_callback_path=OIDC_CALLBACK_PATH,
                 )
             self.service.reconcile(charm_state=state, oauth_information=oauth_information)

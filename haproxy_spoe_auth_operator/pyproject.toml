@@ -34,7 +34,7 @@ integration = ["jubilant==1.1.1", "juju==3.6.1.0", "pytest", "pytest-asyncio"]
 package = false
 
 [tool.uv.sources]
-charmlibs-interfaces-haproxy-spoe-auth = { git = "https://github.com/Thanhphan1147/charmlibs", subdirectory = "interfaces/haproxy_spoe_auth", rev = "feat/add-spoe-auth-lib" }
+charmlibs-interfaces-haproxy-spoe-auth = { git = "https://github.com/Thanhphan1147/charmlibs", subdirectory = "interfaces/haproxy_spoe_auth", rev = "d0b2b27fa454394cc54d438ed18d25d88afa3ed5" }
 
 [tool.ruff]
 target-version = "py310"

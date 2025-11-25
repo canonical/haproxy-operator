@@ -10,7 +10,7 @@ jobs:
     with:
       self-hosted-runner: true
       self-hosted-runner-image: "noble"
-      charmcraft-channel: latest/edge
+      working-directory: ./haproxy_operator
       with-uv: true
   haproxy-spoe-auth-operator:
     name: Unit tests for the haproxy-spoe-auth-operator charm
