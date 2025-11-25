@@ -172,7 +172,7 @@ class HAProxyRouteBackend:
         for rewrite in self.application_data.rewrites:
             if rewrite.method == HaproxyRewriteMethod.SET_HEADER:
                 rewrite_configurations.append(
-                    f"{rewrite.method!s} {rewrite.header} {rewrite.expression}"
+                    f"{rewrite.method.value!s} {rewrite.header} {rewrite.expression}"
                 )
                 continue
             rewrite_configurations.append(f"{rewrite.method.value!s} {rewrite.expression}")
