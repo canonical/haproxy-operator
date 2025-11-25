@@ -30,6 +30,8 @@ jobs:
     with:
       juju-channel: '3/stable'
       provider: lxd
+      self-hosted-runner: true
+      charmcraft-channel: latest/edge
       working-directory: ./haproxy_spoe_auth_operator
       with-uv: True
       modules: '["test_charm.py",]'
