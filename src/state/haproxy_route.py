@@ -310,15 +310,33 @@ class HaproxyRouteRequirersInformation:
         if len(requirers_paths) != len(set(requirers_paths)):
             logger.warning(
                 "Requirers defined path(s) that map to multiple backends."
-                "This can cause unintended behaviours."
+                "This can cause unintended behaviors."
             )
 
         if len(requirers_hostnames) != len(set(requirers_hostnames)):
             logger.warning(
                 "Requirers defined hostname(s) that map to multiple backends."
-                "This can cause unintended behaviours."
+                "This can cause unintended behaviors."
             )
         return self
+
+    @property
+    def acls_for_allow_http(self) -> list[str]:
+        """Get the list of all allow_http ACLs from all backends.
+
+        Returns:
+            list[str]: List of allow_http ACLs.
+        """
+        allow_http_acls: list[str] = []
+        for backend in self.backends:
+            if backend.application_data.allow_http:
+                acl = f"{{ req.hdr(Host) -m str {' '.join(backend.hostname_acls)} }}"
+                if backend.path_acl_required:
+                    acl += f" {{ path_beg -i {' '.join(backend.application_data.paths)} }}"
+                if backend.deny_path_acl_required:
+                    acl += f" !{{ path_beg -i {' '.join(backend.application_data.deny_paths)} }}"
+                allow_http_acls.append(acl)
+        return allow_http_acls
 
 
 def get_servers_definition_from_requirer_data(

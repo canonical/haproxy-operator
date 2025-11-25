@@ -151,7 +151,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 8
+LIBPATCH = 9
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -538,6 +538,8 @@ class RequirerApplicationData(_DatabagModel):
         timeout: Configuration for server, client, and queue timeouts.
         server_maxconn: Optional maximum number of connections per server.
         http_server_close: Configure server close after request.
+        allow_http: Whether to allow HTTP traffic in addition to HTTPS. Defaults to False.
+            Warning: enabling HTTP is a security risk, make sure you apply the necessary precautions.
     """
 
     service: VALIDSTR = Field(description="The name of the service.")
@@ -588,6 +590,9 @@ class RequirerApplicationData(_DatabagModel):
     )
     http_server_close: bool = Field(
         description="Configure server close after request", default=False
+    )
+    allow_http: bool = Field(
+        description="Whether to allow HTTP traffic in addition to HTTPS.", default=False
     )
 
     @field_validator("load_balancing")
@@ -945,6 +950,7 @@ class HaproxyRouteRequirer(Object):
         server_maxconn: Optional[int] = None,
         unit_address: Optional[str] = None,
         http_server_close: bool = False,
+        allow_http: bool = False,
     ) -> None:
         """Initialize the HaproxyRouteRequirer.
 
@@ -983,6 +989,9 @@ class HaproxyRouteRequirer(Object):
             server_maxconn: Maximum connections per server.
             unit_address: IP address of the unit (if not provided, will use binding address).
             http_server_close: Configure server close after request.
+            allow_http: Whether to allow HTTP traffic in addition to HTTPS.
+                Warning: enabling HTTP is a security risk,
+                make sure you apply the necessary precautions.
         """
         super().__init__(charm, relation_name)
 
@@ -1023,6 +1032,7 @@ class HaproxyRouteRequirer(Object):
             queue_timeout,
             server_maxconn,
             http_server_close,
+            allow_http,
         )
         self._unit_address = unit_address
 
@@ -1079,6 +1089,7 @@ class HaproxyRouteRequirer(Object):
         server_maxconn: Optional[int] = None,
         unit_address: Optional[str] = None,
         http_server_close: bool = False,
+        allow_http: bool = False,
     ) -> None:
         """Update haproxy-route requirements data in the relation.
 
@@ -1115,6 +1126,9 @@ class HaproxyRouteRequirer(Object):
             server_maxconn: Maximum connections per server.
             unit_address: IP address of the unit (if not provided, will use binding address).
             http_server_close: Configure server close after request.
+            allow_http: Whether to allow HTTP traffic in addition to HTTPS.
+                Warning: enabling HTTP is a security risk,
+                make sure you apply the necessary precautions.
         """
         self._unit_address = unit_address
         self._application_data = self._generate_application_data(
@@ -1148,6 +1162,7 @@ class HaproxyRouteRequirer(Object):
             queue_timeout,
             server_maxconn,
             http_server_close,
+            allow_http,
         )
         self.update_relation_data()
 
@@ -1184,6 +1199,7 @@ class HaproxyRouteRequirer(Object):
         queue_timeout: int = 60,
         server_maxconn: Optional[int] = None,
         http_server_close: bool = False,
+        allow_http: bool = False,
     ) -> dict[str, Any]:
         """Generate the complete application data structure.
 
@@ -1219,6 +1235,9 @@ class HaproxyRouteRequirer(Object):
             queue_timeout: Timeout for requests waiting in queue in seconds.
             server_maxconn: Maximum connections per server.
             http_server_close: Configure server close after request.
+            allow_http: Whether to allow HTTP traffic in addition to HTTPS.
+                Warning: enabling HTTP is a security risk,
+                make sure you apply the necessary precautions.
 
         Returns:
             dict: A dictionary containing the complete application data structure.
@@ -1271,7 +1290,14 @@ class HaproxyRouteRequirer(Object):
                 header_rewrite_expressions,
             ),
             "http_server_close": http_server_close,
+            "allow_http": allow_http,
         }
+
+        if allow_http:
+            logger.warning(
+                "HTTP traffic is allowed alongside HTTPS. "
+                "This is a security risk, make sure you apply the necessary precautions."
+            )
 
         if check := self._generate_server_healthcheck_configuration(
             check_interval, check_rise, check_fall, check_path, check_port
