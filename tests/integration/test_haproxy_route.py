@@ -5,6 +5,7 @@
 
 import json
 import time
+import uuid
 
 import httpx
 import jubilant
@@ -184,6 +185,32 @@ def test_haproxy_route_https_with_different_transport_protocols(
         )
     )
 
+    juju.integrate(
+        f"{any_charm_haproxy_route_requirer}:require-tls-certificates",
+        f"{certificate_provider_application}:certificates",
+    )
+
+    for _ in range(5):
+        try:
+            juju.run(
+                f"{any_charm_haproxy_route_requirer}/0", "rpc", {"method": "start_ssl_server"}
+            )
+        except jubilant.TaskError:
+            time.sleep(5)
+            continue
+        break
+    else:
+        raise AssertionError("Could not start anycharm ssl server")
+
+    juju.integrate(
+        f"{configured_application_with_tls}:receive-ca-certs",
+        f"{certificate_provider_application}:send-ca-cert",
+    )
+
+    juju.integrate(
+        f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
+    )
+
     juju.run(
         f"{any_charm_haproxy_route_requirer}/0",
         "rpc",
@@ -215,12 +242,21 @@ def test_haproxy_route_https_with_different_transport_protocols(
 
     haproxy_ip_address = get_unit_ip_address(juju, configured_application_with_tls)
 
+    juju.ssh(
+        f"{any_charm_haproxy_route_requirer}/0",
+        r"sudo sed -i 's|CustomLog.*|CustomLog ${APACHE_LOG_DIR}/access.log \"%{X-Request-ID}i %r\"|' "
+        "/etc/apache2/sites-enabled/anycharm-ssl.conf && "
+        "sudo systemctl reload apache2",
+    )
+
     # Test HTTP/1.1
+    request_id = str(uuid.uuid4())
     with httpx.Client(http2=False, verify=False) as client:  # nosec: B501
         response = client.get(
             f"https://{haproxy_ip_address}",
             headers={
                 "Host": TEST_EXTERNAL_HOSTNAME_CONFIG,
+                "X-Request-ID": request_id,
             },
             timeout=5.0,
         )
@@ -230,18 +266,20 @@ def test_haproxy_route_https_with_different_transport_protocols(
         )
 
     http_transport_version = get_http_version_from_apache2_logs(
-        juju, any_charm_haproxy_route_requirer
+        juju, any_charm_haproxy_route_requirer, request_id
     )
     assert http_transport_version == "HTTP/1.1", (
         f"[haproxy <-> backend] Expected HTTP/1.1, got {http_transport_version}"
     )
 
     # Test HTTP/2 without http/2 support on backend
+    request_id = str(uuid.uuid4())
     with httpx.Client(http2=True, verify=False) as client:  # nosec: B501
         response = client.get(
             f"https://{haproxy_ip_address}",
             headers={
                 "Host": TEST_EXTERNAL_HOSTNAME_CONFIG,
+                "X-Request-ID": request_id,
             },
             timeout=5.0,
         )
@@ -251,7 +289,7 @@ def test_haproxy_route_https_with_different_transport_protocols(
         )
 
     http_transport_version = get_http_version_from_apache2_logs(
-        juju, any_charm_haproxy_route_requirer
+        juju, any_charm_haproxy_route_requirer, request_id
     )
     assert http_transport_version == "HTTP/1.1", (
         f"[haproxy <-> backend] Expected HTTP/1.1, got {http_transport_version}"
@@ -263,11 +301,13 @@ def test_haproxy_route_https_with_different_transport_protocols(
         "sudo a2enmod http2 && sudo systemctl restart apache2",
     )
 
+    request_id = str(uuid.uuid4())
     with httpx.Client(http2=True, verify=False) as client:  # nosec: B501
         response = client.get(
             f"https://{haproxy_ip_address}",
             headers={
                 "Host": TEST_EXTERNAL_HOSTNAME_CONFIG,
+                "X-Request-ID": request_id,
             },
             timeout=5.0,
         )
@@ -277,7 +317,9 @@ def test_haproxy_route_https_with_different_transport_protocols(
         )
 
     http_transport_version = get_http_version_from_apache2_logs(
-        juju, any_charm_haproxy_route_requirer
+        juju,
+        any_charm_haproxy_route_requirer,
+        request_id,
     )
     assert http_transport_version == "HTTP/2.0", (
         f"[haproxy <-> backend] Expected HTTP/2, got {http_transport_version}"
@@ -291,10 +333,14 @@ def test_haproxy_route_https_with_different_transport_protocols(
         "sudo systemctl restart apache2",
     )
 
+    request_id = str(uuid.uuid4())
     with httpx.Client(http2=False, verify=False) as client:  # nosec: B501
         response = client.get(
             f"https://{haproxy_ip_address}",
-            headers={"Host": TEST_EXTERNAL_HOSTNAME_CONFIG},
+            headers={
+                "Host": TEST_EXTERNAL_HOSTNAME_CONFIG,
+                "X-Request-ID": request_id,
+            },
             timeout=5.0,
         )
         assert response.status_code == httpx.codes.OK, "HTTP/1.1 request failed"
@@ -303,7 +349,7 @@ def test_haproxy_route_https_with_different_transport_protocols(
         )
 
     http_transport_version = get_http_version_from_apache2_logs(
-        juju, any_charm_haproxy_route_requirer
+        juju, any_charm_haproxy_route_requirer, request_id
     )
     assert http_transport_version == "HTTP/2.0", (
         f"[haproxy <-> backend] Expected HTTP/2, got {http_transport_version}"
