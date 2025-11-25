@@ -165,6 +165,19 @@ def test_haproxy_route_protocol_https(
     )
     assert response.text == "ok!"
 
+    # Clean up relations
+    juju.remove_relation(
+        f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
+    )
+    juju.remove_relation(
+        f"{any_charm_haproxy_route_requirer}:require-tls-certificates",
+        f"{certificate_provider_application}:certificates",
+    )
+    juju.remove_relation(
+        f"{configured_application_with_tls}:receive-ca-certs",
+        f"{certificate_provider_application}:send-ca-cert",
+    )
+
 
 @pytest.mark.abort_on_fail
 def test_haproxy_route_https_with_different_transport_protocols(
@@ -326,10 +339,10 @@ def test_haproxy_route_https_with_different_transport_protocols(
     )
 
     # Test HTTP/1.1 without http/1.1 support on backend
-    apache2_any_charm_conf = "/etc/apache2/sites-available/anycharm-ssl.conf"
     juju.ssh(
         f"{any_charm_haproxy_route_requirer}/0",
-        rf"sudo sed -i '/<VirtualHost \*:443>/a\                Protocols h2' {apache2_any_charm_conf} &&"
+        "echo 'Protocols h2' | sudo tee /etc/apache2/conf-available/force-h2.conf && "
+        "sudo a2enconf force-h2 && "
         "sudo systemctl restart apache2",
     )
 
