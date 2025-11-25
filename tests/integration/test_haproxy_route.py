@@ -255,13 +255,6 @@ def test_haproxy_route_https_with_different_transport_protocols(
 
     haproxy_ip_address = get_unit_ip_address(juju, configured_application_with_tls)
 
-    juju.ssh(
-        f"{any_charm_haproxy_route_requirer}/0",
-        r"sudo sed -i 's|CustomLog.*|CustomLog ${APACHE_LOG_DIR}/access.log \"%{X-Request-ID}i %r\"|' "
-        "/etc/apache2/sites-enabled/anycharm-ssl.conf && "
-        "sudo systemctl reload apache2",
-    )
-
     # Test HTTP/1.1
     request_id = str(uuid.uuid4())
     with httpx.Client(http2=False, verify=False) as client:  # nosec: B501
@@ -339,11 +332,10 @@ def test_haproxy_route_https_with_different_transport_protocols(
     )
 
     # Test HTTP/1.1 without http/1.1 support on backend
-    juju.ssh(
+    juju.run(
         f"{any_charm_haproxy_route_requirer}/0",
-        "echo 'Protocols h2' | sudo tee /etc/apache2/conf-available/force-h2.conf && "
-        "sudo a2enconf force-h2 && "
-        "sudo systemctl restart apache2",
+        "rpc",
+        {"method": "start_ssl_server", "protocols": "h2"},
     )
 
     request_id = str(uuid.uuid4())
