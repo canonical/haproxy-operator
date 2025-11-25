@@ -79,6 +79,22 @@ wheels = [
 ]
 
 [[package]]
+name = "backports-datetime-fromisoformat"
+version = "2.0.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/71/81/eff3184acb1d9dc3ce95a98b6f3c81a49b4be296e664db8e1c2eeabef3d9/backports_datetime_fromisoformat-2.0.3.tar.gz", hash = "sha256:b58edc8f517b66b397abc250ecc737969486703a66eb97e01e6d51291b1a139d", size = 23588, upload-time = "2024-12-28T20:18:15.017Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a2/0f/69bbdde2e1e57c09b5f01788804c50e68b29890aada999f2b1a40519def9/backports_datetime_fromisoformat-2.0.3-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:66ce47ee1ba91e146149cf40565c3d750ea1be94faf660ca733d8601e0848147", size = 27630, upload-time = "2024-12-28T20:17:19.442Z" },
+    { url = "https://files.pythonhosted.org/packages/d5/1d/1c84a50c673c87518b1adfeafcfd149991ed1f7aedc45d6e5eac2f7d19d7/backports_datetime_fromisoformat-2.0.3-cp312-cp312-macosx_11_0_universal2.whl", hash = "sha256:8b7e069910a66b3bba61df35b5f879e5253ff0821a70375b9daf06444d046fa4", size = 34707, upload-time = "2024-12-28T20:17:21.79Z" },
+    { url = "https://files.pythonhosted.org/packages/71/44/27eae384e7e045cda83f70b551d04b4a0b294f9822d32dea1cbf1592de59/backports_datetime_fromisoformat-2.0.3-cp312-cp312-macosx_11_0_x86_64.whl", hash = "sha256:a3b5d1d04a9e0f7b15aa1e647c750631a873b298cdd1255687bb68779fe8eb35", size = 27280, upload-time = "2024-12-28T20:17:24.503Z" },
+    { url = "https://files.pythonhosted.org/packages/a7/7a/a4075187eb6bbb1ff6beb7229db5f66d1070e6968abeb61e056fa51afa5e/backports_datetime_fromisoformat-2.0.3-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ec1b95986430e789c076610aea704db20874f0781b8624f648ca9fb6ef67c6e1", size = 55094, upload-time = "2024-12-28T20:17:25.546Z" },
+    { url = "https://files.pythonhosted.org/packages/71/03/3fced4230c10af14aacadc195fe58e2ced91d011217b450c2e16a09a98c8/backports_datetime_fromisoformat-2.0.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ffe5f793db59e2f1d45ec35a1cf51404fdd69df9f6952a0c87c3060af4c00e32", size = 55605, upload-time = "2024-12-28T20:17:29.208Z" },
+    { url = "https://files.pythonhosted.org/packages/f6/0a/4b34a838c57bd16d3e5861ab963845e73a1041034651f7459e9935289cfd/backports_datetime_fromisoformat-2.0.3-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:620e8e73bd2595dfff1b4d256a12b67fce90ece3de87b38e1dde46b910f46f4d", size = 55353, upload-time = "2024-12-28T20:17:32.433Z" },
+    { url = "https://files.pythonhosted.org/packages/d9/68/07d13c6e98e1cad85606a876367ede2de46af859833a1da12c413c201d78/backports_datetime_fromisoformat-2.0.3-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:4cf9c0a985d68476c1cabd6385c691201dda2337d7453fb4da9679ce9f23f4e7", size = 55298, upload-time = "2024-12-28T20:17:34.919Z" },
+    { url = "https://files.pythonhosted.org/packages/60/33/45b4d5311f42360f9b900dea53ab2bb20a3d61d7f9b7c37ddfcb3962f86f/backports_datetime_fromisoformat-2.0.3-cp312-cp312-win_amd64.whl", hash = "sha256:d144868a73002e6e2e6fef72333e7b0129cecdd121aa8f1edba7107fd067255d", size = 29375, upload-time = "2024-12-28T20:17:36.018Z" },
+]
+
+[[package]]
 name = "bandit"
 version = "1.9.2"
 source = { registry = "https://pypi.org/simple" }
@@ -622,7 +638,7 @@ integration = [
     { name = "httpx", extras = ["http2"], specifier = "==0.28.1" },
     { name = "jinja2", specifier = "==3.1.6" },
     { name = "jubilant", specifier = "==1.1.1" },
-    { name = "juju", specifier = "==3.6.1" },
+    { name = "juju", specifier = "==3.6.1.3" },
     { name = "protobuf", specifier = "==6.33.1" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -878,25 +894,25 @@ wheels = [
 
 [[package]]
 name = "juju"
-version = "3.6.1.0"
+version = "3.6.1.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "backports-datetime-fromisoformat" },
     { name = "hvac" },
     { name = "kubernetes" },
     { name = "macaroonbakery" },
     { name = "packaging" },
     { name = "paramiko" },
     { name = "pyasn1" },
-    { name = "pyrfc3339" },
     { name = "pyyaml" },
     { name = "toposort" },
     { name = "typing-extensions" },
     { name = "typing-inspect" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0d/d6/86e724a37ce2167a5145bd122a10ea36e5a1a3b2b28a27017d46b6fdc306/juju-3.6.1.0.tar.gz", hash = "sha256:59cfde55185bb53877a2bddc2855f3c48471537e130653d77984681676a448bc", size = 291387, upload-time = "2024-12-20T00:16:34.4Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/91/ac/42ed7565d1b031856fb7e8884089acb3eab5aa6a2dabfee3fcf09660f885/juju-3.6.1.3.tar.gz", hash = "sha256:2fcf510fa35b387abb382da3a8b2227f38852ae7e9dc1058afb228588e1aec51", size = 305052, upload-time = "2025-07-11T02:15:59.237Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/70/68/f70c41ab95990b610798809aed792d0efebd79cc322d54e5a3c5685fa4f0/juju-3.6.1.0-py3-none-any.whl", hash = "sha256:28b6a10093f2e0243ad0ddd5ef25a3f59d710e9da5a188456ba704142819fbb3", size = 287063, upload-time = "2024-12-20T00:16:32.206Z" },
+    { url = "https://files.pythonhosted.org/packages/86/13/e31f9b9c24e723a161bc3b75729acb109d80bf3f75f937e4c3d408f19e5a/juju-3.6.1.3-py3-none-any.whl", hash = "sha256:87469500a0a4e6a3976ddf0595e316379868d5cea96e15af2d2d4b94188f76e5", size = 287075, upload-time = "2025-07-11T02:15:57.118Z" },
 ]
 
 [[package]]
