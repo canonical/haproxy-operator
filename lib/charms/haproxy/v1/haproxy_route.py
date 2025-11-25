@@ -151,7 +151,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 9
+LIBPATCH = 10
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -509,7 +509,7 @@ class RewriteConfiguration(BaseModel):
     method: HaproxyRewriteMethod = Field(
         description="Which rewrite method to apply.One of set-path, set-query, set-header."
     )
-    expression: VALIDSTR = Field(description="Regular expression to use with the rewrite method.")
+    expression: str = Field(description="Regular expression to use with the rewrite method.")
     header: Optional[VALIDSTR] = Field(
         description="The name of the header to rewrite.", default=None
     )
