@@ -1,0 +1,17 @@
+# --- Release notes change artifact ----
+
+schema_version: 1
+changes:
+  - title: Add HAProxy SPOE Auth Charm
+    author: tphan025
+    type: major
+    description: |
+      Add a new charm for HAProxy SPOE authentication.
+      Refactor the haproxy-operator charm code to a folder in the monorepo.
+      Update the relevant workflows to support the new directory structure.
+    urls: 
+      pr: "https://github.com/canonical/haproxy-operator/pull/232"
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false
