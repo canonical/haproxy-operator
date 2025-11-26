@@ -13,50 +13,9 @@ cd some-charm
 charmcraft fetch-lib charms.haproxy.v0.spoe_auth
 ```
 
-## Using the library as the Requirer
-
-The requirer charm (haproxy-operator) should expose the interface as shown below:
-
-In the `metadata.yaml` of the charm, add the following:
-
-```yaml
-requires:
-    spoe-auth:
-        interface: spoe-auth
-        limit: 1
-```
-
-Then, to initialise the library:
-
-```python
-from charms.haproxy.v0.spoe_auth import SpoeAuthRequirer
-
-class HaproxyCharm(CharmBase):
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.spoe_auth = SpoeAuthRequirer(self, relation_name="spoe-auth")
-
-        self.framework.observe(
-            self.spoe_auth.on.available, self._on_spoe_auth_available
-        )
-        self.framework.observe(
-            self.spoe_auth.on.removed, self._on_spoe_auth_removed
-        )
-
-    def _on_spoe_auth_available(self, event):
-        # The SPOE auth configuration is available
-        application_data = self.spoe_auth.get_provider_application_data()
-        unit_data = self.spoe_auth.get_provider_unit_data()
-        ...
-
-    def _on_spoe_auth_removed(self, event):
-        # Handle relation broken event
-        ...
-```
-
 ## Using the library as the Provider
 
-The provider charm (SPOE agent) should expose the interface as shown below:
+The provider charm should expose the interface as shown below:
 
 ```yaml
 provides:
@@ -87,7 +46,7 @@ class SpoeAuthCharm(CharmBase):
             var_authenticated="var.sess.is_authenticated",
             var_redirect_url="var.sess.redirect_url",
             cookie_name="auth_session",
-            oidc_callback_hostname="auth.example.com",
+            hostname="auth.example.com",
             oidc_callback_path="/oauth2/callback",
         )
 ```
@@ -96,8 +55,9 @@ class SpoeAuthCharm(CharmBase):
 import json
 import logging
 import re
+from collections.abc import MutableMapping
 from enum import StrEnum
-from typing import Annotated, MutableMapping, Optional, cast
+from typing import Annotated, cast
 
 from ops import CharmBase, RelationBrokenEvent
 from ops.charm import CharmEvents
@@ -105,23 +65,13 @@ from ops.framework import EventBase, EventSource, Object
 from ops.model import Relation
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, IPvAnyAddress, ValidationError
 
-# The unique Charmhub library identifier, never change it
-LIBID = "3f644e37fffc483aa97bea91d4fc0bce"
-
-# Increment this major API version when introducing breaking changes
-LIBAPI = 0
-
-# Increment this PATCH version before using `charmcraft publish-lib` or reset
-# to 0 if you are raising the major API version
-LIBPATCH = 1
-
 logger = logging.getLogger(__name__)
 SPOE_AUTH_DEFAULT_RELATION_NAME = "spoe-auth"
 HAPROXY_CONFIG_INVALID_CHARACTERS = "\n\t#\\'\"\r$ "
 # RFC-1034 and RFC-2181 compliance REGEX for validating FQDNs
 HOSTNAME_REGEX = (
-    r"(?=.{1,253})(?!.*--.*)(?:(?!-)(?![0-9])[a-zA-Z0-9-]"
-    r"{1,63}(?<!-)\.){1,}(?:(?!-)[a-zA-Z0-9-]{1,63}(?<!-))"
+    r"^(?=.{1,253})(?!.*--.*)(?:(?!-)(?![0-9])[a-zA-Z0-9-]"
+    r"{1,63}(?<!-)\.){1,}(?:(?!-)[a-zA-Z0-9-]{1,63}(?<!-))$"
 )
 
 
@@ -189,7 +139,7 @@ class _DatabagModel(BaseModel):
     """Pydantic config."""
 
     @classmethod
-    def load(cls, databag: MutableMapping) -> "_DatabagModel":
+    def load(cls, databag: MutableMapping[str, str]) -> "_DatabagModel":
         """Load this model from a Juju json databag.
 
         Args:
@@ -221,12 +171,12 @@ class _DatabagModel(BaseModel):
             return cls.model_validate_json(json.dumps(data))
         except ValidationError as e:
             msg = f"failed to validate databag: {databag}"
-            logger.error(str(e), exc_info=True)
+            logger.error(msg)
             raise DataValidationError(msg) from e
 
     def dump(
-        self, databag: Optional[MutableMapping] = None, clear: bool = True
-    ) -> Optional[MutableMapping]:
+        self, databag: MutableMapping[str, str] | None = None, clear: bool = True
+    ) -> MutableMapping[str, str] | None:
         """Write the contents of this model to Juju databag.
 
         Args:
@@ -290,6 +240,9 @@ class SpoeAuthProviderAppData(_DatabagModel):
     event: HaproxyEvent = Field(
         description="The event that triggers SPOE messages (e.g., on-http-request).",
     )
+    message_name: str = Field(
+        description="The name of the SPOE message that the provider expects."
+    )
     var_authenticated: VALIDSTR = Field(
         description="Name of the variable set by the SPOE agent for auth status.",
     )
@@ -302,7 +255,7 @@ class SpoeAuthProviderAppData(_DatabagModel):
     oidc_callback_path: VALIDSTR = Field(
         description="Path for OIDC callback.", default="/oauth2/callback"
     )
-    oidc_callback_hostname: Annotated[str, BeforeValidator(validate_hostname)] = Field(
+    hostname: Annotated[str, BeforeValidator(validate_hostname)] = Field(
         description="The hostname HAProxy should route OIDC callbacks to.",
     )
 
@@ -324,7 +277,9 @@ class SpoeAuthProvider(Object):
         relations: Related applications.
     """
 
-    def __init__(self, charm: CharmBase, relation_name: str = SPOE_AUTH_DEFAULT_RELATION_NAME) -> None:
+    def __init__(
+        self, charm: CharmBase, relation_name: str = SPOE_AUTH_DEFAULT_RELATION_NAME
+    ) -> None:
         """Initialize the SpoeAuthProvider.
 
         Args:
@@ -351,12 +306,13 @@ class SpoeAuthProvider(Object):
         spop_port: int,
         oidc_callback_port: int,
         event: HaproxyEvent,
+        message_name: str,
         var_authenticated: str,
         var_redirect_url: str,
         cookie_name: str,
-        oidc_callback_hostname: str,
+        hostname: str,
         oidc_callback_path: str = "/oauth2/callback",
-        unit_address: Optional[str] = None,
+        unit_address: str | None = None,
     ) -> None:
         """Set the SPOE auth configuration in the application databag.
 
@@ -365,10 +321,11 @@ class SpoeAuthProvider(Object):
             spop_port: The port on the agent listening for SPOP.
             oidc_callback_port: The port on the agent handling OIDC callbacks.
             event: The event that triggers SPOE messages.
+            message_name: The name of the SPOE message that the provider expects.
             var_authenticated: Name of the variable for auth status.
             var_redirect_url: Name of the variable for IDP redirect URL.
             cookie_name: Name of the authentication cookie.
-            oidc_callback_hostname: The hostname HAProxy should route OIDC callbacks to.
+            hostname: The hostname HAProxy should route OIDC callbacks to.
             oidc_callback_path: Path for OIDC callback.
             unit_address: The address of the unit.
 
@@ -384,10 +341,11 @@ class SpoeAuthProvider(Object):
                 spop_port=spop_port,
                 oidc_callback_port=oidc_callback_port,
                 event=event,
+                message_name=message_name,
                 var_authenticated=var_authenticated,
                 var_redirect_url=var_redirect_url,
                 cookie_name=cookie_name,
-                oidc_callback_hostname=oidc_callback_hostname,
+                hostname=hostname,
                 oidc_callback_path=oidc_callback_path,
             )
             unit_data = self._prepare_unit_data(unit_address)
@@ -401,7 +359,7 @@ class SpoeAuthProvider(Object):
             application_data.dump(relation.data[self.charm.app], clear=True)
         unit_data.dump(relation.data[self.charm.unit], clear=True)
 
-    def _prepare_unit_data(self, unit_address: Optional[str]) -> SpoeAuthProviderUnitData:
+    def _prepare_unit_data(self, unit_address: str | None) -> SpoeAuthProviderUnitData:
         """Prepare and validate unit data.
 
         Raises:
@@ -411,7 +369,7 @@ class SpoeAuthProvider(Object):
             RequirerUnitData: The validated unit data model.
         """
         if not unit_address:
-            network_binding = self.charm.model.get_binding("juju-info")
+            network_binding = self.charm.model.get_binding(self.relation_name)
             if (
                 network_binding is not None
                 and (bind_address := network_binding.network.bind_address) is not None
@@ -420,7 +378,7 @@ class SpoeAuthProvider(Object):
             else:
                 logger.error("No unit IP available.")
                 raise DataValidationError("No unit IP available.")
-        return SpoeAuthProviderUnitData(address=cast(IPvAnyAddress, unit_address))
+        return SpoeAuthProviderUnitData(address=cast("IPvAnyAddress", unit_address))
 
 
 class SpoeAuthAvailableEvent(EventBase):
@@ -454,7 +412,9 @@ class SpoeAuthRequirer(Object):
     # Ignore this for pylance
     on = SpoeAuthRequirerEvents()  # type: ignore
 
-    def __init__(self, charm: CharmBase, relation_name: str = SPOE_AUTH_DEFAULT_RELATION_NAME) -> None:
+    def __init__(
+        self, charm: CharmBase, relation_name: str = SPOE_AUTH_DEFAULT_RELATION_NAME
+    ) -> None:
         """Initialize the SpoeAuthRequirer.
 
         Args:
@@ -472,7 +432,7 @@ class SpoeAuthRequirer(Object):
         )
 
     @property
-    def relation(self) -> Optional[Relation]:
+    def relation(self) -> Relation | None:
         """The relation instance associated with this relation_name.
 
         Returns:
@@ -511,7 +471,7 @@ class SpoeAuthRequirer(Object):
         except (DataValidationError, KeyError):
             return False
 
-    def get_data(self) -> Optional[SpoeAuthProviderAppData]:
+    def get_data(self) -> SpoeAuthProviderAppData | None:
         """Get the SPOE auth configuration from the provider.
 
         Returns:
@@ -564,7 +524,7 @@ class SpoeAuthRequirer(Object):
                 )
                 continue
             try:
-                data = cast(SpoeAuthProviderUnitData, SpoeAuthProviderUnitData.load(databag))
+                data = cast("SpoeAuthProviderUnitData", SpoeAuthProviderUnitData.load(databag))
                 requirer_units_data.append(data)
             except DataValidationError:
                 logger.error("Invalid requirer application data for %s", unit)
@@ -585,7 +545,7 @@ class SpoeAuthRequirer(Object):
         """
         try:
             return cast(
-                SpoeAuthProviderAppData,
+                "SpoeAuthProviderAppData",
                 SpoeAuthProviderAppData.load(relation.data[relation.app]),
             )
         except DataValidationError:
