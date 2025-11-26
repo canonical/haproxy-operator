@@ -20,7 +20,7 @@ variable "config" {
 }
 
 variable "constraints" {
-  description = "Name of the juju model."
+  description = "Haproxy constraints."
   type        = string
   default     = "arch=amd64"
 }
