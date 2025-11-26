@@ -10,11 +10,14 @@ from unittest.mock import MagicMock
 import pytest
 from charms.haproxy.v0.haproxy_route_tcp import HaproxyRouteTcpRequirersData
 from charms.haproxy.v1.haproxy_route import (
+    HaproxyRewriteMethod,
     HaproxyRouteRequirerData,
     HaproxyRouteRequirersData,
     RequirerApplicationData,
     RequirerUnitData,
+    RewriteConfiguration,
 )
+from pydantic import ValidationError
 
 from state.haproxy_route import HaproxyRouteRequirersInformation
 
@@ -120,3 +123,16 @@ def test_haproxy_route_requirer_information(
     assert haproxy_route_information.acls_for_allow_http == [
         "{ req.hdr(Host) -m str example.com } { path_beg -i /path } !{ path_beg -i /private }"
     ]
+
+
+def test_rewrite_expression_does_not_allow_newline():
+    """
+    act: Create a RewriteConfiguration with an expression containing a newline character.
+    assert: ValidationError is raised
+    """
+    with pytest.raises(ValidationError) as exc:
+        RewriteConfiguration(
+            method=HaproxyRewriteMethod.SET_PATH,
+            expression="data\ninjection data",
+        )
+    assert "invalid character" in str(exc)
