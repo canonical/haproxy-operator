@@ -3,7 +3,7 @@
 This repository provides a collection of operators related to HAproxy
 
 This repository contains the code for the following charms:
-1. `haproxy`: A machine charm managing HAproxy. See the [haproxy README](haproxy_-operator/README.md) for more information.
+1. `haproxy`: A machine charm managing HAproxy. See the [haproxy README](haproxy-operator/README.md) for more information.
 2. `haproxy-spoe-auth-operator`: A machine charm deploying an SPOE agent that serves as an authentication proxy. See the [haproxy-spoe-auth-operator README](haproxy-spoe-auth-operator/README.md) for more information.
 
 The repository also contains the snapped workload of some charms:
