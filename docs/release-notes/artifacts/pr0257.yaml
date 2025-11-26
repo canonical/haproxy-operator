@@ -4,8 +4,8 @@ changes:
     author: javierdelapuente
     type: minor
     description: |
-      Currently some valid character are not allowed for expressions in the
-      haproxy_route relation. Only restrict the newline character.
+      Currently some valid characters are not allowed for expressions in the
+      `haproxy_route` relation. Now only the newline character is restricted.
     urls:
       pr: https://github.com/canonical/haproxy-operator/pull/257
       related_doc:
