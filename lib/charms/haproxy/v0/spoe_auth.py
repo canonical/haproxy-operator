@@ -21,6 +21,7 @@ The provider charm should expose the interface as shown below:
 provides:
     spoe-auth:
         interface: spoe-auth
+        limit: 1
 ```
 
 Then, to initialise the library:
