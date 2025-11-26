@@ -1,4 +1,4 @@
-# Haproxy operator
+# HAProxy operator
 
 This repository provides a collection of operators related to HAproxy
 
