@@ -5,8 +5,7 @@ Application-Layer Protocol Negotiation (ALPN) is used to negotiate HTTP/2 connec
 
 ## Protocol independence
 
-Frontend and backend connections negotiate HTTP versions independently.
-The frontend and backend can use different HTTP versions.
+Frontend and backend connections negotiate HTTP versions independently and can thus use different HTTP versions.
 HAProxy handles protocol conversion transparently.
 
 ## Limitations
