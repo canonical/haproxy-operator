@@ -69,9 +69,6 @@ def test_haproxy_route_any_charm_requirer(
             "hash-type consistent",
         ]
     )
-    juju.remove_relation(
-        f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
-    )
 
 
 @pytest.mark.abort_on_fail
@@ -164,19 +161,6 @@ def test_haproxy_route_protocol_https(
         timeout=5,
     )
     assert response.text == "ok!"
-
-    # Clean up relations
-    juju.remove_relation(
-        f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
-    )
-    juju.remove_relation(
-        f"{any_charm_haproxy_route_requirer}:require-tls-certificates",
-        f"{certificate_provider_application}:certificates",
-    )
-    juju.remove_relation(
-        f"{configured_application_with_tls}:receive-ca-certs",
-        f"{certificate_provider_application}:send-ca-cert",
-    )
 
 
 @pytest.mark.abort_on_fail
