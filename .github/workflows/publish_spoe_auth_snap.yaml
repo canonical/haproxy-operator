@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - spoe_auth_snap/**
+      - haproxy-spoe-auth-snap/**
 
 jobs:
   build:
@@ -16,7 +16,7 @@ jobs:
     - uses: snapcore/action-build@v1.3.0
       id: build
       with:
-        path: ./spoe_auth_snap
+        path: ./haproxy-spoe-auth-snap
     - uses: snapcore/action-publish@v1.2.0
       env:
         SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.STORE_LOGIN }}

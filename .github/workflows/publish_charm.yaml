@@ -16,4 +16,4 @@ jobs:
     secrets: inherit
     with:
       channel: 2.8/edge
-      working-directory: ./haproxy_operator
+      working-directory: ./haproxy-operator

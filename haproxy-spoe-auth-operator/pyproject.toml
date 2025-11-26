@@ -28,7 +28,7 @@ lint = ["codespell", "mypy", "ops[testing]", "pytest", "ruff", "types-pyyaml"]
 unit = ["coverage[toml]", "ops[testing]", "pytest"]
 coverage-report = ["coverage[toml]", "pytest"]
 static = ["bandit[toml]"]
-integration = ["jubilant==1.1.1", "juju==3.6.1.0", "pytest", "pytest-asyncio"]
+integration = ["jubilant==1.1.1", "juju==3.6.1.3", "pytest", "pytest-operator"]
 
 [tool.uv]
 package = false

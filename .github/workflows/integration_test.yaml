@@ -15,7 +15,7 @@ jobs:
       juju-channel: 3/stable
       self-hosted-runner: true
       charmcraft-channel: latest/edge
-      working-directory: ./haproxy_operator
+      working-directory: ./haproxy-operator
       modules: '["test_action.py","test_actions.py","test_charm.py","test_config.py","test_cos.py","test_ha.py","test_haproxy_route.py","test_http_interface.py","test_ingress.py",
         "test_ingress_per_unit.py", "test_haproxy_route_tcp.py"]'
       with-uv: true
@@ -33,6 +33,6 @@ jobs:
       provider: lxd
       self-hosted-runner: true
       charmcraft-channel: latest/edge
-      working-directory: ./haproxy_spoe_auth_operator
+      working-directory: ./haproxy-spoe-auth-operator
       with-uv: True
       modules: '["test_charm.py",]'

@@ -10,7 +10,7 @@ jobs:
     with:
       self-hosted-runner: true
       self-hosted-runner-image: "noble"
-      working-directory: ./haproxy_operator
+      working-directory: ./haproxy-operator
       with-uv: true
   haproxy-spoe-auth-operator:
     name: Unit tests for the haproxy-spoe-auth-operator charm
@@ -20,5 +20,5 @@ jobs:
       self-hosted-runner: true
       self-hosted-runner-image: "noble"
       python-version: 3.12
-      working-directory: ./haproxy_spoe_auth_operator
+      working-directory: ./haproxy-spoe-auth-operator
       with-uv: True
