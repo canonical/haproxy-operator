@@ -132,9 +132,6 @@ class _DatabagModel(BaseModel):
         extra="ignore",
         # Allow instantiating this class by field name (instead of forcing alias).
         populate_by_name=True,
-        # Custom config key: whether to nest the whole datastructure (as json)
-        # under a field or spread it out at the toplevel.
-        _NEST_UNDER=None,
     )  # type: ignore
     """Pydantic config."""
 
@@ -151,10 +148,6 @@ class _DatabagModel(BaseModel):
         Returns:
             _DatabagModel: The validated model.
         """
-        nest_under = cls.model_config.get("_NEST_UNDER")
-        if nest_under:
-            return cls.model_validate(json.loads(databag[nest_under]))
-
         try:
             data = {
                 k: json.loads(v)
@@ -191,12 +184,6 @@ class _DatabagModel(BaseModel):
 
         if databag is None:
             databag = {}
-        nest_under = self.model_config.get("_NEST_UNDER")
-        if nest_under:
-            databag[nest_under] = self.model_dump_json(
-                by_alias=True,
-            )
-            return databag
 
         dct = self.model_dump(mode="json", by_alias=True)
         databag.update({k: json.dumps(v) for k, v in dct.items()})
