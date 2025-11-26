@@ -166,7 +166,7 @@ def value_contains_invalid_characters(
     """Validate if value contains invalid config characters.
 
     Args:
-        invalid_characters: List of invalid characters.
+        invalid_characters: String with the list of invalid characters.
         value: The value to validate.
 
     Raises:
