@@ -302,10 +302,7 @@ def test_haproxy_route_https_with_different_transport_protocols(
     )
 
     # Test HTTP/2 with http/2 support on backend
-    juju.ssh(
-        f"{any_charm_haproxy_route_requirer}/0",
-        "sudo a2enmod http2 && sudo systemctl restart apache2",
-    )
+    juju.run(f"{any_charm_haproxy_route_requirer}/0", "rpc", {"method": "enable_http2"})
 
     request_id = str(uuid.uuid4())
     with httpx.Client(http2=True, verify=False) as client:  # nosec: B501

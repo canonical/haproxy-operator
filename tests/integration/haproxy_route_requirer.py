@@ -145,3 +145,21 @@ class AnyCharm(AnyCharmBase):
           haproxy_route_params: arguments to pass relation.
         """
         self._haproxy_route.provide_haproxy_route_requirements(**haproxy_route_params)
+
+    def enable_http2(self) -> None:
+        """Enable HTTP/2 support in the apache2 webserver."""
+        commands = [
+            ["a2enmod", "http2"],
+            ["systemctl", "restart", "apache2"],
+        ]
+        for command in commands:
+            self._run_subprocess(command)
+
+    def disable_http2(self) -> None:
+        """Disable HTTP/2 support in the apache2 webserver."""
+        commands = [
+            ["a2dismod", "http2"],
+            ["systemctl", "restart", "apache2"],
+        ]
+        for command in commands:
+            self._run_subprocess(command)
