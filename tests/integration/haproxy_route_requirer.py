@@ -97,6 +97,7 @@ class AnyCharm(AnyCharmBase):
                     SSLEngine on
                     SSLCertificateFile      {SSL_CERT_FILE!s}
                     SSLCertificateKeyFile   {SSL_PRIVATE_KEY_FILE!s}
+                    {protocols_line}
             </VirtualHost>
 
             # This easier that editing an apache config file to comment the "Listen 80" line.

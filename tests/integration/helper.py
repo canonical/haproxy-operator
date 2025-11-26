@@ -15,7 +15,7 @@ import pytest
 import yaml
 from requests.adapters import DEFAULT_POOLBLOCK, DEFAULT_POOLSIZE, DEFAULT_RETRIES, HTTPAdapter
 
-HTTP_TRANSPORT_VERSION_PATTERN = re.compile(r'HTTP/[\d.]+')
+HTTP_TRANSPORT_VERSION_PATTERN = re.compile(r"HTTP/[\d.]+")
 
 
 class DNSResolverHTTPSAdapter(HTTPAdapter):
@@ -182,7 +182,10 @@ def pytestconfig_arg_no_deploy(application: str) -> typing.Callable:
 
 
 def get_http_version_from_apache2_logs(
-    juju: jubilant.Juju, app_name: str, request_id: str, pattern: re.Pattern = HTTP_TRANSPORT_VERSION_PATTERN
+    juju: jubilant.Juju,
+    app_name: str,
+    request_id: str,
+    pattern: re.Pattern = HTTP_TRANSPORT_VERSION_PATTERN,
 ) -> str:
     """
     Extract the HTTP transport version from the apache2 access logs of a given application unit.
