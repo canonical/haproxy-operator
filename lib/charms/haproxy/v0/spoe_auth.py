@@ -6,11 +6,19 @@
 
 ## Getting Started
 
-To get started using the library, you just need to fetch the library using `charmcraft`.
+To get started using the library, you need to first declare the library in
+ the charm-libs section of your `charmcraft.yaml` file:
+```yaml
+charm-libs:
+- lib: haproxy.spoe_auth
+  version: "0"
+```
+
+Then, fetch the library using `charmcraft`:
 
 ```shell
 cd some-charm
-charmcraft fetch-lib charms.haproxy.v0.spoe_auth
+charmcraft fetch-libs
 ```
 
 ## Using the library as the Provider
