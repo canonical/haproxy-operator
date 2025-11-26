@@ -123,6 +123,7 @@ class SomeCharm(CharmBase):
 import json
 import logging
 from enum import Enum
+from functools import partial
 from typing import Annotated, Any, Literal, MutableMapping, Optional, cast
 
 from ops import CharmBase, ModelError, RelationBrokenEvent
@@ -151,17 +152,21 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 8
+LIBPATCH = 10
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
 HAPROXY_CONFIG_INVALID_CHARACTERS = "\n\t#\\'\"\r$ "
+HAPROXY_EXPR_INVALID_CHARACTERS = "\n"
 
 
-def value_contains_invalid_characters(value: Optional[str]) -> Optional[str]:
-    """Validate if value contains invalid haproxy config characters.
+def value_contains_invalid_characters(
+    invalid_characters: str, value: Optional[str]
+) -> Optional[str]:
+    """Validate if value contains invalid config characters.
 
     Args:
+        invalid_characters: String with the list of invalid characters.
         value: The value to validate.
 
     Raises:
@@ -173,12 +178,19 @@ def value_contains_invalid_characters(value: Optional[str]) -> Optional[str]:
     if value is None:
         return value
 
-    if [char for char in value if char in HAPROXY_CONFIG_INVALID_CHARACTERS]:
+    if [char for char in value if char in invalid_characters]:
         raise ValueError(f"Relation data contains invalid character(s) {value}")
     return value
 
 
-VALIDSTR = Annotated[str, BeforeValidator(value_contains_invalid_characters)]
+VALIDSTR = Annotated[
+    str,
+    BeforeValidator(partial(value_contains_invalid_characters, HAPROXY_CONFIG_INVALID_CHARACTERS)),
+]
+VALIDEXPRSTR = Annotated[
+    str,
+    BeforeValidator(partial(value_contains_invalid_characters, HAPROXY_EXPR_INVALID_CHARACTERS)),
+]
 
 
 class DataValidationError(Exception):
@@ -509,7 +521,9 @@ class RewriteConfiguration(BaseModel):
     method: HaproxyRewriteMethod = Field(
         description="Which rewrite method to apply.One of set-path, set-query, set-header."
     )
-    expression: VALIDSTR = Field(description="Regular expression to use with the rewrite method.")
+    expression: VALIDEXPRSTR = Field(
+        description="Regular expression to use with the rewrite method."
+    )
     header: Optional[VALIDSTR] = Field(
         description="The name of the header to rewrite.", default=None
     )
@@ -538,6 +552,8 @@ class RequirerApplicationData(_DatabagModel):
         timeout: Configuration for server, client, and queue timeouts.
         server_maxconn: Optional maximum number of connections per server.
         http_server_close: Configure server close after request.
+        allow_http: Whether to allow HTTP traffic in addition to HTTPS. Defaults to False.
+            Warning: enabling HTTP is a security risk, make sure you apply the necessary precautions.
     """
 
     service: VALIDSTR = Field(description="The name of the service.")
@@ -588,6 +604,9 @@ class RequirerApplicationData(_DatabagModel):
     )
     http_server_close: bool = Field(
         description="Configure server close after request", default=False
+    )
+    allow_http: bool = Field(
+        description="Whether to allow HTTP traffic in addition to HTTPS.", default=False
     )
 
     @field_validator("load_balancing")
@@ -875,9 +894,9 @@ class HaproxyRouteProvider(Object):
             endpoints: The list of proxied endpoints to publish.
             relation: The relation with the requirer application.
         """
-        HaproxyRouteProviderAppData(
-            endpoints=list(map(lambda x: cast(AnyHttpUrl, x), endpoints))
-        ).dump(relation.data[self.charm.app], clear=True)
+        HaproxyRouteProviderAppData(endpoints=[cast(AnyHttpUrl, e) for e in endpoints]).dump(
+            relation.data[self.charm.app], clear=True
+        )
 
 
 class HaproxyRouteEnpointsReadyEvent(EventBase):
@@ -945,6 +964,7 @@ class HaproxyRouteRequirer(Object):
         server_maxconn: Optional[int] = None,
         unit_address: Optional[str] = None,
         http_server_close: bool = False,
+        allow_http: bool = False,
     ) -> None:
         """Initialize the HaproxyRouteRequirer.
 
@@ -983,6 +1003,9 @@ class HaproxyRouteRequirer(Object):
             server_maxconn: Maximum connections per server.
             unit_address: IP address of the unit (if not provided, will use binding address).
             http_server_close: Configure server close after request.
+            allow_http: Whether to allow HTTP traffic in addition to HTTPS.
+                Warning: enabling HTTP is a security risk,
+                make sure you apply the necessary precautions.
         """
         super().__init__(charm, relation_name)
 
@@ -1023,6 +1046,7 @@ class HaproxyRouteRequirer(Object):
             queue_timeout,
             server_maxconn,
             http_server_close,
+            allow_http,
         )
         self._unit_address = unit_address
 
@@ -1079,6 +1103,7 @@ class HaproxyRouteRequirer(Object):
         server_maxconn: Optional[int] = None,
         unit_address: Optional[str] = None,
         http_server_close: bool = False,
+        allow_http: bool = False,
     ) -> None:
         """Update haproxy-route requirements data in the relation.
 
@@ -1115,6 +1140,9 @@ class HaproxyRouteRequirer(Object):
             server_maxconn: Maximum connections per server.
             unit_address: IP address of the unit (if not provided, will use binding address).
             http_server_close: Configure server close after request.
+            allow_http: Whether to allow HTTP traffic in addition to HTTPS.
+                Warning: enabling HTTP is a security risk,
+                make sure you apply the necessary precautions.
         """
         self._unit_address = unit_address
         self._application_data = self._generate_application_data(
@@ -1148,6 +1176,7 @@ class HaproxyRouteRequirer(Object):
             queue_timeout,
             server_maxconn,
             http_server_close,
+            allow_http,
         )
         self.update_relation_data()
 
@@ -1184,6 +1213,7 @@ class HaproxyRouteRequirer(Object):
         queue_timeout: int = 60,
         server_maxconn: Optional[int] = None,
         http_server_close: bool = False,
+        allow_http: bool = False,
     ) -> dict[str, Any]:
         """Generate the complete application data structure.
 
@@ -1219,6 +1249,9 @@ class HaproxyRouteRequirer(Object):
             queue_timeout: Timeout for requests waiting in queue in seconds.
             server_maxconn: Maximum connections per server.
             http_server_close: Configure server close after request.
+            allow_http: Whether to allow HTTP traffic in addition to HTTPS.
+                Warning: enabling HTTP is a security risk,
+                make sure you apply the necessary precautions.
 
         Returns:
             dict: A dictionary containing the complete application data structure.
@@ -1271,7 +1304,14 @@ class HaproxyRouteRequirer(Object):
                 header_rewrite_expressions,
             ),
             "http_server_close": http_server_close,
+            "allow_http": allow_http,
         }
+
+        if allow_http:
+            logger.warning(
+                "HTTP traffic is allowed alongside HTTPS. "
+                "This is a security risk, make sure you apply the necessary precautions."
+            )
 
         if check := self._generate_server_healthcheck_configuration(
             check_interval, check_rise, check_fall, check_path, check_port

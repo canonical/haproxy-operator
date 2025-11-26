@@ -575,7 +575,7 @@ class TcpRequirerApplicationData(_DatabagModel):
     port: int = Field(description="The port exposed on the provider.", gt=0, le=65535)
     backend_port: Optional[int] = Field(
         description=(
-            "The port where the backend service is listening. " "Defaults to the provider port."
+            "The port where the backend service is listening. Defaults to the provider port."
         ),
         default=None,
         gt=0,
@@ -1162,7 +1162,7 @@ class HaproxyRouteTcpRequirer(Object):
         self.update_relation_data()
 
     # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
-    def _generate_application_data(  # noqa: C901
+    def _generate_application_data(
         self,
         *,
         port: Optional[int] = None,
@@ -1625,10 +1625,8 @@ class HaproxyRouteTcpRequirer(Object):
         """
         if not upload_bytes_per_second and not download_bytes_per_second:
             logger.error(
-                (
-                    "At least one of `upload_bytes_per_second` "
-                    "or `upload_bytes_per_second` must be set."
-                )
+                "At least one of `upload_bytes_per_second` "
+                "or `upload_bytes_per_second` must be set."
             )
             return self
         self._application_data["bandwidth_limit"] = {
@@ -1677,10 +1675,8 @@ class HaproxyRouteTcpRequirer(Object):
             server_timeout_in_seconds or connect_timeout_in_seconds or queue_timeout_in_seconds
         ):
             logger.error(
-                (
-                    "At least one of `server_timeout_in_seconds`, `connect_timeout_in_seconds` "
-                    "or `queue_timeout_in_seconds` must be set."
-                )
+                "At least one of `server_timeout_in_seconds`, `connect_timeout_in_seconds` "
+                "or `queue_timeout_in_seconds` must be set."
             )
             return self
         self._application_data["timeout"] = self._generate_timeout_configuration(

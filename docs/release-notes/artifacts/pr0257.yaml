@@ -1,0 +1,15 @@
+schema_version: 1
+changes:
+  - title: Remove `haproxy_route` restriction for expressions
+    author: javierdelapuente
+    type: minor
+    description: |
+      Currently some valid characters are not allowed for expressions in the
+      `haproxy_route` relation. Now only the newline character is restricted.
+    urls:
+      pr: https://github.com/canonical/haproxy-operator/pull/257
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false
+

@@ -9,25 +9,23 @@ platforms:
 
 parts:
   charm:
-    build-packages:
-      - build-essential
-      - python3-dev
-      - pkg-config
-      - libffi-dev
-      - libssl-dev
-      - git
+    source: .
+    plugin: uv
     build-snaps:
-      - rustup
-    override-build: |
-      rustup default stable
-      craftctl default
-
+    - astral-uv
+    build-packages:
+    - git
+  templates:
+    plugin: dump
+    source: .
+    stage:
+    - templates
 name: haproxy
 title: HAProxy charm.
 description: |
   A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
   deploying and managing [HAProxy](https://www.haproxy.org/) on machines.
-  
+
   HAProxy is a TCP/HTTP reverse proxy which is particularly suited for high
   availability environments. It features connection persistence through HTTP
   cookies, load balancing, header addition, modification, deletion both ways. It
@@ -38,14 +36,15 @@ description: |
   VMs and bare metal.
 summary: Fast and reliable load balancing reverse proxy.
 links:
-  documentation: https://discourse.charmhub.io/t/haproxy-documentation-overview/17216
+  documentation: 
+    https://discourse.charmhub.io/t/haproxy-documentation-overview/17216
   issues: https://github.com/canonical/haproxy-operator/issues
   source: https://github.com/canonical/haproxy-operator
   contact:
-    - https://launchpad.net/~canonical-is-devops
+  - https://launchpad.net/~canonical-is-devops
 
 assumes:
-  - juju >= 3.3
+- juju >= 3.3
 requires:
   certificates:
     interface: tls-certificates
@@ -89,21 +88,22 @@ config:
       default: 4096
       type: int
       description: |
-          Sets the maximum per-process number of concurrent connections to
-          <number>. Must be greater than 0.
+        Sets the maximum per-process number of concurrent connections to
+        <number>. Must be greater than 0.
     vip:
       type: string
       description: Virtual IP address, used in active-passive ha mode.
 
 actions:
   get-certificate:
-    description: Returns the TLS Certificate. Intended for testing and debugging purposes.
+    description: Returns the TLS Certificate. Intended for testing and debugging
+      purposes.
     params:
       hostname:
         type: string
         description: Hostname to extract certs from.
     required:
-      - hostname
+    - hostname
   get-proxied-endpoints:
     description: |
       Return a list of endpoints 
@@ -117,5 +117,5 @@ actions:
           If no backend with this name is present, an empty list is returned.
 
 charm-libs:
-  - lib: traefik_k8s.ingress_per_unit
-    version: "1"
+- lib: traefik_k8s.ingress_per_unit
+  version: "1"

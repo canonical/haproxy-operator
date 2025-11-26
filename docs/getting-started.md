@@ -25,7 +25,7 @@ juju deploy haproxy --channel=2.8/edge --base=ubuntu@24.04
 HAProxy enforces HTTPS when using the `ingress` integration. To set up the TLS for the HAProxy charm, deploy the `self-signed-certificates` charm as the `cert` application and integrate with the HAProxy charm.
 ```
 juju deploy self-signed-certificates cert
-juju integrate haproxy cert
+juju integrate haproxy:certificates cert
 ```
 
 Check the status of the charms using `juju status`. The output should look similar to the following:
@@ -80,7 +80,7 @@ frontend.
 HAPROXY_HOSTNAME="haproxy.internal"
 LOCAL_IPADDR=$(ip -4 -j route get 2.2.2.2 | jq -r '.[] | .prefsrc')
 juju deploy ingress-configurator  --channel=edge --config hostname=$HAPROXY_HOSTNAME --config backend-addresses=$LOCAL_IPADDR --config backend-ports=8080
-juju integrate ingress-configurator haproxy
+juju integrate ingress-configurator:haproxy-route haproxy
 ```
 
 Let's check that the request has been properly proxied to the backend service. 
