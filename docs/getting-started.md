@@ -80,7 +80,7 @@ frontend.
 HAPROXY_HOSTNAME="haproxy.internal"
 LOCAL_IPADDR=$(ip -4 -j route get 2.2.2.2 | jq -r '.[] | .prefsrc')
 juju deploy ingress-configurator  --channel=edge --config hostname=$HAPROXY_HOSTNAME --config backend-addresses=$LOCAL_IPADDR --config backend-ports=8080
-juju integrate ingress-configurator haproxy
+juju integrate ingress-configurator:haproxy-route haproxy
 ```
 
 Let's check that the request has been properly proxied to the backend service. 

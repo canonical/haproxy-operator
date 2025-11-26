@@ -123,6 +123,7 @@ class SomeCharm(CharmBase):
 import json
 import logging
 from enum import Enum
+from functools import partial
 from typing import Annotated, Any, Literal, MutableMapping, Optional, cast
 
 from ops import CharmBase, ModelError, RelationBrokenEvent
@@ -151,17 +152,21 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 9
+LIBPATCH = 10
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
 HAPROXY_CONFIG_INVALID_CHARACTERS = "\n\t#\\'\"\r$ "
+HAPROXY_EXPR_INVALID_CHARACTERS = "\n"
 
 
-def value_contains_invalid_characters(value: Optional[str]) -> Optional[str]:
-    """Validate if value contains invalid haproxy config characters.
+def value_contains_invalid_characters(
+    invalid_characters: str, value: Optional[str]
+) -> Optional[str]:
+    """Validate if value contains invalid config characters.
 
     Args:
+        invalid_characters: String with the list of invalid characters.
         value: The value to validate.
 
     Raises:
@@ -173,12 +178,19 @@ def value_contains_invalid_characters(value: Optional[str]) -> Optional[str]:
     if value is None:
         return value
 
-    if [char for char in value if char in HAPROXY_CONFIG_INVALID_CHARACTERS]:
+    if [char for char in value if char in invalid_characters]:
         raise ValueError(f"Relation data contains invalid character(s) {value}")
     return value
 
 
-VALIDSTR = Annotated[str, BeforeValidator(value_contains_invalid_characters)]
+VALIDSTR = Annotated[
+    str,
+    BeforeValidator(partial(value_contains_invalid_characters, HAPROXY_CONFIG_INVALID_CHARACTERS)),
+]
+VALIDEXPRSTR = Annotated[
+    str,
+    BeforeValidator(partial(value_contains_invalid_characters, HAPROXY_EXPR_INVALID_CHARACTERS)),
+]
 
 
 class DataValidationError(Exception):
@@ -509,7 +521,9 @@ class RewriteConfiguration(BaseModel):
     method: HaproxyRewriteMethod = Field(
         description="Which rewrite method to apply.One of set-path, set-query, set-header."
     )
-    expression: VALIDSTR = Field(description="Regular expression to use with the rewrite method.")
+    expression: VALIDEXPRSTR = Field(
+        description="Regular expression to use with the rewrite method."
+    )
     header: Optional[VALIDSTR] = Field(
         description="The name of the header to rewrite.", default=None
     )
