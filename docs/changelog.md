@@ -10,6 +10,10 @@ Each revision is versioned by the date of the revision.
 
 - Added GitHub workflow that checks whether a pull request contains a change artifact.
 
+## 2025-11-13
+
+- Added the `spoe-auth` library and requirer/provider class implementation.
+
 ## 2025-11-12
 
 - Updated the haproxy-route library to add the `allow_http` attribute.
