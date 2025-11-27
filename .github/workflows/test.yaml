@@ -21,4 +21,4 @@ jobs:
       self-hosted-runner-image: "noble"
       python-version: 3.12
       working-directory: ./haproxy-spoe-auth-operator
-      with-uv: True
+      with-uv: true
