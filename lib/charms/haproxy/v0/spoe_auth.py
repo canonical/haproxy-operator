@@ -74,6 +74,16 @@ from ops.framework import EventBase, EventSource, Object
 from ops.model import Relation
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, IPvAnyAddress, ValidationError
 
+# The unique Charmhub library identifier, never change it
+LIBID = "3f644e37fffc483aa97bea91d4fc0bce"
+
+# Increment this major API version when introducing breaking changes
+LIBAPI = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 2
+
 logger = logging.getLogger(__name__)
 SPOE_AUTH_DEFAULT_RELATION_NAME = "spoe-auth"
 HAPROXY_CONFIG_INVALID_CHARACTERS = "\n\t#\\'\"\r$ "
