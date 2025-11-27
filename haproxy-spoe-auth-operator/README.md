@@ -12,7 +12,7 @@ HAProxy SPOE Auth is a Stream Processing Offload Engine (SPOE) agent for HAProxy
 Deploy the charm:
 
 ```bash
-juju deploy haproxy_spoe_auth_operator --channel=latest/edge
+juju deploy haproxy_spoe_auth_operator --channel=latest/edge --config hostname=auth.example.com
 ```
 
 Integrate with an OAuth provider:
