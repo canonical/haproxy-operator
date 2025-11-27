@@ -6,7 +6,7 @@ changes:
     author: tphan025
     type: major
     description: |
-      Add a new charm for HAProxy SPOE authentication.
+      Added a new charm for HAProxy SPOE authentication.
       Refactor the haproxy-operator charm code to a folder in the monorepo.
       Update the relevant workflows to support the new directory structure.
     urls: 
