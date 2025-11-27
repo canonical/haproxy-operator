@@ -7,13 +7,13 @@ oidc:
   provider_url: {{ issuer_url }}
 
   # The callback the OIDC server will redirect the user to once authentication is done
-  oauth2_callback_path: /oauth2/callback
+  oauth2_callback_path: {{ oidc_callback_path }}
 
   # The path to the logout endpoint to redirect the user to.
-  oauth2_logout_path: /oauth2/logout
+  oauth2_logout_path: {{ oidc_logout_path }}
 
   # The path the oidc client uses for a healthcheck
-  oauth2_healthcheck_path: /health
+  oauth2_healthcheck_path: {{ oidc_healthcheck_path }}
 
   # The SPOE agent will open a dedicated port for the HTTP server handling the callback. This is the address the server listens on
   callback_addr: 0.0.0.0:{{ oidc_callback_port }}

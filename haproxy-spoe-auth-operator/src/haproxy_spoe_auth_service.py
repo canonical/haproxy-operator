@@ -16,6 +16,8 @@ CONFIG_TEMPLATE = "config.yaml.j2"
 COOKIE_NAME = "authsession"
 OIDC_CALLBACK_PATH = "/oauth2/callback"
 OIDC_CALLBACK_PORT = 5000
+OIDC_HEALTHCHECK_PATH = "/health"
+OIDC_LOGOUT_PATH = "/oauth2/logout"
 SNAP_CHANNEL = "latest/edge"
 SNAP_NAME = "haproxy-spoe-auth"
 SPOP_PORT = 8081
@@ -97,6 +99,8 @@ class SpoeAuthService:
             issuer_url=oauth_information.issuer_url,
             oidc_callback_path=OIDC_CALLBACK_PATH,
             oidc_callback_port=OIDC_CALLBACK_PORT,
+            oidc_logout_path=OIDC_LOGOUT_PATH,
+            oidc_healthcheck_path=OIDC_HEALTHCHECK_PATH,
             signature_secret=charm_state.signature_secret,
             spop_port=SPOP_PORT,
         )
