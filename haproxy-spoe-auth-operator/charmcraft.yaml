@@ -67,3 +67,5 @@ config:
 charm-libs:
 - lib: hydra.oauth
   version: "0"
+- lib: haproxy.spoe_auth
+  version: "0"

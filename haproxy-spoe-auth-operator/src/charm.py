@@ -9,7 +9,7 @@ import logging
 import typing
 
 import ops
-from charmlibs.interfaces.haproxy_spoe_auth import HaproxyEvent, SpoeAuthProvider
+from charms.haproxy.v0.spoe_auth import HaproxyEvent, SpoeAuthProvider
 from charms.hydra.v0.oauth import ClientConfig, OAuthRequirer
 
 from haproxy_spoe_auth_service import (

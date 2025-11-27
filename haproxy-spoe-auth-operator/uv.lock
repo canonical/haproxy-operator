@@ -202,15 +202,6 @@ wheels = [
 ]
 
 [[package]]
-name = "charmlibs-interfaces-haproxy-spoe-auth"
-version = "0.0.1"
-source = { git = "https://github.com/Thanhphan1147/charmlibs?subdirectory=interfaces%2Fhaproxy_spoe_auth&rev=d0b2b27fa454394cc54d438ed18d25d88afa3ed5#d0b2b27fa454394cc54d438ed18d25d88afa3ed5" }
-dependencies = [
-    { name = "ops" },
-    { name = "pydantic" },
-]
-
-[[package]]
 name = "charmlibs-snap"
 version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -464,7 +455,6 @@ name = "haproxy-spoe-auth-operator"
 version = "0.0.1"
 source = { virtual = "." }
 dependencies = [
-    { name = "charmlibs-interfaces-haproxy-spoe-auth" },
     { name = "charmlibs-snap" },
     { name = "jinja2" },
     { name = "jsonschema" },
@@ -505,7 +495,6 @@ unit = [
 
 [package.metadata]
 requires-dist = [
-    { name = "charmlibs-interfaces-haproxy-spoe-auth", git = "https://github.com/Thanhphan1147/charmlibs?subdirectory=interfaces%2Fhaproxy_spoe_auth&rev=d0b2b27fa454394cc54d438ed18d25d88afa3ed5" },
     { name = "charmlibs-snap", specifier = "==1.0.0" },
     { name = "jinja2", specifier = "==3.1.6" },
     { name = "jsonschema", specifier = "==4.25.1" },
