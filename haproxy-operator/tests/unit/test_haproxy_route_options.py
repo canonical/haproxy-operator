@@ -132,7 +132,7 @@ def test_protocol_https_no_ca(monkeypatch: pytest.MonkeyPatch, certificates_inte
     protocol_https_relation = next(
         rel
         for rel in out.relations
-        if rel.endpoint == "haproxy-route" and rel.remote_app_data["protocol"] == '"https"'
+        if rel.endpoint == "haproxy-route" and rel.remote_app_data["protocol"] == '"https"'  # type: ignore[attr-defined]
     )
     # The relation data is invalid
     assert protocol_https_relation.local_app_data["endpoints"] == "[]"  # type: ignore
