@@ -4,7 +4,7 @@
 frontend haproxy
     mode http
     bind [::]:80 v4v6
-    bind [::]:443 v4v6 ssl crt {{ haproxy_crt_dir }}
+    bind [::]:443 v4v6 ssl crt {{ haproxy_crt_dir }} alpn h2,http/1.1
     # Redirect HTTP to HTTPS
     http-request redirect scheme https unless { ssl_fc } {% for acl in acls_for_allow_http %} || {{ acl }}{% endfor %}
 {% endif %}
@@ -72,7 +72,7 @@ backend {{ backend.backend_name }}
     http-request {{ rewrite_configuration }}
 {% endfor %}
 {% for server in backend.servers %}
-    server {{ server.server_name }} {{ server.address }}:{{ server.port }}{% if server.check %} check inter {{ server.check.interval }}s rise {{ server.check.rise }} fall {{ server.check.fall }}{% endif +%}{% if server.protocol == "https" %} ssl ca-file {{ haproxy_cas_file }}{% endif +%}
+    server {{ server.server_name }} {{ server.address }}:{{ server.port }}{% if server.check %} check inter {{ server.check.interval }}s rise {{ server.check.rise }} fall {{ server.check.fall }}{% endif +%}{% if server.protocol == "https" %} ssl ca-file {{ haproxy_cas_file }} alpn h2,http/1.1{% endif +%}
 {% endfor %}
 {% endfor %}
 

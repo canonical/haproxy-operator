@@ -5,6 +5,7 @@
 """haproxy-route requirer source."""
 
 import sys
+from typing import Any
 
 # The last one is the dynamic modules. That way we get the new cryptography
 # library, not the system one.
@@ -13,6 +14,7 @@ sys.path.insert(0, sys.path[-1])
 import logging
 import pathlib
 import subprocess  # nosec: B404
+import textwrap
 from subprocess import CalledProcessError  # nosec: B404
 
 import apt
@@ -70,8 +72,12 @@ class AnyCharm(AnyCharmBase):
         file_path.write_text("ok!")
         self.unit.status = ops.ActiveStatus("Server ready")
 
-    def start_ssl_server(self):
-        """Start apache2 webserver."""
+    def start_ssl_server(self, protocols: str | None = None):
+        """Start apache2 webserver.
+
+        Args:
+            protocols: Apache Protocols directive value (e.g., "h2", "http/1.1", "h2 http/1.1").
+        """
         apt.update()
         apt.add_package(package_names="apache2")
         www_dir = pathlib.Path("/var/www/html")
@@ -79,23 +85,27 @@ class AnyCharm(AnyCharmBase):
         file_path.parent.mkdir(exist_ok=True)
         file_path.write_text("ok!")
 
-        ssl_host = f"""
-        <VirtualHost *:443>
-                ServerAdmin webmaster@localhost
-                DocumentRoot /var/www/html
-                ErrorLog ${{APACHE_LOG_DIR}}/error.log
-                CustomLog ${{APACHE_LOG_DIR}}/access.log combined
-                SSLEngine on
-                SSLCertificateFile      {SSL_CERT_FILE!s}
-                SSLCertificateKeyFile   {SSL_PRIVATE_KEY_FILE!s}
-        </VirtualHost>
+        protocols_line = f"Protocols {protocols}" if protocols else ""
+        ssl_host = textwrap.dedent(f"""
+            LogFormat "%{{X-Request-ID}}i %h %l %u %t \\"%r\\" %>s %O \\"%{{Referer}}i\\" \\"%{{User-Agent}}i\\"" combined_with_id
 
-        # This easier that editing an apache config file to comment the "Listen 80" line.
-        <VirtualHost *:80>
-                RewriteEngine On
-                RewriteRule .* - [R=503,L]
-        </VirtualHost>
-        """
+            <VirtualHost *:443>
+                    ServerAdmin webmaster@localhost
+                    DocumentRoot /var/www/html
+                    ErrorLog ${{APACHE_LOG_DIR}}/error.log
+                    CustomLog ${{APACHE_LOG_DIR}}/access.log combined_with_id
+                    SSLEngine on
+                    SSLCertificateFile      {SSL_CERT_FILE!s}
+                    SSLCertificateKeyFile   {SSL_PRIVATE_KEY_FILE!s}
+                    {protocols_line}
+            </VirtualHost>
+
+            # This easier that editing an apache config file to comment the "Listen 80" line.
+            <VirtualHost *:80>
+                    RewriteEngine On
+                    RewriteRule .* - [R=503,L]
+            </VirtualHost>
+        """)
         ssl_site_file = pathlib.Path("/etc/apache2/sites-available/anycharm-ssl.conf")
         ssl_site_file.write_text(ssl_host, encoding="utf-8")
         commands = [
@@ -128,10 +138,28 @@ class AnyCharm(AnyCharmBase):
             )
             raise
 
-    def update_relation(self, haproxy_route_params: dict[str, str]):
+    def update_relation(self, haproxy_route_params: dict[str, Any]):
         """Update relation details for haproxy-route.
 
         Args:
           haproxy_route_params: arguments to pass relation.
         """
         self._haproxy_route.provide_haproxy_route_requirements(**haproxy_route_params)
+
+    def enable_http2(self) -> None:
+        """Enable HTTP/2 support in the apache2 webserver."""
+        commands = [
+            ["a2enmod", "http2"],
+            ["systemctl", "restart", "apache2"],
+        ]
+        for command in commands:
+            self._run_subprocess(command)
+
+    def disable_http2(self) -> None:
+        """Disable HTTP/2 support in the apache2 webserver."""
+        commands = [
+            ["a2dismod", "http2"],
+            ["systemctl", "restart", "apache2"],
+        ]
+        for command in commands:
+            self._run_subprocess(command)

@@ -110,8 +110,8 @@ def certificate_provider_application_fixture(
     return SELF_SIGNED_CERTIFICATES_APP_NAME
 
 
-@pytest.fixture(scope="module", name="configured_application_with_tls")
-def configured_application_with_tls_fixture(
+@pytest.fixture(scope="module", name="configured_application_with_tls_base")
+def configured_application_with_tls_base_fixture(
     pytestconfig: pytest.Config,
     application: str,
     certificate_provider_application: str,
@@ -119,7 +119,7 @@ def configured_application_with_tls_fixture(
 ):
     """The haproxy charm configured and integrated with TLS provider."""
     if pytestconfig.getoption("--no-deploy") and "haproxy" in juju.status().apps:
-        return "haproxy"
+        return application
     juju.config(application, {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
     juju.integrate(
         f"{application}:certificates", f"{certificate_provider_application}:certificates"
@@ -132,6 +132,38 @@ def configured_application_with_tls_fixture(
         timeout=JUJU_WAIT_TIMEOUT,
     )
     return application
+
+
+@pytest.fixture(name="configured_application_with_tls")
+def configured_application_with_tls_fixture(
+    configured_application_with_tls_base: str,
+    certificate_provider_application: str,
+    juju: jubilant.Juju,
+):
+    """Provide haproxy with TLS and clean up test-specific relations after each test.
+
+    This function-scoped fixture wraps the module-scoped configured_application_with_tls_base
+    and ensures that relations created during tests are removed, while preserving the
+    certificates relation for reuse across tests.
+    """
+    yield configured_application_with_tls_base
+
+    # Remove all relations except peer relations and the certificates relation
+    for endpoint, app_status_relation in (
+        juju.status().apps[configured_application_with_tls_base].relations.items()
+    ):
+        for relation in app_status_relation:
+            if relation.related_app == configured_application_with_tls_base:
+                continue
+            # Keep the certificates relation created by configured_application_with_tls_base fixture
+            if (
+                endpoint == "certificates"
+                and relation.related_app == certificate_provider_application
+            ):
+                continue
+            juju.remove_relation(
+                f"{configured_application_with_tls_base}:{endpoint}", relation.related_app
+            )
 
 
 @pytest.fixture(name="any_charm_ingress_per_unit_requirer")
@@ -183,9 +215,11 @@ def any_charm_ingress_per_unit_requirer_fixture(
     return ANY_CHARM_INGRESS_PER_UNIT_REQUIRER
 
 
-@pytest.fixture(scope="module", name="any_charm_haproxy_route_requirer")
+@pytest.fixture(scope="module", name="any_charm_haproxy_route_requirer_base")
 @pytestconfig_arg_no_deploy(application=ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)
-def any_charm_haproxy_route_requirer_fixture(_pytestconfig: pytest.Config, juju: jubilant.Juju):
+def any_charm_haproxy_route_requirer_base_fixture(
+    _pytestconfig: pytest.Config, juju: jubilant.Juju
+):
     """Deploy any-charm and configure it to serve as a requirer for the haproxy-route
     integration.
     """
@@ -223,6 +257,31 @@ def any_charm_haproxy_route_requirer_fixture(_pytestconfig: pytest.Config, juju:
         timeout=JUJU_WAIT_TIMEOUT,
     )
     return ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION
+
+
+@pytest.fixture(name="any_charm_haproxy_route_requirer")
+def any_charm_haproxy_route_requirer_fixture(
+    any_charm_haproxy_route_requirer_base: str,
+    juju: jubilant.Juju,
+):
+    """Provide haproxy route requirer and clean up test-specific relations after each test.
+
+    This function-scoped fixture wraps the module-scoped any_charm_haproxy_route_requirer_base
+    and ensures that relations created during tests are removed, while preserving the
+    base application for reuse across tests.
+    """
+    yield any_charm_haproxy_route_requirer_base
+
+    # Remove all relations except peer relations
+    app_name = any_charm_haproxy_route_requirer_base
+    if app_name not in juju.status().apps:
+        return
+
+    for endpoint, app_status_relation in juju.status().apps[app_name].relations.items():
+        for relation in app_status_relation:
+            if relation.related_app == app_name:
+                continue
+            juju.remove_relation(f"{app_name}:{endpoint}", relation.related_app)
 
 
 @pytest.fixture(scope="function", name="any_charm_haproxy_route_tcp_requirer")

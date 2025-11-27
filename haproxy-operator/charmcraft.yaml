@@ -32,7 +32,7 @@ description: |
   has request blocking capabilities and provides interface to display server
   status.
 
-  This charm simplifies initial deployment and "day N" operations of HAProxy on 
+  This charm simplifies initial deployment and "day N" operations of HAProxy on
   VMs and bare metal.
 summary: Fast and reliable load balancing reverse proxy.
 links:
@@ -106,7 +106,7 @@ actions:
     - hostname
   get-proxied-endpoints:
     description: |
-      Return a list of endpoints 
+      Return a list of endpoints
       based on route definitions (backends) provided through the `haproxy-route` relation.
       If no `backend` is provided, endpoints for all backends are returned.
     params:
