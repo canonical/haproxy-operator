@@ -1,6 +1,6 @@
 # HTTP/2 support
 
-The HAProxy operator provides **automatic** HTTP/2 support for backends using HTTPS, and for frontends.
+The HAProxy operator provides **automatic** HTTP/2 support for frontends and backends using HTTPS.
 Application-Layer Protocol Negotiation (ALPN) is used to negotiate HTTP/2 connections, falling back to HTTP/1.1.
 
 ## Protocol independence
