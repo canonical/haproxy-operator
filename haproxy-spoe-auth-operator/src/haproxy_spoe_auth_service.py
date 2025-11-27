@@ -23,10 +23,6 @@ SPOP_PORT = 8081
 logger = logging.getLogger(__name__)
 
 
-class SpoeAuthServiceInstallError(Exception):
-    """Exception raised when snap installation fails."""
-
-
 class SpoeAuthServiceConfigError(Exception):
     """Exception raised when service configuration fails."""
 
