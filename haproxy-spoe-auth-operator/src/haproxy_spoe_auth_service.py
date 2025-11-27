@@ -16,6 +16,7 @@ CONFIG_TEMPLATE = "config.yaml.j2"
 COOKIE_NAME = "authsession"
 OIDC_CALLBACK_PATH = "/oauth2/callback"
 OIDC_CALLBACK_PORT = 5000
+SNAP_CHANNEL = "latest/edge"
 SNAP_NAME = "haproxy-spoe-auth"
 SPOP_PORT = 8081
 
