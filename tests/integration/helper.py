@@ -15,7 +15,7 @@ import pytest
 import yaml
 from requests.adapters import DEFAULT_POOLBLOCK, DEFAULT_POOLSIZE, DEFAULT_RETRIES, HTTPAdapter
 
-HTTP_TRANSPORT_VERSION_PATTERN = re.compile(r"HTTP/[\d.]+")
+HTTP_TRANSPORT_VERSION_PATTERN = re.compile(r"HTTP/[\d\.]+")
 
 
 class DNSResolverHTTPSAdapter(HTTPAdapter):
