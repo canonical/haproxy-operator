@@ -70,7 +70,7 @@ class SpoeAuthService:
         try:
             self._render_config(charm_state, oauth_information)
             self.haproxy_spoe_auth_snap.restart(reload=True)
-        except Exception as exc:
+        except snap.SnapError as exc:
             raise SpoeAuthServiceConfigError(f"Failed to reconcile service: {exc}") from exc
 
     def _render_config(self, charm_state: CharmState, oauth_information: OauthInformation) -> None:
