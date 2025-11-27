@@ -8,7 +8,7 @@ changes:
     description: |
       Added a new charm for HAProxy SPOE authentication.
     urls: 
-      pr: "https://github.com/canonical/haproxy-operator/pull/232"
+      pr: https://github.com/canonical/haproxy-operator/pull/232
       related_doc:
       related_issue:
     visibility: public
