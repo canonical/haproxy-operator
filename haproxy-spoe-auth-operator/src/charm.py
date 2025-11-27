@@ -19,7 +19,6 @@ from haproxy_spoe_auth_service import (
     SPOP_PORT,
     SpoeAuthService,
     SpoeAuthServiceConfigError,
-    SpoeAuthServiceInstallError,
 )
 from state import CharmState, InvalidCharmConfigError, OauthInformation
 
