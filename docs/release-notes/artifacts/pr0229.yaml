@@ -1,0 +1,15 @@
+# --- Release notes change artifact ----
+
+schema_version: 1
+changes:
+  - title: Add SPOE Auth interface library
+    author: tphan025
+    type: major
+    description: |
+      Add the `charms.haproxy.v0.spoe_auth` library to enable SPOE authentication integration.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/229
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false
