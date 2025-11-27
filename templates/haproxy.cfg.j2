@@ -2,7 +2,7 @@ global
     maxconn {{ config_global_max_connection }}
     user haproxy
     group haproxy
-    
+
     log /dev/log local0
 
     # haproxy 2.8, intermediate config, OpenSSL 1.1.1k
@@ -38,7 +38,7 @@ frontend prometheus
 {% block proxy_configuration %}
 frontend default
     bind :80
-    default_backend default 
+    default_backend default
 {% endblock %}
 
 backend default

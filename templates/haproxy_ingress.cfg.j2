@@ -3,7 +3,7 @@
 frontend ingress
     mode http
     bind [::]:80 v4v6
-    bind [::]:443 v4v6 ssl crt {{ haproxy_crt_dir }}
+    bind [::]:443 v4v6 ssl crt {{ haproxy_crt_dir }} alpn h2,http/1.1
 
     filter compression
     compression algo gzip
