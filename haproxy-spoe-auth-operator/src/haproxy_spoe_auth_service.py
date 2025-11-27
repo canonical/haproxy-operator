@@ -50,8 +50,12 @@ class SpoeAuthService:
             if not self.haproxy_spoe_auth_snap.present:
                 self.haproxy_spoe_auth_snap.ensure(snap.SnapState.Latest, channel=SNAP_CHANNEL)
             self.haproxy_spoe_auth_snap.restart(reload=True)
-        except snap.SnapError as e:
-            logger.error("An exception occurred when installing charmcraft. Reason: %s", e.message)
+        except snap.SnapError as exc:
+            logger.error(
+                "An exception occurred when installing the haproxy-spoe-auth snap: %s",
+                str(exc),
+            )
+            raise SpoeAuthServiceInstallError("Failed to install haproxy-spoe-auth snap") from exc
 
     def reconcile(self, charm_state: CharmState, oauth_information: OauthInformation) -> None:
         """Reconcile the service configuration.

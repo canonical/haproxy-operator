@@ -25,7 +25,7 @@ name: haproxy-spoe-auth
 title: HAProxy SPOE Auth charm
 description: |
   A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
-  deploying and managing [HAProxy SPOE Auth](https://github.com/Thanhphan1147/haproxy-spoe-auth) on machines.
+  deploying and managing [HAProxy SPOE Auth](https://github.com/criteo/haproxy-spoe-auth) on machines.
   
   HAProxy SPOE Auth is a Stream Processing Offload Engine agent for HAProxy that provides
   authentication capabilities including OAuth support.
