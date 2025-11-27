@@ -53,7 +53,7 @@ class TLSInformation:
         charm: ops.CharmBase,
         certificates: TLSCertificatesRequiresV4,
         allow_no_certificates: bool = False,
-    ) -> "TLSInformation":
+    ) -> "TLSInformation | None":
         """Get TLS information from a charm instance.
 
         Args:
@@ -65,9 +65,13 @@ class TLSInformation:
             PrivateKeyNotGeneratedError: When waiting for the private key to be generated.
 
         Returns:
-            TLSInformation: Information about configured TLS certs.
+            TLSInformation | None: Information about configured TLS certs or None if not ready.
         """
-        cls.validate(charm, certificates, allow_no_certificates)
+        if allow_no_certificates:
+            logger.warning("Allowing load balancing without requesting TLS certificates.")
+            return None
+
+        cls.validate(charm, certificates)
 
         hostnames = [
             certificate_request.common_name
@@ -99,7 +103,6 @@ class TLSInformation:
         cls,
         charm: ops.CharmBase,
         certificates: TLSCertificatesRequiresV4,
-        allow_no_certificates: bool = False,
     ) -> None:
         """Validate the precondition to initialize this state component.
 
@@ -112,10 +115,8 @@ class TLSInformation:
             TLSNotReadyError: if the charm is not ready to handle TLS.
         """
         tls_requirer_integration = charm.model.get_relation(certificates.relationship_name)
-        if allow_no_certificates:
-            logger.warning("Allowing load balancing without requesting TLS certificates.")
 
-        if not certificates.certificate_requests and not allow_no_certificates:
+        if not certificates.certificate_requests:
             logger.error(
                 "The charm did not request any certificates."
                 "You need to either set the `external-hostname` config or request a hostname from"
@@ -142,6 +143,6 @@ class TLSInformation:
         if (
             tls_requirer_integration is None
             or tls_requirer_integration.data.get(charm.app) is None
-        ) and not allow_no_certificates:
+        ):
             logger.error("Relation or relation data not ready.")
             raise TLSNotReadyError("Certificates relation or relation data not ready.")
