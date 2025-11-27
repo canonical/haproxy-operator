@@ -7,7 +7,7 @@ changes:
     type: major
     description: |
       Add the `charms.haproxy.v0.spoe_auth` library to enable SPOE authentication integration.
-    urls: 
+    urls:
       pr: https://github.com/canonical/haproxy-operator/pull/229
       related_doc:
       related_issue:
