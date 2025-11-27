@@ -12,7 +12,7 @@ juju deploy haproxy --channel=2.8/edge
 juju config haproxy external-hostname="fqdn.example"
 
 juju deploy self-signed-certificates
-juju integrate haproxy self-signed-certificates
+juju integrate haproxy self-signed-certificates:certificates
 ```
 
 # HAProxy project information
