@@ -13,6 +13,10 @@ from charms.haproxy.v0.spoe_auth import HaproxyEvent, SpoeAuthProvider
 from charms.hydra.v0.oauth import ClientConfig, OAuthRequirer
 
 from haproxy_spoe_auth_service import (
+    COOKIE_NAME,
+    OIDC_CALLBACK_PATH,
+    OIDC_CALLBACK_PORT,
+    SPOP_PORT,
     SpoeAuthService,
     SpoeAuthServiceConfigError,
     SpoeAuthServiceInstallError,
@@ -22,15 +26,11 @@ from state import CharmState, InvalidCharmConfigError, OauthInformation
 logger = logging.getLogger(__name__)
 
 OAUTH_RELATION = "oauth"
-OIDC_CALLBACK_PATH = "/oauth2/callback"
-SPOP_PORT = 8081
-OIDC_CALLBACK_PORT = 5000
 OIDC_SCOPE = "openid email profile"
+SPOE_AUTH_MESSAGE_NAME = "try-auth-oidc"
+SPOE_AUTH_RELATION = "spoe-auth"
 VAR_AUTHENTICATED = "sess.auth.is_authenticated"
 VAR_REDIRECT_URL = "sess.auth.redirect_url"
-COOKIE_NAME = "authsession"
-SPOE_AUTH_RELATION = "spoe-auth"
-SPOE_AUTH_MESSAGE_NAME = "try-auth-oidc"
 
 
 class HaproxySpoeAuthCharm(ops.CharmBase):

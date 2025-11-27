@@ -11,9 +11,13 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from state import CharmState, OauthInformation
 
-SNAP_NAME = "haproxy-spoe-auth"
 CONFIG_PATH = Path("/var/snap/haproxy-spoe-auth/current/config.yaml")
 CONFIG_TEMPLATE = "config.yaml.j2"
+COOKIE_NAME = "authsession"
+OIDC_CALLBACK_PATH = "/oauth2/callback"
+OIDC_CALLBACK_PORT = 5000
+SNAP_NAME = "haproxy-spoe-auth"
+SPOP_PORT = 8081
 
 logger = logging.getLogger(__name__)
 
@@ -80,12 +84,16 @@ class SpoeAuthService:
         )
         template = env.get_template(CONFIG_TEMPLATE)
         config_content = template.render(
-            hostname=charm_state.hostname,
-            issuer_url=oauth_information.issuer_url,
             client_id=oauth_information.client_id,
             client_secret=oauth_information.client_secret,
-            signature_secret=charm_state.signature_secret,
+            cookie_name=COOKIE_NAME,
             encryption_secret=charm_state.encryption_secret,
+            hostname=charm_state.hostname,
+            issuer_url=oauth_information.issuer_url,
+            oidc_callback_path=OIDC_CALLBACK_PATH,
+            oidc_callback_port=OIDC_CALLBACK_PORT,
+            signature_secret=charm_state.signature_secret,
+            spop_port=SPOP_PORT,
         )
 
         # Ensure parent directory exists
