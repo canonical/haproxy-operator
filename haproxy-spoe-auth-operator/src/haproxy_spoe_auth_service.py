@@ -47,7 +47,7 @@ class SpoeAuthService:
         """
         try:
             if not self.haproxy_spoe_auth_snap.present:
-                self.haproxy_spoe_auth_snap.ensure(snap.SnapState.Latest, channel="edge")
+                self.haproxy_spoe_auth_snap.ensure(snap.SnapState.Latest, channel=SNAP_CHANNEL)
             self.haproxy_spoe_auth_snap.restart(reload=True)
         except snap.SnapError as e:
             logger.error("An exception occurred when installing charmcraft. Reason: %s", e.message)
