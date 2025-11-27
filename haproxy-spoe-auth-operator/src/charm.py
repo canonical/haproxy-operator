@@ -87,7 +87,7 @@ class HaproxySpoeAuthCharm(ops.CharmBase):
         except InvalidCharmConfigError as exc:
             logger.exception("Charm state validation failed")
             self.unit.status = ops.BlockedStatus(f"Configuration error: {exc}")
-        except (SpoeAuthServiceInstallError, SpoeAuthServiceConfigError) as exc:
+        except SpoeAuthServiceConfigError as exc:
             logger.exception("Error configuring the haproxy-spoe-auth service.")
             self.unit.status = ops.BlockedStatus(f"Service configuration failed: {exc}")
 
