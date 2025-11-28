@@ -1,4 +1,4 @@
-name: Promote charm
+name: Promote the haproxy-operatorcharm
 
 on:
   workflow_dispatch:

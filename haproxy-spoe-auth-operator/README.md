@@ -18,10 +18,10 @@ juju deploy haproxy_spoe_auth_operator --channel=latest/edge --config hostname=a
 Integrate with an OAuth provider:
 
 ```bash
-juju relate haproxy-spoe-auth oauth-provider
+juju relate haproxy-spoe-auth:oauth oauth-provider
 ```
 
 Integrate with haproxy
 ```bash
-juju relate haproxy-spoe-auth haproxy
+juju relate haproxy-spoe-auth:spoe-auth haproxy
 ```
