@@ -16,6 +16,8 @@ CONFIG_TEMPLATE = "config.yaml.j2"
 COOKIE_NAME = "authsession"
 OIDC_CALLBACK_PATH = "/oauth2/callback"
 OIDC_CALLBACK_PORT = 5000
+OIDC_HEALTHCHECK_PATH = "/health"
+OIDC_LOGOUT_PATH = "/oauth2/logout"
 SNAP_CHANNEL = "latest/edge"
 SNAP_NAME = "haproxy-spoe-auth"
 SPOP_PORT = 8081
@@ -70,7 +72,7 @@ class SpoeAuthService:
         try:
             self._render_config(charm_state, oauth_information)
             self.haproxy_spoe_auth_snap.restart(reload=True)
-        except Exception as exc:
+        except snap.SnapError as exc:
             raise SpoeAuthServiceConfigError(f"Failed to reconcile service: {exc}") from exc
 
     def _render_config(self, charm_state: CharmState, oauth_information: OauthInformation) -> None:
@@ -97,6 +99,8 @@ class SpoeAuthService:
             issuer_url=oauth_information.issuer_url,
             oidc_callback_path=OIDC_CALLBACK_PATH,
             oidc_callback_port=OIDC_CALLBACK_PORT,
+            oidc_logout_path=OIDC_LOGOUT_PATH,
+            oidc_healthcheck_path=OIDC_HEALTHCHECK_PATH,
             signature_secret=charm_state.signature_secret,
             spop_port=SPOP_PORT,
         )
