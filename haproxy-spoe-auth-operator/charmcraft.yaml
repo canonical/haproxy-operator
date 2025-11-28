@@ -15,6 +15,8 @@ parts:
     - astral-uv
     build-packages:
     - git
+    stage-snaps:
+    - haproxy-spoe-auth/latest/edge
   templates:
     plugin: dump
     source: .
