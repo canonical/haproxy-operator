@@ -1,14 +1,12 @@
-name: Publish to edge
+name: Publish the haproxy-operator charm to edge
 
 on:
   workflow_dispatch:
   push:
     branches:
       - main
-      # workflow runs on main and 2.8/main are mutually exclusive.
-      # This will be replaced by 2.8/main once we finished moving the 
-      # legacy haproxy code to this repo.
-      # - 2.8/main 
+    paths:
+      - haproxy-operator/**
 
 jobs:
   publish-to-edge:
