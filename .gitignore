@@ -1,16 +1,18 @@
-venv/
-build/
-*.charm
-.tox/
-.coverage
+**/venv/
+**/build/
+**/*.charm
+**/*.snap
+**/.tox/
+**/.coverage
 __pycache__/
-*.py[cod]
-.idea
-.vscode
-.mypy_cache
+**/*.py[cod]
+**/.idea
+**/.vscode
+**/.mypy_cache
+**/.ruff_cache
 *.egg-info/
 */*.rock
-.venv/
+**/.venv/
 
 # BEGIN VALE WORKFLOW IGNORE
 .vale/styles/*
@@ -24,7 +26,6 @@ __pycache__/
 !.vale/styles/config/vocabularies/local
 # END VALE WORKFLOW IGNORE
 
-**/*.snap
 terraform/**/.terraform*
 terraform/**/.tfvars
 terraform/**/*.tfstate*

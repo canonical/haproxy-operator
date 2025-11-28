@@ -121,7 +121,7 @@ namespace_packages = true
 
 [[tool.mypy.overrides]]
 disallow_untyped_defs = false
-module = "tests.*"
+module = ["tests.*"]
 
 [tool.bandit]
 exclude_dirs = [ "/venv/" ]

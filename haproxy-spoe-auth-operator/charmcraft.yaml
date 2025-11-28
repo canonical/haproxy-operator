@@ -1,0 +1,71 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+type: charm
+base: ubuntu@24.04
+build-base: ubuntu@24.04
+
+platforms:
+  amd64:
+
+parts:
+  charm:
+    source: .
+    plugin: uv
+    build-snaps:
+    - astral-uv
+    build-packages:
+    - git
+  templates:
+    plugin: dump
+    source: .
+    stage:
+    - templates
+
+name: haproxy-spoe-auth
+title: HAProxy SPOE Auth charm
+description: |
+  A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
+  deploying and managing [HAProxy SPOE Auth](https://github.com/criteo/haproxy-spoe-auth) on machines.
+  
+  HAProxy SPOE Auth is a Stream Processing Offload Engine agent for HAProxy that provides
+  authentication capabilities including OAuth support.
+
+  This charm simplifies initial deployment and "day N" operations of HAProxy SPOE Auth on 
+  VMs and bare metal.
+summary: HAProxy SPOE authentication agent
+links:
+  documentation: https://discourse.charmhub.io/t/haproxy-spoe-auth-documentation-overview/
+  issues: https://github.com/canonical/haproxy-operator/issues
+  source: https://github.com/canonical/haproxy-operator
+  contact:
+  - https://launchpad.net/~canonical-is-devops
+
+assumes:
+- juju >= 3.3
+
+requires:
+  oauth:
+    interface: oauth
+    description: OAuth authentication provider integration
+    limit: 1
+    optional: false
+provides:
+  spoe-auth:
+    interface: spoe-auth
+    description: Relation to provide authentication proxy to HAProxy.
+    limit: 1
+    optional: false
+
+config:
+  options:
+    hostname:
+      type: string
+      description: |
+        Public hostname of the agent. Used to store client credentials
+        and to build the redirect URI
+
+charm-libs:
+- lib: hydra.oauth
+  version: "0"
+- lib: haproxy.spoe_auth
+  version: "0"
