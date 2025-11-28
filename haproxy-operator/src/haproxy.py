@@ -10,6 +10,7 @@ import pwd
 # We silence this rule because subprocess call is only for validating the haproxy config
 # and no user input is parsed
 import subprocess  # nosec B404
+import typing
 from pathlib import Path
 from subprocess import CalledProcessError, run  # nosec
 
@@ -21,11 +22,13 @@ from state.charm_state import CharmState
 from state.haproxy_route import HaproxyRouteRequirersInformation
 from state.ingress import IngressRequirersInformation
 from state.ingress_per_unit import IngressPerUnitRequirersInformation
+from state.spoe_auth import SpoeAuthInformation
 
 APT_PACKAGE_VERSION = "2.8.5-1ubuntu3.4"
 APT_PACKAGE_NAME = "haproxy"
 HAPROXY_CONFIG_DIR = Path("/etc/haproxy")
 HAPROXY_CONFIG = Path(HAPROXY_CONFIG_DIR / "haproxy.cfg")
+SPOE_AUTH_CONFIG = Path(HAPROXY_CONFIG_DIR / "spoe_auth.conf")
 HAPROXY_USER = "haproxy"
 # Configuration used to parameterize Diffie-Hellman key exchange.
 # The base64 content of the file is hard-coded here to avoid having to fetch
@@ -49,6 +52,7 @@ HAPROXY_INGRESS_PER_UNIT_CONFIG_TEMPLATE = "haproxy_ingress_per_unit.cfg.j2"
 HAPROXY_LEGACY_CONFIG_TEMPLATE = "haproxy_legacy.cfg.j2"
 HAPROXY_ROUTE_CONFIG_TEMPLATE = "haproxy_route.cfg.j2"
 HAPROXY_ROUTE_TCP_CONFIG_TEMPLATE = "haproxy_route_tcp.cfg.j2"
+SPOE_AUTH_CONFIG_TEMPLATE = "spoe_auth.conf.j2"
 
 HAPROXY_DEFAULT_CONFIG_TEMPLATE = "haproxy.cfg.j2"
 HAPROXY_CERTS_DIR = Path("/var/lib/haproxy/certs")
@@ -108,7 +112,7 @@ class HAProxyService:
             "config_global_max_connection": charm_state.global_max_connection,
             "services": services,
         }
-        self._render_haproxy_config(HAPROXY_LEGACY_CONFIG_TEMPLATE, template_context)
+        self._render_haproxy_config(HAPROXY_LEGACY_CONFIGT_EMPLATE, template_context)
         self._validate_haproxy_config()
         self._reload_haproxy_service()
 
@@ -148,6 +152,7 @@ class HAProxyService:
         self,
         charm_state: CharmState,
         haproxy_route_requirers_information: HaproxyRouteRequirersInformation,
+        spoe_oauth_info: typing.Optional[SpoeAuthInformation],
     ) -> None:
         """Render the haproxy config for haproxy-route.
 
@@ -164,6 +169,7 @@ class HAProxyService:
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
             "haproxy_cas_file": HAPROXY_CAS_FILE,
             "acls_for_allow_http": haproxy_route_requirers_information.acls_for_allow_http,
+            "spoe_auth_info": spoe_oauth_info,
         }
         template = (
             HAPROXY_ROUTE_TCP_CONFIG_TEMPLATE
@@ -171,6 +177,13 @@ class HAProxyService:
             else HAPROXY_ROUTE_CONFIG_TEMPLATE
         )
         self._render_haproxy_config(template, template_context)
+        if spoe_oauth_info:
+            spoe_auth_template_context = {
+                "spoe_auth_info": spoe_oauth_info,
+            }
+            self._render_config_file(
+                SPOE_AUTH_CONFIG_TEMPLATE, spoe_auth_template_context, SPOE_AUTH_CONFIG
+            )
         self._validate_haproxy_config()
         self._reload_haproxy_service()
 
@@ -196,6 +209,11 @@ class HAProxyService:
             template_file_path: Path of the template to load.
             context: Context needed to render the template.
         """
+        self._render_config_file(template_file_path, context, HAPROXY_CONFIG)
+
+    def _render_config_file(self, template_file_path: str, context: dict, path: Path) -> None:
+        """TODO."""
+
         env = Environment(
             loader=FileSystemLoader("templates"),
             autoescape=select_autoescape(),
@@ -205,7 +223,7 @@ class HAProxyService:
         )
         template = env.get_template(template_file_path)
         rendered = template.render(context)
-        render_file(HAPROXY_CONFIG, rendered, 0o644)
+        render_file(path, rendered, 0o644)
 
     def _reload_haproxy_service(self) -> None:
         """Reload the haproxy service.

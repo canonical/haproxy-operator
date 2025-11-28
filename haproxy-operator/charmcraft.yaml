@@ -59,6 +59,7 @@ requires:
   spoe-auth:
     interface: spoe-auth
     description: Relation to provide authentication proxy to HAProxy.
+    # JAVI for now
     limit: 1
 
 provides:
@@ -74,6 +75,7 @@ provides:
     interface: haproxy-route
   haproxy-route-tcp:
     interface: haproxy-route-tcp
+
 peers:
   haproxy-peers:
     interface: haproxy-peers

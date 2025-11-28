@@ -1,0 +1,10 @@
+[spoe-auth]
+spoe-agent spoe-auth-agents
+    messages {{ spoe_auth_info.app_data.message_name }}
+    option var-prefix auth # JAVI WHY? WHAT is prefix {{ prefix }}
+#   use-backend spop_auth var-prefix
+    use-backend spop_auth
+
+spoe-message {{ spoe_auth_info.app_data.message_name }}
+    args arg_ssl=ssl_fc arg_host=req.hdr(Host) arg_pathq=pathq arg_cookie=req.cook({{ spoe_auth_info.app_data.cookie_name }})
+    event {{ spoe_auth_info.app_data.event }} if { req.hdr(Host) -m str {{ spoe_auth_info.app_data.hostname }} }

@@ -19,6 +19,9 @@ from charms.certificate_transfer_interface.v1.certificate_transfer import (
 )
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.haproxy.v0.haproxy_route_tcp import HaproxyRouteTcpProvider
+from charms.haproxy.v0.spoe_auth import (
+    SpoeAuthRequirer,
+)
 from charms.haproxy.v1.haproxy_route import HaproxyRouteProvider
 from charms.tls_certificates_interface.v4.tls_certificates import (
     CertificateAvailableEvent,
@@ -58,6 +61,7 @@ from state.haproxy_route import (
 )
 from state.ingress import IngressRequirersInformation
 from state.ingress_per_unit import IngressPerUnitRequirersInformation
+from state.spoe_auth import SpoeAuthInformation
 from state.tls import TLSInformation, TLSNotReadyError
 from state.validation import validate_config_and_tls
 from tls_relation import TLSRelationService
@@ -69,6 +73,7 @@ TLS_CERT_RELATION = "certificates"
 REVERSE_PROXY_RELATION = "reverseproxy"
 WEBSITE_RELATION = "website"
 RECV_CA_CERTS_RELATION = "receive-ca-certs"
+SPOE_AUTH_RELATION = "spoe-auth"
 
 
 class HaproxyUnitAddressNotAvailableError(CharmStateValidationBaseError):
@@ -113,6 +118,7 @@ class HAProxyCharm(ops.CharmBase):
         self.reverseproxy_requirer = HTTPRequirer(self, REVERSE_PROXY_RELATION)
         self.haproxy_route_provider = HaproxyRouteProvider(self)
         self.haproxy_route_tcp_provider = HaproxyRouteTcpProvider(self)
+        self.spoe_auth_provider = SpoeAuthRequirer(self, SPOE_AUTH_RELATION)
 
         self.recv_ca_certs = CertificateTransferRequires(self, RECV_CA_CERTS_RELATION)
         self.certificates = TLSCertificatesRequiresV4(
@@ -187,6 +193,8 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(
             self.on.get_proxied_endpoints_action, self._on_get_proxied_endpoints_action
         )
+        self.framework.observe(self.spoe_auth_provider.on.available, self._on_config_changed)
+        self.framework.observe(self.spoe_auth_provider.on.removed, self._on_config_changed)
 
     @validate_config_and_tls(defer=False)
     def _on_install(self, _: typing.Any) -> None:
@@ -346,8 +354,12 @@ class HAProxyCharm(ops.CharmBase):
         )
         tls_information = TLSInformation.from_charm(self, self.certificates, allow_no_certificates)
         self._tls.certificate_available(tls_information)
+
+        # JAVI
+        spoe_oauth_info = SpoeAuthInformation.from_charm(self)
+
         self.haproxy_service.reconcile_haproxy_route(
-            charm_state, haproxy_route_requirers_information
+            charm_state, haproxy_route_requirers_information, spoe_oauth_info
         )
         self.unit.set_ports(
             80,

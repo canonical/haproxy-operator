@@ -7,6 +7,17 @@ frontend haproxy
     bind [::]:443 v4v6 ssl crt {{ haproxy_crt_dir }} alpn h2,http/1.1
     # Redirect HTTP to HTTPS
     http-request redirect scheme https unless { ssl_fc } {% for acl in acls_for_allow_http %} || {{ acl }}{% endfor %}
+
+{% if spoe_auth_info %}
+    acl oidc_callback_path path_beg -i {{ spoe_auth_info.app_data.oidc_callback_path }}
+    acl oidc_callback_host req.hdr(Host) -m str {{ spoe_auth_info.app_data.oidc_callback_hostname }}
+    use_backend spoe_oidc_callback if oidc_callback_path oidc_callback_host
+
+    filter spoe engine spoe-auth config /etc/haproxy/spoe_auth.conf
+
+    acl authenticated var({{ spoe_auth_info.app_data.var_authenticated }}) -m bool
+    use_backend backend_redirect if !authenticated
+{% endif %}
 {% endif %}
 
 {% for backend in backends %}
@@ -75,6 +86,26 @@ backend {{ backend.backend_name }}
     server {{ server.server_name }} {{ server.address }}:{{ server.port }}{% if server.check %} check inter {{ server.check.interval }}s rise {{ server.check.rise }} fall {{ server.check.fall }}{% endif +%}{% if server.protocol == "https" %} ssl ca-file {{ haproxy_cas_file }} alpn h2,http/1.1{% endif +%}
 {% endfor %}
 {% endfor %}
+
+{% if spoe_auth_info %}
+backend backend_redirect
+    mode http
+    balance roundrobin
+    http-request redirect location %[var({{ spoe_auth_info.app_data.var_redirect_url }})]
+
+backend spoe_oidc_callback
+{% for agent_address in spoe_auth_info.unit_addresses %}
+    server {{ agent_address }} {{ agent_address }}:{{ spoe_auth_info.app_data.oidc_callback_port }} check
+{% endfor %}
+
+backend spop_auth
+    mode tcp
+    balance roundrobin
+    option spop-check
+{% for agent_address in spoe_auth_info.unit_addresses %}
+    server {{ agent_address }} {{ agent_address }}:{{ spoe_auth_info.app_data.spop_port }} check
+{% endfor %}
+{% endif %}
 
 {% block haproxy_route_tcp %}{% endblock %}
 {% endblock %}
