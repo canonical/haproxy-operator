@@ -15,3 +15,4 @@ jobs:
     with:
       channel: 2.8/edge
       working-directory: ./haproxy-operator
+      tag-prefix: haproxy-operator
