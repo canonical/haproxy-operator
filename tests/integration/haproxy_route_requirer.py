@@ -192,100 +192,74 @@ class AnyCharm(AnyCharmBase):
 
 
     def _start_grpc_server(self, port: int = 50051, use_tls: bool = False):
-        """Start the gRPC server as a background process.
+        """Start the gRPC server as a systemd service (like apache2).
 
         Args:
             port: Port to listen on
             use_tls: Whether to use TLS
         """
-        # Create a Python script to run the gRPC server
-        grpc_server_script = pathlib.Path("/tmp/grpc_server.py")
-
         # Get the charm's dynamic packages directory for grpc module
         charm_dir = pathlib.Path("/var/lib/juju/agents").glob("unit-*/charm/dynamic-packages")
         dynamic_packages = next(charm_dir, None)
         dynamic_packages_str = str(dynamic_packages) if dynamic_packages else ""
 
-        server_code = f"""
-import sys
-# Add dynamic packages to path for grpc module
-if "{dynamic_packages_str}" and "{dynamic_packages_str}" not in sys.path:
-    sys.path.insert(0, "{dynamic_packages_str}")
+        # Copy grpc_server.py from charm's src directory
+        source_script = pathlib.Path(__file__).parent / "grpc_server.py"
+        target_script = pathlib.Path("/usr/local/bin/anycharm-grpc-server.py")
 
-import grpc
-from concurrent import futures
-import signal
+        # Read the source script and inject dynamic packages path at the top
+        with open(source_script, "r") as f:
+            content = f.read()
 
-def handle_unary_unary(request, context):
-    return request
+        # Insert sys.path modification right after the docstring, before any imports
+        # Find the position after the module docstring
+        docstring_end = content.find('"""', content.find('"""') + 3) + 3
+        if docstring_end > 3 and dynamic_packages_str:
+            # Insert after the docstring and any blank lines
+            insert_pos = docstring_end
+            while insert_pos < len(content) and content[insert_pos] in ('\n', ' ', '\t'):
+                insert_pos += 1
+                if insert_pos < len(content) and content[insert_pos] == '\n':
+                    insert_pos += 1
+                    break
 
-class GenericHandler(grpc.GenericRpcHandler):
-    def service(self, handler_call_details):
-        return grpc.unary_unary_rpc_method_handler(
-            handle_unary_unary,
-            request_deserializer=lambda x: x,
-            response_serializer=lambda x: x,
-        )
+            sys_path_code = f'\nimport sys\nsys.path.insert(0, "{dynamic_packages_str}")\n'
+            content = content[:insert_pos] + sys_path_code + content[insert_pos:]
 
-def main():
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    server.add_generic_rpc_handlers((GenericHandler(),))
+        # Write the modified script
+        target_script.write_text(content, encoding="utf-8")
+        target_script.chmod(0o755)
 
-    {"" if not use_tls else f'''
-    with open("{SSL_PRIVATE_KEY_FILE}", "rb") as f:
-        private_key = f.read()
-    with open("{SSL_CERT_FILE}", "rb") as f:
-        certificate_chain = f.read()
+        # Build command line arguments
+        tls_args = ""
+        if use_tls:
+            tls_args = f"--tls --cert {SSL_CERT_FILE} --key {SSL_PRIVATE_KEY_FILE}"
 
-    server_credentials = grpc.ssl_server_credentials(
-        ((private_key, certificate_chain),)
-    )
-    server.add_secure_port("[::]:{port}", server_credentials)
-    '''}
+        # Create systemd service unit file (like apache2.service)
+        service_file = pathlib.Path("/etc/systemd/system/anycharm-grpc.service")
+        service_content = f"""[Unit]
+Description=Any Charm gRPC Server
+After=network.target
 
-    {"server.add_insecure_port(f'[::]:{port}')" if not use_tls else ""}
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 {target_script} --port {port} {tls_args}
+Restart=on-failure
+RestartSec=5s
 
-    server.start()
-
-    def shutdown(signum, frame):
-        server.stop(0)
-        sys.exit(0)
-
-    signal.signal(signal.SIGTERM, shutdown)
-    signal.signal(signal.SIGINT, shutdown)
-
-    print(f"gRPC server started on port {port}", flush=True)
-    server.wait_for_termination()
-
-if __name__ == "__main__":
-    main()
+[Install]
+WantedBy=multi-user.target
 """
+        service_file.write_text(service_content, encoding="utf-8")
 
-        grpc_server_script.write_text(server_code, encoding="utf-8")
-
-        # Kill any existing gRPC server process
-        try:
-            subprocess.run(
-                ["pkill", "-f", "grpc_server.py"],
-                capture_output=True,
-                check=False
-            )
-            time.sleep(0.5)  # Give time for process to die
-        except Exception:
-            pass
-
-        # Start the gRPC server as a background process using nohup
-        log_file = "/tmp/grpc_server.log"
-        # Use sys.executable to ensure we use the same Python interpreter with grpc installed
-        python_exe = sys.executable
-        with open(log_file, "w") as log:
-            subprocess.Popen(
-                ["nohup", python_exe, str(grpc_server_script)],
-                stdout=log,
-                stderr=subprocess.STDOUT,
-                start_new_session=True,
-                cwd="/tmp"
-            )
+        # Start the service (like systemctl restart apache2)
+        commands = [
+            ["systemctl", "daemon-reload"],
+            ["systemctl", "enable", "anycharm-grpc"],
+            ["systemctl", "restart", "anycharm-grpc"],
+        ]
+        for command in commands:
+            self._run_subprocess(command)
 
         # Give the server time to start
-        time.sleep(2)
+        time.sleep(1)
