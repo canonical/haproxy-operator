@@ -1,6 +1,6 @@
 # HAProxy SPOE Auth Configuration
-spoe:
-  address: 0.0.0.0:{{ spop_port }}
+server:
+  addr: 0.0.0.0:{{ spop_port }}
 
 oidc:
   # The URL to the OpenID Connect provider. This is the URL hosting the discovery endpoint
