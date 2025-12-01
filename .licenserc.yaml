@@ -24,8 +24,10 @@ header:
     - 'lib/**'
     - '.woke.yaml'
     - 'templates/**'
-    - 'src/loki_alert_rules/*.rule'
+    - '**/src/loki_alert_rules/*.rule'
     - 'docs/release-notes/**/*.yaml'
     - '**/*.md.j2'
-    - 'uv.lock'
+    - '**/lib/**'
+    - '**/uv.lock'
+    - '**/templates/**'
   comment: on-failure

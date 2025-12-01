@@ -15,7 +15,7 @@ confinement: strict
 parts:
   haproxy-spoe-auth:
     plugin: dump
-    source: https://github.com/Thanhphan1147/haproxy-spoe-auth.git
+    source: https://github.com/criteo/haproxy-spoe-auth.git
     source-type: git
     build-snaps:
       - go/1.22/stable
