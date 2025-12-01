@@ -15,9 +15,11 @@ import logging
 import pathlib
 import subprocess  # nosec: B404
 import textwrap
+import time
 from subprocess import CalledProcessError  # nosec: B404
 
 import apt
+import grpc
 import ops
 from any_charm_base import AnyCharmBase
 from haproxy_route import HaproxyRouteRequirer
@@ -62,8 +64,18 @@ class AnyCharm(AnyCharmBase):
             for provider_certificate in provider_certificates:
                 SSL_CERT_FILE.write_text(str(provider_certificate.certificate), encoding="utf-8")
 
-    def start_server(self):
-        """Start apache2 webserver."""
+        self._grpc_server = None
+
+    def start_server(self, grpc: bool = False):
+        """Start apache2 webserver or gRPC server."""
+        if grpc:
+            self._start_grpc_server(port=50051, use_tls=False)
+            self.unit.status = ops.ActiveStatus("gRPC Server ready")
+            return
+
+        self._start_apache_server()
+
+    def _start_apache_server(self):
         apt.update()
         apt.add_package(package_names="apache2")
         www_dir = pathlib.Path("/var/www/html")
@@ -72,12 +84,29 @@ class AnyCharm(AnyCharmBase):
         file_path.write_text("ok!")
         self.unit.status = ops.ActiveStatus("Server ready")
 
-    def start_ssl_server(self, protocols: str | None = None):
-        """Start apache2 webserver.
+    def start_ssl_server(self, protocols: str | None = None, grpc: bool = False):
+        """Start apache2 webserver or gRPC server with TLS.
 
         Args:
             protocols: Apache Protocols directive value (e.g., "h2", "http/1.1", "h2 http/1.1").
+            grpc: If True, start gRPC server instead of apache2.
         """
+        # Refresh certificates from relation
+        provider_certificates, private_key = self.certificates.get_assigned_certificates()
+        if provider_certificates:
+            SSL_PRIVATE_KEY_FILE.write_text(str(private_key), encoding="utf-8")
+            for provider_certificate in provider_certificates:
+                SSL_CERT_FILE.write_text(str(provider_certificate.certificate), encoding="utf-8")
+
+        if grpc:
+            self._start_grpc_server(port=50051, use_tls=True)
+            self.unit.status = ops.ActiveStatus("gRPC SSL Server ready")
+            return
+
+        self._start_apache2_ssl_server(protocols)
+        self.unit.status = ops.ActiveStatus("SSL Server ready")
+
+    def _start_apache2_ssl_server(self, protocols):
         apt.update()
         apt.add_package(package_names="apache2")
         www_dir = pathlib.Path("/var/www/html")
@@ -88,7 +117,6 @@ class AnyCharm(AnyCharmBase):
         protocols_line = f"Protocols {protocols}" if protocols else ""
         ssl_host = textwrap.dedent(f"""
             LogFormat "%{{X-Request-ID}}i %h %l %u %t \\"%r\\" %>s %O \\"%{{Referer}}i\\" \\"%{{User-Agent}}i\\"" combined_with_id
-
             <VirtualHost *:443>
                     ServerAdmin webmaster@localhost
                     DocumentRoot /var/www/html
@@ -99,7 +127,6 @@ class AnyCharm(AnyCharmBase):
                     SSLCertificateKeyFile   {SSL_PRIVATE_KEY_FILE!s}
                     {protocols_line}
             </VirtualHost>
-
             # This easier that editing an apache config file to comment the "Listen 80" line.
             <VirtualHost *:80>
                     RewriteEngine On
@@ -116,7 +143,6 @@ class AnyCharm(AnyCharmBase):
         ]
         for command in commands:
             self._run_subprocess(command)
-        self.unit.status = ops.ActiveStatus("SSL Server ready")
 
     def _run_subprocess(self, cmd: list[str]):
         """Run a subprocess command.
@@ -163,3 +189,103 @@ class AnyCharm(AnyCharmBase):
         ]
         for command in commands:
             self._run_subprocess(command)
+
+
+    def _start_grpc_server(self, port: int = 50051, use_tls: bool = False):
+        """Start the gRPC server as a background process.
+
+        Args:
+            port: Port to listen on
+            use_tls: Whether to use TLS
+        """
+        # Create a Python script to run the gRPC server
+        grpc_server_script = pathlib.Path("/tmp/grpc_server.py")
+
+        # Get the charm's dynamic packages directory for grpc module
+        charm_dir = pathlib.Path("/var/lib/juju/agents").glob("unit-*/charm/dynamic-packages")
+        dynamic_packages = next(charm_dir, None)
+        dynamic_packages_str = str(dynamic_packages) if dynamic_packages else ""
+
+        server_code = f"""
+import sys
+# Add dynamic packages to path for grpc module
+if "{dynamic_packages_str}" and "{dynamic_packages_str}" not in sys.path:
+    sys.path.insert(0, "{dynamic_packages_str}")
+
+import grpc
+from concurrent import futures
+import signal
+
+def handle_unary_unary(request, context):
+    return request
+
+class GenericHandler(grpc.GenericRpcHandler):
+    def service(self, handler_call_details):
+        return grpc.unary_unary_rpc_method_handler(
+            handle_unary_unary,
+            request_deserializer=lambda x: x,
+            response_serializer=lambda x: x,
+        )
+
+def main():
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    server.add_generic_rpc_handlers((GenericHandler(),))
+
+    {"" if not use_tls else f'''
+    with open("{SSL_PRIVATE_KEY_FILE}", "rb") as f:
+        private_key = f.read()
+    with open("{SSL_CERT_FILE}", "rb") as f:
+        certificate_chain = f.read()
+
+    server_credentials = grpc.ssl_server_credentials(
+        ((private_key, certificate_chain),)
+    )
+    server.add_secure_port("[::]:{port}", server_credentials)
+    '''}
+
+    {"server.add_insecure_port(f'[::]:{port}')" if not use_tls else ""}
+
+    server.start()
+
+    def shutdown(signum, frame):
+        server.stop(0)
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, shutdown)
+    signal.signal(signal.SIGINT, shutdown)
+
+    print(f"gRPC server started on port {port}", flush=True)
+    server.wait_for_termination()
+
+if __name__ == "__main__":
+    main()
+"""
+
+        grpc_server_script.write_text(server_code, encoding="utf-8")
+
+        # Kill any existing gRPC server process
+        try:
+            subprocess.run(
+                ["pkill", "-f", "grpc_server.py"],
+                capture_output=True,
+                check=False
+            )
+            time.sleep(0.5)  # Give time for process to die
+        except Exception:
+            pass
+
+        # Start the gRPC server as a background process using nohup
+        log_file = "/tmp/grpc_server.log"
+        # Use sys.executable to ensure we use the same Python interpreter with grpc installed
+        python_exe = sys.executable
+        with open(log_file, "w") as log:
+            subprocess.Popen(
+                ["nohup", python_exe, str(grpc_server_script)],
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+                cwd="/tmp"
+            )
+
+        # Give the server time to start
+        time.sleep(2)

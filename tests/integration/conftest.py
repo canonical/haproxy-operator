@@ -242,7 +242,7 @@ def any_charm_haproxy_route_requirer_base_fixture(
             channel="beta",
             config={
                 "src-overwrite": f"@{tf.name}",
-                "python-packages": "pydantic\ncryptography==45.0.6",
+                "python-packages": "\n".join(["pydantic", "cryptography==45.0.6", "grpcio"]),
             },
         )
     juju.wait(
