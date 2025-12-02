@@ -10,7 +10,7 @@ frontend haproxy
 
 {% if spoe_auth_info %}
     acl oidc_callback_path path_beg -i {{ spoe_auth_info.app_data.oidc_callback_path }}
-    acl oidc_callback_host req.hdr(Host) -m str {{ spoe_auth_info.app_data.oidc_callback_hostname }}
+    acl oidc_callback_host req.hdr(Host) -m str {{ spoe_auth_info.app_data.hostname }}
     use_backend spoe_oidc_callback if oidc_callback_path oidc_callback_host
 
     filter spoe engine spoe-auth config /etc/haproxy/spoe_auth.conf
