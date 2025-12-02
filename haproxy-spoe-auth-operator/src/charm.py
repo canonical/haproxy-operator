@@ -48,6 +48,8 @@ class HaproxySpoeAuthCharm(ops.CharmBase):
 
         self.framework.observe(self.on.install, self._reconcile)
         self.framework.observe(self.on.config_changed, self._reconcile)
+        self.framework.observe(self.on[OAUTH_RELATION].relation_created, self._reconcile)
+        self.framework.observe(self.on[OAUTH_RELATION].relation_changed, self._reconcile)        
         self.framework.observe(self._oauth.on.oauth_info_changed, self._reconcile)
         self.framework.observe(self._oauth.on.oauth_info_removed, self._reconcile)
 
