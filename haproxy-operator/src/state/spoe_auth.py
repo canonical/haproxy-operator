@@ -4,6 +4,7 @@
 """SPOE authentication state component."""
 
 import logging
+from typing import Self
 
 from charms.haproxy.v0.spoe_auth import (
     DataValidationError,
@@ -11,8 +12,7 @@ from charms.haproxy.v0.spoe_auth import (
     SpoeAuthProviderAppData,
     SpoeAuthRequirer,
 )
-from pydantic import IPvAnyAddress
-from pydantic.dataclasses import dataclass
+from pydantic import BaseModel, IPvAnyAddress
 
 from .exception import CharmStateValidationBaseError
 
@@ -23,8 +23,7 @@ class SpoeAuthValidationError(CharmStateValidationBaseError):
     """TODO."""
 
 
-@dataclass(frozen=True)
-class SpoeAuthInformation:
+class SpoeAuthInformation(BaseModel):
     """JAVI."""
 
     # TODO for now, this is coupled to the relation pydantic models.
@@ -32,7 +31,7 @@ class SpoeAuthInformation:
     unit_addresses: list[IPvAnyAddress]
 
     @classmethod
-    def from_requirer(cls, spoe_auth_requirer: SpoeAuthRequirer) -> "SpoeAuthInformation | None":
+    def from_requirer(cls, spoe_auth_requirer: SpoeAuthRequirer) -> Self | None:
         """JAVI."""
         # JAVI. Returning optionally None is probably not so nice. Review this.
         try:
