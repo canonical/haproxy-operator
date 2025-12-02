@@ -7,7 +7,7 @@ on:
 
 jobs:
   integration-tests:
-    uses: 
+    uses:
       canonical/operator-workflows/.github/workflows/integration_test.yaml@main
     secrets: inherit
     with:
@@ -48,3 +48,21 @@ jobs:
       working-directory: ./haproxy-spoe-auth-operator
       with-uv: True
       modules: '["test_charm.py",]'
+  integration-tests-oauth:
+    uses:
+      canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+    secrets: inherit
+    with:
+      use-canonical-k8s: true
+      provider: 'k8s'
+      channel: '1.33-classic/stable'
+      juju-channel: 3/stable
+      self-hosted-runner: true
+      charmcraft-channel: latest/edge
+      working-directory: ./haproxy-operator
+      modules: |
+        [
+          "test_oauth_spoe.py",
+        ]
+      with-uv: true
+      tmate-debug: true
