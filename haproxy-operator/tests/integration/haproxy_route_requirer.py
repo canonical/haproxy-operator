@@ -132,7 +132,7 @@ class AnyCharm(AnyCharmBase):
                     RewriteEngine On
                     RewriteRule .* - [R=503,L]
             </VirtualHost>
-        """)
+            """)
         ssl_site_file = pathlib.Path("/etc/apache2/sites-available/anycharm-ssl.conf")
         ssl_site_file.write_text(ssl_host, encoding="utf-8")
         commands = [
@@ -190,7 +190,6 @@ class AnyCharm(AnyCharmBase):
         for command in commands:
             self._run_subprocess(command)
 
-
     def _start_grpc_server(self, port: int = 50051, use_tls: bool = False):
         """Start the gRPC server as a systemd service (like apache2).
 
@@ -203,56 +202,40 @@ class AnyCharm(AnyCharmBase):
         dynamic_packages = next(charm_dir, None)
         dynamic_packages_str = str(dynamic_packages) if dynamic_packages else ""
 
-        # Copy grpc_server.py from charm's src directory
         source_script = pathlib.Path(__file__).parent / "grpc_server.py"
         target_script = pathlib.Path("/usr/local/bin/anycharm-grpc-server.py")
 
-        # Read the source script and inject dynamic packages path at the top
-        with open(source_script, "r") as f:
-            content = f.read()
-
-        # Insert sys.path modification right after the docstring, before any imports
-        # Find the position after the module docstring
-        docstring_end = content.find('"""', content.find('"""') + 3) + 3
-        if docstring_end > 3 and dynamic_packages_str:
-            # Insert after the docstring and any blank lines
-            insert_pos = docstring_end
-            while insert_pos < len(content) and content[insert_pos] in ('\n', ' ', '\t'):
-                insert_pos += 1
-                if insert_pos < len(content) and content[insert_pos] == '\n':
-                    insert_pos += 1
-                    break
-
-            sys_path_code = f'\nimport sys\nsys.path.insert(0, "{dynamic_packages_str}")\n'
-            content = content[:insert_pos] + sys_path_code + content[insert_pos:]
-
-        # Write the modified script
-        target_script.write_text(content, encoding="utf-8")
+        target_script.write_text(source_script.read_text(), encoding="utf-8")
         target_script.chmod(0o755)
 
-        # Build command line arguments
         tls_args = ""
         if use_tls:
             tls_args = f"--tls --cert {SSL_CERT_FILE} --key {SSL_PRIVATE_KEY_FILE}"
 
-        # Create systemd service unit file (like apache2.service)
+        # Create systemd service unit file with PYTHONPATH
         service_file = pathlib.Path("/etc/systemd/system/anycharm-grpc.service")
-        service_content = f"""[Unit]
-Description=Any Charm gRPC Server
-After=network.target
+        pythonpath_line = (
+            f'Environment="PYTHONPATH={dynamic_packages_str}:/usr/lib/python3/dist-packages"'
+            if dynamic_packages_str
+            else ""
+        )
+        service_content = textwrap.dedent(f"""
+            [Unit]
+            Description=Any Charm gRPC Server
+            After=network.target
 
-[Service]
-Type=simple
-ExecStart=/usr/bin/python3 {target_script} --port {port} {tls_args}
-Restart=on-failure
-RestartSec=5s
+            [Service]
+            Type=simple
+            {pythonpath_line}
+            ExecStart=/usr/bin/python3 {target_script} --port {port} {tls_args}
+            Restart=on-failure
+            RestartSec=5s
 
-[Install]
-WantedBy=multi-user.target
-"""
+            [Install]
+            WantedBy=multi-user.target
+            """)
         service_file.write_text(service_content, encoding="utf-8")
 
-        # Start the service (like systemctl restart apache2)
         commands = [
             ["systemctl", "daemon-reload"],
             ["systemctl", "enable", "anycharm-grpc"],
@@ -260,6 +243,3 @@ WantedBy=multi-user.target
         ]
         for command in commands:
             self._run_subprocess(command)
-
-        # Give the server time to start
-        time.sleep(1)

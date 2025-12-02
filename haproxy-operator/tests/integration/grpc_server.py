@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 
-# Copyright 2025 Canonical Ltd.
-# See LICENSE file for licensing details.
 
 """Simple gRPC server for integration testing."""
 
 import argparse
+import logging
 import signal
 import sys
 from concurrent import futures
 
 import grpc
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 def handle_unary_unary(request, context):
@@ -37,7 +38,12 @@ def parse_args():
     parser.add_argument("--tls", action="store_true", help="Enable TLS")
     parser.add_argument("--cert", type=str, help="Path to certificate file")
     parser.add_argument("--key", type=str, help="Path to private key file")
-    return parser.parse_args()
+
+    args = parser.parse_args()
+    if args.tls and not (args.cert and args.key):
+        logging.error("--cert and --key required when --tls is enabled")
+        sys.exit(1)
+    return args
 
 
 def main():
@@ -48,10 +54,6 @@ def main():
     server.add_generic_rpc_handlers((GenericHandler(),))
 
     if args.tls:
-        if not args.cert or not args.key:
-            print("Error: --cert and --key required when --tls is enabled", file=sys.stderr)
-            sys.exit(1)
-
         with open(args.key, "rb") as f:
             private_key = f.read()
         with open(args.cert, "rb") as f:
@@ -59,15 +61,15 @@ def main():
 
         server_credentials = grpc.ssl_server_credentials(((private_key, certificate_chain),))
         server.add_secure_port(f"[::]:{args.port}", server_credentials)
-        print(f"gRPC server started with TLS on port {args.port}", flush=True)
+        logging.info("gRPC server started with TLS on port %d", args.port)
     else:
         server.add_insecure_port(f"[::]:{args.port}")
-        print(f"gRPC server started on port {args.port}", flush=True)
+        logging.info("gRPC server started on port %d", args.port)
 
     server.start()
 
     def shutdown(signum, frame):
-        print("Shutting down gRPC server...", flush=True)
+        logging.info("Shutting down gRPC server...")
         server.stop(0)
         sys.exit(0)
 
