@@ -1,0 +1,14 @@
+# --- Release notes change artifact ----
+
+schema_version: 1
+changes:
+  - title: Add missing metadata to spoe_auth library
+    author: tphan025
+    type: minor
+    description: Add missing LIBID, LIBAPI, and LIBPATCH constants to the spoe_auth interface library.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/263
+      related_doc: 
+      related_issue: 
+    visibility: hidden
+    highlight: false
