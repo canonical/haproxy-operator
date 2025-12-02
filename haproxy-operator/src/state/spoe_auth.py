@@ -4,13 +4,12 @@
 """SPOE authentication state component."""
 
 import logging
-import typing
 
-import ops
 from charms.haproxy.v0.spoe_auth import (
     DataValidationError,
     SpoeAuthInvalidRelationDataError,
     SpoeAuthProviderAppData,
+    SpoeAuthRequirer,
 )
 from pydantic import IPvAnyAddress
 from pydantic.dataclasses import dataclass
@@ -20,7 +19,7 @@ from .exception import CharmStateValidationBaseError
 logger = logging.getLogger(__name__)
 
 
-class SpoeAuthInvalidRelationData(CharmStateValidationBaseError):
+class SpoeAuthValidationError(CharmStateValidationBaseError):
     """TODO."""
 
 
@@ -33,23 +32,22 @@ class SpoeAuthInformation:
     unit_addresses: list[IPvAnyAddress]
 
     @classmethod
-    def from_charm(cls, charm: ops.CharmBase) -> "SpoeAuthInformation | None":
+    def from_requirer(cls, spoe_auth_requirer: SpoeAuthRequirer) -> "SpoeAuthInformation | None":
         """JAVI."""
-
         # JAVI. Returning optionally None is probably not so nice. Review this.
         try:
-            app_data = charm.spoe_auth_provider.get_data()
+            app_data = spoe_auth_requirer.get_data()
         except (DataValidationError, SpoeAuthInvalidRelationDataError) as ex:
-            raise SpoeAuthInvalidRelationData from ex
+            raise SpoeAuthValidationError from ex
 
         if not app_data:
             return None
 
-        relation = charm.spoe_auth_provider.relation
+        relation = spoe_auth_requirer.relation
         try:
-            requirer_units_data = charm.spoe_auth_provider.get_provider_unit_data(relation)
+            requirer_units_data = spoe_auth_requirer.get_provider_unit_data(relation)
         except DataValidationError as ex:
-            raise SpoeAuthInvalidRelationData from ex
+            raise SpoeAuthValidationError from ex
 
         unit_addresses = [unit_data.address for unit_data in requirer_units_data]
 

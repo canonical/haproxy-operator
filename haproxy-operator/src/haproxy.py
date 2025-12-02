@@ -112,7 +112,7 @@ class HAProxyService:
             "config_global_max_connection": charm_state.global_max_connection,
             "services": services,
         }
-        self._render_haproxy_config(HAPROXY_LEGACY_CONFIGT_EMPLATE, template_context)
+        self._render_haproxy_config(HAPROXY_LEGACY_CONFIG_TEMPLATE, template_context)
         self._validate_haproxy_config()
         self._reload_haproxy_service()
 
@@ -159,6 +159,7 @@ class HAProxyService:
         Args:
             charm_state: The charm state component.
             haproxy_route_requirers_information: HaproxyRouteRequirersInformation state component.
+            spoe_oauth_info: Information about SPOE auth providers.
         """
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
@@ -213,7 +214,6 @@ class HAProxyService:
 
     def _render_config_file(self, template_file_path: str, context: dict, path: Path) -> None:
         """TODO."""
-
         env = Environment(
             loader=FileSystemLoader("templates"),
             autoescape=select_autoescape(),

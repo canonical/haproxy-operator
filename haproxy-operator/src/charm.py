@@ -118,7 +118,7 @@ class HAProxyCharm(ops.CharmBase):
         self.reverseproxy_requirer = HTTPRequirer(self, REVERSE_PROXY_RELATION)
         self.haproxy_route_provider = HaproxyRouteProvider(self)
         self.haproxy_route_tcp_provider = HaproxyRouteTcpProvider(self)
-        self.spoe_auth_provider = SpoeAuthRequirer(self, SPOE_AUTH_RELATION)
+        self.spoe_auth_requirer = SpoeAuthRequirer(self, SPOE_AUTH_RELATION)
 
         self.recv_ca_certs = CertificateTransferRequires(self, RECV_CA_CERTS_RELATION)
         self.certificates = TLSCertificatesRequiresV4(
@@ -193,8 +193,8 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(
             self.on.get_proxied_endpoints_action, self._on_get_proxied_endpoints_action
         )
-        self.framework.observe(self.spoe_auth_provider.on.available, self._on_config_changed)
-        self.framework.observe(self.spoe_auth_provider.on.removed, self._on_config_changed)
+        self.framework.observe(self.spoe_auth_requirer.on.available, self._on_config_changed)
+        self.framework.observe(self.spoe_auth_requirer.on.removed, self._on_config_changed)
 
     @validate_config_and_tls(defer=False)
     def _on_install(self, _: typing.Any) -> None:
@@ -356,7 +356,7 @@ class HAProxyCharm(ops.CharmBase):
         self._tls.certificate_available(tls_information)
 
         # JAVI
-        spoe_oauth_info = SpoeAuthInformation.from_charm(self)
+        spoe_oauth_info = SpoeAuthInformation.from_requirer(self.spoe_auth_requirer)
 
         self.haproxy_service.reconcile_haproxy_route(
             charm_state, haproxy_route_requirers_information, spoe_oauth_info
