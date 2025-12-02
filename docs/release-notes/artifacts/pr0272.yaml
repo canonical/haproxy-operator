@@ -1,0 +1,16 @@
+# --- Release notes change artifact ----
+
+schema_version: 1
+changes:
+  - title: Document release policy and schedule for haproxy monorepo
+    author: tphan025
+    type: minor
+    description: |
+      Add documentation for the release policy and schedule covering
+        both haproxy and haproxy-spoe-auth charms in the monorepo.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/272
+      related_doc: 
+      related_issue: 
+    visibility: public
+    highlight: false
