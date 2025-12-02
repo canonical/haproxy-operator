@@ -11,7 +11,14 @@ For instructions on a specific release, see the corresponding release notes.
 
 ## Release policy and schedule
 
-Release notes are published for HAProxy with every revision of the `2.8/stable` track.
+This section covers the release policy and schedule for the `haproxy` charm and the `haproxy-spoe-auth` charm.
+
+For any given track, we'll implement 3 different risk levels `edge`, `candidate`, and `stable`. The release schedule for each of the risk level is as follow:
+1. Changes pushed to the `haproxy-operator` repository will be release to `edge`.
+2. On Monday of every week, the current revision on `candidate` will be promoted to `stable`.
+3. On Monday of every week, the current revision on `edge` will be promoted to `candidate`.
+
+Release notes are published for the `haproxy` charm with every revision of the `2.8/stable` track.
 
 ## Releases
 
