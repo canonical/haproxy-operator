@@ -6,7 +6,7 @@ changes:
     author: tphan025
     type: minor
     description: |
-      Fix configuration template keys to match the expected YAML
+      Fixed configuration template keys to match the expected YAML
         structure and add missing relation event observers for OAuth integration.
     urls: 
       pr: https://github.com/canonical/haproxy-operator/pull/268
