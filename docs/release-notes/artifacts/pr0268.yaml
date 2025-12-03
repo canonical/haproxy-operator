@@ -2,11 +2,11 @@
 
 schema_version: 1
 changes:
-  - title: Update haproxy-spoe-auth configuration template and event hooks
+  - title: Updated haproxy-spoe-auth configuration template and event hooks
     author: tphan025
     type: minor
     description: |
-      Fix configuration template keys to match the expected YAML
+      Fixed configuration template keys to match the expected YAML
         structure and add missing relation event observers for OAuth integration.
     urls: 
       pr: https://github.com/canonical/haproxy-operator/pull/268
