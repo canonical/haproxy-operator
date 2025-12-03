@@ -15,4 +15,4 @@ jobs:
     with:
       channel: latest/edge
       working-directory: ./haproxy-spoe-auth-operator
-      tag-prefix: haproxy-spoe-auth-operator
+      tag-prefix: haproxy-spoe-auth
