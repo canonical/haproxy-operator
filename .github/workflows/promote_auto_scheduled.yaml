@@ -1,4 +1,4 @@
-name: Promote charm
+name: Automatically promote the haproxy and the haproxy-spoe-auth charm
 
 on:
   schedule:
