@@ -1,6 +1,6 @@
 # HAProxy SPOE Auth Configuration
-spoe:
-  address: 0.0.0.0:{{ spop_port }}
+server:
+  addr: 0.0.0.0:{{ spop_port }}
 
 oidc:
   # The URL to the OpenID Connect provider. This is the URL hosting the discovery endpoint
@@ -29,8 +29,8 @@ oidc:
   # The secret used to encrypt the cookie in order to guarantee the privacy of the data in case of leak
   encryption_secret: {{ encryption_secret }}
 
-oauth:
-  {{ hostname }}:
-    client_id: {{ client_id }}
-    client_secret: {{ client_secret }}
-    redirect_url: https://{{ hostname }}{{ oidc_callback_path }}
+  clients:
+    {{ hostname }}:
+      client_id: {{ client_id }}
+      client_secret: {{ client_secret }}
+      redirect_url: https://{{ hostname }}{{ oidc_callback_path }}
