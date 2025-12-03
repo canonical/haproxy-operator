@@ -48,7 +48,7 @@ jobs:
         required: true
 
   promote-haproxy-spoe-auth-charm-edge-to-candidate:
-    needs: [promote-haproxy-charm-candidate-to-stable]
+    needs: [promote-haproxy-spoe-auth-charm-candidate-to-stable]
     uses: canonical/operator-workflows/.github/workflows/promote_charm.yaml@main
     with:
       origin-channel: latest/edge
