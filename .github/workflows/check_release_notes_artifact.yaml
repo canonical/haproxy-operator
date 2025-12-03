@@ -9,3 +9,4 @@ jobs:
     secrets: inherit
     with:
       change-artifact-dir: docs/release-notes/artifacts
+
