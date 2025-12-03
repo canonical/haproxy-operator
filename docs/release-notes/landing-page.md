@@ -14,7 +14,7 @@ For instructions on a specific release, see the corresponding release notes.
 This section covers the release policy and schedule for the `haproxy` charm and the `haproxy-spoe-auth` charm.
 
 For any given track, we'll implement three different risk levels `edge`, `candidate`, and `stable`. The release schedule for each of the risk level is as follow:
-1. Changes pushed to the `haproxy-operator` repository will be release to `edge`.
+1. Changes pushed to the `haproxy-operator` repository will be released to `edge`.
 2. On Monday of every week, the current revision on `candidate` will be promoted to `stable`. This process requires an approval from the maintainers and happens automatically once the approval is given.
 3. On Monday of every week, the current revision on `edge` will be promoted to `candidate`. This process also requires an approval from the maintainers and happens automatically once the approval is given.
 
