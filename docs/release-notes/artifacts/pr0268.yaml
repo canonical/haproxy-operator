@@ -2,7 +2,7 @@
 
 schema_version: 1
 changes:
-  - title: Update haproxy-spoe-auth configuration template and event hooks
+  - title: Updated haproxy-spoe-auth configuration template and event hooks
     author: tphan025
     type: minor
     description: |
