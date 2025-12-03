@@ -2,7 +2,7 @@
 
 schema_version: 1
 changes:
-  - title: Document release policy and schedule for haproxy monorepo
+  - title: Documented release policy and schedule for HAProxy monorepo
     author: tphan025
     type: minor
     description: |
