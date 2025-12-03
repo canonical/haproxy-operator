@@ -10,7 +10,7 @@ changes:
         both haproxy and haproxy-spoe-auth charms in the monorepo.
     urls: 
       pr: https://github.com/canonical/haproxy-operator/pull/272
-      related_doc: 
+      related_doc: landing-page.md
       related_issue: 
     visibility: public
     highlight: false
