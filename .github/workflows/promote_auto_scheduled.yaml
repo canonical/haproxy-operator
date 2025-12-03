@@ -20,7 +20,6 @@ jobs:
         required: true
 
   promote-charm-edge-to-candidate:
-    environment: release
     needs: [promote-charm-candidate-to-stable]
     uses: canonical/operator-workflows/.github/workflows/promote_charm.yaml@main
     with:
