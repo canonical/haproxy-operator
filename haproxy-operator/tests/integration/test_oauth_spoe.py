@@ -5,10 +5,21 @@
 
 import json
 import logging
+import re
+import secrets
+import string
+import subprocess
+import tempfile
 import typing
+from contextlib import contextmanager
 
+from playwright._impl._driver import compute_driver_executable, get_driver_env
+from playwright.sync_api import expect, sync_playwright
 import jubilant
 import pytest
+
+from .helper import get_unit_ip_address
+from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +33,12 @@ def lxd_juju_fixture(request: pytest.FixtureRequest) -> str:
     lxd_controller_name = "localhost"
     lxd_cloud_name = "localhost"
     juju.wait_timeout = JUJU_WAIT_TIMEOUT
-    juju.bootstrap(lxd_cloud_name, lxd_controller_name)
+    try:
+        juju.bootstrap(lxd_cloud_name, lxd_controller_name)
+    except jubilant.CLIError as err:
+        if not "already exists":
+            logger.exception(err)
+            raise
 
     # we need to swith or commands like add-cloud do not work.
     juju.cli("switch", f"{lxd_controller_name}:", include_model=False)
@@ -39,7 +55,13 @@ def lxd_juju_fixture(request: pytest.FixtureRequest) -> str:
 
     model = request.config.getoption("--model")
     if model:
-        juju.add_model(model=model, cloud=lxd_cloud_name, controller=lxd_controller_name)
+        try:
+            juju.add_model(model=model, cloud=lxd_cloud_name, controller=lxd_controller_name)
+        except jubilant.CLIError as err:
+            if not "already exists":
+                logger.exception(err)
+                raise
+            juju.model = f"{lxd_controller_name}:{model}"
         juju = jubilant.Juju(model=f"{lxd_controller_name}:{model}")
         juju.wait_timeout = JUJU_WAIT_TIMEOUT
         yield juju
@@ -68,7 +90,14 @@ def k8s_juju_fixture(juju: jubilant.Juju, request: pytest.FixtureRequest) -> str
 
     new_juju = jubilant.Juju(model=juju.model)
     new_juju.wait_timeout = JUJU_WAIT_TIMEOUT
-    new_juju.add_model(f"k8s-{juju.status().model.name}", k8s_cloud)
+    k8s_model_name = f"k8s-{juju.status().model.name}"
+    try:
+        new_juju.add_model(k8s_model_name, k8s_cloud)
+    except jubilant.CLIError as err:
+        if not "already exists":
+            logger.exception(err)
+            raise
+        new_juju.model = k8s_model_name
     yield new_juju
 
 
@@ -123,12 +152,128 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
 
     juju.config("kratos", {"enforce_mfa": False})
 
+
+@contextmanager
+def patch_etc_hosts(ip, hostname):
+    # I could not come with a better idea...
+    etc_host_line = f"{ip} {hostname} #test"
+    command_add_line = f"/bin/echo '{etc_host_line}' | sudo tee -a /etc/hosts"
+    subprocess.run(command_add_line, shell=True)
+    try:
+        yield
+    finally:
+        command_remove_line = f"sudo sed -i '/^{etc_host_line}$/d' /etc/hosts"
+        subprocess.run(command_remove_line, shell=True)
+
+
 @pytest.mark.abort_on_fail
 def test_oauth_spoe(
+        configured_application_with_tls: str,
         juju: jubilant.Juju,
         k8s_juju: jubilant.Juju,
+        any_charm_haproxy_route_requirer: str,
         iam_bundle):
+
+
+    haproxy_spoe_auth_name = "haproxy-spoe-auth"
+    juju.deploy(
+        charm="../haproxy-spoe-auth-operator/haproxy-spoe-auth_amd64.charm",
+        app=haproxy_spoe_auth_name,
+        config={
+            "hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
+        }
+    )
+    juju.integrate(
+        f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
+    )
+    juju.run(
+        f"{any_charm_haproxy_route_requirer}/0",
+        "rpc",
+        {
+            "method": "update_relation",
+            "args": json.dumps(
+                [
+                    {
+                        "service": "any_charm_with_retry",
+                        "ports": [80],
+                        "hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
+                    }
+                ]
+            ),
+        },
+    )
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, any_charm_haproxy_route_requirer,
+        )
+    )
+    ca_cert_result = k8s_juju.run("self-signed-certificates/0", "get-ca-certificate")
+    with tempfile.NamedTemporaryFile(dir=".") as tf:
+        tf.write(ca_cert_result.results['ca-certificate'].encode("utf-8"))
+        tf.flush()
+        # the unit could be not the number 0.
+        juju.scp(tf.name, f"{haproxy_spoe_auth_name}/0:/home/ubuntu/iam.crt")
+        juju.exec(command="sudo mv /home/ubuntu/iam.crt /usr/local/share/ca-certificates", unit=f"{haproxy_spoe_auth_name}/0")
+        juju.exec(command="sudo update-ca-certificates", unit=f"{haproxy_spoe_auth_name}/0")
+
+    k8s_juju.offer(f"{k8s_juju.model}.hydra", endpoint="oauth")
+    juju.integrate(f"{k8s_juju.model}.hydra", haproxy_spoe_auth_name)
+    juju.integrate(
+        f"{configured_application_with_tls}:spoe-auth", haproxy_spoe_auth_name
+    )
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, any_charm_haproxy_route_requirer,
+            haproxy_spoe_auth_name
+        )
+    )
     logger.info("juju %s", juju)
     logger.info("juju model %s", juju.model)
-    import pdb; pdb.set_trace()
-    assert False
+
+    driver_executable, driver_cli = compute_driver_executable()
+    completed_process = subprocess.run(
+        [driver_executable, driver_cli, "install-deps"], env=get_driver_env()
+    )
+    logger.info("install-deps output %s", completed_process)
+    completed_process = subprocess.run(
+        [driver_executable, driver_cli, "install", "chromium"], env=get_driver_env()
+    )
+    logger.info("install chromium %s", completed_process)
+
+    test_username = "".join(secrets.choice(string.ascii_lowercase) for _ in range(8))
+    test_email = f"{test_username}@example.com"
+    test_password = "randompasswd"
+    test_secret = test_username
+    k8s_juju.run(
+        "kratos/0",
+        "create-admin-account",
+        {"email": test_email, "password": test_password, "username": test_username},
+    )
+    secret_id = k8s_juju.add_secret(test_secret, {"password": test_password})
+    k8s_juju.cli("grant-secret", secret_id, "kratos")
+    result = k8s_juju.run(
+        "kratos/0",
+        "reset-password",
+        {"email": test_email, "password-secret-id": secret_id.split(":")[-1]},
+    )
+    logger.info("results reset-password %s", result.results)
+
+    # TODO I could not find a better way :(
+    haproxy_unit_ip = get_unit_ip_address(juju, 'haproxy')
+    with patch_etc_hosts(haproxy_unit_ip, TEST_EXTERNAL_HOSTNAME_CONFIG):
+        _assert_idp_login_success(test_email, test_password)
+
+
+def _assert_idp_login_success(test_email, test_password):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(ignore_https_errors=True)
+        page = context.new_page()
+        page.goto(f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}")
+        logger.info("Page content: %s", page.content())
+        expect(page).not_to_have_title(re.compile("Sign in failed"))
+        page.get_by_label("Email").fill(test_email)
+        page.get_by_label("Password").fill(test_password)
+        page.get_by_role("button", name="Sign in").click()
+        expect(page).to_have_url(f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}")
+        assert f"Welcome, {test_email}!" in page.content()
