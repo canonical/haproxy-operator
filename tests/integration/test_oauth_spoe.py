@@ -176,16 +176,9 @@ def test_oauth_spoe(
     juju: jubilant.Juju,
     k8s_juju: jubilant.Juju,
     any_charm_haproxy_route_requirer: str,
+    haproxy_spoe_auth: str,
     iam_bundle,
 ):
-    haproxy_spoe_auth_name = "haproxy-spoe-auth"
-    juju.deploy(
-        charm="../haproxy-spoe-auth-operator/haproxy-spoe-auth_amd64.charm",
-        app=haproxy_spoe_auth_name,
-        config={
-            "hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
-        },
-    )
     juju.integrate(
         f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
     )
@@ -217,22 +210,22 @@ def test_oauth_spoe(
         tf.write(ca_cert_result.results["ca-certificate"].encode("utf-8"))
         tf.flush()
         # the unit could be not the number 0.
-        juju.scp(tf.name, f"{haproxy_spoe_auth_name}/0:/home/ubuntu/iam.crt")
+        juju.scp(tf.name, f"{haproxy_spoe_auth}/0:/home/ubuntu/iam.crt")
         juju.exec(
             command="sudo mv /home/ubuntu/iam.crt /usr/local/share/ca-certificates",
-            unit=f"{haproxy_spoe_auth_name}/0",
+            unit=f"{haproxy_spoe_auth}/0",
         )
-        juju.exec(command="sudo update-ca-certificates", unit=f"{haproxy_spoe_auth_name}/0")
+        juju.exec(command="sudo update-ca-certificates", unit=f"{haproxy_spoe_auth}/0")
 
     k8s_juju.offer(f"{k8s_juju.model}.hydra", endpoint="oauth")
-    juju.integrate(f"{k8s_juju.model}.hydra", haproxy_spoe_auth_name)
-    juju.integrate(f"{configured_application_with_tls}:spoe-auth", haproxy_spoe_auth_name)
+    juju.integrate(f"{k8s_juju.model}.hydra", haproxy_spoe_auth)
+    juju.integrate(f"{configured_application_with_tls}:spoe-auth", haproxy_spoe_auth)
     juju.wait(
         lambda status: jubilant.all_active(
             status,
             configured_application_with_tls,
             any_charm_haproxy_route_requirer,
-            haproxy_spoe_auth_name,
+            haproxy_spoe_auth,
         )
     )
     logger.info("juju %s", juju)
