@@ -1,4 +1,4 @@
-name: Promote the haproxy-operatorcharm
+name: Promote the haproxy-operator charm
 
 on:
   workflow_dispatch:
@@ -29,5 +29,5 @@ jobs:
       base-channel: 24.04
       base-name: ubuntu
       base-architecture: amd64
-      tag-prefix: haproxy-operator
+      tag-prefix: haproxy
     secrets: inherit

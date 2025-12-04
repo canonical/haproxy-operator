@@ -27,5 +27,5 @@ jobs:
       base-channel: 24.04
       base-name: ubuntu
       base-architecture: amd64
-      tag-prefix: haproxy-spoe-auth-operator
+      tag-prefix: haproxy-spoe-auth
     secrets: inherit

@@ -6,7 +6,7 @@ changes:
     author: tphan025
     type: minor
     description: |
-      Separate publish and promote workflows for haproxy and
+      Separated publish and promote workflows for haproxy and
       haproxy-spoe-auth charms to enable independent release management.
     urls: 
       pr: https://github.com/canonical/haproxy-operator/pull/266
