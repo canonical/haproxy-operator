@@ -23,7 +23,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 class EchoService(echo_pb2_grpc.EchoServiceServicer):
     """gRPC Echo Service implementation."""
 
-    def Echo(self, request, context):
+    def Echo(self, request, context):  # noqa: N802
         return echo_pb2.EchoResponse(message=request.message)
 
 
