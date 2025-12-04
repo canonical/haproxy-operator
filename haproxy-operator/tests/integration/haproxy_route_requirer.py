@@ -89,13 +89,6 @@ class AnyCharm(AnyCharmBase):
             protocols: Apache Protocols directive value (e.g., "h2", "http/1.1", "h2 http/1.1").
             grpc: If True, start gRPC server instead of apache2.
         """
-        # Refresh certificates from relation
-        provider_certificates, private_key = self.certificates.get_assigned_certificates()
-        if provider_certificates:
-            SSL_PRIVATE_KEY_FILE.write_text(str(private_key), encoding="utf-8")
-            for provider_certificate in provider_certificates:
-                SSL_CERT_FILE.write_text(str(provider_certificate.certificate), encoding="utf-8")
-
         if grpc:
             self._start_grpc_server(port=50051, use_tls=True)
             self.unit.status = ops.ActiveStatus("gRPC SSL Server ready")
@@ -200,8 +193,6 @@ class AnyCharm(AnyCharmBase):
         charm_dir = next(pathlib.Path("/var/lib/juju/agents").glob("unit-*/charm"))
         dynamic_packages = charm_dir / "dynamic-packages"
         dynamic_packages_str = str(dynamic_packages) if dynamic_packages else ""
-
-
 
         service_file = pathlib.Path("/etc/systemd/system/anycharm-grpc.service")
         target_script = charm_dir / "src/grpc_server/main.py"
