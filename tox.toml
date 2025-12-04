@@ -25,7 +25,7 @@ commands = [
     "--tb",
     "native",
     "--ignore={[vars]tst_path}unit",
-    "--ignore={toxinidir}/haproxy_spoe_auth_operator",
+    "--ignore={toxinidir}/haproxy-spoe-auth-operator",
     "--ignore={toxinidir}/haproxy-operator",
     "--log-cli-level=INFO",
     "-s",
@@ -38,9 +38,3 @@ dependency_groups = [ "integration" ]
 [vars]
 src_path = "{toxinidir}/src/"
 tst_path = "{toxinidir}/tests/"
-all_path = [
-  "{toxinidir}/src/",
-  "{toxinidir}/tests/",
-  "{toxinidir}/lib/charms/haproxy/v1",
-  "{toxinidir}/lib/charms/haproxy/v0",
-]
