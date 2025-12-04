@@ -423,7 +423,6 @@ def test_haproxy_route_grpcs_support(
                         "http_server_close": False,
                         "protocol": "https",
                         "check_path": None,
-                        "check_port": None,
                     }
                 ]
             ),
