@@ -9,10 +9,17 @@ on:
       - haproxy-operator/**
 
 jobs:
-  publish-to-edge:
+  publish-haproxy-to-edge:
     uses: canonical/operator-workflows/.github/workflows/publish_charm.yaml@main
     secrets: inherit
     with:
       channel: 2.8/edge
       working-directory: ./haproxy-operator
       tag-prefix: haproxy-operator
+  publish-haproxy-spoe-auth-to-edge:
+    uses: canonical/operator-workflows/.github/workflows/publish_charm.yaml@main
+    secrets: inherit
+    with:
+      channel: latest/edge
+      working-directory: ./haproxy-spoe-auth-operator
+      tag-prefix: haproxy-spoe-auth-operator

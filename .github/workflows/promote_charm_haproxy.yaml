@@ -8,10 +8,12 @@ on:
         description: 'Origin Channel'
         options:
         - 2.8/edge
+        - 2.8/candidate
       destination-channel:
         type: choice
         description: 'Destination Channel'
         options:
+        - 2.8/candidate
         - 2.8/stable
     secrets:
       CHARMHUB_TOKEN:
