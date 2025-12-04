@@ -1,0 +1,46 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+skipsdist = true
+skip_missing_interpreters = true
+requires = [ "tox>=4.21" ]
+no_package = true
+
+[env_run_base]
+passenv = [ "PYTHONPATH", "CHARM_BUILD_DIR", "MODEL_SETTINGS" ]
+runner = "uv-venv-lock-runner"
+
+[env_run_base.setenv]
+PYTHONPATH = "{toxinidir}:{toxinidir}/lib:{[vars]src_path}"
+PYTHONBREAKPOINT = "ipdb.set_trace"
+PY_COLORS = "1"
+
+
+[env.integration]
+description = "Run integration tests"
+commands = [
+  [
+    "pytest",
+    "-v",
+    "--tb",
+    "native",
+    "--ignore={[vars]tst_path}unit",
+    "--ignore={toxinidir}/haproxy_spoe_auth_operator",
+    "--ignore={toxinidir}/haproxy-operator",
+    "--log-cli-level=INFO",
+    "-s",
+    { replace = "posargs", extend = "true" },
+  ],
+]
+dependency_groups = [ "integration" ]
+
+
+[vars]
+src_path = "{toxinidir}/src/"
+tst_path = "{toxinidir}/tests/"
+all_path = [
+  "{toxinidir}/src/",
+  "{toxinidir}/tests/",
+  "{toxinidir}/lib/charms/haproxy/v1",
+  "{toxinidir}/lib/charms/haproxy/v0",
+]
