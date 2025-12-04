@@ -59,8 +59,6 @@ requires:
   spoe-auth:
     interface: spoe-auth
     description: Relation to provide authentication proxy to HAProxy.
-    # JAVI for now
-    limit: 1
 
 provides:
   ingress:
