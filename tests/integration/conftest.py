@@ -126,15 +126,18 @@ def certificate_provider_application_fixture(
 
 
 @pytest.fixture(scope="module", name="any_charm_haproxy_route_requirer")
-def any_charm_haproxy_route_requirer_base_fixture(juju: jubilant.Juju):
+def any_charm_haproxy_route_requirer_fixture(juju: jubilant.Juju):
     """Deploy any-charm and configure it to serve as a requirer for the haproxy-route
     integration.
     """
+    app_name = ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION
+    return deploy_any_charm_haproxy_route_requirer(juju, app_name)
+
+def deploy_any_charm_haproxy_route_requirer(juju: jubilant.Juju, app_name):
     src_overwrite = json.dumps(
         {
             "any_charm.py": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(encoding="utf-8"),
             "haproxy_route.py": pathlib.Path(HAPROXY_ROUTE_LIB_SRC).read_text(encoding="utf-8"),
-            "tls_certificates.py": pathlib.Path(TLS_CERTIFICATES_LIB_SRC).read_text(encoding="utf-8"),
             "apt.py": pathlib.Path(APT_LIB_SRC).read_text(encoding="utf-8"),
         }
     )
@@ -143,7 +146,7 @@ def any_charm_haproxy_route_requirer_base_fixture(juju: jubilant.Juju):
         tf.flush()
         juju.deploy(
             "any-charm",
-            app=ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION,
+            app=app_name,
             channel="beta",
             config={
                 "src-overwrite": f"@{tf.name}",
@@ -151,47 +154,49 @@ def any_charm_haproxy_route_requirer_base_fixture(juju: jubilant.Juju):
             },
         )
     juju.wait(
-        lambda status: (jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)),
+        lambda status: (jubilant.all_active(status, app_name)),
         timeout=JUJU_WAIT_TIMEOUT,
     )
     juju.run(
-        f"{ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION}/0", "rpc", {"method": "start_server"}
+        f"{app_name}/0", "rpc", {"method": "start_server"}
     )
     juju.wait(
-        lambda status: (jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)),
+        lambda status: (jubilant.all_active(status, app_name)),
         timeout=JUJU_WAIT_TIMEOUT,
     )
-    return ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION
-
+    return app_name
 
 
 @pytest.fixture(scope="module", name="haproxy_spoe_auth")
-def haproxy_spoe_auth_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju):
-    """Deploy the haproxy-spoe-auth application.
-
-    Args:
-        juju: Jubilant juju fixture.
-        charm_file: Path to the packed charm file.
-
-    Returns:
-        The haproxy-spoe-auth app name.
-    """
+def haproxy_spoe_auth1_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju):
     app_name = "haproxy-spoe-auth"
+    hostname = "haproxy.internal"
+    return deploy_spoe_auth(pytestconfig, juju, app_name, hostname)
+
+
+@pytest.fixture(scope="module", name="haproxy_spoe_auth_haproxy2")
+def haproxy_spoe_auth2_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju):
+    app_name = "haproxy2-spoe-auth"
+    hostname = "haproxy2.internal"
+    return deploy_spoe_auth(pytestconfig, juju, app_name, hostname)
+
+
+def deploy_spoe_auth(pytestconfig: pytest.Config, juju: jubilant, app_name, host_name):
+    charm_name = "haproxy-spoe-auth"
     if pytestconfig.getoption("--no-deploy") and app_name in juju.status().apps:
         return app_name
 
     charm_file = next(
-        (f for f in pytestconfig.getoption("--charm-file") if f"{app_name}_" in f), None
+        (f for f in pytestconfig.getoption("--charm-file") if f"{charm_name}_" in f), None
     )
-    assert charm_file, f"--charm-file with  {app_name} charm should be set"
+    assert charm_file, f"--charm-file with  {charm_name} charm should be set"
 
     juju.deploy(
         charm=charm_file,
         app=app_name,
         config={
-            "hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
+            "hostname": host_name
         },
     )
     return app_name
-
-
+    

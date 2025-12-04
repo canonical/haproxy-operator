@@ -206,16 +206,8 @@ def test_oauth_spoe(
         )
     )
     ca_cert_result = k8s_juju.run("self-signed-certificates/0", "get-ca-certificate")
-    with tempfile.NamedTemporaryFile(dir=".") as tf:
-        tf.write(ca_cert_result.results["ca-certificate"].encode("utf-8"))
-        tf.flush()
-        # the unit could be not the number 0.
-        juju.scp(tf.name, f"{haproxy_spoe_auth}/0:/home/ubuntu/iam.crt")
-        juju.exec(
-            command="sudo mv /home/ubuntu/iam.crt /usr/local/share/ca-certificates",
-            unit=f"{haproxy_spoe_auth}/0",
-        )
-        juju.exec(command="sudo update-ca-certificates", unit=f"{haproxy_spoe_auth}/0")
+    ca_cert = ca_cert_result.results["ca-certificate"].encode("utf-8")
+    inject_ca_certificate(juju, f"{haproxy_spoe_auth}/0", ca_cert)
 
     k8s_juju.offer(f"{k8s_juju.model}.hydra", endpoint="oauth")
     juju.integrate(f"{k8s_juju.model}.hydra", haproxy_spoe_auth)
@@ -231,6 +223,15 @@ def test_oauth_spoe(
     logger.info("juju %s", juju)
     logger.info("juju model %s", juju.model)
 
+    test_email, test_password = create_idp_user(k8s_juju)
+
+    # TODO I could not find a better way :(
+    haproxy_unit_ip = get_unit_ip_address(juju, "haproxy")
+    with patch_etc_hosts(haproxy_unit_ip, TEST_EXTERNAL_HOSTNAME_CONFIG):
+        _assert_idp_login_success(test_email, test_password)
+
+
+def _assert_idp_login_success(test_email, test_password):
     driver_executable, driver_cli = compute_driver_executable()
     completed_process = subprocess.run(  # nosec
         [driver_executable, driver_cli, "install-deps"], env=get_driver_env()
@@ -240,7 +241,39 @@ def test_oauth_spoe(
         [driver_executable, driver_cli, "install", "chromium"], env=get_driver_env()
     )
     logger.info("install chromium %s", completed_process)
+    
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(ignore_https_errors=True)
+        page = context.new_page()
+        page.goto(f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}")
+        logger.info("Page content: %s", page.content())
+        expect(page).not_to_have_title(re.compile("Sign in failed"))
+        # This will timeout if there is no email field.
+        page.get_by_label("Email").fill(test_email)
+        page.get_by_label("Password").fill(test_password)
+        page.get_by_role("button", name="Sign in").click()
+        page.wait_for_url(f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}/")
+        logger.info("Content %s", page.content())
+        logger.info("url %s", page.url)
+        expect(page).to_have_url(f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}/")
+        assert "ok!" in page.content()
 
+
+def inject_ca_certificate(juju, unit_name, ca_cert: str):
+    with tempfile.NamedTemporaryFile(dir=".") as tf:
+        tf.write(ca_cert)
+        tf.flush()
+        # the unit could be not the number 0.
+        juju.scp(tf.name, f"{unit_name}:/home/ubuntu/iam.crt")
+        juju.exec(
+            command="sudo mv /home/ubuntu/iam.crt /usr/local/share/ca-certificates",
+            unit=unit_name,
+        )
+        juju.exec(command="sudo update-ca-certificates", unit=unit_name)
+
+
+def create_idp_user(k8s_juju) -> tuple[str, str]:
     test_username = "".join(secrets.choice(string.ascii_lowercase) for _ in range(8))
     test_email = f"{test_username}@example.com"
     test_password = secrets.token_hex(8)
@@ -259,27 +292,4 @@ def test_oauth_spoe(
         {"email": test_email, "password-secret-id": secret_id.split(":")[-1]},
     )
     logger.info("results reset-password %s", result.results)
-
-    # TODO I could not find a better way :(
-    haproxy_unit_ip = get_unit_ip_address(juju, "haproxy")
-    with patch_etc_hosts(haproxy_unit_ip, TEST_EXTERNAL_HOSTNAME_CONFIG):
-        _assert_idp_login_success(test_email, test_password)
-
-
-def _assert_idp_login_success(test_email, test_password):
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(ignore_https_errors=True)
-        page = context.new_page()
-        page.goto(f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}")
-        logger.info("Page content: %s", page.content())
-        expect(page).not_to_have_title(re.compile("Sign in failed"))
-        # This will timeout if there is no email field.
-        page.get_by_label("Email").fill(test_email)
-        page.get_by_label("Password").fill(test_password)
-        page.get_by_role("button", name="Sign in").click()
-        page.wait_for_url(f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}/")
-        logger.info("Content %s", page.content())
-        logger.info("url %s", page.url)
-        expect(page).to_have_url(f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}/")
-        assert "ok!" in page.content()
+    return test_email, test_password
