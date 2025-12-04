@@ -17,7 +17,7 @@ import echo_pb2_grpc
 import grpc
 from grpc_reflection.v1alpha import reflection
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 class EchoService(echo_pb2_grpc.EchoServiceServicer):
@@ -41,8 +41,6 @@ def parse_args():
         sys.exit(1)
 
     return args
-
-
 
 
 def main():
