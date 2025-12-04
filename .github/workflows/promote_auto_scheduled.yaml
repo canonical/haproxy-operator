@@ -6,7 +6,7 @@ on:
 
 jobs:
   promote-haproxy-charm-candidate-to-stable:
-    environment: release
+    environment: charmhub-stable-promote
     uses: canonical/operator-workflows/.github/workflows/promote_charm.yaml@main
     with:
       origin-channel: 2.8/candidate
@@ -34,7 +34,7 @@ jobs:
         required: true
 
   promote-haproxy-spoe-auth-charm-candidate-to-stable:
-    environment: release
+    environment: charmhub-stable-promote
     uses: canonical/operator-workflows/.github/workflows/promote_charm.yaml@main
     with:
       origin-channel: latest/candidate
