@@ -47,6 +47,8 @@ static = [ "bandit[toml]", "jinja2==3.1.6" ]
 integration = [
   "allure-pytest>=2.8.18",
   "allure-pytest-collection-report @ git+https://github.com/canonical/data-platform-workflows@v24.0.0#subdirectory=python/pytest_plugins/allure_pytest_collection_report",
+  "grpcio>=1.76.0",
+  "grpcio-reflection>=1.76.0",
   "httpx[http2]==0.28.1",
   "jinja2==3.1.6",
   "jubilant==1.6.1",
