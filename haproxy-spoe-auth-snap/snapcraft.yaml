@@ -36,7 +36,6 @@ apps:
   haproxy-spoe-auth:
     command: bin/agent --config config.yaml
     daemon: simple
-    restart-delay: 10s
     plugs:
       - network-bind
       - network
