@@ -10,7 +10,6 @@ import pwd
 # We silence this rule because subprocess call is only for validating the haproxy config
 # and no user input is parsed
 import subprocess  # nosec B404
-import typing
 from pathlib import Path
 from subprocess import CalledProcessError, run  # nosec
 
@@ -152,14 +151,14 @@ class HAProxyService:
         self,
         charm_state: CharmState,
         haproxy_route_requirers_information: HaproxyRouteRequirersInformation,
-        spoe_oauth_info: typing.Optional[SpoeAuthInformation],
+        spoe_oauth_info_list: list[SpoeAuthInformation],
     ) -> None:
         """Render the haproxy config for haproxy-route.
 
         Args:
             charm_state: The charm state component.
             haproxy_route_requirers_information: HaproxyRouteRequirersInformation state component.
-            spoe_oauth_info: Information about SPOE auth providers.
+            spoe_oauth_info_list: Information about SPOE auth providers.
         """
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
@@ -170,7 +169,7 @@ class HAProxyService:
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
             "haproxy_cas_file": HAPROXY_CAS_FILE,
             "acls_for_allow_http": haproxy_route_requirers_information.acls_for_allow_http,
-            "spoe_auth_info": spoe_oauth_info,
+            "spoe_auth_info_list": spoe_oauth_info_list,
         }
         template = (
             HAPROXY_ROUTE_TCP_CONFIG_TEMPLATE
@@ -178,9 +177,9 @@ class HAProxyService:
             else HAPROXY_ROUTE_CONFIG_TEMPLATE
         )
         self._render_haproxy_config(template, template_context)
-        if spoe_oauth_info:
+        if spoe_oauth_info_list:
             spoe_auth_template_context = {
-                "spoe_auth_info": spoe_oauth_info,
+                "spoe_auth_info_list": spoe_oauth_info_list,
             }
             self._render_config_file(
                 SPOE_AUTH_CONFIG_TEMPLATE, spoe_auth_template_context, SPOE_AUTH_CONFIG

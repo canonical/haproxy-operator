@@ -253,6 +253,7 @@ def test_oauth_spoe(
     test_email = f"{test_username}@example.com"
     test_password = secrets.token_hex(8)
     test_secret = test_username
+    logger.info("username: %s, password: %s", test_username, test_password)
     k8s_juju.run(
         "kratos/0",
         "create-admin-account",

@@ -8,16 +8,16 @@ frontend haproxy
     # Redirect HTTP to HTTPS
     http-request redirect scheme https unless { ssl_fc } {% for acl in acls_for_allow_http %} || {{ acl }}{% endfor %}
 
-{% if spoe_auth_info %}
-    acl oidc_callback_path path_beg -i {{ spoe_auth_info.app_data.oidc_callback_path }}
-    acl oidc_callback_host req.hdr(Host) -m str {{ spoe_auth_info.app_data.hostname }}
-    use_backend spoe_oidc_callback if oidc_callback_path oidc_callback_host
+{% for spoe_auth_info in spoe_auth_info_list  %}
+    acl oidc_callback_path_{{ spoe_auth_info.id }} path_beg -i {{ spoe_auth_info.oidc_callback_path }}
+    acl oidc_callback_host_{{ spoe_auth_info.id }} req.hdr(Host) -m str {{ spoe_auth_info.hostname }}
+    use_backend spoe_oidc_callback_{{ spoe_auth_info.id }} if oidc_callback_path_{{ spoe_auth_info.id }} oidc_callback_host_{{ spoe_auth_info.id }}
 
-    filter spoe engine spoe-auth config /etc/haproxy/spoe_auth.conf
+    filter spoe engine spoe-auth-{{ spoe_auth_info.id }} config /etc/haproxy/spoe_auth.conf
 
-    acl authenticated var({{ spoe_auth_info.app_data.var_authenticated }}) -m bool
-    use_backend backend_redirect if !authenticated
-{% endif %}
+    acl authenticated_{{ spoe_auth_info.id }} var({{ spoe_auth_info.var_authenticated_scope }}.auth_{{ spoe_auth_info.id }}.{{ spoe_auth_info.var_authenticated }}) -m bool
+    use_backend backend_redirect_{{ spoe_auth_info.id }} if !authenticated_{{ spoe_auth_info.id }}
+{% endfor %}
 {% endif %}
 
 {% for backend in backends %}
@@ -35,8 +35,8 @@ frontend haproxy
 
 peers haproxy_peers
 {% for address in peer_units_address %}
-    peer {{ address }}
 {% endfor %}
+    peer {{ address }}
 {% for entry in stick_table_entries %}
     table {{ entry }} type ip size 100k expire 2m store http_req_rate(1m)
 {% endfor %}
@@ -87,25 +87,25 @@ backend {{ backend.backend_name }}
 {% endfor %}
 {% endfor %}
 
-{% if spoe_auth_info %}
-backend backend_redirect
+{% for spoe_auth_info in spoe_auth_info_list  %}
+backend backend_redirect_{{ spoe_auth_info.id }}
     mode http
     balance roundrobin
-    http-request redirect location %[var({{ spoe_auth_info.app_data.var_redirect_url }})]
+    http-request redirect location %[var({{ spoe_auth_info.var_redirect_url_scope }}.auth_{{ spoe_auth_info.id }}.{{ spoe_auth_info.var_redirect_url }})]
 
-backend spoe_oidc_callback
+backend spoe_oidc_callback_{{ spoe_auth_info.id }}
 {% for agent_address in spoe_auth_info.unit_addresses %}
-    server {{ agent_address }} {{ agent_address }}:{{ spoe_auth_info.app_data.oidc_callback_port }} check
+    server {{ agent_address }} {{ agent_address }}:{{ spoe_auth_info.oidc_callback_port }} check
 {% endfor %}
 
-backend spop_auth
+backend spop_auth_{{ spoe_auth_info.id }}
     mode tcp
     balance roundrobin
     option spop-check
 {% for agent_address in spoe_auth_info.unit_addresses %}
-    server {{ agent_address }} {{ agent_address }}:{{ spoe_auth_info.app_data.spop_port }} check
+    server {{ agent_address }} {{ agent_address }}:{{ spoe_auth_info.spop_port }} check
 {% endfor %}
-{% endif %}
+{% endfor %}
 
 {% block haproxy_route_tcp %}{% endblock %}
 {% endblock %}

@@ -12,7 +12,7 @@ from charms.haproxy.v0.spoe_auth import (
     SpoeAuthProviderAppData,
     SpoeAuthRequirer,
 )
-from pydantic import BaseModel, IPvAnyAddress
+from pydantic import IPvAnyAddress
 
 from .exception import CharmStateValidationBaseError
 
@@ -23,34 +23,38 @@ class SpoeAuthValidationError(CharmStateValidationBaseError):
     """TODO."""
 
 
-class SpoeAuthInformation(BaseModel):
+class SpoeAuthInformation(SpoeAuthProviderAppData):
     """JAVI."""
 
     # TODO for now, this is coupled to the relation pydantic models.
-    app_data: SpoeAuthProviderAppData
+    id: int
     unit_addresses: list[IPvAnyAddress]
 
     @classmethod
-    def from_requirer(cls, spoe_auth_requirer: SpoeAuthRequirer) -> Self | None:
+    def from_requirer(cls, spoe_auth_requirer: SpoeAuthRequirer) -> list[Self]:
         """JAVI."""
         # JAVI. Returning optionally None is probably not so nice. Review this.
-        try:
-            app_data = spoe_auth_requirer.get_data()
-        except (DataValidationError, SpoeAuthInvalidRelationDataError) as ex:
-            raise SpoeAuthValidationError from ex
+        response = []
 
-        if not app_data:
-            return None
+        for relation in spoe_auth_requirer.relations:
+            try:
+                app_data = spoe_auth_requirer.get_provider_application_data(relation)
+            except (DataValidationError, SpoeAuthInvalidRelationDataError) as ex:
+                raise SpoeAuthValidationError from ex
 
-        relation = spoe_auth_requirer.relation
-        try:
-            requirer_units_data = spoe_auth_requirer.get_provider_unit_data(relation)
-        except DataValidationError as ex:
-            raise SpoeAuthValidationError from ex
+            if not app_data:
+                continue
 
-        unit_addresses = [unit_data.address for unit_data in requirer_units_data]
+            try:
+                requirer_units_data = spoe_auth_requirer.get_provider_unit_data(relation)
+            except DataValidationError as ex:
+                raise SpoeAuthValidationError from ex
 
-        return cls(
-            app_data=app_data,
-            unit_addresses=unit_addresses,
-        )
+            unit_addresses = [unit_data.address for unit_data in requirer_units_data]
+            spoe_auth_information = cls(
+                **app_data.dict(),
+                unit_addresses=unit_addresses,
+                id=relation.id,
+            )
+            response.append(spoe_auth_information)
+        return response
