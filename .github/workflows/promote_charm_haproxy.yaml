@@ -1,4 +1,4 @@
-name: Promote charm
+name: Promote the haproxy-operator charm
 
 on:
   workflow_dispatch:
@@ -8,10 +8,12 @@ on:
         description: 'Origin Channel'
         options:
         - 2.8/edge
+        - 2.8/candidate
       destination-channel:
         type: choice
         description: 'Destination Channel'
         options:
+        - 2.8/candidate
         - 2.8/stable
     secrets:
       CHARMHUB_TOKEN:
@@ -27,4 +29,5 @@ jobs:
       base-channel: 24.04
       base-name: ubuntu
       base-architecture: amd64
+      tag-prefix: haproxy
     secrets: inherit
