@@ -15,11 +15,9 @@ import logging
 import pathlib
 import subprocess  # nosec: B404
 import textwrap
-import time
 from subprocess import CalledProcessError  # nosec: B404
 
 import apt
-import grpc
 import ops
 from any_charm_base import AnyCharmBase
 from haproxy_route import HaproxyRouteRequirer
@@ -197,28 +195,16 @@ class AnyCharm(AnyCharmBase):
             port: Port to listen on
             use_tls: Whether to use TLS
         """
-        # Get the charm's dynamic packages directory for grpc module
-        charm_dir = pathlib.Path("/var/lib/juju/agents").glob("unit-*/charm/dynamic-packages")
-        dynamic_packages = next(charm_dir, None)
+        tls_args = f"--tls --cert {SSL_CERT_FILE} --key {SSL_PRIVATE_KEY_FILE}" if use_tls else ""
+
+        charm_dir = next(pathlib.Path("/var/lib/juju/agents").glob("unit-*/charm"))
+        dynamic_packages = charm_dir / "dynamic-packages"
         dynamic_packages_str = str(dynamic_packages) if dynamic_packages else ""
 
-        source_script = pathlib.Path(__file__).parent / "grpc_server.py"
-        target_script = pathlib.Path("/usr/local/bin/anycharm-grpc-server.py")
 
-        target_script.write_text(source_script.read_text(), encoding="utf-8")
-        target_script.chmod(0o755)
 
-        tls_args = ""
-        if use_tls:
-            tls_args = f"--tls --cert {SSL_CERT_FILE} --key {SSL_PRIVATE_KEY_FILE}"
-
-        # Create systemd service unit file with PYTHONPATH
         service_file = pathlib.Path("/etc/systemd/system/anycharm-grpc.service")
-        pythonpath_line = (
-            f'Environment="PYTHONPATH={dynamic_packages_str}:/usr/lib/python3/dist-packages"'
-            if dynamic_packages_str
-            else ""
-        )
+        target_script = charm_dir / "src/grpc_server/main.py"
         service_content = textwrap.dedent(f"""
             [Unit]
             Description=Any Charm gRPC Server
@@ -226,7 +212,8 @@ class AnyCharm(AnyCharmBase):
 
             [Service]
             Type=simple
-            {pythonpath_line}
+            User=root
+            Environment="PYTHONPATH={dynamic_packages_str}:/usr/lib/python3/dist-packages"
             ExecStart=/usr/bin/python3 {target_script} --port {port} {tls_args}
             Restart=on-failure
             RestartSec=5s

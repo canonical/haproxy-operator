@@ -4,16 +4,23 @@
 """Integration tests for the ingress per unit relation."""
 
 import json
+import sys
 import time
 import uuid
 
+import grpc
 import httpx
 import jubilant
 import pytest
 import requests
+from grpc_reflection.v1alpha import reflection_pb2, reflection_pb2_grpc
 
-from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
+from .conftest import GRPC_SERVER_DIR, TEST_EXTERNAL_HOSTNAME_CONFIG
 from .helper import get_http_version_from_apache2_logs, get_unit_ip_address
+
+sys.path.insert(0, str(GRPC_SERVER_DIR))
+import echo_pb2
+import echo_pb2_grpc
 
 
 @pytest.mark.abort_on_fail
@@ -432,49 +439,33 @@ def test_haproxy_route_grpc_support(
 
     haproxy_ip_address = get_unit_ip_address(juju, configured_application_with_tls)
 
-    # Debug: Check HAProxy configuration
-    haproxy_config = juju.ssh(
-        f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
-    )
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info("="*80)
-    logger.info("HAProxy configuration:")
-    logger.info(haproxy_config)
-    logger.info("="*80)
+    ca_cert_content = juju.run(f"{certificate_provider_application}/0", "get-ca-certificate")
 
-    # Debug: Check if gRPC server is listening
-    backend_ip = get_unit_ip_address(juju, any_charm_haproxy_route_requirer)
-    netstat_output = juju.ssh(
-        f"{any_charm_haproxy_route_requirer}/0", "ss -tlnp | grep 50051 || netstat -tlnp | grep 50051 || echo 'Not listening on 50051'"
+    ssl_credentials = grpc.ssl_channel_credentials(
+        root_certificates=ca_cert_content.results["ca-certificate"].encode()
     )
-    logger.info(f"Backend gRPC server status on {backend_ip}:")
-    logger.info(netstat_output)
-    logger.info("="*80)
 
-    # Test gRPC connection through HAProxy with HTTP/2
-    # gRPC requires HTTP/2, so we verify the connection works
-    with httpx.Client(http2=True, verify=False) as client:  # nosec: B501
-        response = client.post(
-            f"https://{haproxy_ip_address}/test.service/Method",
-            headers={
-                "Host": TEST_EXTERNAL_HOSTNAME_CONFIG,
-                "content-type": "application/grpc",
-            },
-            content=b"",
-            timeout=5.0,
-        )
-        # gRPC servers should respond with HTTP/2
-        assert response.http_version == "HTTP/2", (
-            f"Expected HTTP/2 for gRPC, got {response.http_version}"
-        )
-        # 503 means backend is down - check health check configuration
-        # For gRPC, we may need to disable HTTP health checks
-        assert response.status_code in (httpx.codes.OK, httpx.codes.SERVICE_UNAVAILABLE), (
-            f"Unexpected status code: {response.status_code}, response: {response.text}"
-        )
-        # The response may not be 200 but should be a valid HTTP/2 response
-        # indicating the connection to the gRPC server was established
-        assert response.status_code in (httpx.codes.OK, httpx.codes.UNPROCESSABLE_ENTITY), (
-            f"Unexpected status code: {response.status_code}"
-        )
+    with grpc.secure_channel(
+        f"{haproxy_ip_address}:443",
+        ssl_credentials,
+        options=[
+            ("grpc.default_authority", TEST_EXTERNAL_HOSTNAME_CONFIG),
+            ("grpc.ssl_target_name_override", TEST_EXTERNAL_HOSTNAME_CONFIG),
+        ],
+    ) as channel:
+        reflection_stub = reflection_pb2_grpc.ServerReflectionStub(channel)
+
+        request = reflection_pb2.ServerReflectionRequest(list_services="")
+        response = reflection_stub.ServerReflectionInfo(iter([request]))
+        # make a call to ensure we get a response
+        service_names = set()
+        for resp in response:
+            for service in resp.list_services_response.service:
+                service_names.add(service.name)
+
+        assert {"echo.EchoService", "grpc.reflection.v1alpha.ServerReflection"} == service_names
+
+        echo_request = echo_pb2.EchoRequest(message="Test!")
+        echo_stub = echo_pb2_grpc.EchoServiceStub(channel)
+        echo_response = echo_stub.Echo(echo_request)
+        assert echo_response.message == "Test!"
