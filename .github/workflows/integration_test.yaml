@@ -66,3 +66,18 @@ jobs:
         ]
       with-uv: true
       tmate-debug: true
+  integration-tests-global:
+    uses:
+      canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+    secrets: inherit
+    with:
+      use-canonical-k8s: true
+      provider: 'k8s'
+      channel: '1.33-classic/stable'
+      juju-channel: 3/stable
+      modules: |
+        [
+          "test_oauth_spoe.py",
+        ]
+      with-uv: true
+      tmate-debug: true
