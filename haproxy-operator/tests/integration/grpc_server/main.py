@@ -9,26 +9,19 @@ import signal
 import sys
 from concurrent import futures
 
+import echo_pb2
+import echo_pb2_grpc
 import grpc
+from grpc_reflection.v1alpha import reflection
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-def handle_unary_unary(request, context):
-    """Echo back the request."""
-    return request
+class EchoService(echo_pb2_grpc.EchoServiceServicer):
+    """gRPC Echo Service implementation."""
 
-
-class GenericHandler(grpc.GenericRpcHandler):
-    """Generic handler that echoes all requests."""
-
-    def service(self, handler_call_details):
-        """Service any RPC call by echoing the request."""
-        return grpc.unary_unary_rpc_method_handler(
-            handle_unary_unary,
-            request_deserializer=lambda x: x,
-            response_serializer=lambda x: x,
-        )
+    def Echo(self, request, context):
+        return echo_pb2.EchoResponse(message=request.message)
 
 
 def parse_args():
@@ -43,15 +36,28 @@ def parse_args():
     if args.tls and not (args.cert and args.key):
         logging.error("--cert and --key required when --tls is enabled")
         sys.exit(1)
+
     return args
 
 
+
+
 def main():
-    """Start the gRPC server."""
     args = parse_args()
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    server.add_generic_rpc_handlers((GenericHandler(),))
+
+    # Register Echo Service
+    echo_pb2_grpc.add_EchoServiceServicer_to_server(EchoService(), server)
+
+    # Enable reflection
+    service_names = (
+        echo_pb2.DESCRIPTOR.services_by_name["EchoService"].full_name,
+        reflection.SERVICE_NAME,
+    )
+    reflection.enable_server_reflection(service_names, server)
+
+    address = f"[::]:{args.port}"
 
     if args.tls:
         with open(args.key, "rb") as f:
@@ -60,14 +66,15 @@ def main():
             certificate_chain = f.read()
 
         server_credentials = grpc.ssl_server_credentials(((private_key, certificate_chain),))
-        server.add_secure_port(f"[::]:{args.port}", server_credentials)
-        logging.info("gRPC server started with TLS on port %d", args.port)
+        server.add_secure_port(address, server_credentials)
+        logging.info("gRPC Echo server started with TLS on port %d", args.port)
     else:
-        server.add_insecure_port(f"[::]:{args.port}")
-        logging.info("gRPC server started on port %d", args.port)
+        server.add_insecure_port(address)
+        logging.info("gRPC Echo server started on port %d", args.port)
 
     server.start()
 
+    # Graceful shutdown on SIGTERM/SIGINT
     def shutdown(signum, frame):
         logging.info("Shutting down gRPC server...")
         server.stop(0)
