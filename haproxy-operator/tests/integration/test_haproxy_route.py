@@ -350,7 +350,7 @@ def test_haproxy_route_https_with_different_transport_protocols(
 
 
 @pytest.mark.abort_on_fail
-def test_haproxy_route_grpc_support(
+def test_haproxy_route_grpcs_support(
     configured_application_with_tls: str,
     any_charm_haproxy_route_requirer: str,
     juju: jubilant.Juju,
