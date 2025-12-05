@@ -4,6 +4,10 @@
 """The haproxy-spoe-auth service module."""
 
 import logging
+
+# We silence this rule because subprocess call is only for
+# resetting the service restart counter and no user input is parsed
+import subprocess  # nosec blacklist
 from pathlib import Path
 
 from charmlibs import snap
@@ -20,6 +24,7 @@ OIDC_HEALTHCHECK_PATH = "/health"
 OIDC_LOGOUT_PATH = "/oauth2/logout"
 SNAP_CHANNEL = "latest/edge"
 SNAP_NAME = "haproxy-spoe-auth"
+SNAP_SERVICE_NAME = "snap.haproxy-spoe-auth.haproxy-spoe-auth.service"
 SPOP_PORT = 8081
 
 logger = logging.getLogger(__name__)
@@ -51,7 +56,6 @@ class SpoeAuthService:
         try:
             if not self.haproxy_spoe_auth_snap.present:
                 self.haproxy_spoe_auth_snap.ensure(snap.SnapState.Latest, channel=SNAP_CHANNEL)
-            self.haproxy_spoe_auth_snap.restart(reload=True)
         except snap.SnapError as exc:
             logger.error(
                 "An exception occurred when installing the haproxy-spoe-auth snap: %s",
@@ -72,8 +76,12 @@ class SpoeAuthService:
         try:
             self._render_config(charm_state, oauth_information)
             self.haproxy_spoe_auth_snap.restart(reload=True)
-        except snap.SnapError as exc:
-            raise SpoeAuthServiceConfigError(f"Failed to reconcile service: {exc}") from exc
+            # Ignore bandit rule as this is only used to reset the service restart counter.
+            subprocess.check_call(["/usr/bin/systemctl", "reset-failed", SNAP_SERVICE_NAME])  # nosec subprocess_without_shell_equals_true
+        except (snap.SnapError, subprocess.CalledProcessError) as exc:
+            raise SpoeAuthServiceConfigError(
+                f"Failed to reconcile the haproxy-spoe-auth service: {exc}"
+            ) from exc
 
     def _render_config(self, charm_state: CharmState, oauth_information: OauthInformation) -> None:
         """Render the configuration file.
