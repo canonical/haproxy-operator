@@ -94,6 +94,8 @@ lint.ignore = [
   "UP045",
 ]
 lint.per-file-ignores."tests/*" = [ "B011", "D100", "D101", "D102", "D103", "D104", "D212", "D415", "D417", "S" ]
+lint.per-file-ignores."tests/integration/grpc_server/*_pb2.py" = [ "ALL" ]
+lint.per-file-ignores."tests/integration/grpc_server/*_pb2_grpc.py" = [ "ALL" ]
 lint.flake8-copyright.author = "Canonical Ltd."
 lint.flake8-copyright.min-file-size = 1
 lint.flake8-copyright.notice-rgx = "Copyright\\s\\d{4}([-,]\\d{4})*\\s+"
