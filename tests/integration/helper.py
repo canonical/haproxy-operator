@@ -5,6 +5,8 @@
 """Helper methods for integration tests."""
 
 import ipaddress
+import subprocess  # nosec
+from contextlib import contextmanager
 
 import jubilant
 
@@ -45,3 +47,16 @@ def get_unit_address(juju: jubilant.Juju, application: str) -> str:
     if isinstance(unit_ip_address, ipaddress.IPv6Address):
         return f"http://[{unit_ip_address}]"
     return f"http://{unit_ip_address}"
+
+
+@contextmanager
+def patch_etc_hosts(ip, hostname):
+    # I could not come with a better idea...
+    etc_host_line = f"{ip} {hostname} #test"
+    command_add_line = f"/bin/echo '{etc_host_line}' | sudo tee -a /etc/hosts"
+    subprocess.run(command_add_line, shell=True)  # nosec
+    try:
+        yield
+    finally:
+        command_remove_line = f"sudo sed -i '/^{etc_host_line}$/d' /etc/hosts"
+        subprocess.run(command_remove_line, shell=True)  # nosec

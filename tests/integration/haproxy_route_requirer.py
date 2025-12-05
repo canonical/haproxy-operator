@@ -28,14 +28,14 @@ class AnyCharm(AnyCharmBase):
         super().__init__(*args, **kwargs)
         self._haproxy_route = HaproxyRouteRequirer(self, HAPROXY_ROUTE_RELATION)
 
-    def start_server(self):
+    def start_server(self, hostname):
         """Start apache2 webserver."""
         apt.update()
         apt.add_package(package_names="apache2")
         www_dir = pathlib.Path("/var/www/html")
         file_path = www_dir / "index.html"
         file_path.parent.mkdir(exist_ok=True)
-        file_path.write_text(f"ok!\n{self.app.name}")
+        file_path.write_text(f"ok!\n{self.app.name}\n{hostname}")
         self.unit.status = ops.ActiveStatus("Server ready")
 
     def update_relation(self, haproxy_route_params: dict[str, Any]):
@@ -44,4 +44,5 @@ class AnyCharm(AnyCharmBase):
         Args:
           haproxy_route_params: arguments to pass relation.
         """
+        self.start_server(haproxy_route_params.get('hostname'))
         self._haproxy_route.provide_haproxy_route_requirements(**haproxy_route_params)
