@@ -130,8 +130,7 @@ def configured_application_with_tls_base_fixture(
     )
     juju.wait(
         lambda status: (
-            jubilant.all_active(status, application)
-            and jubilant.all_active(status, certificate_provider_application)
+            jubilant.all_active(status, application, certificate_provider_application)
         ),
         timeout=JUJU_WAIT_TIMEOUT,
     )
@@ -168,6 +167,11 @@ def configured_application_with_tls_fixture(
             juju.remove_relation(
                 f"{configured_application_with_tls_base}:{endpoint}", relation.related_app
             )
+    # Ensure the removal is complete otherwise reintegration in next test may fail
+    juju.wait(
+        lambda status: (jubilant.all_active(status)),
+        timeout=JUJU_WAIT_TIMEOUT,
+    )
 
 
 @pytest.fixture(name="any_charm_ingress_per_unit_requirer")

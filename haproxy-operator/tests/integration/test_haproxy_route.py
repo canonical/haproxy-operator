@@ -14,6 +14,7 @@ import jubilant
 import pytest
 import requests
 from grpc_reflection.v1alpha import reflection_pb2, reflection_pb2_grpc
+# from grpc_server import echo_pb2, echo_pb2_grpc
 
 from .conftest import GRPC_SERVER_DIR, TEST_EXTERNAL_HOSTNAME_CONFIG
 from .helper import get_http_version_from_apache2_logs, get_unit_ip_address
@@ -90,15 +91,16 @@ def test_haproxy_route_protocol_https(
 
     Assert that the requirer endpoints can be accessed using https.
     """
-    juju.wait(
-        lambda status: jubilant.all_active(
-            status, configured_application_with_tls, any_charm_haproxy_route_requirer
-        )
-    )
-
     juju.integrate(
         f"{any_charm_haproxy_route_requirer}:require-tls-certificates",
         f"{certificate_provider_application}:certificates",
+    )
+    juju.integrate(
+        f"{configured_application_with_tls}:receive-ca-certs",
+        f"{certificate_provider_application}:send-ca-cert",
+    )
+    juju.integrate(
+        f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
     )
 
     for _ in range(5):
@@ -113,14 +115,6 @@ def test_haproxy_route_protocol_https(
     else:
         raise AssertionError("Could not start anycharm ssl server")
 
-    juju.integrate(
-        f"{configured_application_with_tls}:receive-ca-certs",
-        f"{certificate_provider_application}:send-ca-cert",
-    )
-
-    juju.integrate(
-        f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
-    )
 
     juju.run(
         f"{any_charm_haproxy_route_requirer}/0",
@@ -183,15 +177,16 @@ def test_haproxy_route_https_with_different_transport_protocols(
     Assert that the communication between frontend<->haproxy and haproxy<->backend
         supports both http/2 and http/1.1 transport protocols.
     """
-    juju.wait(
-        lambda status: jubilant.all_active(
-            status, configured_application_with_tls, any_charm_haproxy_route_requirer
-        )
-    )
-
     juju.integrate(
         f"{any_charm_haproxy_route_requirer}:require-tls-certificates",
         f"{certificate_provider_application}:certificates",
+    )
+    juju.integrate(
+        f"{configured_application_with_tls}:receive-ca-certs",
+        f"{certificate_provider_application}:send-ca-cert",
+    )
+    juju.integrate(
+        f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
     )
 
     for _ in range(5):
@@ -206,14 +201,6 @@ def test_haproxy_route_https_with_different_transport_protocols(
     else:
         raise AssertionError("Could not start anycharm ssl server")
 
-    juju.integrate(
-        f"{configured_application_with_tls}:receive-ca-certs",
-        f"{certificate_provider_application}:send-ca-cert",
-    )
-
-    juju.integrate(
-        f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
-    )
 
     juju.run(
         f"{any_charm_haproxy_route_requirer}/0",
@@ -364,6 +351,13 @@ def test_haproxy_route_grpcs_support(
         f"{any_charm_haproxy_route_requirer}:require-tls-certificates",
         f"{certificate_provider_application}:certificates",
     )
+    juju.integrate(
+        f"{configured_application_with_tls}:receive-ca-certs",
+        f"{certificate_provider_application}:send-ca-cert",
+    )
+    juju.integrate(
+        f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
+    )
 
     # Start gRPC SSL server
     for _ in range(5):
@@ -382,15 +376,6 @@ def test_haproxy_route_grpcs_support(
         break
     else:
         raise AssertionError("Could not start gRPC SSL server")
-
-    juju.integrate(
-        f"{configured_application_with_tls}:receive-ca-certs",
-        f"{certificate_provider_application}:send-ca-cert",
-    )
-
-    juju.integrate(
-        f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
-    )
 
     # Configure haproxy-route for gRPC
     juju.run(
@@ -419,9 +404,7 @@ def test_haproxy_route_grpcs_support(
         lambda status: jubilant.all_active(
             status, configured_application_with_tls, any_charm_haproxy_route_requirer
         ),
-        delay=5,
     )
-
     haproxy_ip_address = get_unit_ip_address(juju, configured_application_with_tls)
 
     ca_cert_content = juju.run(f"{certificate_provider_application}/0", "get-ca-certificate")
