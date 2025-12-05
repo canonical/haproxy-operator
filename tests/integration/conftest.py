@@ -81,10 +81,10 @@ def k8s_juju_fixture(juju: jubilant.Juju, request: pytest.FixtureRequest):
     # get clouds. there should be one k8s.
     clouds_json = juju.cli(
         "clouds", "--format=json", include_model=False
-    )  # , lxd_cloud_name, lxd_controller_name, include_model=False)
+    )
     clouds = json.loads(clouds_json)
-    k8s_clouds = [k for k, v in clouds.items() if v["type"] == "k8s"]
-    assert len(k8s_clouds) == 1, f"Only one cloud of type k8s supported for the test. {k8s_clouds}"
+    k8s_clouds = sorted([k for k, v in clouds.items() if v["type"] == "k8s"])
+    assert len(k8s_clouds) >= 1, f"At least one cloud of type k8s supported for the test. {k8s_clouds}"
     k8s_cloud = k8s_clouds[0]
 
     # Add the k8s cloud to our new controller.
@@ -286,8 +286,6 @@ def haproxy_spoe_deployer_fixture(
         logger.info(juju.status().apps[haproxy_spoe_name])
         # Why unit 0?
         inject_ca_certificate(juju, f"{haproxy_spoe_name}/0", ca_cert)
-        # This looks like a bug in cidp. Update revisions before complaining.
-        k8s_juju.wait(lambda status: status.apps["hydra"].is_active, timeout=5 * 60)
         juju.integrate(f"{k8s_juju.model}.hydra", haproxy_spoe_name)
         juju.integrate(f"{application}:spoe-auth", haproxy_spoe_name)
 

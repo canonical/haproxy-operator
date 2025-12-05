@@ -81,4 +81,5 @@ jobs:
           "test_oauth_spoe.py",
         ]
       with-uv: true
+      pre-run-script: ./tests/integration/setup-integration-tests.sh
       tmate-debug: true
