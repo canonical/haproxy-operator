@@ -60,6 +60,7 @@ def test_oauth_spoe(
     juju.integrate(
         f"{configured_application_with_tls}:haproxy-route", haproxy_route_requirer_2
     )
+    juju.wait(lambda status: not status.apps[haproxy_route_requirer_2].is_waiting, timeout=5 * 60)
     juju.run(
         f"{haproxy_route_requirer_2}/0",
         "rpc",
