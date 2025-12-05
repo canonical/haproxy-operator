@@ -358,24 +358,11 @@ def test_haproxy_route_grpcs_support(
 ):
     """Deploy the charm with anycharm haproxy route requirer that runs a gRPC server with TLS.
 
-    Assert that gRPC requests can be proxied through HAProxy.
+    Assert that gRPCs requests can be proxied through HAProxy.
     """
-    juju.wait(
-        lambda status: jubilant.all_active(
-            status, configured_application_with_tls, any_charm_haproxy_route_requirer
-        )
-    )
-
     juju.integrate(
         f"{any_charm_haproxy_route_requirer}:require-tls-certificates",
         f"{certificate_provider_application}:certificates",
-    )
-
-    # Wait for certificates to be provisioned
-    juju.wait(
-        lambda status: jubilant.all_active(
-            status, configured_application_with_tls, any_charm_haproxy_route_requirer
-        )
     )
 
     # Start gRPC SSL server
@@ -422,7 +409,6 @@ def test_haproxy_route_grpcs_support(
                         "load_balancing_consistent_hashing": True,
                         "http_server_close": False,
                         "protocol": "https",
-                        "check_path": None,
                     }
                 ]
             ),
