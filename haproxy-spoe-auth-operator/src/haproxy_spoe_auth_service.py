@@ -7,7 +7,7 @@ import logging
 
 # We silence this rule because subprocess call is only for
 # resetting the service restart counter and no user input is parsed
-import subprocess  # nosec B404
+import subprocess  # nosec blacklist
 from pathlib import Path
 
 from charmlibs import snap
@@ -77,7 +77,7 @@ class SpoeAuthService:
             self._render_config(charm_state, oauth_information)
             self.haproxy_spoe_auth_snap.restart(reload=True)
             # Ignore bandit rule as this is only used to reset the service restart counter.
-            subprocess.check_call(["/usr/bin/systemctl", "reset-failed", SNAP_SERVICE_NAME])  # nosec B603
+            subprocess.check_call(["/usr/bin/systemctl", "reset-failed", SNAP_SERVICE_NAME])  # nosec subprocess_without_shell_equals_true
         except (snap.SnapError, subprocess.CalledProcessError) as exc:
             raise SpoeAuthServiceConfigError(
                 f"Failed to reconcile the haproxy-spoe-auth service: {exc}"
