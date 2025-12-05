@@ -286,6 +286,8 @@ def haproxy_spoe_deployer_fixture(
         logger.info(juju.status().apps[haproxy_spoe_name])
         # Why unit 0?
         inject_ca_certificate(juju, f"{haproxy_spoe_name}/0", ca_cert)
+        # This looks like a bug in cidp. Update revisions before complaining.
+        k8s_juju.wait(lambda status: status.apps["hydra"].is_active, timeout=5 * 60)
         juju.integrate(f"{k8s_juju.model}.hydra", haproxy_spoe_name)
         juju.integrate(f"{application}:spoe-auth", haproxy_spoe_name)
 
