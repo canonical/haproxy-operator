@@ -5,5 +5,4 @@ The HAProxy operator provides **automatic** gRPC-over-HTTPS support for frontend
 ## Limitations
 
 - Exposed only on port 443
-- Requires TLS (HTTPS)
-- gRPC over clear-text (gRPC-C) is not supported
+- Only gRPC-over-TLS is supported (TLS encryption required)
