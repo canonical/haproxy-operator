@@ -94,7 +94,7 @@ def k8s_juju_fixture(juju: jubilant.Juju, request: pytest.FixtureRequest):
 
     new_juju = jubilant.Juju(model=juju.model)
     new_juju.wait_timeout = JUJU_WAIT_TIMEOUT
-    k8s_model_name = f"k8s-{juju.status().model.name}"
+    k8s_model_name = f"k{juju.status().model.name}"
     try:
         new_juju.add_model(k8s_model_name, k8s_cloud)
     except jubilant.CLIError as err:
