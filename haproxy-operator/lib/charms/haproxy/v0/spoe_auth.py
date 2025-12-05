@@ -52,8 +52,10 @@ class SpoeAuthCharm(CharmBase):
             spop_port=8081,
             oidc_callback_port=5000,
             event=HaproxyEvent.ON_HTTP_REQUEST,
-            var_authenticated="var.sess.is_authenticated",
-            var_redirect_url="var.sess.redirect_url",
+            var_authenticated_scope="sess",
+            var_authenticated="is_authenticated",
+            var_redirect_url_scope="sess",
+            var_redirect_url="redirect_url",
             cookie_name="auth_session",
             hostname="auth.example.com",
             oidc_callback_path="/oauth2/callback",
@@ -226,7 +228,9 @@ class SpoeAuthProviderAppData(_DatabagModel):
         spop_port: The port on the agent listening for SPOP.
         oidc_callback_port: The port on the agent handling OIDC callbacks.
         event: The event that triggers SPOE messages (e.g., on-http-request).
+        var_authenticated_scope: Scope of the variable set by the SPOE agent for auth status.
         var_authenticated: Name of the variable set by the SPOE agent for auth status.
+        var_redirect_url_scope: Scope of the variable set by the SPOE agent for IDP redirect URL.
         var_redirect_url: Name of the variable set by the SPOE agent for IDP redirect URL.
         cookie_name: Name of the authentication cookie used by the SPOE agent.
         oidc_callback_path: Path for OIDC callback.
@@ -249,8 +253,14 @@ class SpoeAuthProviderAppData(_DatabagModel):
     message_name: str = Field(
         description="The name of the SPOE message that the provider expects."
     )
+    var_authenticated_scope: VALIDSTR = Field(
+        description="Scope of the variable set by the SPOE agent for auth status.",
+    )
     var_authenticated: VALIDSTR = Field(
         description="Name of the variable set by the SPOE agent for auth status.",
+    )
+    var_redirect_url_scope: VALIDSTR = Field(
+        description="Scope of the variable set by the SPOE agent for IDP redirect URL.",
     )
     var_redirect_url: VALIDSTR = Field(
         description="Name of the variable set by the SPOE agent for IDP redirect URL.",
@@ -313,7 +323,9 @@ class SpoeAuthProvider(Object):
         oidc_callback_port: int,
         event: HaproxyEvent,
         message_name: str,
+        var_authenticated_scope: str,
         var_authenticated: str,
+        var_redirect_url_scope: str,
         var_redirect_url: str,
         cookie_name: str,
         hostname: str,
@@ -328,7 +340,9 @@ class SpoeAuthProvider(Object):
             oidc_callback_port: The port on the agent handling OIDC callbacks.
             event: The event that triggers SPOE messages.
             message_name: The name of the SPOE message that the provider expects.
+            var_authenticated_scope: Scope of the variable for auth status.
             var_authenticated: Name of the variable for auth status.
+            var_redirect_url_scope: Scope of the variable for IDP redirect URL.
             var_redirect_url: Name of the variable for IDP redirect URL.
             cookie_name: Name of the authentication cookie.
             hostname: The hostname HAProxy should route OIDC callbacks to.
@@ -348,7 +362,9 @@ class SpoeAuthProvider(Object):
                 oidc_callback_port=oidc_callback_port,
                 event=event,
                 message_name=message_name,
+                var_authenticated_scope=var_authenticated_scope,
                 var_authenticated=var_authenticated,
+                var_redirect_url_scope=var_redirect_url_scope,
                 var_redirect_url=var_redirect_url,
                 cookie_name=cookie_name,
                 hostname=hostname,
@@ -446,6 +462,15 @@ class SpoeAuthRequirer(Object):
         """
         relations = self.charm.model.relations[self.relation_name]
         return relations[0] if relations else None
+
+    @property
+    def relations(self) -> list[Relation]:
+        """The list of relations associated with this relation_name.
+
+        Returns:
+            The list of relations.
+        """
+        return list(self.charm.model.relations[self.relation_name])
 
     def _configure(self, _: EventBase) -> None:
         """Handle relation changed events."""

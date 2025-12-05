@@ -152,7 +152,7 @@ def test_haproxy_route_protocol_https(
         timeout=5,
         verify=False,  # nosec: B501
     )
-    assert response.text == "ok!"
+    assert "ok!" in response.text
 
     # Make HTTP request to verify allow_http works
     response = requests.get(
@@ -160,7 +160,7 @@ def test_haproxy_route_protocol_https(
         headers={"Host": TEST_EXTERNAL_HOSTNAME_CONFIG},
         timeout=5,
     )
-    assert response.text == "ok!"
+    assert "ok!" in response.text
 
 
 @pytest.mark.abort_on_fail

@@ -67,7 +67,7 @@ Deploy the `haproxy` and `self-signed-certificates` charms. Please refer to the 
 ```sh
 juju deploy haproxy --channel=2.8/edge --base=ubuntu@24.04
 juju deploy self-signed-certificates cert
-juju integrate haproxy cert
+juju integrate haproxy:certificates cert
 ```
 
 ## Deploy the `ingress-configurator` charm
