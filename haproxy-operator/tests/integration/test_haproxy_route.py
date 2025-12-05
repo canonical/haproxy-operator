@@ -103,18 +103,13 @@ def test_haproxy_route_protocol_https(
         f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
     )
 
-    for _ in range(5):
-        try:
-            juju.run(
-                f"{any_charm_haproxy_route_requirer}/0", "rpc", {"method": "start_ssl_server"}
-            )
-        except jubilant.TaskError:
-            time.sleep(5)
-            continue
-        break
-    else:
-        raise AssertionError("Could not start anycharm ssl server")
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, any_charm_haproxy_route_requirer, certificate_provider_application
+        )
+    )
 
+    juju.run(f"{any_charm_haproxy_route_requirer}/0", "rpc", {"method": "start_ssl_server"})
 
     juju.run(
         f"{any_charm_haproxy_route_requirer}/0",
@@ -189,18 +184,13 @@ def test_haproxy_route_https_with_different_transport_protocols(
         f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
     )
 
-    for _ in range(5):
-        try:
-            juju.run(
-                f"{any_charm_haproxy_route_requirer}/0", "rpc", {"method": "start_ssl_server"}
-            )
-        except jubilant.TaskError:
-            time.sleep(5)
-            continue
-        break
-    else:
-        raise AssertionError("Could not start anycharm ssl server")
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, any_charm_haproxy_route_requirer, certificate_provider_application
+        )
+    )
 
+    juju.run(f"{any_charm_haproxy_route_requirer}/0", "rpc", {"method": "start_ssl_server"})
 
     juju.run(
         f"{any_charm_haproxy_route_requirer}/0",
@@ -359,23 +349,21 @@ def test_haproxy_route_grpcs_support(
         f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
     )
 
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, any_charm_haproxy_route_requirer, certificate_provider_application
+        )
+    )
+
     # Start gRPC SSL server
-    for _ in range(5):
-        try:
-            juju.run(
-                f"{any_charm_haproxy_route_requirer}/0",
-                "rpc",
-                {
-                    "method": "start_ssl_server",
-                    "kwargs": json.dumps({"grpc": True}),
-                },
-            )
-        except jubilant.TaskError:
-            time.sleep(5)
-            continue
-        break
-    else:
-        raise AssertionError("Could not start gRPC SSL server")
+    juju.run(
+        f"{any_charm_haproxy_route_requirer}/0",
+        "rpc",
+        {
+            "method": "start_ssl_server",
+            "kwargs": json.dumps({"grpc": True}),
+        },
+    )
 
     # Configure haproxy-route for gRPC
     juju.run(
