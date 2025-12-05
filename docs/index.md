@@ -15,6 +15,7 @@ The haproxy-operator offers advanced features such as TLS, monitoring and high-a
   1. [High availability](explanation/high-availability.md)
   1. [Security](explanation/security.md)
 1. [Reference](reference)
+  1. [gRPC support](reference/grpc-support.md)
   1. [HTTP/2 support](reference/http2-support.md)
 1. [Release notes](release-notes)
   1. [Overview](release-notes/landing-page.md)

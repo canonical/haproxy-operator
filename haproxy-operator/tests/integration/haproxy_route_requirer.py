@@ -62,8 +62,18 @@ class AnyCharm(AnyCharmBase):
             for provider_certificate in provider_certificates:
                 SSL_CERT_FILE.write_text(str(provider_certificate.certificate), encoding="utf-8")
 
-    def start_server(self):
-        """Start apache2 webserver."""
+        self._grpc_server = None
+
+    def start_server(self, grpc: bool = False):
+        """Start apache2 webserver or gRPC server."""
+        if grpc:
+            self._start_grpc_server(port=50051, use_tls=False)
+            self.unit.status = ops.ActiveStatus("gRPC Server ready")
+            return
+
+        self._start_apache_server()
+
+    def _start_apache_server(self):
         apt.update()
         apt.add_package(package_names="apache2")
         www_dir = pathlib.Path("/var/www/html")
@@ -72,12 +82,22 @@ class AnyCharm(AnyCharmBase):
         file_path.write_text("ok!")
         self.unit.status = ops.ActiveStatus("Server ready")
 
-    def start_ssl_server(self, protocols: str | None = None):
-        """Start apache2 webserver.
+    def start_ssl_server(self, protocols: str | None = None, grpc: bool = False):
+        """Start apache2 webserver or gRPC server with TLS.
 
         Args:
             protocols: Apache Protocols directive value (e.g., "h2", "http/1.1", "h2 http/1.1").
+            grpc: If True, start gRPC server instead of apache2.
         """
+        if grpc:
+            self._start_grpc_server(port=50051, use_tls=True)
+            self.unit.status = ops.ActiveStatus("gRPC SSL Server ready")
+            return
+
+        self._start_apache2_ssl_server(protocols)
+        self.unit.status = ops.ActiveStatus("SSL Server ready")
+
+    def _start_apache2_ssl_server(self, protocols):
         apt.update()
         apt.add_package(package_names="apache2")
         www_dir = pathlib.Path("/var/www/html")
@@ -88,7 +108,6 @@ class AnyCharm(AnyCharmBase):
         protocols_line = f"Protocols {protocols}" if protocols else ""
         ssl_host = textwrap.dedent(f"""
             LogFormat "%{{X-Request-ID}}i %h %l %u %t \\"%r\\" %>s %O \\"%{{Referer}}i\\" \\"%{{User-Agent}}i\\"" combined_with_id
-
             <VirtualHost *:443>
                     ServerAdmin webmaster@localhost
                     DocumentRoot /var/www/html
@@ -99,13 +118,12 @@ class AnyCharm(AnyCharmBase):
                     SSLCertificateKeyFile   {SSL_PRIVATE_KEY_FILE!s}
                     {protocols_line}
             </VirtualHost>
-
             # This easier that editing an apache config file to comment the "Listen 80" line.
             <VirtualHost *:80>
                     RewriteEngine On
                     RewriteRule .* - [R=503,L]
             </VirtualHost>
-        """)
+            """)
         ssl_site_file = pathlib.Path("/etc/apache2/sites-available/anycharm-ssl.conf")
         ssl_site_file.write_text(ssl_host, encoding="utf-8")
         commands = [
@@ -116,7 +134,6 @@ class AnyCharm(AnyCharmBase):
         ]
         for command in commands:
             self._run_subprocess(command)
-        self.unit.status = ops.ActiveStatus("SSL Server ready")
 
     def _run_subprocess(self, cmd: list[str]):
         """Run a subprocess command.
@@ -160,6 +177,47 @@ class AnyCharm(AnyCharmBase):
         commands = [
             ["a2dismod", "http2"],
             ["systemctl", "restart", "apache2"],
+        ]
+        for command in commands:
+            self._run_subprocess(command)
+
+    def _start_grpc_server(self, port: int = 50051, use_tls: bool = False):
+        """Start the gRPC server as a systemd service (like apache2).
+
+        Args:
+            port: Port to listen on
+            use_tls: Whether to use TLS
+        """
+        tls_args = f"--tls --cert {SSL_CERT_FILE} --key {SSL_PRIVATE_KEY_FILE}" if use_tls else ""
+
+        charm_dir = next(pathlib.Path("/var/lib/juju/agents").glob("unit-*/charm"))
+        dynamic_packages = charm_dir / "dynamic-packages"
+        dynamic_packages_str = str(dynamic_packages) if dynamic_packages else ""
+
+        service_file = pathlib.Path("/etc/systemd/system/anycharm-grpc.service")
+        target_script = charm_dir / "src/grpc_server/main.py"
+        service_content = textwrap.dedent(f"""
+            [Unit]
+            Description=Any Charm gRPC Server
+            After=network.target
+
+            [Service]
+            Type=simple
+            User=root
+            Environment="PYTHONPATH={dynamic_packages_str}:/usr/lib/python3/dist-packages"
+            ExecStart=/usr/bin/python3 {target_script} --port {port} {tls_args}
+            Restart=on-failure
+            RestartSec=5s
+
+            [Install]
+            WantedBy=multi-user.target
+            """)
+        service_file.write_text(service_content, encoding="utf-8")
+
+        commands = [
+            ["systemctl", "daemon-reload"],
+            ["systemctl", "enable", "anycharm-grpc"],
+            ["systemctl", "restart", "anycharm-grpc"],
         ]
         for command in commands:
             self._run_subprocess(command)
