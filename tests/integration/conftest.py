@@ -25,84 +25,85 @@ HAPROXY_ROUTE_LIB_SRC = "haproxy-operator/lib/charms/haproxy/v1/haproxy_route.py
 APT_LIB_SRC = "haproxy-operator/lib/charms/operator_libs_linux/v0/apt.py"
 
 
-@pytest.fixture(scope="session", name="juju")
-def lxd_juju_fixture(request: pytest.FixtureRequest):
+@pytest.fixture(scope="session", name="lxd_controller")
+def lxd_controller_fixture(request: pytest.FixtureRequest) -> str:
     """TODO BOOTSTRAP A CONTROLLER IN LXD, AND ADDS A CLOUD FROM K8S!"""
     juju = jubilant.Juju()
-
     lxd_controller_name = "localhost"
     lxd_cloud_name = "localhost"
     juju.wait_timeout = JUJU_WAIT_TIMEOUT
     try:
         juju.bootstrap(lxd_cloud_name, lxd_controller_name)
     except jubilant.CLIError as err:
+        logger.exception(err)
+        if "already exists" not in err.stderr:
+            raise
+    return lxd_controller_name
+
+
+@pytest.fixture(scope="session", name="lxd_juju")
+def lxd_juju_fixture(request: pytest.FixtureRequest, lxd_controller):
+    juju = jubilant.Juju()
+
+    lxd_cloud_name = "localhost"
+    juju.wait_timeout = JUJU_WAIT_TIMEOUT
+    try:
+        juju.bootstrap(lxd_cloud_name, lxd_controller)
+    except jubilant.CLIError as err:
         if not "already exists":
             logger.exception(err)
             raise
 
     # we need to switch or commands like add-cloud do not work.
-    juju.cli("switch", f"{lxd_controller_name}:", include_model=False)
-
-    def show_debug_log(juju: jubilant.Juju):
-        """Show the debug log if tests failed.c
-
-        Args:
-            juju: Jubilant juju instance.
-        """
-        if request.session.testsfailed:
-            log = juju.debug_log(limit=1000)
-            print(log, end="")
+    juju.cli("switch", f"{lxd_controller}:", include_model=False)
 
     model = request.config.getoption("--model")
     if model:
         try:
-            juju.add_model(model=model, cloud=lxd_cloud_name, controller=lxd_controller_name)
+            juju.add_model(model=model, cloud=lxd_cloud_name, controller=lxd_controller)
         except jubilant.CLIError as err:
             if not "already exists":
                 logger.exception(err)
                 raise
-            juju.model = f"{lxd_controller_name}:{model}"
-        juju = jubilant.Juju(model=f"{lxd_controller_name}:{model}")
+            juju.model = f"{lxd_controller}:{model}"
+        juju = jubilant.Juju(model=f"{lxd_controller}:{model}")
         juju.wait_timeout = JUJU_WAIT_TIMEOUT
         yield juju
-        show_debug_log(juju)
         return
 
     keep_models = typing.cast(bool, request.config.getoption("--keep-models"))
     with jubilant.temp_model(
-        keep=keep_models, cloud=lxd_cloud_name, controller=lxd_controller_name
+        keep=keep_models, cloud=lxd_cloud_name, controller=lxd_controller
     ) as juju:
         juju.wait_timeout = JUJU_WAIT_TIMEOUT
         yield juju
 
 
 @pytest.fixture(scope="session", name="k8s_juju")
-def k8s_juju_fixture(juju: jubilant.Juju, request: pytest.FixtureRequest):
-    # get clouds. there should be one k8s.
-    clouds_json = juju.cli(
-        "clouds", "--format=json", include_model=False
+def k8s_juju_fixture(request: pytest.FixtureRequest, lxd_juju):
+    # For this, we are using the controller in a k8s cloud. That we suppose it exists and that
+    # the name contains k8s.
+    
+    juju = jubilant.Juju()
+    controllers_json = juju.cli(
+        "controllers", "--format=json", include_model=False
     )
-    clouds = json.loads(clouds_json)
-    k8s_clouds = sorted([k for k, v in clouds.items() if v["type"] == "k8s"])
-    assert len(k8s_clouds) >= 1, f"At least one cloud of type k8s supported for the test. {k8s_clouds}"
-    k8s_cloud = k8s_clouds[0]
+    controllers = json.loads(controllers_json)
+    controllers = controllers["controllers"]
+    k8s_controllers = sorted([name for name in controllers.keys() if "k8s" in name])
+    assert len(k8s_controllers) == 1, f"Only one controller of type k8s supported for the test. {k8s_controllers}"
+    k8s_controller = k8s_controllers[0]
 
-    # Add the k8s cloud to our new controller.
-    juju.cli(
-        "add-cloud", "--controller", juju.status().model.controller, k8s_cloud, include_model=False
-    )
-
-    new_juju = jubilant.Juju(model=juju.model)
-    new_juju.wait_timeout = JUJU_WAIT_TIMEOUT
-    k8s_model_name = f"k{juju.status().model.name}"
+    juju.wait_timeout = JUJU_WAIT_TIMEOUT
+    k8s_model_name = lxd_juju.model.split(":")[-1]
     try:
-        new_juju.add_model(k8s_model_name, k8s_cloud)
+        juju.add_model(model=k8s_model_name, controller=k8s_controller)
     except jubilant.CLIError as err:
+        logger.exception(err)
         if not "already exists":
-            logger.exception(err)
             raise
-        new_juju.model = k8s_model_name
-    yield new_juju
+        juju.model = f"{k8s_controller}:{k8s_model_name}"
+    yield juju
 
 
 @pytest.fixture(scope="module", name="application")
@@ -232,12 +233,13 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
     juju.integrate("traefik-public:ingress", "identity-platform-login-ui-operator:ingress")
 
     juju.config("kratos", {"enforce_mfa": False})
-    juju.offer(f"{juju.model}.hydra", endpoint="oauth")
+    juju_controller, juju_model = juju.model.split(":")
+    juju.offer(app=f"{juju_model}.hydra", controller=juju_controller, endpoint="oauth")
 
 
 @pytest.fixture(scope="module", name="any_charm_haproxy_route_deployer")
 def any_charm_haproxy_route_deployer_fixture(
-        juju: jubilant.Juju,
+        lxd_juju: jubilant.Juju,
 ):
     def deployer(app_name):
         return deploy_any_charm_haproxy_route_requirer(juju, app_name)

@@ -23,13 +23,14 @@ JUJU_WAIT_TIMEOUT = 10 * 60  # 10 minutes
 @pytest.mark.abort_on_fail
 def test_oauth_spoe(
     configured_application_with_tls: str,
-    juju: jubilant.Juju,
+    lxd_juju: jubilant.Juju,
     k8s_juju: jubilant.Juju,
     any_charm_haproxy_route_deployer,
     iam_bundle,
     haproxy_spoe_auth_deployer,
     browser_context_manager,
 ):
+    juju = lxd_juju
     host_protected_1 = "haproxy1.internal"
     host_protected_2 = "haproxy2.internal"
     host_not_protected = "haproxy3.internal"
