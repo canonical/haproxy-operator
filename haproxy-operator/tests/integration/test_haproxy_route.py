@@ -28,6 +28,8 @@ def test_haproxy_route_any_charm_requirer(
 
     Assert that the requirer endpoints are available.
     """
+    juju.run(f"{any_charm_haproxy_route_requirer}/0", "rpc", {"method": "start_server"})
+
     juju.integrate(
         f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
     )

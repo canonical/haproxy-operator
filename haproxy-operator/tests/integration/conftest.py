@@ -269,17 +269,13 @@ def any_charm_haproxy_route_requirer_base_fixture(
                 ),
             },
         )
-    juju.wait(
-        lambda status: (jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)),
-        timeout=JUJU_WAIT_TIMEOUT,
-    )
-    juju.run(
-        f"{ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION}/0", "rpc", {"method": "start_server"}
-    )
-    juju.wait(
-        lambda status: (jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)),
-        timeout=JUJU_WAIT_TIMEOUT,
-    )
+        juju.wait(
+            lambda status: (
+                jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)
+            ),
+            timeout=JUJU_WAIT_TIMEOUT,
+        )
+
     return ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION
 
 
