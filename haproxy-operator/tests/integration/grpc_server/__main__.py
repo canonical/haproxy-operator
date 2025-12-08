@@ -12,9 +12,10 @@ import signal
 import sys
 from concurrent import futures
 
-from . import echo_pb2, echo_pb2_grpc
 import grpc
 from grpc_reflection.v1alpha import reflection
+
+from . import echo_pb2, echo_pb2_grpc
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
