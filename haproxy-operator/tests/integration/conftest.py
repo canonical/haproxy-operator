@@ -15,7 +15,7 @@ import jubilant
 import pytest
 import yaml
 
-from .helper import pytestconfig_arg_no_deploy
+from .helper import pytestconfig_arg_no_deploy, verify_relations_removed
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +152,7 @@ def configured_application_with_tls_fixture(
     yield configured_application_with_tls_base
 
     # Remove all relations except peer relations and the certificates relation
+    relations_to_remove = []
     for endpoint, app_status_relation in (
         juju.status().apps[configured_application_with_tls_base].relations.items()
     ):
@@ -167,11 +168,14 @@ def configured_application_with_tls_fixture(
             juju.remove_relation(
                 f"{configured_application_with_tls_base}:{endpoint}", relation.related_app
             )
-    # Ensure the removal is complete otherwise reintegration in next test may fail
-    juju.wait(
-        lambda status: (jubilant.all_active(status)),
-        timeout=JUJU_WAIT_TIMEOUT,
-    )
+            relations_to_remove.append((endpoint, relation.related_app))
+
+    if relations_to_remove:
+        verify_relations_removed(juju, configured_application_with_tls_base, relations_to_remove)
+        juju.wait(
+            lambda status: (jubilant.all_active(status)),
+            timeout=JUJU_WAIT_TIMEOUT,
+        )
 
 
 @pytest.fixture(name="any_charm_ingress_per_unit_requirer")
@@ -297,11 +301,16 @@ def any_charm_haproxy_route_requirer_fixture(
     if app_name not in juju.status().apps:
         return
 
+    relations_to_remove = []
     for endpoint, app_status_relation in juju.status().apps[app_name].relations.items():
         for relation in app_status_relation:
             if relation.related_app == app_name:
                 continue
             juju.remove_relation(f"{app_name}:{endpoint}", relation.related_app)
+            relations_to_remove.append((endpoint, relation.related_app))
+
+    if relations_to_remove:
+        verify_relations_removed(juju, app_name, relations_to_remove)
 
 
 @pytest.fixture(scope="function", name="any_charm_haproxy_route_tcp_requirer")

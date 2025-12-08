@@ -14,6 +14,7 @@ import jubilant
 import pytest
 import yaml
 from requests.adapters import DEFAULT_POOLBLOCK, DEFAULT_POOLSIZE, DEFAULT_RETRIES, HTTPAdapter
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 HTTP_TRANSPORT_VERSION_PATTERN = re.compile(r"HTTP/[\d\.]+")
 
@@ -208,3 +209,26 @@ def get_http_version_from_apache2_logs(
         raise RuntimeError("Unexpected Error: No HTTP version found in log entry")
 
     return match.group(0)
+
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(30))
+def verify_relations_removed(
+    juju: jubilant.Juju,
+    app_name: str,
+    relations_to_remove: list[tuple[str, str]],
+) -> None:
+    """Verify that relations have been removed with retries.
+
+    Args:
+        juju: Jubilant Juju client.
+        app_name: The application name to check.
+        relations_to_remove: List of (endpoint, related_app) tuples to verify removal.
+
+    Raises:
+        AssertionError: If any relation still exists after retries.
+    """
+    for endpoint, related_app in relations_to_remove:
+        rels = juju.status().apps[app_name].relations.get(endpoint, [])
+        if any(relation.related_app == related_app for relation in rels):
+            raise AssertionError(
+                f"Relation {endpoint} with {related_app} still exists"
+            )
