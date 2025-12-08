@@ -182,43 +182,25 @@ class AnyCharm(AnyCharmBase):
             self._run_subprocess(command)
 
     def _start_grpc_server(self, port: int = 50051, use_tls: bool = False):
-        """Start the gRPC server as a systemd service (like apache2).
+        """Start the gRPC server in the background.
 
         Args:
             port: Port to listen on
             use_tls: Whether to use TLS
         """
-        tls_args = f"--tls --cert {SSL_CERT_FILE} --key {SSL_PRIVATE_KEY_FILE}" if use_tls else ""
-
         charm_dir = next(pathlib.Path("/var/lib/juju/agents").glob("unit-*/charm"))
         dynamic_packages = charm_dir / "dynamic-packages"
-        dynamic_packages_str = str(dynamic_packages) if dynamic_packages else ""
         src_dir = charm_dir / "src"
 
-        service_file = pathlib.Path("/etc/systemd/system/anycharm-grpc.service")
-        service_content = textwrap.dedent(f"""
-            [Unit]
-            Description=Any Charm gRPC Server
-            After=network.target
+        cmd = ["python3", "-m", "grpc_server", "--port", str(port)]
+        if use_tls:
+            cmd.extend(["--tls", "--cert", str(SSL_CERT_FILE), "--key", str(SSL_PRIVATE_KEY_FILE)])
 
-            [Service]
-            Type=simple
-            User=root
-            WorkingDirectory={src_dir}
-            Environment="PYTHONPATH={dynamic_packages_str}:{src_dir}:/usr/lib/python3/dist-packages"
-            ExecStart=/usr/bin/python3 -m grpc_server --port {port} {tls_args}
-            Restart=on-failure
-            RestartSec=5s
-
-            [Install]
-            WantedBy=multi-user.target
-            """)
-        service_file.write_text(service_content, encoding="utf-8")
-
-        commands = [
-            ["systemctl", "daemon-reload"],
-            ["systemctl", "enable", "anycharm-grpc"],
-            ["systemctl", "restart", "anycharm-grpc"],
-        ]
-        for command in commands:
-            self._run_subprocess(command)
+        subprocess.Popen(  # nosec: B603
+            cmd,
+            cwd=str(src_dir),
+            env={
+                "PYTHONPATH": f"{dynamic_packages}:{src_dir}",
+            },
+            start_new_session=True,
+        )
