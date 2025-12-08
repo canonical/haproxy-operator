@@ -12,6 +12,7 @@ stubs:
 	  --python_out=. \
 	  --grpc_python_out=. \
 	  echo.proto
+	sed -i 's/^import echo_pb2 as echo__pb2/from . import echo_pb2 as echo__pb2/' echo_pb2_grpc.py
 
 clean:
 	rm -f echo_pb2.py echo_pb2_grpc.py

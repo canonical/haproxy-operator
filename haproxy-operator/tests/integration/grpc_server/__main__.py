@@ -12,8 +12,7 @@ import signal
 import sys
 from concurrent import futures
 
-import echo_pb2
-import echo_pb2_grpc
+from . import echo_pb2, echo_pb2_grpc
 import grpc
 from grpc_reflection.v1alpha import reflection
 

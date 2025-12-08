@@ -4,8 +4,6 @@
 """Integration tests for the ingress per unit relation."""
 
 import json
-import sys
-import time
 import uuid
 
 import grpc
@@ -14,14 +12,10 @@ import jubilant
 import pytest
 import requests
 from grpc_reflection.v1alpha import reflection_pb2, reflection_pb2_grpc
-# from grpc_server import echo_pb2, echo_pb2_grpc
 
-from .conftest import GRPC_SERVER_DIR, TEST_EXTERNAL_HOSTNAME_CONFIG
+from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
+from .grpc_server import echo_pb2, echo_pb2_grpc
 from .helper import get_http_version_from_apache2_logs, get_unit_ip_address
-
-sys.path.insert(0, str(GRPC_SERVER_DIR))
-import echo_pb2
-import echo_pb2_grpc
 
 
 @pytest.mark.abort_on_fail

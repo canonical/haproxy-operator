@@ -193,9 +193,9 @@ class AnyCharm(AnyCharmBase):
         charm_dir = next(pathlib.Path("/var/lib/juju/agents").glob("unit-*/charm"))
         dynamic_packages = charm_dir / "dynamic-packages"
         dynamic_packages_str = str(dynamic_packages) if dynamic_packages else ""
+        src_dir = charm_dir / "src"
 
         service_file = pathlib.Path("/etc/systemd/system/anycharm-grpc.service")
-        target_script = charm_dir / "src/grpc_server/main.py"
         service_content = textwrap.dedent(f"""
             [Unit]
             Description=Any Charm gRPC Server
@@ -204,8 +204,9 @@ class AnyCharm(AnyCharmBase):
             [Service]
             Type=simple
             User=root
-            Environment="PYTHONPATH={dynamic_packages_str}:/usr/lib/python3/dist-packages"
-            ExecStart=/usr/bin/python3 {target_script} --port {port} {tls_args}
+            WorkingDirectory={src_dir}
+            Environment="PYTHONPATH={dynamic_packages_str}:{src_dir}:/usr/lib/python3/dist-packages"
+            ExecStart=/usr/bin/python3 -m grpc_server --port {port} {tls_args}
             Restart=on-failure
             RestartSec=5s
 

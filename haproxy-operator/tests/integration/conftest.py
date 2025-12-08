@@ -32,7 +32,7 @@ HAPROXY_ROUTE_TCP_REQUIRER_SRC = "tests/integration/haproxy_route_tcp_requirer.p
 HAPROXY_ROUTE_TCP_LIB_SRC = "lib/charms/haproxy/v0/haproxy_route_tcp.py"
 ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION = "any-charm-haproxy-route-tcp-requirer"
 GRPC_SERVER_DIR = pathlib.Path("tests/integration/grpc_server")
-GRPC_SERVER_SRC = GRPC_SERVER_DIR / "main.py"
+GRPC_SERVER_SRC = GRPC_SERVER_DIR / "__main__.py"
 GRPC_MESSAGE_STUB_SRC = GRPC_SERVER_DIR / "echo_pb2.py"
 GRPC_SERVICE_STUB_SRC = GRPC_SERVER_DIR / "echo_pb2_grpc.py"
 
@@ -239,7 +239,7 @@ def any_charm_haproxy_route_requirer_base_fixture(
                 "lib/charms/tls_certificates_interface/v4/tls_certificates.py"
             ).read_text(encoding="utf-8"),
             "apt.py": pathlib.Path(APT_LIB_SRC).read_text(encoding="utf-8"),
-            "grpc_server/main.py": pathlib.Path(GRPC_SERVER_SRC).read_text(encoding="utf-8"),
+            "grpc_server/__main__.py": pathlib.Path(GRPC_SERVER_DIR / "__main__.py").read_text(encoding="utf-8"),
             "grpc_server/echo_pb2.py": pathlib.Path(GRPC_MESSAGE_STUB_SRC).read_text(
                 encoding="utf-8"
             ),

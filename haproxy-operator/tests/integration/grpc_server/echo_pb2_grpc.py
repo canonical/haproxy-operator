@@ -3,7 +3,7 @@
 
 import warnings
 
-import echo_pb2 as echo__pb2
+from . import echo_pb2 as echo__pb2
 import grpc
 
 GRPC_GENERATED_VERSION = "1.76.0"
