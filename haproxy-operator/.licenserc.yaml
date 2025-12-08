@@ -1,5 +1,0 @@
-header:
-  paths-ignore:
-  - tests/integration/grpc_server/*_pb2_grpc.py
-  - tests/integration/grpc_server/*_pb2.py
-  comment: on-failure
