@@ -1,8 +1,8 @@
 # gRPC support
 
-The HAProxy operator provides **automatic** gRPC-over-HTTPS support for frontends and backends.
+The HAProxy operator provides **automatic** gRPC support for frontends and backends using HTTPS on port 443.
 
 ## Limitations
 
-- Exposed only on port 443
-- Only gRPC-over-HTTPS is supported
+- Only when using HTTPS
+- Only on port 443
