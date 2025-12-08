@@ -127,6 +127,13 @@ namespace_packages = true
 disallow_untyped_defs = false
 module = ["tests.*"]
 
+[[tool.mypy.overrides]]
+ignore_errors = true
+module = [
+  "tests.integration.grpc_server.echo_pb2",
+  "tests.integration.grpc_server.echo_pb2_grpc",
+]
+
 [tool.bandit]
 exclude_dirs = [ "/venv/" ]
 

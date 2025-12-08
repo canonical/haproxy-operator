@@ -415,7 +415,7 @@ def test_haproxy_route_grpcs_support(
 
         assert {"echo.EchoService", "grpc.reflection.v1alpha.ServerReflection"} == service_names
 
-        echo_request = echo_pb2.EchoRequest(message="Test!")
+        echo_request = echo_pb2.EchoRequest(message="Test!")  # type: ignore[attr-defined]
         echo_stub = echo_pb2_grpc.EchoServiceStub(channel)
         echo_response = echo_stub.Echo(echo_request)
         assert echo_response.message == "Test!"

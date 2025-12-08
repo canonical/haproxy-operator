@@ -24,7 +24,7 @@ class EchoService(echo_pb2_grpc.EchoServiceServicer):
     """gRPC Echo Service implementation."""
 
     def Echo(self, request, context):  # noqa: N802 (invalid-function-name)
-        return echo_pb2.EchoResponse(message=request.message)
+        return echo_pb2.EchoResponse(message=request.message)  # type: ignore[attr-defined]
 
 
 def parse_args():
