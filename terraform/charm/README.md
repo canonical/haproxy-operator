@@ -34,7 +34,7 @@ No modules.
 | <a name="input_base"></a> [base](#input\_base) | Base of the haproxy charm. | `string` | `"ubuntu@24.04"` | no |
 | <a name="input_channel"></a> [channel](#input\_channel) | Revision of the haproxy charm. | `string` | `"2.8/edge"` | no |
 | <a name="input_config"></a> [config](#input\_config) | Haproxy charm config. | `map(string)` | `{}` | no |
-| <a name="input_constraints"></a> [constraints](#input\_constraints) | Name of the juju model. | `string` | `"arch=amd64"` | no |
+| <a name="input_constraints"></a> [constraints](#input\_constraints) | Haproxy constraints. | `string` | `"arch=amd64"` | no |
 | <a name="input_hacluster_app_name"></a> [hacluster\_app\_name](#input\_hacluster\_app\_name) | Application name of the hacluster charm. | `string` | `"hacluster"` | no |
 | <a name="input_hacluster_charm_channel"></a> [hacluster\_charm\_channel](#input\_hacluster\_charm\_channel) | Channel of the hacluster charm. | `string` | `"2.4/edge"` | no |
 | <a name="input_hacluster_charm_revision"></a> [hacluster\_charm\_revision](#input\_hacluster\_charm\_revision) | Revision of the hacluster charm. | `number` | `null` | no |
