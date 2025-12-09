@@ -474,8 +474,7 @@ class SpoeAuthRequirer(Object):
 
     def _configure(self, _: EventBase) -> None:
         """Handle relation changed events."""
-        if self.is_available():
-            self.on.available.emit()
+        self.on.available.emit()
 
     def _on_relation_broken(self, _: RelationBrokenEvent) -> None:
         """Handle relation broken events."""

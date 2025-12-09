@@ -94,6 +94,11 @@ backend backend_redirect_{{ spoe_auth_info.id }}
     http-request redirect location %[var({{ spoe_auth_info.var_redirect_url_scope }}.auth_{{ spoe_auth_info.id }}.{{ spoe_auth_info.var_redirect_url }})]
 
 backend spoe_oidc_callback_{{ spoe_auth_info.id }}
+    mode http
+    balance roundrobin
+    option tcp-check
+    timeout connect 5s
+    timeout server  3m
 {% for agent_address in spoe_auth_info.unit_addresses %}
     server {{ agent_address }} {{ agent_address }}:{{ spoe_auth_info.oidc_callback_port }} check
 {% endfor %}
@@ -102,6 +107,8 @@ backend spop_auth_{{ spoe_auth_info.id }}
     mode tcp
     balance roundrobin
     option spop-check
+    timeout connect 5s
+    timeout server  3m
 {% for agent_address in spoe_auth_info.unit_addresses %}
     server {{ agent_address }} {{ agent_address }}:{{ spoe_auth_info.spop_port }} check
 {% endfor %}

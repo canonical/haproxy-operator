@@ -422,3 +422,33 @@ def test_two_spoe_auth(monkeypatch: pytest.MonkeyPatch, certificates_integration
             ANY,
         )
     assert out.unit_status == ops.testing.ActiveStatus("")
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_spoe_auth_invalid_data(monkeypatch: pytest.MonkeyPatch, certificates_integration):
+    """
+    arrange: Prepare a haproxy with haproxy_route and spoe with wrong data in the spoe-auth relation.
+    act: trigger relation changed.
+    assert: No file should be updated and the charm should be blocked.
+    """
+    monkeypatch.setattr(
+        "charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.private_key",
+        MagicMock(),
+    )
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+
+    spoe_auth_relation = build_spoe_auth_relation()
+    del spoe_auth_relation.remote_app_data["hostname"]
+    haproxy_route_relation = build_haproxy_route_relation()
+
+    ctx = ops.testing.Context(HAProxyCharm)
+    state = ops.testing.State(
+        relations=[certificates_integration, spoe_auth_relation, haproxy_route_relation]
+    )
+    out = ctx.run(
+        ctx.on.relation_changed(spoe_auth_relation),
+        state,
+    )
+    assert render_file_mock.call_count == 0
+    assert out.unit_status == ops.testing.BlockedStatus("")

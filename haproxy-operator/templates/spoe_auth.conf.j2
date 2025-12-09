@@ -1,6 +1,9 @@
 {% for spoe_auth_info in spoe_auth_info_list  %}
 [spoe-auth-{{ spoe_auth_info.id }}]
     spoe-agent spoe-auth-agents
+    timeout hello      5s
+    timeout idle       2m
+    timeout processing 5s
     messages {{ spoe_auth_info.message_name }}
     option var-prefix auth_{{ spoe_auth_info.id }}
     use-backend spop_auth_{{ spoe_auth_info.id }}

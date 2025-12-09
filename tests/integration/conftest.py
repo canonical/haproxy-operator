@@ -69,7 +69,6 @@ def lxd_juju_fixture(request: pytest.FixtureRequest):
 @pytest.fixture(scope="session", name="k8s_juju")
 def k8s_juju_fixture(lxd_juju: jubilant.Juju, request: pytest.FixtureRequest):
     """Bootstrap a new k8s model in the lxd controller and return a Juju fixture for it."""
-    # get clouds. there should be one k8s.
     clouds_json = lxd_juju.cli("clouds", "--format=json", include_model=False)
     clouds = json.loads(clouds_json)
     k8s_clouds = sorted([k for k, v in clouds.items() if v["type"] == "k8s"])
