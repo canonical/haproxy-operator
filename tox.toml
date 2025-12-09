@@ -98,6 +98,5 @@ dependency_groups = [ "integration" ]
 src_path = "{toxinidir}/src/"
 tst_path = "{toxinidir}/tests/"
 all_path = [
-  "{toxinidir}/src/",
   "{toxinidir}/tests/",
 ]

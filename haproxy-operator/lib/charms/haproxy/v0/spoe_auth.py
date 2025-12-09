@@ -70,9 +70,8 @@ from collections.abc import MutableMapping
 from enum import StrEnum
 from typing import Annotated, cast
 
-from ops import CharmBase, RelationBrokenEvent
-from ops.charm import CharmEvents
-from ops.framework import EventBase, EventSource, Object
+from ops import CharmBase
+from ops.framework import EventBase, Object
 from ops.model import Relation
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, IPvAnyAddress, ValidationError
 
@@ -411,18 +410,6 @@ class SpoeAuthRemovedEvent(EventBase):
     """SpoeAuthRemovedEvent custom event."""
 
 
-class SpoeAuthRequirerEvents(CharmEvents):
-    """List of events that the SPOE auth requirer charm can leverage.
-
-    Attributes:
-        available: Emitted when provider configuration is available.
-        removed: Emitted when the provider relation is broken.
-    """
-
-    available = EventSource(SpoeAuthAvailableEvent)
-    removed = EventSource(SpoeAuthRemovedEvent)
-
-
 class SpoeAuthRequirer(Object):
     """SPOE auth interface requirer implementation.
 
@@ -430,9 +417,6 @@ class SpoeAuthRequirer(Object):
         on: Custom events of the requirer.
         relation: The related application.
     """
-
-    # Ignore this for pylance
-    on = SpoeAuthRequirerEvents()  # type: ignore
 
     def __init__(
         self, charm: CharmBase, relation_name: str = SPOE_AUTH_DEFAULT_RELATION_NAME
@@ -446,12 +430,6 @@ class SpoeAuthRequirer(Object):
         super().__init__(charm, relation_name)
         self.charm = charm
         self.relation_name = relation_name
-
-        self.framework.observe(self.charm.on[self.relation_name].relation_created, self._configure)
-        self.framework.observe(self.charm.on[self.relation_name].relation_changed, self._configure)
-        self.framework.observe(
-            self.charm.on[self.relation_name].relation_broken, self._on_relation_broken
-        )
 
     @property
     def relation(self) -> Relation | None:
@@ -471,14 +449,6 @@ class SpoeAuthRequirer(Object):
             The list of relations.
         """
         return list(self.charm.model.relations[self.relation_name])
-
-    def _configure(self, _: EventBase) -> None:
-        """Handle relation changed events."""
-        self.on.available.emit()
-
-    def _on_relation_broken(self, _: RelationBrokenEvent) -> None:
-        """Handle relation broken events."""
-        self.on.removed.emit()
 
     def is_available(self) -> bool:
         """Check if the SPOE auth configuration is available and valid.

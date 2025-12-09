@@ -193,8 +193,9 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(
             self.on.get_proxied_endpoints_action, self._on_get_proxied_endpoints_action
         )
-        self.framework.observe(self.spoe_auth_requirer.on.available, self._on_config_changed)
-        self.framework.observe(self.spoe_auth_requirer.on.removed, self._on_config_changed)
+        self.framework.observe(
+            self.on[SPOE_AUTH_RELATION].relation_changed, self._on_config_changed
+        )
 
     @validate_config_and_tls(defer=False)
     def _on_install(self, _: typing.Any) -> None:

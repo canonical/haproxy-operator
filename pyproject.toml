@@ -37,3 +37,5 @@ integration = [
 [tool.uv]
 package = false
 
+[tool.codespell]
+skip = "haproxy-operator"

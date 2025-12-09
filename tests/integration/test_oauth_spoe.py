@@ -39,17 +39,14 @@ def test_oauth_spoe(
     The two protected ones should require OIDC authentication.
     The unprotected one can be accessed directly.
     """
-    HostConfig = namedtuple(
-        "HostConfig",
-        [
-            "hostname",
-            "requirer",
-            "spoe"
-        ]
-    )
+    HostConfig = namedtuple("HostConfig", ["hostname", "requirer", "spoe"])
     host_configs = [
-        HostConfig("haproxy1.internal", "haproxy-route-requirer1", "haproxy-spoe-auth1"),
-        HostConfig("haproxy2.internal", "haproxy-route-requirer2", "haproxy-spoe-auth2"),
+        HostConfig(
+            "haproxy1.internal", "haproxy-route-requirer1", "haproxy-spoe-auth1"
+        ),
+        HostConfig(
+            "haproxy2.internal", "haproxy-route-requirer2", "haproxy-spoe-auth2"
+        ),
         # Unprotected hostname
         HostConfig("haproxy3.internal", "haproxy-route-requirer3", None),
     ]
@@ -95,11 +92,16 @@ def test_oauth_spoe(
     for host_config in host_configs:
         if host_config.spoe:
             logger.info("Testing protected %s", host_config.hostname)
-            _assert_idp_login_success(haproxy_unit_ip, host_config.hostname, test_email, test_password)
+            _assert_idp_login_success(
+                haproxy_unit_ip, host_config.hostname, test_email, test_password
+            )
         else:
             logger.info("Testing unprotected %s", host_config.hostname)
             response = requests.get(
-                f"https://{haproxy_unit_ip}", headers={"Host": host_config.hostname}, timeout=5, verify=False
+                f"https://{haproxy_unit_ip}",
+                headers={"Host": host_config.hostname},
+                timeout=5,
+                verify=False,
             )
             assert "ok!" in response.text
             assert host_config.hostname in response.text
