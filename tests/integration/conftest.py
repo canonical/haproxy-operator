@@ -107,7 +107,7 @@ def k8s_juju_fixture(request: pytest.FixtureRequest, lxd_juju):
 
 
 @pytest.fixture(scope="module", name="application")
-def application_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju):
+def application_fixture(pytestconfig: pytest.Config, lxd_juju: jubilant.Juju):
     """Deploy the haproxy application.
 
     Args:
@@ -117,6 +117,7 @@ def application_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju):
     Returns:
         The haproxy app name.
     """
+    juju = lxd_juju
     app_name = "haproxy"
     if pytestconfig.getoption("--no-deploy") and app_name in juju.status().apps:
         return app_name
@@ -138,9 +139,10 @@ def configured_application_with_tls_base_fixture(
     pytestconfig: pytest.Config,
     application: str,
     certificate_provider_application: str,
-    juju: jubilant.Juju,
+    lxd_juju: jubilant.Juju,
 ):
     """The haproxy charm configured and integrated with TLS provider."""
+    juju = lxd_juju
     if pytestconfig.getoption("--no-deploy") and "haproxy" in juju.status().apps:
         return application
     juju.config(application, {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
@@ -154,7 +156,6 @@ def configured_application_with_tls_base_fixture(
 def configured_application_with_tls_fixture(
     configured_application_with_tls_base: str,
     certificate_provider_application: str,
-    juju: jubilant.Juju,
 ):
     """Provide haproxy with TLS and clean up test-specific relations after each test.
 
@@ -168,9 +169,10 @@ def configured_application_with_tls_fixture(
 @pytest.fixture(scope="module", name="certificate_provider_application")
 def certificate_provider_application_fixture(
     pytestconfig: pytest.Config,
-    juju: jubilant.Juju,
+    lxd_juju: jubilant.Juju,
 ):
     """Deploy self-signed-certificates."""
+    juju = lxd_juju
     if (
         pytestconfig.getoption("--no-deploy")
         and SELF_SIGNED_CERTIFICATES_APP_NAME in juju.status().apps
@@ -241,13 +243,15 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
 def any_charm_haproxy_route_deployer_fixture(
         lxd_juju: jubilant.Juju,
 ):
+    juju = lxd_juju
     def deployer(app_name):
         return deploy_any_charm_haproxy_route_requirer(juju, app_name)
 
     yield deployer
 
 
-def deploy_any_charm_haproxy_route_requirer(juju: jubilant.Juju, app_name):
+def deploy_any_charm_haproxy_route_requirer(lxd_juju: jubilant.Juju, app_name):
+    juju = lxd_juju
     src_overwrite = json.dumps(
         {
             "any_charm.py": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(encoding="utf-8"),
@@ -273,11 +277,12 @@ def deploy_any_charm_haproxy_route_requirer(juju: jubilant.Juju, app_name):
 @pytest.fixture(scope="module", name="haproxy_spoe_auth_deployer")
 def haproxy_spoe_deployer_fixture(
         pytestconfig: pytest.Config,
-        juju: jubilant.Juju,
+        lxd_juju: jubilant.Juju,
         application,
         k8s_juju,
         iam_bundle
 ):
+    juju = lxd_juju
     def deployer(haproxy_spoe_name, hostname):
         haproxy_spoe_name = deploy_spoe_auth(pytestconfig, juju, haproxy_spoe_name, hostname)
         k8s_juju.wait(lambda status: status.apps["self-signed-certificates"].is_active, timeout=5 * 60)
@@ -296,7 +301,8 @@ def haproxy_spoe_deployer_fixture(
     yield deployer
 
 
-def deploy_spoe_auth(pytestconfig: pytest.Config, juju: jubilant, app_name, host_name):
+def deploy_spoe_auth(pytestconfig: pytest.Config, lxd_juju: jubilant.Juju, app_name, host_name):
+    juju = lxd_juju
     charm_name = "haproxy-spoe-auth"
     if pytestconfig.getoption("--no-deploy") and app_name in juju.status().apps:
         return app_name
@@ -315,7 +321,8 @@ def deploy_spoe_auth(pytestconfig: pytest.Config, juju: jubilant, app_name, host
     )
     return app_name
 
-def inject_ca_certificate(juju, unit_name, ca_cert: str):
+def inject_ca_certificate(lxd_juju, unit_name, ca_cert: str):
+    juju = lxd_juju
     with tempfile.NamedTemporaryFile(dir=".") as tf:
         tf.write(ca_cert)
         tf.flush()

@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import scenario
+from charms.haproxy.v0.spoe_auth import SpoeAuthProviderAppData, SpoeAuthProviderUnitData
 from charms.haproxy.v1.haproxy_route import RequirerApplicationData, RequirerUnitData
 from charms.tls_certificates_interface.v4.tls_certificates import (
     Certificate,
@@ -338,18 +339,55 @@ def base_state_haproxy_route_fixture(
         "relations": [
             peer_relation,
             certificates_integration,
-            scenario.Relation(
-                endpoint="haproxy-route",
-                remote_app_name="requirer",
-                remote_app_data=haproxy_route_requirer_application_data_with_hosts,
-                remote_units_data={0: RequirerUnitData(address=IPv4Address("10.0.0.1")).dump()},
-            ),
+            build_haproxy_route_relation(),
         ],
         "config": {
             "external-hostname": "haproxy.internal",
         },
     }
     return input_state
+
+
+def build_haproxy_route_relation(
+    service="ingress-configurator", hostname=TEST_EXTERNAL_HOSTNAME_CONFIG
+):
+    return scenario.Relation(
+        endpoint="haproxy-route",
+        interface="haproxy-route",
+        local_app_data={"endpoints": f'["https://{hostname}/"]'},
+        local_unit_data={},
+        remote_app_name="ingress-configurator",
+        limit=1,
+        remote_app_data=RequirerApplicationData(
+            service=service,
+            ports=[8080, 8443],
+            hosts=["10.0.0.1", "10.0.0.2"],
+            hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
+        ).dump(),
+        remote_units_data={0: RequirerUnitData(address=IPv4Address("10.0.0.1")).dump()},
+    )
+
+
+def build_spoe_auth_relation(hostname=TEST_EXTERNAL_HOSTNAME_CONFIG):
+    return scenario.Relation(
+        endpoint="spoe-auth",
+        interface="spoe-auth",
+        remote_app_name="haproxy-spoe-auth",
+        remote_app_data=SpoeAuthProviderAppData(
+            cookie_name="authsession",
+            event="on-frontend-http-request",
+            hostname=hostname,
+            message_name="try-auth-oidc",
+            oidc_callback_path="/oauth2/callback",
+            oidc_callback_port=5000,
+            spop_port=8081,
+            var_authenticated_scope="sess",
+            var_authenticated="is_authenticated",
+            var_redirect_url_scope="sess",
+            var_redirect_url="redirect_url",
+        ).dump(),
+        remote_units_data={1: SpoeAuthProviderUnitData(address=IPv4Address("10.0.0.1")).dump()},
+    )
 
 
 @pytest.fixture(name="base_state_with_ingress_per_unit")

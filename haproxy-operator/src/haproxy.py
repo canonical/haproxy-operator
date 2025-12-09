@@ -212,7 +212,13 @@ class HAProxyService:
         self._render_config_file(template_file_path, context, HAPROXY_CONFIG)
 
     def _render_config_file(self, template_file_path: str, context: dict, path: Path) -> None:
-        """TODO."""
+        """Render configuration file based on a template.
+
+        Args:
+            template_file_path: Path of the template to load.
+            context: Context needed to render the template.
+            path: Path of the file to render.
+        """
         env = Environment(
             loader=FileSystemLoader("templates"),
             autoescape=select_autoescape(),

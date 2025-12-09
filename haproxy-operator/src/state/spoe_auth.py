@@ -20,20 +20,34 @@ logger = logging.getLogger(__name__)
 
 
 class SpoeAuthValidationError(CharmStateValidationBaseError):
-    """TODO."""
+    """Exception raised when there is an error validating spoe relations."""
 
 
 class SpoeAuthInformation(SpoeAuthProviderAppData):
-    """JAVI."""
+    """Component containing information about a spoe-auth relation.
 
-    # TODO for now, this is coupled to the relation pydantic models.
+    Attrs:
+      id: Unique identifier for the spoe-auth relation.
+      unit_addresses: List of IP addresses of the spoe agents.
+    """
+
     id: int
     unit_addresses: list[IPvAnyAddress]
 
     @classmethod
     def from_requirer(cls, spoe_auth_requirer: SpoeAuthRequirer) -> list[Self]:
-        """JAVI."""
-        # JAVI. Returning optionally None is probably not so nice. Review this.
+        """Get list of spoe-auth information from the SpoeAuthRequirer.
+
+        Args:
+          charm: The haproxy charm.
+          spoe_auth_requirer: SpoeAuthRequirer for the endpoint.
+
+        Raises:
+            SpoeAuthValidationError: When there is an error validating a spoe relation.
+
+        Returns:
+            List of SpoeAuthInformation
+        """
         response = []
 
         for relation in spoe_auth_requirer.relations:
@@ -42,9 +56,6 @@ class SpoeAuthInformation(SpoeAuthProviderAppData):
             except (DataValidationError, SpoeAuthInvalidRelationDataError) as ex:
                 raise SpoeAuthValidationError from ex
 
-            if not app_data:
-                continue
-
             try:
                 requirer_units_data = spoe_auth_requirer.get_provider_unit_data(relation)
             except DataValidationError as ex:
@@ -52,7 +63,7 @@ class SpoeAuthInformation(SpoeAuthProviderAppData):
 
             unit_addresses = [unit_data.address for unit_data in requirer_units_data]
             spoe_auth_information = cls(
-                **app_data.dict(),
+                **app_data.model_dump(),
                 unit_addresses=unit_addresses,
                 id=relation.id,
             )

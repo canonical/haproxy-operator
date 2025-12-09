@@ -16,7 +16,7 @@ frontend haproxy
     filter spoe engine spoe-auth-{{ spoe_auth_info.id }} config /etc/haproxy/spoe_auth.conf
 
     acl authenticated_{{ spoe_auth_info.id }} var({{ spoe_auth_info.var_authenticated_scope }}.auth_{{ spoe_auth_info.id }}.{{ spoe_auth_info.var_authenticated }}) -m bool
-    use_backend backend_redirect_{{ spoe_auth_info.id }} if oidc_host_{{ spoe_auth_info.id }} !authenticated_{{ spoe_auth_info.id }} 
+    use_backend backend_redirect_{{ spoe_auth_info.id }} if oidc_host_{{ spoe_auth_info.id }} !authenticated_{{ spoe_auth_info.id }}
 {% endfor %}
 {% endif %}
 
@@ -35,8 +35,8 @@ frontend haproxy
 
 peers haproxy_peers
 {% for address in peer_units_address %}
-{% endfor %}
     peer {{ address }}
+{% endfor %}
 {% for entry in stick_table_entries %}
     table {{ entry }} type ip size 100k expire 2m store http_req_rate(1m)
 {% endfor %}

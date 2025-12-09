@@ -1,11 +1,10 @@
 multipass launch --cpus 12 --disk 80G --memory 12G --name haproxyoauth 24.04
-multipass shell haproxyoaut
+multipass shell haproxyoauth
 sudo snap install astral-uv --classic
 uv tool install tox --with tox-uv # use uv to install
 sudo poweroff
-multipass mount --type native /home/javier.delapuente@canonical.com/github haproxyoauth:/home/ubuntu/github
+multipass mount --type native /home/jpuente/github haproxyoauth:/home/ubuntu/github
 multipass shell haproxyoauth
-
 
 sudo snap install astral-uv --classic
 uv tool install tox --with tox-uv # use uv to install
@@ -18,9 +17,6 @@ sudo k8s set load-balancer.l2-mode=true
 sudo k8s set load-balancer.cidrs=10.168.161.120/28
 sudo k8s set load-balancer.enabled=true
 
-
-
-
 sudo snap install juju
 
 mkdir -p ~/.local/share/juju
@@ -29,7 +25,6 @@ juju bootstrap ck8s  # This should not necessary, just to be similar to the pipe
 
 sudo snap install jhack
 sudo snap connect jhack:dot-local-share-juju snapd
-
 
 lxd init --auto
 lxc network set lxdbr0 ipv6.address none

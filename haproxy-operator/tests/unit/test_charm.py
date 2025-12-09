@@ -5,8 +5,11 @@
 
 import json
 import logging
-from unittest.mock import MagicMock
+import pathlib
+import re
+from unittest.mock import ANY, MagicMock
 
+import ops
 import ops.testing
 import pytest
 import scenario
@@ -14,6 +17,9 @@ import scenario
 import tls_relation
 from charm import HAProxyCharm
 from tests.unit.conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
+
+from .conftest import build_haproxy_route_relation, build_spoe_auth_relation
+from .helper import RegexMatcher
 
 logger = logging.getLogger(__name__)
 
@@ -319,9 +325,9 @@ class TestGetProxiedEndpointsAction:
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
 def test_spoe_auth(monkeypatch: pytest.MonkeyPatch, certificates_integration):
     """
-    arrange: TODO.
-    act: TODO.
-    assert: TODO.
+    arrange: Prepare a haproxy with haproxy_route and spoe.
+    act: trigger relation changed.
+    assert: The haproxy.conf and spoe_auth.conf files are writtern with the relevant lines.
     """
     monkeypatch.setattr(
         "charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.private_key",
@@ -330,41 +336,8 @@ def test_spoe_auth(monkeypatch: pytest.MonkeyPatch, certificates_integration):
     render_file_mock = MagicMock()
     monkeypatch.setattr("haproxy.render_file", render_file_mock)
 
-    spoe_auth_relation = scenario.Relation(
-        endpoint="spoe-auth",
-        interface="spoe-auth",
-        remote_app_name="haproxy-spoe-auth",
-        remote_app_data={
-            "cookie_name": '"authsession"',
-            "event": '"on-frontend-http-request"',
-            "hostname": f'"{TEST_EXTERNAL_HOSTNAME_CONFIG}"',
-            "message_name": '"try-auth-oidc"',
-            "oidc_callback_path": '"/oauth2/callback"',
-            "oidc_callback_port": "5000",
-            "spop_port": "8081",
-            "var_authenticated_scope": '"sess"',
-            "var_authenticated": '"is_authenticated"',
-            "var_redirect_url_scope": '"sess"',
-            "var_redirect_url": '"redirect_url"',
-        },
-        remote_units_data={1: {"address": '"10.60.21.97"'}},
-    )
-
-    haproxy_route_relation = scenario.Relation(
-        endpoint="haproxy-route",
-        interface="haproxy-route",
-        local_app_data={"endpoints": f'["https://{TEST_EXTERNAL_HOSTNAME_CONFIG}/"]'},
-        local_unit_data={},
-        remote_app_name="ingress-configurator",
-        limit=1,
-        remote_app_data={
-            "hostname": f'"{TEST_EXTERNAL_HOSTNAME_CONFIG}"',
-            "hosts": '["10.168.161.223"]',
-            "ports": "[8080]",
-            "service": '"haproxy-tutorial-ingress-configurator"',
-        },
-        remote_units_data={0: {"address": '"10.60.21.21"'}},
-    )
+    spoe_auth_relation = build_spoe_auth_relation()
+    haproxy_route_relation = build_haproxy_route_relation()
 
     ctx = ops.testing.Context(HAProxyCharm)
     state = ops.testing.State(
@@ -378,37 +351,26 @@ def test_spoe_auth(monkeypatch: pytest.MonkeyPatch, certificates_integration):
     # It should write the files:
     # - /etc/haproxy/spoe_auth.conf
     # - /etc/haproxy/haproxy.cfg
-    try:
-        spoe_auth_call = next(
-            filter(
-                lambda call: str(call.args[0]) == "/etc/haproxy/spoe_auth.conf",
-                render_file_mock.call_args_list,
-            )
-        )
-    except StopIteration:
-        assert False, "Missing file spoe_auth.conf"
-    spoe_auth_file = spoe_auth_call.args[1]
-    assert "event on-frontend-http-request" in spoe_auth_file
-    try:
-        haproxy_call = next(
-            filter(
-                lambda call: str(call.args[0]) == "/etc/haproxy/haproxy.cfg",
-                render_file_mock.call_args_list,
-            )
-        )
-    except StopIteration:
-        assert False, "Missing file haproxy.cfg"
-    haproxy_org_file = haproxy_call.args[1]
-    assert "filter spoe engine spoe-auth" in haproxy_org_file
+    # Test a random line related to spoe-auth in each file.
+    render_file_mock.assert_any_call(
+        pathlib.Path("/etc/haproxy/spoe_auth.conf"),
+        RegexMatcher("event on-frontend-http-request"),
+        ANY,
+    )
+    render_file_mock.assert_any_call(
+        pathlib.Path("/etc/haproxy/haproxy.cfg"),
+        RegexMatcher("filter spoe engine spoe-auth"),
+        ANY,
+    )
     assert out.unit_status == ops.testing.ActiveStatus("")
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
 def test_two_spoe_auth(monkeypatch: pytest.MonkeyPatch, certificates_integration):
     """
-    arrange: TODO.
-    act: TODO.
-    assert: TODO.
+    arrange: are a haproxy with two haproxy_route and two spoe.
+    act: trigger relation changed.
+    assert: The haproxy.conf and spoe_auth.conf files are writtern with the relevant lines.
     """
     monkeypatch.setattr(
         "charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.private_key",
@@ -417,76 +379,13 @@ def test_two_spoe_auth(monkeypatch: pytest.MonkeyPatch, certificates_integration
     render_file_mock = MagicMock()
     monkeypatch.setattr("haproxy.render_file", render_file_mock)
 
-    spoe_auth_relation_1 = scenario.Relation(
-        endpoint="spoe-auth",
-        interface="spoe-auth",
-        remote_app_name="haproxy-spoe-auth1",
-        remote_app_data={
-            "cookie_name": '"authsession"',
-            "event": '"on-frontend-http-request"',
-            "hostname": f'"{TEST_EXTERNAL_HOSTNAME_CONFIG}1"',
-            "message_name": '"try-auth-oidc"',
-            "oidc_callback_path": '"/oauth2/callback"',
-            "oidc_callback_port": "5000",
-            "spop_port": "8081",
-            "var_authenticated_scope": '"sess"',
-            "var_authenticated": '"is_authenticated"',
-            "var_redirect_url_scope": '"sess"',
-            "var_redirect_url": '"redirect_url"',
-        },
-        remote_units_data={1: {"address": '"10.60.21.91"'}},
+    spoe_auth_relation_1 = build_spoe_auth_relation(hostname="haproxy1.internal")
+    haproxy_route_relation_1 = build_haproxy_route_relation(
+        hostname="haproxy1.internal", service="service1"
     )
-
-    spoe_auth_relation_2 = scenario.Relation(
-        endpoint="spoe-auth",
-        interface="spoe-auth",
-        remote_app_name="haproxy-spoe-auth2",
-        remote_app_data={
-            "cookie_name": '"authsession"',
-            "event": '"on-frontend-http-request"',
-            "hostname": f'"{TEST_EXTERNAL_HOSTNAME_CONFIG}2"',
-            "message_name": '"try-auth-oidc"',
-            "oidc_callback_path": '"/oauth2/callback"',
-            "oidc_callback_port": "5000",
-            "spop_port": "8081",
-            "var_authenticated_scope": '"sess"',
-            "var_authenticated": '"is_authenticated"',
-            "var_redirect_url_scope": '"sess"',
-            "var_redirect_url": '"redirect_url"',
-        },
-        remote_units_data={1: {"address": '"10.60.21.92"'}},
-    )
-
-    haproxy_route_relation_1 = scenario.Relation(
-        endpoint="haproxy-route",
-        interface="haproxy-route",
-        local_app_data={"endpoints": f'["https://{TEST_EXTERNAL_HOSTNAME_CONFIG}1/"]'},
-        local_unit_data={},
-        remote_app_name="ingress-configurator",
-        limit=1,
-        remote_app_data={
-            "hostname": f'"{TEST_EXTERNAL_HOSTNAME_CONFIG}1"',
-            "hosts": '["10.168.161.221"]',
-            "ports": "[8080]",
-            "service": '"haproxy-tutorial-ingress-configurator1"',
-        },
-        remote_units_data={0: {"address": '"10.60.21.21"'}},
-    )
-
-    haproxy_route_relation_2 = scenario.Relation(
-        endpoint="haproxy-route",
-        interface="haproxy-route",
-        local_app_data={"endpoints": f'["https://{TEST_EXTERNAL_HOSTNAME_CONFIG}2/"]'},
-        local_unit_data={},
-        remote_app_name="ingress-configurator",
-        limit=1,
-        remote_app_data={
-            "hostname": f'"{TEST_EXTERNAL_HOSTNAME_CONFIG}2"',
-            "hosts": '["10.168.161.222"]',
-            "ports": "[8080]",
-            "service": '"haproxy-tutorial-ingress-configurator2"',
-        },
-        remote_units_data={0: {"address": '"10.60.21.22"'}},
+    spoe_auth_relation_2 = build_spoe_auth_relation(hostname="haproxy2.internal")
+    haproxy_route_relation_2 = build_haproxy_route_relation(
+        hostname="haproxy2.internal", service="service2"
     )
 
     ctx = ops.testing.Context(HAProxyCharm)
@@ -507,27 +406,19 @@ def test_two_spoe_auth(monkeypatch: pytest.MonkeyPatch, certificates_integration
     # It should write the files:
     # - /etc/haproxy/spoe_auth.conf
     # - /etc/haproxy/haproxy.cfg
-    try:
-        spoe_auth_call = next(
-            filter(
-                lambda call: str(call.args[0]) == "/etc/haproxy/spoe_auth.conf",
-                render_file_mock.call_args_list,
-            )
+    # assert some required information in the files for each relation.
+    spoe_rel_ids = {rel.id for rel in out.relations if rel.endpoint == "spoe-auth"}
+    for rel in spoe_rel_ids:
+        render_file_mock.assert_any_call(
+            pathlib.Path("/etc/haproxy/spoe_auth.conf"),
+            RegexMatcher(re.escape(f"[spoe-auth-{rel}]")),
+            ANY,
         )
-    except StopIteration:
-        assert False, "Missing file spoe_auth.conf"
-    spoe_auth_file = spoe_auth_call.args[1]
-    assert "event on-frontend-http-request" in spoe_auth_file
-    try:
-        haproxy_call = next(
-            filter(
-                lambda call: str(call.args[0]) == "/etc/haproxy/haproxy.cfg",
-                render_file_mock.call_args_list,
-            )
+        render_file_mock.assert_any_call(
+            pathlib.Path("/etc/haproxy/haproxy.cfg"),
+            RegexMatcher(
+                re.escape(f"filter spoe engine spoe-auth-{rel} config /etc/haproxy/spoe_auth.conf")
+            ),
+            ANY,
         )
-    except StopIteration:
-        assert False, "Missing file haproxy.cfg"
-    haproxy_org_file = haproxy_call.args[1]
-    logger.info(haproxy_org_file)
-    assert "filter spoe engine spoe-auth" in haproxy_org_file
     assert out.unit_status == ops.testing.ActiveStatus("")
