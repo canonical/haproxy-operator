@@ -14,7 +14,7 @@ import pytest
 import requests
 from playwright.sync_api import expect, sync_playwright
 
-from .helper import get_unit_ip_address, patch_etc_hosts
+from .helper import get_unit_ip_address
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,6 @@ def test_oauth_spoe(
     haproxy_spoe_auth_deployer,
     browser_context_manager,
 ):
-    juju = lxd_juju
     host_protected_1 = "haproxy1.internal"
     host_protected_2 = "haproxy2.internal"
     host_not_protected = "haproxy3.internal"
@@ -41,10 +40,10 @@ def test_oauth_spoe(
     haproxy_spoe_auth_1 = haproxy_spoe_auth_deployer(
         "haproxy-spoe-auth1", host_protected_1
     )
-    juju.integrate(
+    lxd_juju.integrate(
         f"{configured_application_with_tls}:haproxy-route", haproxy_route_requirer_1
     )
-    juju.run(
+    lxd_juju.run(
         f"{haproxy_route_requirer_1}/0",
         "rpc",
         {
@@ -67,14 +66,14 @@ def test_oauth_spoe(
     haproxy_spoe_auth_2 = haproxy_spoe_auth_deployer(
         "haproxy-spoe-auth2", host_protected_2
     )
-    juju.integrate(
+    lxd_juju.integrate(
         f"{configured_application_with_tls}:haproxy-route", haproxy_route_requirer_2
     )
-    juju.wait(
+    lxd_juju.wait(
         lambda status: not status.apps[haproxy_route_requirer_2].is_waiting,
         timeout=5 * 60,
     )
-    juju.run(
+    lxd_juju.run(
         f"{haproxy_route_requirer_2}/0",
         "rpc",
         {
@@ -93,14 +92,14 @@ def test_oauth_spoe(
     haproxy_route_requirer_3 = any_charm_haproxy_route_deployer(
         "haproxy-route-requirer3"
     )
-    juju.integrate(
+    lxd_juju.integrate(
         f"{configured_application_with_tls}:haproxy-route", haproxy_route_requirer_3
     )
-    juju.wait(
+    lxd_juju.wait(
         lambda status: not status.apps[haproxy_route_requirer_3].is_waiting,
         timeout=5 * 60,
     )
-    juju.run(
+    lxd_juju.run(
         f"{haproxy_route_requirer_3}/0",
         "rpc",
         {
@@ -117,7 +116,7 @@ def test_oauth_spoe(
         },
     )
 
-    juju.wait(
+    lxd_juju.wait(
         lambda status: jubilant.all_active(
             status,
             configured_application_with_tls,
@@ -132,25 +131,26 @@ def test_oauth_spoe(
     test_email, test_password = create_idp_user(k8s_juju)
     logger.info("test_email:%s test_password:%s", test_email, test_password)
 
-    haproxy_unit_ip = get_unit_ip_address(juju, "haproxy")
+    haproxy_unit_ip = get_unit_ip_address(lxd_juju, "haproxy")
 
-    with patch_etc_hosts(haproxy_unit_ip, host_not_protected):
-        response = requests.get(
-            f"https://{host_not_protected}", timeout=5, verify=False
-        )
-        assert "ok!" in response.text
-        assert host_not_protected in response.text
-    with patch_etc_hosts(haproxy_unit_ip, host_protected_1):
-        _assert_idp_login_success(host_protected_1, test_email, test_password)
+    response = requests.get(
+        f"https://{haproxy_unit_ip}", headers={"Host": host_not_protected}, timeout=5, verify=False
+    )
+    assert "ok!" in response.text
+    assert host_not_protected in response.text
+
+    _assert_idp_login_success(haproxy_unit_ip, host_protected_1, test_email, test_password)
     # This opens a new browser, so sessions are not reused. We could
     # instead try to reuse.
-    with patch_etc_hosts(haproxy_unit_ip, host_protected_2):
-        _assert_idp_login_success(host_protected_2, test_email, test_password)
+    _assert_idp_login_success(haproxy_unit_ip, host_protected_2, test_email, test_password)
 
 
-def _assert_idp_login_success(hostname, test_email, test_password):
+def _assert_idp_login_success(haproxy_unit_ip, hostname, test_email, test_password):
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(
+            headless=True,
+            args=[f"--host-resolver-rules=MAP {hostname} {haproxy_unit_ip}"],
+        )
         context = browser.new_context(ignore_https_errors=True)
         page = context.new_page()
         page.goto(f"https://{hostname}")

@@ -54,12 +54,16 @@ class SpoeAuthInformation(SpoeAuthProviderAppData):
             try:
                 app_data = spoe_auth_requirer.get_provider_application_data(relation)
             except (DataValidationError, SpoeAuthInvalidRelationDataError) as ex:
-                raise SpoeAuthValidationError from ex
+                raise SpoeAuthValidationError(
+                    f"spoe validation error for {relation.app.name}"
+                ) from ex
 
             try:
                 requirer_units_data = spoe_auth_requirer.get_provider_unit_data(relation)
             except DataValidationError as ex:
-                raise SpoeAuthValidationError from ex
+                raise SpoeAuthValidationError(
+                    f"Spoe validation error for {relation.app.name}"
+                ) from ex
 
             unit_addresses = [unit_data.address for unit_data in requirer_units_data]
             spoe_auth_information = cls(

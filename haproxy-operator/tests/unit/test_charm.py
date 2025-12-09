@@ -451,4 +451,5 @@ def test_spoe_auth_invalid_data(monkeypatch: pytest.MonkeyPatch, certificates_in
         state,
     )
     assert render_file_mock.call_count == 0
-    assert out.unit_status == ops.testing.BlockedStatus("")
+    assert out.unit_status.name == ops.testing.BlockedStatus.name
+    assert spoe_auth_relation.remote_app_name in out.unit_status.message
