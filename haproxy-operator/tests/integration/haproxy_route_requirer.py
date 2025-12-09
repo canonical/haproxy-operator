@@ -145,7 +145,9 @@ class AnyCharm(AnyCharmBase):
           CalledProcessError: Error running the command.
         """
         try:
-            subprocess.run(cmd, capture_output=True, check=True)  # nosec: B603
+            # Safe because command is constructed as a list,
+            # not using shell=True, and contains no user input
+            subprocess.run(cmd, capture_output=True, check=True)  # nosec: subprocess_without_shell
         except CalledProcessError as e:
             logging.error(
                 "%s:\nstdout:\n%s\nstderr:\n%s",
@@ -196,7 +198,9 @@ class AnyCharm(AnyCharmBase):
         if use_tls:
             cmd.extend(["--tls", "--cert", str(SSL_CERT_FILE), "--key", str(SSL_PRIVATE_KEY_FILE)])
 
-        subprocess.Popen(  # nosec: B603
+        # Safe because command is constructed as a list,
+        # not using shell=True, and contains no user input
+        subprocess.Popen(  # nosec: subprocess_without_shell
             cmd,
             cwd=str(src_dir),
             env={
