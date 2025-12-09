@@ -30,4 +30,6 @@ header:
     - '**/lib/**'
     - '**/uv.lock'
     - '**/templates/**'
+    - '**/*_pb2_grpc.py'
+    - '**/*_pb2.py'
   comment: on-failure
