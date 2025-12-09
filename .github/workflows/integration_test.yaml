@@ -56,8 +56,8 @@ jobs:
       use-canonical-k8s: true
       provider: 'k8s'
       channel: '1.32-classic/stable'
-      self-hosted-runner: true
-      self-hosted-runner-image: "noble"
+      # self-hosted-runner: true
+      # self-hosted-runner-image: "noble"
       juju-channel: 3/stable
       modules: |
         [
