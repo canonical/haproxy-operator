@@ -14,7 +14,6 @@ jobs:
       provider: lxd
       juju-channel: 3/stable
       self-hosted-runner: true
-      charmcraft-channel: latest/edge
       working-directory: ./haproxy-operator
       modules: |
         [
@@ -44,20 +43,18 @@ jobs:
       juju-channel: '3/stable'
       provider: lxd
       self-hosted-runner: true
-      charmcraft-channel: latest/edge
       working-directory: ./haproxy-spoe-auth-operator
       with-uv: True
       modules: '["test_charm.py",]'
   integration-tests-global:
     uses:
-      canonical/operator-workflows/.github/workflows/integration_test.yaml@set-10g-as-bootstrap-constraints
+      canonical/operator-workflows/.github/workflows/integration_test.yaml@main
     secrets: inherit
     with:
       use-canonical-k8s: true
       provider: 'k8s'
       channel: '1.32-classic/stable'
-      # self-hosted-runner: true
-      # self-hosted-runner-image: "noble"
+      self-hosted-runner: true
       juju-channel: 3/stable
       modules: |
         [
