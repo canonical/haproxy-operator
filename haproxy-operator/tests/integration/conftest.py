@@ -169,8 +169,7 @@ def configured_application_with_tls_fixture(
             )
     # Ensure the removal is complete otherwise reintegration in next test may fail
     juju.wait(
-        lambda status: (jubilant.all_active(status)),
-        timeout=JUJU_WAIT_TIMEOUT,
+        lambda status: (jubilant.all_agents_idle(status)),
     )
 
 
@@ -302,6 +301,10 @@ def any_charm_haproxy_route_requirer_fixture(
             if relation.related_app == app_name:
                 continue
             juju.remove_relation(f"{app_name}:{endpoint}", relation.related_app)
+
+    juju.wait(
+        lambda status: (jubilant.all_agents_idle(status)),
+    )
 
 
 @pytest.fixture(scope="function", name="any_charm_haproxy_route_tcp_requirer")
