@@ -12,13 +12,14 @@ from typing import Any
 sys.path.insert(0, sys.path[-1])
 
 import pathlib
+
 import apt
 import ops
 from any_charm_base import AnyCharmBase
 from haproxy_route import HaproxyRouteRequirer
 
-
 HAPROXY_ROUTE_RELATION = "require-haproxy-route"
+
 
 class AnyCharm(AnyCharmBase):
     """haproxy-route requirer charm."""
@@ -44,5 +45,5 @@ class AnyCharm(AnyCharmBase):
         Args:
           haproxy_route_params: arguments to pass relation.
         """
-        self.start_server(haproxy_route_params.get('hostname'))
+        self.start_server(haproxy_route_params.get("hostname"))
         self._haproxy_route.provide_haproxy_route_requirements(**haproxy_route_params)

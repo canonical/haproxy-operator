@@ -2,15 +2,16 @@
 # See LICENSE file for licensing details.
 
 """Integration tests for haproxy spoe auth."""
+
 import json
 import logging
 import re
 import secrets
 import string
 
-import requests
 import jubilant
 import pytest
+import requests
 from playwright.sync_api import expect, sync_playwright
 
 from .helper import get_unit_ip_address, patch_etc_hosts
@@ -34,8 +35,12 @@ def test_oauth_spoe(
     host_protected_1 = "haproxy1.internal"
     host_protected_2 = "haproxy2.internal"
     host_not_protected = "haproxy3.internal"
-    haproxy_route_requirer_1 = any_charm_haproxy_route_deployer("haproxy-route-requirer1")
-    haproxy_spoe_auth_1 = haproxy_spoe_auth_deployer("haproxy-spoe-auth1", host_protected_1)
+    haproxy_route_requirer_1 = any_charm_haproxy_route_deployer(
+        "haproxy-route-requirer1"
+    )
+    haproxy_spoe_auth_1 = haproxy_spoe_auth_deployer(
+        "haproxy-spoe-auth1", host_protected_1
+    )
     juju.integrate(
         f"{configured_application_with_tls}:haproxy-route", haproxy_route_requirer_1
     )
@@ -56,12 +61,19 @@ def test_oauth_spoe(
         },
     )
 
-    haproxy_route_requirer_2 = any_charm_haproxy_route_deployer("haproxy-route-requirer2")
-    haproxy_spoe_auth_2 = haproxy_spoe_auth_deployer("haproxy-spoe-auth2", host_protected_2)
+    haproxy_route_requirer_2 = any_charm_haproxy_route_deployer(
+        "haproxy-route-requirer2"
+    )
+    haproxy_spoe_auth_2 = haproxy_spoe_auth_deployer(
+        "haproxy-spoe-auth2", host_protected_2
+    )
     juju.integrate(
         f"{configured_application_with_tls}:haproxy-route", haproxy_route_requirer_2
     )
-    juju.wait(lambda status: not status.apps[haproxy_route_requirer_2].is_waiting, timeout=5 * 60)
+    juju.wait(
+        lambda status: not status.apps[haproxy_route_requirer_2].is_waiting,
+        timeout=5 * 60,
+    )
     juju.run(
         f"{haproxy_route_requirer_2}/0",
         "rpc",
@@ -78,11 +90,16 @@ def test_oauth_spoe(
             ),
         },
     )
-    haproxy_route_requirer_3 = any_charm_haproxy_route_deployer("haproxy-route-requirer3")
+    haproxy_route_requirer_3 = any_charm_haproxy_route_deployer(
+        "haproxy-route-requirer3"
+    )
     juju.integrate(
         f"{configured_application_with_tls}:haproxy-route", haproxy_route_requirer_3
     )
-    juju.wait(lambda status: not status.apps[haproxy_route_requirer_3].is_waiting, timeout=5 * 60)
+    juju.wait(
+        lambda status: not status.apps[haproxy_route_requirer_3].is_waiting,
+        timeout=5 * 60,
+    )
     juju.run(
         f"{haproxy_route_requirer_3}/0",
         "rpc",
@@ -99,7 +116,7 @@ def test_oauth_spoe(
             ),
         },
     )
-    
+
     juju.wait(
         lambda status: jubilant.all_active(
             status,
@@ -118,7 +135,9 @@ def test_oauth_spoe(
     haproxy_unit_ip = get_unit_ip_address(juju, "haproxy")
 
     with patch_etc_hosts(haproxy_unit_ip, host_not_protected):
-        response = requests.get(f"https://{host_not_protected}", timeout=5, verify=False)
+        response = requests.get(
+            f"https://{host_not_protected}", timeout=5, verify=False
+        )
         assert "ok!" in response.text
         assert host_not_protected in response.text
     with patch_etc_hosts(haproxy_unit_ip, host_protected_1):
@@ -127,7 +146,6 @@ def test_oauth_spoe(
     # instead try to reuse.
     with patch_etc_hosts(haproxy_unit_ip, host_protected_2):
         _assert_idp_login_success(host_protected_2, test_email, test_password)
-
 
 
 def _assert_idp_login_success(hostname, test_email, test_password):

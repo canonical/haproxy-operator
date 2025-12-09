@@ -61,7 +61,6 @@ class HaproxySpoeAuthCharm(ops.CharmBase):
             self.service.install()
             state = CharmState.from_charm(self)
 
-            logger.exception("JAVI redirect %s", f"https://{state.hostname}{OIDC_CALLBACK_PATH}")
             self._oauth.update_client_config(
                 client_config=ClientConfig(
                     redirect_uri=f"https://{state.hostname}{OIDC_CALLBACK_PATH}",

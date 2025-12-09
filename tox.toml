@@ -15,6 +15,65 @@ PYTHONPATH = "{toxinidir}:{toxinidir}/lib:{[vars]src_path}"
 PYTHONBREAKPOINT = "ipdb.set_trace"
 PY_COLORS = "1"
 
+[env.fmt]
+description = "Apply coding style standards to code"
+commands = [
+  [
+    "ruff",
+    "check",
+    "--fix",
+    "--select",
+    "I",
+    { replace = "ref", of = [
+      "vars",
+      "all_path",
+    ], extend = true },
+  ],
+  [
+    "ruff",
+    "format",
+    { replace = "ref", of = [
+      "vars",
+      "all_path",
+    ], extend = true },
+  ],
+]
+dependency_groups = [ "fmt" ]
+
+[env.lint]
+description = "Check code against coding style standards"
+commands = [
+  [
+    "codespell",
+    "{toxinidir}",
+  ],
+  [
+    "ruff",
+    "format",
+    "--check",
+    "--diff",
+    { replace = "ref", of = [
+      "vars",
+      "all_path",
+    ], extend = true },
+  ],
+  [
+    "ruff",
+    "check",
+    { replace = "ref", of = [
+      "vars",
+      "all_path",
+    ], extend = true },
+  ],
+  [
+    "mypy",
+    { replace = "ref", of = [
+      "vars",
+      "all_path",
+    ], extend = true },
+  ],
+]
+dependency_groups = [ "lint" ]
 
 [env.integration]
 description = "Run integration tests"
@@ -38,3 +97,7 @@ dependency_groups = [ "integration" ]
 [vars]
 src_path = "{toxinidir}/src/"
 tst_path = "{toxinidir}/tests/"
+all_path = [
+  "{toxinidir}/src/",
+  "{toxinidir}/tests/",
+]
