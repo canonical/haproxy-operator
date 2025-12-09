@@ -50,7 +50,7 @@ jobs:
       modules: '["test_charm.py",]'
   integration-tests-global:
     uses:
-      canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+      canonical/operator-workflows/.github/workflows/integration_test.yaml@set-10g-as-bootstrap-constraints
     secrets: inherit
     with:
       use-canonical-k8s: true
