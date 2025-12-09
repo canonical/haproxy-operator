@@ -1,13 +1,21 @@
 name: Automatically promote the haproxy and the haproxy-spoe-auth charm
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: 0 9 * * 1 # At 09:00 on Monday
 
 jobs:
-  promote-haproxy-charm-candidate-to-stable:
+  require-approval:
     environment: charmhub-stable-promote
+    runs-on: ubuntu-latest
+    steps:
+    - run: echo "Workflow has been approved"
+  
+  promote-haproxy-charm-candidate-to-stable:
+    needs: [require-approval]
     uses: canonical/operator-workflows/.github/workflows/promote_charm.yaml@main
+    secrets: inherit
     with:
       origin-channel: 2.8/candidate
       destination-channel: 2.8/stable
@@ -15,13 +23,11 @@ jobs:
       base-channel: 24.04
       base-name: ubuntu
       base-architecture: amd64
-    secrets:
-      CHARMHUB_TOKEN:
-        required: true
 
   promote-haproxy-charm-edge-to-candidate:
     needs: [promote-haproxy-charm-candidate-to-stable]
     uses: canonical/operator-workflows/.github/workflows/promote_charm.yaml@main
+    secrets: inherit
     with:
       origin-channel: 2.8/edge
       destination-channel: 2.8/candidate
@@ -29,13 +35,11 @@ jobs:
       base-channel: 24.04
       base-name: ubuntu
       base-architecture: amd64
-    secrets:
-      CHARMHUB_TOKEN:
-        required: true
 
   promote-haproxy-spoe-auth-charm-candidate-to-stable:
-    environment: charmhub-stable-promote
+    needs: [require-approval]
     uses: canonical/operator-workflows/.github/workflows/promote_charm.yaml@main
+    secrets: inherit
     with:
       origin-channel: latest/candidate
       destination-channel: latest/stable
@@ -43,13 +47,11 @@ jobs:
       base-channel: 24.04
       base-name: ubuntu
       base-architecture: amd64
-    secrets:
-      CHARMHUB_TOKEN:
-        required: true
 
   promote-haproxy-spoe-auth-charm-edge-to-candidate:
     needs: [promote-haproxy-spoe-auth-charm-candidate-to-stable]
     uses: canonical/operator-workflows/.github/workflows/promote_charm.yaml@main
+    secrets: inherit
     with:
       origin-channel: latest/edge
       destination-channel: latest/candidate
@@ -57,6 +59,3 @@ jobs:
       base-channel: 24.04
       base-name: ubuntu
       base-architecture: amd64
-    secrets:
-      CHARMHUB_TOKEN:
-        required: true
