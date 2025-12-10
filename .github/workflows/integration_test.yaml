@@ -62,4 +62,3 @@ jobs:
         ]
       with-uv: true
       pre-run-script: ./tests/integration/setup-integration-tests.sh
-      tmate-debug: true
