@@ -12,10 +12,9 @@ The haproxy-operator offers advanced features such as TLS, monitoring and high-a
 ```{toctree}
 :hidden:
 :maxdepth: 1
-Explanation <explanation/index.md>
+Tutorial <getting-started.md>
 How-to guides <how-to/index.md>
 Reference <reference/index.md>
+Explanation <explanation/index.md>
 Release notes <release-notes/index.md>
-Changelog <changelog.md>
-Getting started <getting-started.md>
 ```
