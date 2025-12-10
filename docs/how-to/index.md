@@ -17,4 +17,5 @@ Configure virtual IP on openstack <configure-virtual-ip-on-openstack.md>
 Integrate with non-charm workloads <integrate-with-non-charm-workload.md>
 Provide extra configurations for ingress requirer charms <provide-extra-configurations-for-ingress-requirer-charms.md>
 Upgrade <upgrade.md>
+Contribute <contribute.md>
 ```
