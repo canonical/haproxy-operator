@@ -1,3 +1,5 @@
+(how_to_upgrade)=
+
 # How to upgrade
 Upgrade the charm with the `juju refresh` command:
 ```bash

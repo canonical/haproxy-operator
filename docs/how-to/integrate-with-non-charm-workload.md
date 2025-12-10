@@ -1,3 +1,5 @@
+(how_to_integrate_with_non_charm_workload)=
+
 # How to integrate with non-charmed workloads
 This guide will show you how non-charm applications can use the `haproxy` charm to load balance traffic with the help of the `ingress-configurator` charm.
 

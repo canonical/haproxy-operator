@@ -1,3 +1,5 @@
+(release_notes_landing_page)=
+
 # Release notes
 
 Release notes for the `2.8/stable` track of HAProxy, summarizing new features,

@@ -1,3 +1,5 @@
+(release_notes_release_notes_rev216)=
+
 # HAProxy release notes – 2.8/stable, revision 216
 
 These release notes cover new features and changes in HAProxy for revisions
@@ -118,7 +120,7 @@ Relevant links:
 ### Added new field to the requirer application databag
 
 The requirer application databag now has a "protocol" field to
-support HTTPS supstream servers.
+support HTTPS upstream servers.
 
 Relevant links:
 
@@ -147,7 +149,7 @@ Relevant links:
 
 ### Added first scenario test
 
-Added the first scenario test which kickstarts the transition process from Harness to Scenario.
+Added the first scenario test which starts the transition process from Harness to Scenario.
 
 Relevant links:
 

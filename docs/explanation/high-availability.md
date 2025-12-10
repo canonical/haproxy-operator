@@ -1,3 +1,5 @@
+(explanation_high_availability)=
+
 # High availability
 High availability (HA) is a characteristic of a system that aims to ensure an agreed level of operational performance, usually uptime, for a higher than normal period. In this document we will discuss different possible configurations for high availability supported by the `hacluster` subordinate charm.
 
