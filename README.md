@@ -27,7 +27,7 @@ and hosted on [Read the Docs](https://about.readthedocs.com/). In structuring,
 the documentation employs the [Diátaxis](https://diataxis.fr/) approach.
 
 You may open a pull request with your documentation changes, or you can
-[file a bug](LINK TO ISSUES) to provide constructive feedback or suggestions.
+[file a bug](https://github.com/canonical/haproxy-operator/issues) to provide constructive feedback or suggestions.
 
 To run the documentation locally before submitting your changes:
 
