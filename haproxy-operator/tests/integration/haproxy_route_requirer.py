@@ -62,8 +62,18 @@ class AnyCharm(AnyCharmBase):
             for provider_certificate in provider_certificates:
                 SSL_CERT_FILE.write_text(str(provider_certificate.certificate), encoding="utf-8")
 
-    def start_server(self):
-        """Start apache2 webserver."""
+        self._grpc_server = None
+
+    def start_server(self, grpc: bool = False):
+        """Start apache2 webserver or gRPC server."""
+        if grpc:
+            self._start_grpc_server(port=50051, use_tls=False)
+            self.unit.status = ops.ActiveStatus("gRPC Server ready")
+            return
+
+        self._start_apache_server()
+
+    def _start_apache_server(self):
         apt.update()
         apt.add_package(package_names="apache2")
         www_dir = pathlib.Path("/var/www/html")
@@ -72,12 +82,22 @@ class AnyCharm(AnyCharmBase):
         file_path.write_text("ok!")
         self.unit.status = ops.ActiveStatus("Server ready")
 
-    def start_ssl_server(self, protocols: str | None = None):
-        """Start apache2 webserver.
+    def start_ssl_server(self, protocols: str | None = None, grpc: bool = False):
+        """Start apache2 webserver or gRPC server with TLS.
 
         Args:
             protocols: Apache Protocols directive value (e.g., "h2", "http/1.1", "h2 http/1.1").
+            grpc: If True, start gRPC server instead of apache2.
         """
+        if grpc:
+            self._start_grpc_server(port=50051, use_tls=True)
+            self.unit.status = ops.ActiveStatus("gRPC SSL Server ready")
+            return
+
+        self._start_apache2_ssl_server(protocols)
+        self.unit.status = ops.ActiveStatus("SSL Server ready")
+
+    def _start_apache2_ssl_server(self, protocols):
         apt.update()
         apt.add_package(package_names="apache2")
         www_dir = pathlib.Path("/var/www/html")
@@ -88,7 +108,6 @@ class AnyCharm(AnyCharmBase):
         protocols_line = f"Protocols {protocols}" if protocols else ""
         ssl_host = textwrap.dedent(f"""
             LogFormat "%{{X-Request-ID}}i %h %l %u %t \\"%r\\" %>s %O \\"%{{Referer}}i\\" \\"%{{User-Agent}}i\\"" combined_with_id
-
             <VirtualHost *:443>
                     ServerAdmin webmaster@localhost
                     DocumentRoot /var/www/html
@@ -99,13 +118,12 @@ class AnyCharm(AnyCharmBase):
                     SSLCertificateKeyFile   {SSL_PRIVATE_KEY_FILE!s}
                     {protocols_line}
             </VirtualHost>
-
             # This easier that editing an apache config file to comment the "Listen 80" line.
             <VirtualHost *:80>
                     RewriteEngine On
                     RewriteRule .* - [R=503,L]
             </VirtualHost>
-        """)
+            """)
         ssl_site_file = pathlib.Path("/etc/apache2/sites-available/anycharm-ssl.conf")
         ssl_site_file.write_text(ssl_host, encoding="utf-8")
         commands = [
@@ -116,7 +134,6 @@ class AnyCharm(AnyCharmBase):
         ]
         for command in commands:
             self._run_subprocess(command)
-        self.unit.status = ops.ActiveStatus("SSL Server ready")
 
     def _run_subprocess(self, cmd: list[str]):
         """Run a subprocess command.
@@ -128,7 +145,9 @@ class AnyCharm(AnyCharmBase):
           CalledProcessError: Error running the command.
         """
         try:
-            subprocess.run(cmd, capture_output=True, check=True)  # nosec: B603
+            # Safe because command is constructed as a list,
+            # not using shell=True, and contains no user input
+            subprocess.run(cmd, capture_output=True, check=True)  # nosec: subprocess_without_shell
         except CalledProcessError as e:
             logging.error(
                 "%s:\nstdout:\n%s\nstderr:\n%s",
@@ -163,3 +182,29 @@ class AnyCharm(AnyCharmBase):
         ]
         for command in commands:
             self._run_subprocess(command)
+
+    def _start_grpc_server(self, port: int = 50051, use_tls: bool = False):
+        """Start the gRPC server in the background.
+
+        Args:
+            port: Port to listen on
+            use_tls: Whether to use TLS
+        """
+        charm_dir = next(pathlib.Path("/var/lib/juju/agents").glob("unit-*/charm"))
+        dynamic_packages = charm_dir / "dynamic-packages"
+        src_dir = charm_dir / "src"
+
+        cmd = ["python3", "-m", "grpc_server", "--port", str(port)]
+        if use_tls:
+            cmd.extend(["--tls", "--cert", str(SSL_CERT_FILE), "--key", str(SSL_PRIVATE_KEY_FILE)])
+
+        # Safe because command is constructed as a list,
+        # not using shell=True, and contains no user input
+        subprocess.Popen(  # nosec: subprocess_without_shell
+            cmd,
+            cwd=str(src_dir),
+            env={
+                "PYTHONPATH": f"{dynamic_packages}:{src_dir}",
+            },
+            start_new_session=True,
+        )
