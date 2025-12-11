@@ -1,3 +1,6 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
 from ops import testing
 
 from charm import HAProxyDDoSProtectionConfiguratorCharm
