@@ -1,7 +1,7 @@
 # Overview
 
-A [Juju](https://juju.is/) [subordinate](https://documentation.ubuntu.com/juju/3.6/reference/charm/#subordinate-charm) 
-[charm](https://juju.is/docs/olm/charmed-operators) that serves as a configurator for HAProxy 
+A [Juju](https://canonical.com/juju) [subordinate](https://documentation.ubuntu.com/juju/3.6/reference/charm/#subordinate-charm) 
+[charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/) that serves as a configurator for HAProxy 
 to provide DDoS protection capabilities.
 
 HAProxy is a TCP/HTTP reverse proxy which is particularly suited for high availability environments.

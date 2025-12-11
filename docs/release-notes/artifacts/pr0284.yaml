@@ -1,0 +1,14 @@
+# --- Release notes change artifact ----
+
+schema_version: 1
+changes:
+  - title: Create HAProxy DDoS Protection Configurator charm
+    author: swetha1654
+    type: major
+    description: Creates the skeleton code for the HAProxy DDoS Protection Configurator charm.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/284
+      related_doc: 
+      related_issue: 
+    visibility: public
+    highlight: false
