@@ -98,7 +98,7 @@ backend spoe_oidc_callback_{{ spoe_auth_info.id }}
     balance roundrobin
     option tcp-check
     timeout connect 5s
-    timeout server  3m
+    timeout server  1m
 {% for agent_address in spoe_auth_info.unit_addresses %}
     server {{ agent_address }} {{ agent_address }}:{{ spoe_auth_info.oidc_callback_port }} check
 {% endfor %}
@@ -108,7 +108,7 @@ backend spop_auth_{{ spoe_auth_info.id }}
     balance roundrobin
     option spop-check
     timeout connect 5s
-    timeout server  3m
+    timeout server  1m
 {% for agent_address in spoe_auth_info.unit_addresses %}
     server {{ agent_address }} {{ agent_address }}:{{ spoe_auth_info.spop_port }} check
 {% endfor %}
