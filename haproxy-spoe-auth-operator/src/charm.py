@@ -28,8 +28,10 @@ OAUTH_RELATION = "oauth"
 OIDC_SCOPE = "openid email profile"
 SPOE_AUTH_MESSAGE_NAME = "try-auth-oidc"
 SPOE_AUTH_RELATION = "spoe-auth"
-VAR_AUTHENTICATED = "sess.auth.is_authenticated"
-VAR_REDIRECT_URL = "sess.auth.redirect_url"
+VAR_AUTHENTICATED_SCOPE = "sess"
+VAR_AUTHENTICATED = "is_authenticated"
+VAR_REDIRECT_URL_SCOPE = "sess"
+VAR_REDIRECT_URL = "redirect_url"
 
 
 class HaproxySpoeAuthCharm(ops.CharmBase):
@@ -48,6 +50,7 @@ class HaproxySpoeAuthCharm(ops.CharmBase):
 
         self.framework.observe(self.on.install, self._reconcile)
         self.framework.observe(self.on.config_changed, self._reconcile)
+        self.framework.observe(self.on[OAUTH_RELATION].relation_created, self._reconcile)
         self.framework.observe(self.on[OAUTH_RELATION].relation_changed, self._reconcile)
         self.framework.observe(self._oauth.on.oauth_info_changed, self._reconcile)
         self.framework.observe(self._oauth.on.oauth_info_removed, self._reconcile)
@@ -75,7 +78,9 @@ class HaproxySpoeAuthCharm(ops.CharmBase):
                     event=HaproxyEvent.ON_FRONTEND_HTTP_REQUEST,
                     message_name=SPOE_AUTH_MESSAGE_NAME,
                     oidc_callback_port=OIDC_CALLBACK_PORT,
+                    var_authenticated_scope=VAR_AUTHENTICATED_SCOPE,
                     var_authenticated=VAR_AUTHENTICATED,
+                    var_redirect_url_scope=VAR_REDIRECT_URL_SCOPE,
                     var_redirect_url=VAR_REDIRECT_URL,
                     cookie_name=COOKIE_NAME,
                     hostname=state.hostname,

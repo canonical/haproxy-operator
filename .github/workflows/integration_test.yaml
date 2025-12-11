@@ -7,17 +7,28 @@ on:
 
 jobs:
   integration-tests:
-    uses: 
+    uses:
       canonical/operator-workflows/.github/workflows/integration_test.yaml@main
     secrets: inherit
     with:
       provider: lxd
       juju-channel: 3/stable
       self-hosted-runner: true
-      charmcraft-channel: latest/edge
       working-directory: ./haproxy-operator
-      modules: '["test_action.py","test_actions.py","test_charm.py","test_config.py","test_cos.py","test_ha.py","test_haproxy_route.py","test_http_interface.py","test_ingress.py",
-        "test_ingress_per_unit.py", "test_haproxy_route_tcp.py"]'
+      modules: |
+        [
+          "test_action.py",
+          "test_actions.py",
+          "test_charm.py",
+          "test_config.py",
+          "test_cos.py",
+          "test_ha.py",
+          "test_haproxy_route.py",
+          "test_http_interface.py",
+          "test_ingress.py",
+          "test_ingress_per_unit.py",
+          "test_haproxy_route_tcp.py"
+        ]
       with-uv: true
   allure-report:
     if: ${{ !cancelled() && github.event_name == 'schedule' }}
@@ -32,7 +43,22 @@ jobs:
       juju-channel: '3/stable'
       provider: lxd
       self-hosted-runner: true
-      charmcraft-channel: latest/edge
       working-directory: ./haproxy-spoe-auth-operator
       with-uv: True
       modules: '["test_charm.py",]'
+  integration-tests-global:
+    uses:
+      canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+    secrets: inherit
+    with:
+      use-canonical-k8s: true
+      provider: 'k8s'
+      channel: '1.32-classic/stable'
+      self-hosted-runner: true
+      juju-channel: 3/stable
+      modules: |
+        [
+          "test_oauth_spoe.py",
+        ]
+      with-uv: true
+      pre-run-script: ./tests/integration/setup-integration-tests.sh

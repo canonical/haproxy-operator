@@ -52,8 +52,10 @@ class SpoeAuthCharm(CharmBase):
             spop_port=8081,
             oidc_callback_port=5000,
             event=HaproxyEvent.ON_HTTP_REQUEST,
-            var_authenticated="var.sess.is_authenticated",
-            var_redirect_url="var.sess.redirect_url",
+            var_authenticated_scope="sess",
+            var_authenticated="is_authenticated",
+            var_redirect_url_scope="sess",
+            var_redirect_url="redirect_url",
             cookie_name="auth_session",
             hostname="auth.example.com",
             oidc_callback_path="/oauth2/callback",
@@ -68,9 +70,8 @@ from collections.abc import MutableMapping
 from enum import StrEnum
 from typing import Annotated, cast
 
-from ops import CharmBase, RelationBrokenEvent
-from ops.charm import CharmEvents
-from ops.framework import EventBase, EventSource, Object
+from ops import CharmBase
+from ops.framework import EventBase, Object
 from ops.model import Relation
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, IPvAnyAddress, ValidationError
 
@@ -226,7 +227,9 @@ class SpoeAuthProviderAppData(_DatabagModel):
         spop_port: The port on the agent listening for SPOP.
         oidc_callback_port: The port on the agent handling OIDC callbacks.
         event: The event that triggers SPOE messages (e.g., on-http-request).
+        var_authenticated_scope: Scope of the variable set by the SPOE agent for auth status.
         var_authenticated: Name of the variable set by the SPOE agent for auth status.
+        var_redirect_url_scope: Scope of the variable set by the SPOE agent for IDP redirect URL.
         var_redirect_url: Name of the variable set by the SPOE agent for IDP redirect URL.
         cookie_name: Name of the authentication cookie used by the SPOE agent.
         oidc_callback_path: Path for OIDC callback.
@@ -249,8 +252,14 @@ class SpoeAuthProviderAppData(_DatabagModel):
     message_name: str = Field(
         description="The name of the SPOE message that the provider expects."
     )
+    var_authenticated_scope: VALIDSTR = Field(
+        description="Scope of the variable set by the SPOE agent for auth status.",
+    )
     var_authenticated: VALIDSTR = Field(
         description="Name of the variable set by the SPOE agent for auth status.",
+    )
+    var_redirect_url_scope: VALIDSTR = Field(
+        description="Scope of the variable set by the SPOE agent for IDP redirect URL.",
     )
     var_redirect_url: VALIDSTR = Field(
         description="Name of the variable set by the SPOE agent for IDP redirect URL.",
@@ -313,7 +322,9 @@ class SpoeAuthProvider(Object):
         oidc_callback_port: int,
         event: HaproxyEvent,
         message_name: str,
+        var_authenticated_scope: str,
         var_authenticated: str,
+        var_redirect_url_scope: str,
         var_redirect_url: str,
         cookie_name: str,
         hostname: str,
@@ -328,7 +339,9 @@ class SpoeAuthProvider(Object):
             oidc_callback_port: The port on the agent handling OIDC callbacks.
             event: The event that triggers SPOE messages.
             message_name: The name of the SPOE message that the provider expects.
+            var_authenticated_scope: Scope of the variable for auth status.
             var_authenticated: Name of the variable for auth status.
+            var_redirect_url_scope: Scope of the variable for IDP redirect URL.
             var_redirect_url: Name of the variable for IDP redirect URL.
             cookie_name: Name of the authentication cookie.
             hostname: The hostname HAProxy should route OIDC callbacks to.
@@ -348,7 +361,9 @@ class SpoeAuthProvider(Object):
                 oidc_callback_port=oidc_callback_port,
                 event=event,
                 message_name=message_name,
+                var_authenticated_scope=var_authenticated_scope,
                 var_authenticated=var_authenticated,
+                var_redirect_url_scope=var_redirect_url_scope,
                 var_redirect_url=var_redirect_url,
                 cookie_name=cookie_name,
                 hostname=hostname,
@@ -395,18 +410,6 @@ class SpoeAuthRemovedEvent(EventBase):
     """SpoeAuthRemovedEvent custom event."""
 
 
-class SpoeAuthRequirerEvents(CharmEvents):
-    """List of events that the SPOE auth requirer charm can leverage.
-
-    Attributes:
-        available: Emitted when provider configuration is available.
-        removed: Emitted when the provider relation is broken.
-    """
-
-    available = EventSource(SpoeAuthAvailableEvent)
-    removed = EventSource(SpoeAuthRemovedEvent)
-
-
 class SpoeAuthRequirer(Object):
     """SPOE auth interface requirer implementation.
 
@@ -414,9 +417,6 @@ class SpoeAuthRequirer(Object):
         on: Custom events of the requirer.
         relation: The related application.
     """
-
-    # Ignore this for pylance
-    on = SpoeAuthRequirerEvents()  # type: ignore
 
     def __init__(
         self, charm: CharmBase, relation_name: str = SPOE_AUTH_DEFAULT_RELATION_NAME
@@ -431,12 +431,6 @@ class SpoeAuthRequirer(Object):
         self.charm = charm
         self.relation_name = relation_name
 
-        self.framework.observe(self.charm.on[self.relation_name].relation_created, self._configure)
-        self.framework.observe(self.charm.on[self.relation_name].relation_changed, self._configure)
-        self.framework.observe(
-            self.charm.on[self.relation_name].relation_broken, self._on_relation_broken
-        )
-
     @property
     def relation(self) -> Relation | None:
         """The relation instance associated with this relation_name.
@@ -447,14 +441,14 @@ class SpoeAuthRequirer(Object):
         relations = self.charm.model.relations[self.relation_name]
         return relations[0] if relations else None
 
-    def _configure(self, _: EventBase) -> None:
-        """Handle relation changed events."""
-        if self.is_available():
-            self.on.available.emit()
+    @property
+    def relations(self) -> list[Relation]:
+        """The list of relations associated with this relation_name.
 
-    def _on_relation_broken(self, _: RelationBrokenEvent) -> None:
-        """Handle relation broken events."""
-        self.on.removed.emit()
+        Returns:
+            The list of relations.
+        """
+        return list(self.charm.model.relations[self.relation_name])
 
     def is_available(self) -> bool:
         """Check if the SPOE auth configuration is available and valid.
