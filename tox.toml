@@ -1,0 +1,102 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+skipsdist = true
+skip_missing_interpreters = true
+requires = [ "tox>=4.21" ]
+no_package = true
+
+[env_run_base]
+passenv = [ "PYTHONPATH", "CHARM_BUILD_DIR", "MODEL_SETTINGS" ]
+runner = "uv-venv-lock-runner"
+
+[env_run_base.setenv]
+PYTHONPATH = "{toxinidir}:{toxinidir}/lib:{[vars]src_path}"
+PYTHONBREAKPOINT = "ipdb.set_trace"
+PY_COLORS = "1"
+
+[env.fmt]
+description = "Apply coding style standards to code"
+commands = [
+  [
+    "ruff",
+    "check",
+    "--fix",
+    "--select",
+    "I",
+    { replace = "ref", of = [
+      "vars",
+      "all_path",
+    ], extend = true },
+  ],
+  [
+    "ruff",
+    "format",
+    { replace = "ref", of = [
+      "vars",
+      "all_path",
+    ], extend = true },
+  ],
+]
+dependency_groups = [ "fmt" ]
+
+[env.lint]
+description = "Check code against coding style standards"
+commands = [
+  [
+    "codespell",
+    "{toxinidir}",
+  ],
+  [
+    "ruff",
+    "format",
+    "--check",
+    "--diff",
+    { replace = "ref", of = [
+      "vars",
+      "all_path",
+    ], extend = true },
+  ],
+  [
+    "ruff",
+    "check",
+    { replace = "ref", of = [
+      "vars",
+      "all_path",
+    ], extend = true },
+  ],
+  [
+    "mypy",
+    { replace = "ref", of = [
+      "vars",
+      "all_path",
+    ], extend = true },
+  ],
+]
+dependency_groups = [ "lint" ]
+
+[env.integration]
+description = "Run integration tests"
+commands = [
+  [
+    "pytest",
+    "-v",
+    "--tb",
+    "native",
+    "--ignore={[vars]tst_path}unit",
+    "--ignore={toxinidir}/haproxy-spoe-auth-operator",
+    "--ignore={toxinidir}/haproxy-operator",
+    "--log-cli-level=INFO",
+    "-s",
+    { replace = "posargs", extend = "true" },
+  ],
+]
+dependency_groups = [ "integration" ]
+
+
+[vars]
+src_path = "{toxinidir}/src/"
+tst_path = "{toxinidir}/tests/"
+all_path = [
+  "{toxinidir}/tests/",
+]
