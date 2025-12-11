@@ -1,6 +1,6 @@
 schema_version: 1
 changes:
-  - title: Implement spoe-auth relation in HAproxy
+  - title: Implemented spoe-auth relation in HAproxy
     author: javierdelapuente
     type: major
     description: |
