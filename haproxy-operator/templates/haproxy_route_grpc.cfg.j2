@@ -1,0 +1,28 @@
+{% for port, grouped_backends in backends | groupby('external_grpc_port') %}
+    {% if port %}
+frontend haproxy_grpc_{{ port }}
+    mode http
+    bind [::]:{{ port }} v4v6 ssl crt /var/lib/haproxy/certs alpn h2
+        {% for backend in grouped_backends %}
+    acl acl_host_{{ backend.backend_name }} req.hdr(Host) -m str {% for hostname in backend.hostname_acls%}{{hostname}} {% endfor +%}
+            {% if backend.path_acl_required %}
+    acl acl_path_{{ backend.backend_name }} path_beg -i {% for path in backend.application_data.paths %}{{ path }} {% endfor +%}
+            {% endif %}
+            {% if backend.deny_path_acl_required %}
+    acl acl_deny_path_{{ backend.backend_name }} path_beg -i {% for path in backend.application_data.deny_paths %}{{ path }} {% endfor +%}
+            {% endif %}
+    use_backend {{ backend.backend_name }} if {% if backend.path_acl_required %}acl_path_{{ backend.backend_name }}{% endif %} acl_host_{{ backend.backend_name }} {% if backend.deny_path_acl_required %}!acl_deny_path_{{ backend.backend_name }}{% endif +%}
+        {% endfor %}
+    {% endif %}
+{% endfor %}
+
+{% for backend in backends if backend.external_grpc_port %}
+backend {{ backend.backend_name }}
+    balance {{ backend.load_balancing_configuration }}
+    timeout server {{ backend.application_data.timeout.server }}s
+    timeout connect {{ backend.application_data.timeout.connect }}s
+{% for server in backend.servers %}
+    server {{ server.server_name }} {{ server.address }}:{{ server.port }}{% if server.protocol == "https" %} ssl ca-file {{ haproxy_cas_file }} alpn h2{% endif +%}
+{% endfor %}
+
+{% endfor %}

@@ -47,7 +47,6 @@ HAPROXY_INGRESS_CONFIG_TEMPLATE = "haproxy_ingress.cfg.j2"
 HAPROXY_INGRESS_PER_UNIT_CONFIG_TEMPLATE = "haproxy_ingress_per_unit.cfg.j2"
 HAPROXY_LEGACY_CONFIG_TEMPLATE = "haproxy_legacy.cfg.j2"
 HAPROXY_ROUTE_CONFIG_TEMPLATE = "haproxy_route.cfg.j2"
-HAPROXY_ROUTE_TCP_CONFIG_TEMPLATE = "haproxy_route_tcp.cfg.j2"
 
 HAPROXY_DEFAULT_CONFIG_TEMPLATE = "haproxy.cfg.j2"
 HAPROXY_CERTS_DIR = Path("/var/lib/haproxy/certs")
@@ -162,12 +161,7 @@ class HAProxyService:
             "haproxy_cas_file": HAPROXY_CAS_FILE,
             "acls_for_allow_http": haproxy_route_requirers_information.acls_for_allow_http,
         }
-        template = (
-            HAPROXY_ROUTE_TCP_CONFIG_TEMPLATE
-            if haproxy_route_requirers_information.tcp_endpoints
-            else HAPROXY_ROUTE_CONFIG_TEMPLATE
-        )
-        self._render_haproxy_config(template, template_context)
+        self._render_haproxy_config(HAPROXY_ROUTE_CONFIG_TEMPLATE, template_context)
         self._validate_haproxy_config()
         self._reload_haproxy_service()
 

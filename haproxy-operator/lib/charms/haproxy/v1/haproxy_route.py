@@ -554,6 +554,7 @@ class RequirerApplicationData(_DatabagModel):
         http_server_close: Configure server close after request.
         allow_http: Whether to allow HTTP traffic in addition to HTTPS. Defaults to False.
             Warning: enabling HTTP is a security risk, make sure you apply the necessary precautions.
+        external_grpc_port: Optional port number for gRPC frontend if gRPC is used.
     """
 
     service: VALIDSTR = Field(description="The name of the service.")
@@ -607,6 +608,9 @@ class RequirerApplicationData(_DatabagModel):
     )
     allow_http: bool = Field(
         description="Whether to allow HTTP traffic in addition to HTTPS.", default=False
+    )
+    external_grpc_port: int | None = Field(
+        description="Optional port number for gRPC frontend if gRPC is used.", default=None
     )
 
     @field_validator("load_balancing")
@@ -1104,6 +1108,7 @@ class HaproxyRouteRequirer(Object):
         unit_address: Optional[str] = None,
         http_server_close: bool = False,
         allow_http: bool = False,
+        external_grpc_port: Optional[int] = None,
     ) -> None:
         """Update haproxy-route requirements data in the relation.
 
@@ -1143,6 +1148,7 @@ class HaproxyRouteRequirer(Object):
             allow_http: Whether to allow HTTP traffic in addition to HTTPS.
                 Warning: enabling HTTP is a security risk,
                 make sure you apply the necessary precautions.
+            external_grpc_port: Optional port number for gRPC frontend if gRPC is used.
         """
         self._unit_address = unit_address
         self._application_data = self._generate_application_data(
@@ -1177,6 +1183,7 @@ class HaproxyRouteRequirer(Object):
             server_maxconn,
             http_server_close,
             allow_http,
+            external_grpc_port,
         )
         self.update_relation_data()
 
@@ -1214,6 +1221,7 @@ class HaproxyRouteRequirer(Object):
         server_maxconn: Optional[int] = None,
         http_server_close: bool = False,
         allow_http: bool = False,
+        external_grpc_port: Optional[int] = None,
     ) -> dict[str, Any]:
         """Generate the complete application data structure.
 
@@ -1305,6 +1313,7 @@ class HaproxyRouteRequirer(Object):
             ),
             "http_server_close": http_server_close,
             "allow_http": allow_http,
+            "external_grpc_port": external_grpc_port,
         }
 
         if allow_http:
