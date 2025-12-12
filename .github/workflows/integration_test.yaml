@@ -43,8 +43,25 @@ jobs:
       working-directory: ${{ matrix.charm.working-directory }}
       modules: ${{ matrix.charm.modules }}
       with-uv: true
+  integration-tests-global:
+    uses:
+      canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+    secrets: inherit
+    with:
+      use-canonical-k8s: true
+      provider: 'k8s'
+      channel: '1.32-classic/stable'
+      self-hosted-runner: true
+      juju-channel: 3/stable
+      modules: |
+        [
+          "test_oauth_spoe.py",
+        ]
+      with-uv: true
+      pre-run-script: ./tests/integration/setup-integration-tests.sh
   allure-report:
     if: ${{ !cancelled() && github.event_name == 'schedule' }}
     needs:
     - integration-tests
+    - integration-tests-global
     uses: canonical/operator-workflows/.github/workflows/allure_report.yaml@main
