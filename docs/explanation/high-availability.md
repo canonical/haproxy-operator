@@ -33,7 +33,7 @@ An active-passive configuration consists of two or more nodes. In this configura
 
 By default it is required to have at least three HAProxy units when using the `hacluster` subordinate charm to maintain a quorum. However, this number can be configured. See the next section on active/passive cluster configuration for more details.
 
-## Active/passive cluster configuration
+### Active/passive cluster configuration
 The `hacluster` charm provide operators with configuration options to fine-tune the cluster's behavior. Below are some key settings for HAProxy.
 
 ### Cluster count configuration
