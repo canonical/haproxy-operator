@@ -36,7 +36,7 @@ By default it is required to have at least three HAProxy units when using the `h
 ### Active/passive cluster configuration
 The `hacluster` charm provide operators with configuration options to fine-tune the cluster's behavior. Below are some key settings for HAProxy.
 
-### Cluster count configuration
+#### Cluster count configuration
 The [`cluster_count`](https://opendev.org/openstack/charm-hacluster/src/commit/2449932bf7c618fda4fa412228a133688db13b02/config.yaml#L125) configuration adjusts the number of peer units required to bootstrap cluster services.
 
 ### Quorum policy configuration
