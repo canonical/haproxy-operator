@@ -35,8 +35,8 @@ juju integrate haproxy haproxy-ddos-protection-configurator
 
 # HAProxy project information
 
-- [HAProxy Homepage](http://haproxy.1wt.eu/)
-- [HAProxy mailing list](http://haproxy.1wt.eu/#tact)
+- [HAProxy Homepage](https://www.haproxy.org/)
+- [HAProxy mailing list](https://www.haproxy.org/#tact)
 
 ## Project and community
 

@@ -8,7 +8,7 @@ Each revision is versioned by the date of the revision.
 
 ## 2025-12-11
 
-- Added the skeleton code for the HAProxy DDoS Protection Configurator charm.
+- Added the skeleton code for the HAProxy DDoS protection configurator charm.
 
 ## 2025-11-27
 

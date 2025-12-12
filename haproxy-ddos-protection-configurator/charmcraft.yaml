@@ -41,16 +41,16 @@ config:
   options:
     rate-limit-requests-per-minute:
       type: int
-      description: Maximum number of requests per minute per entry.
+      description: Maximum number of requests per minute per entry to trigger the limit policy.
     rate-limit-connections-per-minute:
       type: int
-      description: Maximum number of connections per minute per entry.
+      description: Maximum number of connections per minute per entry to trigger the limit policy.
     concurrent-connections-limit:
       type: int
-      description: Maximum number of concurrent connections per entry.
+      description: Maximum number of concurrent connections per entry to trigger the limit policy.
     error-rate-per-minute:
       type: int
-      description: Number of errors per minute to trigger the limit policy.
+      description: Number of errors per minute per entry to trigger the limit policy.
     limit-policy:
       type: string
       description: |
