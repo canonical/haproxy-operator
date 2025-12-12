@@ -2,7 +2,7 @@
 
 schema_version: 1
 changes:
-  - title: Create HAProxy DDoS Protection Configurator charm
+  - title: Created HAProxy DDoS Protection Configurator charm
     author: swetha1654
     type: major
     description: Creates the skeleton code for the HAProxy DDoS Protection Configurator charm.
