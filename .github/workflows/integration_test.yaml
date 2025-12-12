@@ -53,6 +53,7 @@ jobs:
       channel: '1.32-classic/stable'
       self-hosted-runner: true
       juju-channel: 3/stable
+      working-directory: ./tests
       modules: |
         [
           "test_oauth_spoe.py",
