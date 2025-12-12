@@ -1,0 +1,14 @@
+# --- Release notes change artifact ----
+
+schema_version: 1
+changes:
+  - title: Add haproxy-route-tcp library implementation
+    author: tphan025
+    type: feature
+    description: Add the haproxy-route-tcp interface library to enable TCP routing configuration for HAProxy.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/173
+      related_doc: 
+      related_issue: 
+    visibility: public
+    highlight: false

@@ -1,0 +1,14 @@
+# --- Release notes change artifact ----
+
+schema_version: 1
+changes:
+  - title: Add HTTPS backend support for HAProxy routing
+    author: dimaqq
+    type: feature
+    description: Enable HAProxy to route traffic to HTTPS backends with certificate handling and validation.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/172
+      related_doc: 
+      related_issue: 
+    visibility: public
+    highlight: false
