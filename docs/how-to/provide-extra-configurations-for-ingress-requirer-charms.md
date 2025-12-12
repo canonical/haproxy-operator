@@ -53,7 +53,7 @@ juju run ingress-requirer/0 rpc method=start_server
 ```
 
 
-# Verify that the requirer application is responding to requests
+## Verify that the requirer application is responding to requests
 Send a request with `curl` to the `any-charm` unit:
 ```sh
 curl $(juju status --format=json | jq -r '.applications["ingress-requirer"].units["ingress-requirer/0"]."public-address"')
