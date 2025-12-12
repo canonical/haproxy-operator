@@ -114,12 +114,8 @@ backend spop_auth_{{ spoe_auth_info.id }}
 {% endfor %}
 {% endfor %}
 
-{% if tcp_endpoints %}
-{% include 'haproxy_route_tcp.cfg.j2' %}
-{% endif %}
+{% if tcp_endpoints %}{% include 'haproxy_route_tcp.cfg.j2' %}{% endif %}
 
-{% if backends | selectattr('external_grpc_port') | list %}
-{% include 'haproxy_route_grpc.cfg.j2' %}
-{% endif %}
+{% if backends | selectattr('external_grpc_port') | list %}{% include 'haproxy_route_grpc.cfg.j2' %}{% endif %}
 
 {% endblock %}
