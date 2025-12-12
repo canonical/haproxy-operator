@@ -12,7 +12,7 @@ The following guides cover key processes and common tasks for managing and using
 
 ```{toctree}
 :maxdepth: 1
-Configure virtual IP on openstack <configure-virtual-ip-on-openstack.md>
+Configure virtual IP on OpenStack <configure-virtual-ip-on-openstack.md>
 Integrate with non-charm workloads <integrate-with-non-charm-workload.md>
 Provide extra configurations for ingress requirer charms <provide-extra-configurations-for-ingress-requirer-charms.md>
 Upgrade <upgrade.md>
