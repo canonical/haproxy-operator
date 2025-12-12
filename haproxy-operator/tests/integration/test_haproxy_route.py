@@ -451,7 +451,6 @@ def test_haproxy_route_grpcs_support(
             status, configured_application_with_tls, any_charm_haproxy_route_requirer
         ),
     )
-    import pdb; pdb.set_trace()
     with grpc.secure_channel(
         f"{haproxy_ip_address}:8443",
         ssl_credentials,

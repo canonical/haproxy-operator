@@ -1260,6 +1260,8 @@ class HaproxyRouteRequirer(Object):
             allow_http: Whether to allow HTTP traffic in addition to HTTPS.
                 Warning: enabling HTTP is a security risk,
                 make sure you apply the necessary precautions.
+            external_grpc_port: Optional external port number for gRPC if a custom port in required.
+                If not set, gRPC connection will use port 443.
 
         Returns:
             dict: A dictionary containing the complete application data structure.

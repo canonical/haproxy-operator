@@ -189,6 +189,7 @@ class HAProxyRouteBackend:
         """
         return self.application_data.external_grpc_port
 
+
 # pylint: disable=too-many-locals
 @dataclass(frozen=True)
 class HaproxyRouteRequirersInformation:
