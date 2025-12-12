@@ -2,44 +2,44 @@
 
 # list of change artifacts included in the release
 included_changes:
-- pr0172.yaml
-- pr0173.yaml
-- pr0175.yaml
-- pr0176.yaml
-- pr0178.yaml
-- pr0179.yaml
-- pr0187.yaml
-- pr0188.yaml
-- pr0193.yaml
-- pr0194.yaml
-- pr0199.yaml
-- pr0200.yaml
-- pr0201.yaml
-- pr0209.yaml
-- pr0214.yaml
-- pr0215.yaml
-- pr0217.yaml
-- pr0221.yaml
-- pr0223.yaml
-- pr0224.yaml
-- pr0225.yaml
-- pr0226.yaml
-- pr0229.yaml
-- pr0230.yaml
-- pr0232.yaml
-- pr0243.yaml
-- pr0246.yaml
-- pr0248.yaml
-- pr0249.yaml
-- pr0253.yaml
-- pr0256.yaml
-- pr0257.yaml
-- pr0262.yaml
-- pr0263.yaml
-- pr0266.yaml
-- pr0268.yaml
-- pr0272.yaml
-- pr0276.yaml
+  - pr0172.yaml
+  - pr0173.yaml
+  - pr0175.yaml
+  - pr0176.yaml
+  - pr0178.yaml
+  - pr0179.yaml
+  - pr0187.yaml
+  - pr0188.yaml
+  - pr0193.yaml
+  - pr0194.yaml
+  - pr0199.yaml
+  - pr0200.yaml
+  - pr0201.yaml
+  - pr0209.yaml
+  - pr0214.yaml
+  - pr0215.yaml
+  - pr0217.yaml
+  - pr0221.yaml
+  - pr0223.yaml
+  - pr0224.yaml
+  - pr0225.yaml
+  - pr0226.yaml
+  - pr0229.yaml
+  - pr0230.yaml
+  - pr0232.yaml
+  - pr0243.yaml
+  - pr0246.yaml
+  - pr0248.yaml
+  - pr0249.yaml
+  - pr0253.yaml
+  - pr0256.yaml
+  - pr0257.yaml
+  - pr0262.yaml
+  - pr0263.yaml
+  - pr0266.yaml
+  - pr0268.yaml
+  - pr0272.yaml
+  - pr0276.yaml
 # earliest revision included in the release
 earliest_revision: 217
 
