@@ -84,6 +84,7 @@ commands = [
     "--tb",
     "native",
     "--ignore={[vars]tst_path}unit",
+    "--ignore={toxinidir}/haproxy-ddos-protection-configurator",
     "--ignore={toxinidir}/haproxy-spoe-auth-operator",
     "--ignore={toxinidir}/haproxy-operator",
     "--log-cli-level=INFO",
