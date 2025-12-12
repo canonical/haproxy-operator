@@ -11,7 +11,6 @@ myst:
 The following guides cover key processes and common tasks for managing and using the HAProxy charm.
 
 ```{toctree}
-:hidden:
 :maxdepth: 1
 Configure virtual IP on openstack <configure-virtual-ip-on-openstack.md>
 Integrate with non-charm workloads <integrate-with-non-charm-workload.md>
