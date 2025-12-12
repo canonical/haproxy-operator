@@ -3,7 +3,7 @@
 # High availability
 High availability (HA) is a characteristic of a system that aims to ensure an agreed level of operational performance, usually uptime, for a higher than normal period. In this document we will discuss different possible configurations for high availability supported by the `hacluster` subordinate charm.
 
-# Active/active
+## Active/active
 An active-active configuration consists of two or more HAProxy units that reply to incoming requests at the same time. Increasing the number of HAProxy charm units can be done either during deployment with the `-n` flag or by using the `juju add-unit` command: 
 ```
 juju add-unit haproxy -n 2
