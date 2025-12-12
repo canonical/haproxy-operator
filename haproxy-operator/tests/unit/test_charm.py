@@ -5,8 +5,11 @@
 
 import json
 import logging
-from unittest.mock import MagicMock
+import pathlib
+import re
+from unittest.mock import ANY, MagicMock
 
+import ops
 import ops.testing
 import pytest
 import scenario
@@ -14,6 +17,9 @@ import scenario
 import tls_relation
 from charm import HAProxyCharm
 from tests.unit.conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
+
+from .conftest import build_haproxy_route_relation, build_spoe_auth_relation
+from .helper import RegexMatcher
 
 logger = logging.getLogger(__name__)
 
@@ -314,3 +320,136 @@ class TestGetProxiedEndpointsAction:
         out = context.action_results
 
         assert out == {"endpoints": "[]"}
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_spoe_auth(monkeypatch: pytest.MonkeyPatch, certificates_integration):
+    """
+    arrange: Prepare a haproxy with haproxy_route and spoe.
+    act: trigger relation changed.
+    assert: The haproxy.conf and spoe_auth.conf files are writtern with the relevant lines.
+    """
+    monkeypatch.setattr(
+        "charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.private_key",
+        MagicMock(),
+    )
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+
+    spoe_auth_relation = build_spoe_auth_relation()
+    haproxy_route_relation = build_haproxy_route_relation()
+
+    ctx = ops.testing.Context(HAProxyCharm)
+    state = ops.testing.State(
+        relations=[certificates_integration, spoe_auth_relation, haproxy_route_relation]
+    )
+    out = ctx.run(
+        ctx.on.relation_changed(spoe_auth_relation),
+        state,
+    )
+    assert render_file_mock.call_count == 2
+    # It should write the files:
+    # - /etc/haproxy/spoe_auth.conf
+    # - /etc/haproxy/haproxy.cfg
+    # Test a random line related to spoe-auth in each file.
+    render_file_mock.assert_any_call(
+        pathlib.Path("/etc/haproxy/spoe_auth.conf"),
+        RegexMatcher("event on-frontend-http-request"),
+        ANY,
+    )
+    render_file_mock.assert_any_call(
+        pathlib.Path("/etc/haproxy/haproxy.cfg"),
+        RegexMatcher("filter spoe engine spoe-auth"),
+        ANY,
+    )
+    assert out.unit_status == ops.testing.ActiveStatus("")
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_two_spoe_auth(monkeypatch: pytest.MonkeyPatch, certificates_integration):
+    """
+    arrange: are a haproxy with two haproxy_route and two spoe.
+    act: trigger relation changed.
+    assert: The haproxy.conf and spoe_auth.conf files are writtern with the relevant lines.
+    """
+    monkeypatch.setattr(
+        "charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.private_key",
+        MagicMock(),
+    )
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+
+    spoe_auth_relation_1 = build_spoe_auth_relation(hostname="haproxy1.internal")
+    haproxy_route_relation_1 = build_haproxy_route_relation(
+        hostname="haproxy1.internal", service="service1"
+    )
+    spoe_auth_relation_2 = build_spoe_auth_relation(hostname="haproxy2.internal")
+    haproxy_route_relation_2 = build_haproxy_route_relation(
+        hostname="haproxy2.internal", service="service2"
+    )
+
+    ctx = ops.testing.Context(HAProxyCharm)
+    state = ops.testing.State(
+        relations=[
+            certificates_integration,
+            spoe_auth_relation_1,
+            spoe_auth_relation_2,
+            haproxy_route_relation_1,
+            haproxy_route_relation_2,
+        ]
+    )
+    out = ctx.run(
+        ctx.on.relation_changed(spoe_auth_relation_1),
+        state,
+    )
+    assert render_file_mock.call_count == 2
+    # It should write the files:
+    # - /etc/haproxy/spoe_auth.conf
+    # - /etc/haproxy/haproxy.cfg
+    # assert some required information in the files for each relation.
+    spoe_rel_ids = {rel.id for rel in out.relations if rel.endpoint == "spoe-auth"}
+    for rel in spoe_rel_ids:
+        render_file_mock.assert_any_call(
+            pathlib.Path("/etc/haproxy/spoe_auth.conf"),
+            RegexMatcher(re.escape(f"[spoe-auth-{rel}]")),
+            ANY,
+        )
+        render_file_mock.assert_any_call(
+            pathlib.Path("/etc/haproxy/haproxy.cfg"),
+            RegexMatcher(
+                re.escape(f"filter spoe engine spoe-auth-{rel} config /etc/haproxy/spoe_auth.conf")
+            ),
+            ANY,
+        )
+    assert out.unit_status == ops.testing.ActiveStatus("")
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_spoe_auth_invalid_data(monkeypatch: pytest.MonkeyPatch, certificates_integration):
+    """
+    arrange: Prepare a haproxy with haproxy_route and spoe with wrong data in the spoe-auth relation.
+    act: trigger relation changed.
+    assert: No file should be updated and the charm should be blocked.
+    """
+    monkeypatch.setattr(
+        "charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.private_key",
+        MagicMock(),
+    )
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+
+    spoe_auth_relation = build_spoe_auth_relation()
+    del spoe_auth_relation.remote_app_data["hostname"]
+    haproxy_route_relation = build_haproxy_route_relation()
+
+    ctx = ops.testing.Context(HAProxyCharm)
+    state = ops.testing.State(
+        relations=[certificates_integration, spoe_auth_relation, haproxy_route_relation]
+    )
+    out = ctx.run(
+        ctx.on.relation_changed(spoe_auth_relation),
+        state,
+    )
+    assert render_file_mock.call_count == 0
+    assert out.unit_status.name == ops.testing.BlockedStatus.name
+    assert spoe_auth_relation.remote_app_name in out.unit_status.message
