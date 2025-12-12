@@ -18,3 +18,32 @@ The haproxy-operator project is a member of the Ubuntu family. It is an open sou
 * [Issues](https://github.com/canonical/haproxy-operator/issues)
 * [Matrix](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)
 * [Contribute](https://github.com/canonical/haproxy-operator/blob/main/CONTRIBUTING.md)
+
+## Documentation
+
+Our documentation is stored in the `docs` directory.
+It is based on the Canonical starter pack
+and hosted on [Read the Docs](https://about.readthedocs.com/). In structuring,
+the documentation employs the [Diátaxis](https://diataxis.fr/) approach.
+
+You may open a pull request with your documentation changes, or you can
+[file a bug](https://github.com/canonical/haproxy-operator/issues) to provide constructive feedback or suggestions.
+
+To run the documentation locally before submitting your changes:
+
+```bash
+cd docs
+make run
+```
+
+GitHub runs automatic checks on the documentation
+to verify spelling, validate links and style guide compliance.
+
+You can (and should) run the same checks locally:
+
+```bash
+make spelling
+make linkcheck
+make vale
+make lint-md
+```

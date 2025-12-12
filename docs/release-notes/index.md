@@ -1,3 +1,11 @@
+---
+myst:
+  html_meta:
+    "description lang=en": "History of stable releases for the HAProxy charm."
+---
+
+(release_notes_index)=
+
 # Release notes
 
 Release notes for the `2.8/stable` track of HAProxy, summarizing new features,
@@ -25,3 +33,8 @@ Release notes are published for the `haproxy` charm with every revision of the `
 ## Releases
 
 * [HAProxy release notes – 2.8/stable, revision 216](release-notes-rev216.md)
+
+```{toctree}
+:hidden:
+:maxdepth: 1
+release-notes-rev216.md
