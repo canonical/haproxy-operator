@@ -361,7 +361,7 @@ def test_haproxy_route_grpcs_support(
         },
     )
 
-    # Configure haproxy-route for gRPC
+    # Configure haproxy-route for gRPC-over-https
     juju.run(
         f"{any_charm_haproxy_route_requirer}/0",
         "rpc",
@@ -399,6 +399,60 @@ def test_haproxy_route_grpcs_support(
 
     with grpc.secure_channel(
         f"{haproxy_ip_address}:443",
+        ssl_credentials,
+        options=[
+            ("grpc.default_authority", TEST_EXTERNAL_HOSTNAME_CONFIG),
+            ("grpc.ssl_target_name_override", TEST_EXTERNAL_HOSTNAME_CONFIG),
+        ],
+    ) as channel:
+        reflection_stub = reflection_pb2_grpc.ServerReflectionStub(channel)
+
+        request = reflection_pb2.ServerReflectionRequest(list_services="")
+        response = reflection_stub.ServerReflectionInfo(iter([request]))
+        # make a call to ensure we get a response
+        service_names = set()
+        for resp in response:
+            for service in resp.list_services_response.service:
+                service_names.add(service.name)
+
+        assert {"echo.EchoService", "grpc.reflection.v1alpha.ServerReflection"} == service_names
+
+        echo_request = echo_pb2.EchoRequest(message="Test!")  # type: ignore[attr-defined]
+        echo_stub = echo_pb2_grpc.EchoServiceStub(channel)
+        echo_response = echo_stub.Echo(echo_request)
+        assert echo_response.message == "Test!"
+
+    # Configure gRPC server on custom port
+    juju.run(
+        f"{any_charm_haproxy_route_requirer}/0",
+        "rpc",
+        {
+            "method": "update_relation",
+            "args": json.dumps(
+                [
+                    {
+                        "service": "any_charm_with_retry",
+                        "ports": [50051],
+                        "retry_count": 3,
+                        "retry_redispatch": True,
+                        "load_balancing_algorithm": "source",
+                        "load_balancing_consistent_hashing": True,
+                        "http_server_close": False,
+                        "protocol": "https",
+                        "external_grpc_port": 8443,
+                    }
+                ]
+            ),
+        },
+    )
+
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, any_charm_haproxy_route_requirer
+        ),
+    )
+    with grpc.secure_channel(
+        f"{haproxy_ip_address}:8443",
         ssl_credentials,
         options=[
             ("grpc.default_authority", TEST_EXTERNAL_HOSTNAME_CONFIG),
