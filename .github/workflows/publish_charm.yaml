@@ -7,17 +7,12 @@ on:
       - main
 
 jobs:
-  publish-haproxy-to-edge:
+  publish-to-edge:
+    strategy:
+      matrix:
+        working-directory: ['./haproxy-operator', './haproxy-spoe-auth-operator', './haproxy-ddos-protection-configurator']
     uses: canonical/operator-workflows/.github/workflows/publish_charm.yaml@main
     secrets: inherit
     with:
       channel: 2.8/edge
-      working-directory: ./haproxy-operator
-      tag-prefix: haproxy
-  publish-haproxy-spoe-auth-to-edge:
-    uses: canonical/operator-workflows/.github/workflows/publish_charm.yaml@main
-    secrets: inherit
-    with:
-      channel: latest/edge
-      working-directory: ./haproxy-spoe-auth-operator
-      tag-prefix: haproxy-spoe-auth
+      working-directory: ${{ matrix.working-directory }}

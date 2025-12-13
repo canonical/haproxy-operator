@@ -17,8 +17,8 @@ juju integrate haproxy self-signed-certificates:certificates
 
 # HAProxy project information
 
-- [HAProxy Homepage](http://haproxy.1wt.eu/)
-- [HAProxy mailing list](http://haproxy.1wt.eu/#tact)
+- [HAProxy Homepage](https://www.haproxy.org/)
+- [HAProxy mailing list](https://www.haproxy.org/#tact)
 
 ## Project and community
 
@@ -28,7 +28,7 @@ suggestions, fixes and constructive feedback.
 * [Code of conduct](https://ubuntu.com/community/code-of-conduct)
 * [Get support](https://discourse.charmhub.io/)
 * [Join our online chat](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)
-* [Contribute](https://charmhub.io/chrony/docs/contributing)
+* [Contribute](https://charmhub.io/haproxy/docs/contributing)
 * [Roadmap](https://charmhub.io/haproxy/docs/roadmap)
 Thinking about using the HAProxy charm for your next project? [Get in touch](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)!
 
