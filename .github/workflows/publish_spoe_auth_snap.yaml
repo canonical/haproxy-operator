@@ -19,7 +19,7 @@ jobs:
         path: ./haproxy-spoe-auth-snap
     - uses: snapcore/action-publish@v1.2.0
       env:
-        SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.STORE_LOGIN }}
+        SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPSTORE_TOKEN }}
       with:
         snap: ${{ steps.build.outputs.snap }}
         release: edge
