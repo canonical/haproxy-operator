@@ -47,7 +47,7 @@ class HAProxyRouteServer:
         protocol: The protocol that the backend service speaks. "http" (default) or "https".
         check: Health check configuration.
         maxconn: Maximum allowed connections before requests are queued.
-        external_grpc_port: The port of the grpc frontend if grpc is used.
+        external_grpc_port: Optional external gRPC port.
     """
 
     server_name: str

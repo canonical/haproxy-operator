@@ -554,12 +554,12 @@ class RequirerApplicationData(_DatabagModel):
         http_server_close: Configure server close after request.
         allow_http: Whether to allow HTTP traffic in addition to HTTPS. Defaults to False.
             Warning: enabling HTTP is a security risk, make sure you apply the necessary precautions.
-        external_grpc_port: Optional port number for gRPC frontend if gRPC is used.
+        external_grpc_port: Optional external gRPC port.
     """
 
     service: VALIDSTR = Field(description="The name of the service.")
     ports: list[int] = Field(description="The list of ports listening for this service.")
-    protocol: Optional[Literal["http", "https"]] = Field(
+    protocol: Literal["http", "https"] = Field(
         description="The protocol that the service speaks.",
         default="http",
     )
@@ -610,7 +610,7 @@ class RequirerApplicationData(_DatabagModel):
         description="Whether to allow HTTP traffic in addition to HTTPS.", default=False
     )
     external_grpc_port: int | None = Field(
-        description="Optional port number for gRPC frontend if gRPC is used.", default=None
+        description="Optional external gRPC port.", default=None
     )
 
     @field_validator("load_balancing")
@@ -1148,7 +1148,7 @@ class HaproxyRouteRequirer(Object):
             allow_http: Whether to allow HTTP traffic in addition to HTTPS.
                 Warning: enabling HTTP is a security risk,
                 make sure you apply the necessary precautions.
-            external_grpc_port: Optional port number for gRPC frontend if gRPC is used.
+            external_grpc_port: Optional external gRPC port.
         """
         self._unit_address = unit_address
         self._application_data = self._generate_application_data(
@@ -1260,8 +1260,7 @@ class HaproxyRouteRequirer(Object):
             allow_http: Whether to allow HTTP traffic in addition to HTTPS.
                 Warning: enabling HTTP is a security risk,
                 make sure you apply the necessary precautions.
-            external_grpc_port: Optional external port number for gRPC if a custom port in required.
-                If not set, gRPC connection will use port 443.
+            external_grpc_port: Optional external gRPC port.
 
         Returns:
             dict: A dictionary containing the complete application data structure.
