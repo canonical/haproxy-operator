@@ -1,6 +1,6 @@
 {% set excluded_grpc_ports = [80, 443] %}
 {% for backend in backends if backend.external_grpc_port and backend.external_grpc_port not in excluded_grpc_ports and backend.servers | selectattr('protocol', 'eq', 'https') | list %}
-frontend haproxy_grpc_{{ backend.backend_name }}
+frontend {{ backend.backend_name }}
     mode http
     bind [::]:{{ backend.external_grpc_port }} v4v6 ssl crt /var/lib/haproxy/certs alpn h2
     acl acl_host_{{ backend.backend_name }} req.hdr(Host) -m str {% for hostname in backend.hostname_acls %}{{hostname}} {% endfor +%}
