@@ -4,6 +4,7 @@
 """HAproxy route charm state component."""
 
 import logging
+from collections import defaultdict
 from functools import cached_property
 from typing import Optional, cast
 
@@ -329,6 +330,45 @@ class HaproxyRouteRequirersInformation:
                 "Requirers defined hostname(s) that map to multiple backends."
                 "This can cause unintended behaviors."
             )
+        return self
+
+    @model_validator(mode="after")
+    def check_grpc_ports_unique(self) -> Self:
+        """Check that backends with external_grpc_port define unique ports.
+
+        Returns:
+            Self: The validated model
+        """
+        grpc_ports: dict[int, list[int]] = defaultdict(list[int])
+        for backend in self.backends:
+            if backend.external_grpc_port:
+                grpc_ports[backend.external_grpc_port].append(backend.relation_id)
+
+        for port, relation_ids in grpc_ports.items():
+            if len(relation_ids) > 1:
+                logger.error(
+                    f"Multiple backends requested the same external gRPC port {port}: "
+                    f"relation_ids {relation_ids}"
+                )
+                self.relation_ids_with_invalid_data.extend(set(relation_ids) - set(self.relation_ids_with_invalid_data))
+        return self
+
+    @model_validator(mode="after")
+    def check_grpc_requires_https(self) -> Self:
+        """Check that backends with external_grpc_port use https protocol.
+
+        Returns:
+            Self: The validated model
+        """
+        for backend in self.backends:
+            if backend.external_grpc_port and backend.application_data.protocol != "https":
+                logger.error(
+                    f"Backend {backend.backend_name} with external gRPC port "
+                    f"{backend.external_grpc_port} must use 'https' protocol, "
+                    f"got '{backend.application_data.protocol}'. Relation ID: {backend.relation_id}"
+                )
+                if backend.relation_id not in self.relation_ids_with_invalid_data:
+                    self.relation_ids_with_invalid_data.append(backend.relation_id)
         return self
 
     @property
