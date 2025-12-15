@@ -1,3 +1,5 @@
+(how_to_provide_extra_configurations_for_ingress_requirer_charms)=
+
 # How to provide extra configuration to ingress requirers
 This guide will show you how a charm implementing only the `ingress` relation can leverage the added functionalities of the `haproxy-route` relation with the help of the `ingress-configurator` charm.
 
@@ -51,7 +53,7 @@ juju run ingress-requirer/0 rpc method=start_server
 ```
 
 
-# Verify that the requirer application is responding to requests
+## Verify that the requirer application is responding to requests
 Send a request with `curl` to the `any-charm` unit:
 ```sh
 curl $(juju status --format=json | jq -r '.applications["ingress-requirer"].units["ingress-requirer/0"]."public-address"')
@@ -63,7 +65,7 @@ juju-344909-3
 ```
 
 ## Deploy and configure the `haproxy` charm
-Deploy the `haproxy` and `self-signed-certificates` charms. Please refer to the [getting-started](../getting-started.md) section for a more detailed explanation.
+Deploy the `haproxy` and `self-signed-certificates` charms. Please refer to the {ref}`Tutorial <getting_started>` for a more detailed explanation.
 ```sh
 juju deploy haproxy --channel=2.8/edge --base=ubuntu@24.04
 juju deploy self-signed-certificates cert
