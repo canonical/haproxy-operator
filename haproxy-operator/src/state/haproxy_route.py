@@ -283,10 +283,6 @@ class HaproxyRouteRequirersInformation:
             )
             relation_ids_with_invalid_data_tcp = tcp_requirers.relation_ids_with_invalid_data
             for tcp_requirer in tcp_requirers.requirers_data:
-                if haproxy_route.relations and tcp_requirer.application_data.port in [80, 443]:
-                    logger.error("port 80 and 443 are not allowed if haproxy_route is present.")
-                    relation_ids_with_invalid_data_tcp.append(tcp_requirer.relation_id)
-                    continue
                 tcp_endpoints.append(
                     HAProxyRouteTcpEndpoint.from_haproxy_route_tcp_requirer_data(tcp_requirer)
                 )
@@ -333,43 +329,70 @@ class HaproxyRouteRequirersInformation:
         return self
 
     @model_validator(mode="after")
-    def check_grpc_ports_unique(self) -> Self:
-        """Check that backends with external_grpc_port define unique ports.
+    def check_tcp_http_port_conflicts(self) -> Self:
+        """Check that TCP and HTTP backends don't use the same frontend port.
 
         Returns:
             Self: The validated model
         """
-        grpc_ports: dict[int, list[int]] = defaultdict(list[int])
-        for backend in self.backends:
-            if backend.external_grpc_port:
-                grpc_ports[backend.external_grpc_port].append(backend.relation_id)
+        if not self.valid_backends or not self.valid_tcp_endpoints:
+            return self
 
-        for port, relation_ids in grpc_ports.items():
-            if len(relation_ids) > 1:
+        port_to_backend: dict[int, HAProxyRouteBackend] = {
+            backend.external_grpc_port: backend
+            for backend in self.valid_backends
+            if backend.external_grpc_port
+        }
+        backends_using_standard_ports = bool(
+            backend for backend in self.valid_backends if not backend.external_grpc_port
+        )
+
+        # Check for conflicts with TCP endpoints
+        for tcp_endpoint in self.valid_tcp_endpoints:
+            tcp_port = tcp_endpoint.application_data.port
+            if tcp_port in (80, 443) and backends_using_standard_ports:
                 logger.error(
-                    f"Multiple backends requested the same external gRPC port {port}: "
-                    f"relation_ids {relation_ids}"
+                    f"TCP backend on port {tcp_port} conflicts with HTTP backend."
                 )
-                self.relation_ids_with_invalid_data.extend(set(relation_ids) - set(self.relation_ids_with_invalid_data))
+                # For standard ports, dismiss only the TCP endpoint
+                self.relation_ids_with_invalid_data_tcp.append(tcp_endpoint.relation_id)
+                continue
+
+            conflicting_backend = port_to_backend.get(tcp_port)
+            if conflicting_backend:
+                logger.error(
+                    f"TCP backend on port {tcp_port} conflicts with HTTP backend."
+                )
+                self.relation_ids_with_invalid_data_tcp.append(tcp_endpoint.relation_id)
+                self.relation_ids_with_invalid_data.append(conflicting_backend.relation_id)
+
         return self
 
-    @model_validator(mode="after")
-    def check_grpc_requires_https(self) -> Self:
-        """Check that backends with external_grpc_port use https protocol.
+    @property
+    def valid_backends(self) -> list[HAProxyRouteBackend]:
+        """Get the list of valid backends (not in the invalid list).
 
         Returns:
-            Self: The validated model
+            list[HAProxyRouteBackend]: List of valid backends.
         """
-        for backend in self.backends:
-            if backend.external_grpc_port and backend.application_data.protocol != "https":
-                logger.error(
-                    f"Backend {backend.backend_name} with external gRPC port "
-                    f"{backend.external_grpc_port} must use 'https' protocol, "
-                    f"got '{backend.application_data.protocol}'. Relation ID: {backend.relation_id}"
-                )
-                if backend.relation_id not in self.relation_ids_with_invalid_data:
-                    self.relation_ids_with_invalid_data.append(backend.relation_id)
-        return self
+        return [
+            backend
+            for backend in self.backends
+            if backend.relation_id not in self.relation_ids_with_invalid_data
+        ]
+
+    @property
+    def valid_tcp_endpoints(self) -> list[HAProxyRouteTcpEndpoint]:
+        """Get the list of valid TCP endpoints (not in the invalid list).
+
+        Returns:
+            list[HAProxyRouteTcpEndpoint]: List of valid TCP endpoints.
+        """
+        return [
+            endpoint
+            for endpoint in self.tcp_endpoints
+            if endpoint.relation_id not in self.relation_ids_with_invalid_data_tcp
+        ]
 
     @property
     def acls_for_allow_http(self) -> list[str]:

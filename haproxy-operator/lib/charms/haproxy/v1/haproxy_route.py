@@ -122,6 +122,7 @@ class SomeCharm(CharmBase):
 
 import json
 import logging
+from collections import defaultdict
 from enum import Enum
 from functools import partial
 from typing import Annotated, Any, Literal, MutableMapping, Optional, cast
@@ -716,6 +717,49 @@ class HaproxyRouteRequirersData:
         if len(services) != len(set(services)):
             raise DataValidationError("Services declaration by requirers must be unique.")
 
+        return self
+
+    @model_validator(mode="after")
+    def check_external_grpc_port_unique(self) -> Self:
+        """Check that external gRPC ports are unique across units.
+
+        Raises:
+            DataValidationError: When units declared duplicate external gRPC ports.
+
+        Returns:
+            The validated model.
+        """
+        relation_ids_per_port: dict[int, list[int]] = defaultdict(list[int])
+        for requirer_data in self.requirers_data:
+            if requirer_data.application_data.external_grpc_port:
+                relation_ids_per_port[requirer_data.application_data.external_grpc_port].append(
+                    requirer_data.relation_id
+                )
+
+        self.relation_ids_with_invalid_data.extend(
+            relation_id
+            for relation_ids in relation_ids_per_port.values()
+            for relation_id in relation_ids
+            if len(relation_ids) > 1 and relation_id not in self.relation_ids_with_invalid_data
+        )
+        return self
+
+    @model_validator(mode="after")
+    def check_grpc_requires_https(self) -> Self:
+        """Check that backends with external_grpc_port use https protocol.
+
+        Returns:
+            Self: The validated model
+        """
+        for requirer_data in self.requirers_data:
+            if all(
+                [
+                    requirer_data.application_data.external_grpc_port is not None,
+                    requirer_data.application_data.protocol != "https",
+                    requirer_data.relation_id not in self.relation_ids_with_invalid_data,
+                ]
+            ):
+                self.relation_ids_with_invalid_data.append(requirer_data.relation_id)
         return self
 
 
