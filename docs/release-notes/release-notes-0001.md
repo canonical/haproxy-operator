@@ -1,4 +1,5 @@
 <!-- Remember to update this file for your charm!! -->
+(release_notes_release_notes_0001)=
 
 # HAProxy release notes – 2.8/stable
 
@@ -7,17 +8,17 @@ These release notes cover new features and changes in HAProxy for revisions
 
 Main features:
 
-
-
-Main breaking changes:
-
-
+1. Support for TCP is added via the new `haproxy-route-tcp` relation.
+2. Support for downstream HTTPS is added together with the `certificate_transfer` relation.
+3. The product's terraform module now supports keepalived as an alternative option to hacluster for high-availability.
+4. Removed the restriction on header rewrite expressions in the `haproxy-route` relation ( previously HAProxy's reserved characters were forbidden )
+5. Added HTTP/2 support over HTTPS for backend communication. Note that this requires the backend to set `protocol=HTTPS` and the use of the `certificate_transfer` relation is also required.
+6. Requirers can now request for backends to be made available via HTTP using the new `allow_http` attribute of the `haproxy-route` relation.
 
 Main bug fixes:
 * Fixed handling of `haproxy-route-tcp` requirer data.
 
-
-See our [Release policy and schedule](docs/release-notes/landing-page.md).
+See our [Release policy and schedule](index.md).
 
 ## Requirements and compatibility
 
@@ -29,17 +30,16 @@ If the user will need any specific upgrade instructions for this
 release, include those instructions here.
 -->
 
-The charm operates <workload name with version>.
+The charm operates HAProxy v2.8.
 
 The table below shows the required or supported versions of the software necessary to operate the charm.
 
 | Software                | Required version |
 |-------------------------|------------------|
-| Juju                    | XXXX             |
-| Terraform               | XXXX             |
-| Terraform Juju provider | XXXX             |
-| Ubuntu                  | XXXX             |
-| XXXX                    | XXXX             |
+| Juju                    | 3.x              |
+| Terraform               | 1.6              |
+| Terraform Juju provider | 1.1              |
+| Ubuntu                  | 24.04            |
 
 ## Updates
 
@@ -49,8 +49,6 @@ The following major and minor features were added in this release.
 Now the charm has a new action, `get-proxied-endpoints`, that
 gets the endpoints proxied by HAProxy.
 
-<Add more context and information about the entry>
-
 Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/214)
 * [Related documentation](https://charmhub.io/haproxy/actions?channel=2.8/edge#get-proxied-endpoints)
@@ -59,7 +57,6 @@ Relevant links:
 
 ### Unpin HAProxy apt package version
 Unpinned the HAProxy APT package version.
-<Add more context and information about the entry>
 
 Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/276)
@@ -68,8 +65,6 @@ Relevant links:
 ### Get network information from relation endpoint binding
 So that the charm will work with Juju spaces, now the charm
 gets its network information from the relation endpoint binding.
-
-<Add more context and information about the entry>
 
 Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/223)
@@ -81,8 +76,6 @@ Stream Processing Offload Engine (SPOE) agent for the charm.
 The SPOE agent works with HAProxy to act as an authentication
 proxy for both LDAP and OIDC.
 
-<Add more context and information about the entry>
-
 Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/224)
 
@@ -90,8 +83,6 @@ Relevant links:
 ### Upgraded HAProxy apt package
 To fix an issue where the `install` hook was failing,
 the charm now uses `2.8.5-1ubuntu3.4` of the HAProxy apt package.
-
-<Add more context and information about the entry>
 
 Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/209)
@@ -101,8 +92,6 @@ Relevant links:
 Added the `http-server-close` argument to the HAProxy configuration.
 When this argument is set, it closes the connection after the request.
 
-<Add more context and information about the entry>
-
 Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/175)
 
@@ -110,8 +99,6 @@ Relevant links:
 ### Remove `haproxy_route` restriction for expressions
 Currently some valid characters are not allowed for expressions in the
 `haproxy_route` relation. Now only the newline character is restricted.
-
-<Add more context and information about the entry>
 
 Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/257)
@@ -121,8 +108,6 @@ Relevant links:
 Update TF module to provide support for keepalived,
   add validation rules to ensure mutual exclusivity between the 2 options.
 
-<Add more context and information about the entry>
-
 Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/243)
 
@@ -130,8 +115,6 @@ Relevant links:
 ### Added `rsyslog` configuration when HAProxy is installed
 Now the `rsyslog` configuration is added when the HAProxy package
 is installed, setting the logging destination to the unix socket.      
-
-<Add more context and information about the entry>
 
 Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/187)
@@ -141,16 +124,13 @@ Relevant links:
 Add documentation for the release policy and schedule covering
   both haproxy and haproxy-spoe-auth charms in the monorepo.
 
-<Add more context and information about the entry>
-
 Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/272)
-* [Related documentation](landing-page.md)
+* [Related documentation](index.md)
 
 
 ### Add HTTPS backend support for HAProxy routing
 Enable HAProxy to route traffic to HTTPS backends with certificate handling and validation.
-<Add more context and information about the entry>
 
 Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/172)
@@ -160,8 +140,6 @@ Relevant links:
 Add a new allow_http attribute to allow disabling mandatory HTTPS redirection for backends.
 Add logic to build the required ACL and rendering logic in the j2 template.
 
-<Add more context and information about the entry>
-
 Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/230)
 
@@ -170,8 +148,6 @@ Relevant links:
 Run renovate only twice a month except for vulnerability alerts.
 Also use allNonMajor.
 
-<Add more context and information about the entry>
-
 Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/262)
 
@@ -179,15 +155,12 @@ Relevant links:
 ### Add SPOE Auth interface library
 Add the `charms.haproxy.v0.spoe_auth` library to enable SPOE authentication integration.
 
-<Add more context and information about the entry>
-
 Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/229)
 
 
 ### Added HTTP/2 support to HAProxy
 Added HTTP/2 support in the HAProxy charm for both frontend and backend connections.
-<Add more context and information about the entry>
 
 Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/249)
@@ -197,16 +170,12 @@ Relevant links:
 After the HAProxy configuration is updated, the requested TCP ports
 are opened.    
 
-<Add more context and information about the entry>
-
 Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/188)
 
 
 ### Add HAProxy SPOE Auth Charm
 Added a new charm for HAProxy SPOE authentication.
-
-<Add more context and information about the entry>
 
 Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/232)
@@ -216,35 +185,19 @@ Relevant links:
 Now the repository uses `uv`, `tox-uv`, and `ruff` for building,
 testing and linting.
 
-<Add more context and information about the entry>
-
 Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/225)
-
-
-
-
-
-
 
 ## Bug fixes
 
 * Fixed handling of `haproxy-route-tcp` requirer data ([PR](https://github.com/canonical/haproxy-operator/pull/215)).
 * Fixed a typo in the cookie fetch method in the load-balancing algorithm ([PR](https://github.com/canonical/haproxy-operator/pull/179)).
 
-
-
-
-
 ## Known issues
 
-<!--
-Add a bulleted list with links to unresolved issues – the most important/pressing ones,
-the ones being worked on currently, or the ones with the most visibility/traffic.
-You don’t need to add links to all the issues in the repository if there are
-several – a list of 3-5 issues is sufficient. 
-If there are no known issues, keep the section and write "No known issues".
--->
+* [Allow a port component in the haproxy-route hostname and additional-hostnames attribute](https://github.com/canonical/haproxy-operator/issues/288)
+* [Return apex domain endpoint when no paths defined](https://github.com/canonical/haproxy-operator/issues/285)
+* [Match host header as domain, not as string](https://github.com/canonical/haproxy-operator/issues/245)
 
 ## Thanks to our contributors
 
