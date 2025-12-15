@@ -8,12 +8,12 @@ These release notes cover new features and changes in HAProxy for revisions
 
 Main features:
 
-1. Support for TCP is added via the new `haproxy-route-tcp` relation.
-2. Support for downstream HTTPS is added together with the `certificate_transfer` relation.
-3. The product's terraform module now supports keepalived as an alternative option to hacluster for high-availability.
-4. Removed the restriction on header rewrite expressions in the `haproxy-route` relation ( previously HAProxy's reserved characters were forbidden )
-5. Added HTTP/2 support over HTTPS for backend communication. Note that this requires the backend to set `protocol=HTTPS` and the use of the `certificate_transfer` relation is also required.
-6. Requirers can now request for backends to be made available via HTTP using the new `allow_http` attribute of the `haproxy-route` relation.
+* Added support for TCP is added via the new `haproxy-route-tcp` relation.
+* Added support for downstream HTTPS is added together with the `certificate_transfer` relation.
+* The product's Terraform module now supports keepalived as an alternative option to `hacluster` for high-availability.
+* Removed the restriction on header rewrite expressions in the `haproxy-route` relation ( previously HAProxy's reserved characters were forbidden )
+* Added HTTP/2 support over HTTPS for backend communication. Note that this requires the backend to set `protocol=HTTPS` and the use of the `certificate_transfer` relation is also required.
+* Requirers can now request for backends to be made available via HTTP using the new `allow_http` attribute of the `haproxy-route` relation.
 
 Main bug fixes:
 
@@ -87,7 +87,7 @@ Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/175)
 
 
-### Remove `haproxy_route` restriction for expressions
+### Removed `haproxy_route` restriction for expressions
 
 Currently some valid characters are not allowed for expressions in the
 `haproxy_route` relation. Now only the newline character is restricted.
@@ -137,7 +137,7 @@ Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/172)
 
 
-### Allow enabling http for haproxy route backend
+### Allow enabling HTTP for haproxy route backend
 
 Add a new `allow_http attribute` to allow disabling mandatory HTTPS redirection for backends.
 Add logic to build the required ACL and rendering logic in the Jinja2 template.
