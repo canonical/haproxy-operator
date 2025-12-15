@@ -54,6 +54,7 @@ class HaproxySpoeAuthCharm(ops.CharmBase):
         self.framework.observe(self.on[OAUTH_RELATION].relation_changed, self._reconcile)
         self.framework.observe(self._oauth.on.oauth_info_changed, self._reconcile)
         self.framework.observe(self._oauth.on.oauth_info_removed, self._reconcile)
+        self.framework.observe(self.on[SPOE_AUTH_RELATION].relation_changed, self._reconcile)
 
     def _reconcile(self, _: ops.EventBase) -> None:
         """Reconcile the charm state and service configuration."""

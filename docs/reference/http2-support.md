@@ -1,3 +1,5 @@
+(reference_http2_support)=
+
 # HTTP/2 support
 
 The HAProxy operator provides **automatic** HTTP/2 support for frontends and backends using HTTPS.

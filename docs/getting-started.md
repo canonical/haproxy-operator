@@ -1,3 +1,5 @@
+(getting_started)=
+
 # Deploy the HAProxy charm
 
 In this tutorial we'll look at how to deploy the HAProxy charm to provide ingress to a backend application, then configure high-avalability using the `hacluster` relation. This tutorial is done on LXD and assumes that you have a Juju controller bootstrapped and a machine model to deploy charms.
@@ -6,7 +8,7 @@ In this tutorial we'll look at how to deploy the HAProxy charm to provide ingres
 
 * A working station, e.g., a laptop, with amd64 architecture.
 * Juju 3.3 or higher installed and bootstrapped to a LXD controller. You can accomplish
-this process by using a [Multipass](https://multipass.run/) VM as outlined in this guide: [Set up / Tear down your test environment](https://canonical-juju.readthedocs-hosted.com/en/3.6/user/howto/manage-your-deployment/manage-your-deployment-environment/#set-things-up)
+this process by using a [Multipass](https://multipass.run/) VM as outlined in this guide: {ref}`Set up your test environment <juju:set-things-up>`
 
 ## Set up a tutorial model
 
