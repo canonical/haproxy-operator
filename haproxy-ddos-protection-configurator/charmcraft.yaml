@@ -55,8 +55,8 @@ config:
       type: string
       description: |
         Policy to be applied when the above limits are exceeded. Specify one of: drop, reject, or 
-        deny. Optionally append an HTTP status code for deny. Examples: "reject", "deny", 
-        "deny 503".
+        deny. Optionally append an HTTP status code for deny (default is 403). Examples: "reject", 
+        "deny", "deny 503".
       default: drop
     ip-allow-list:
       type: string
