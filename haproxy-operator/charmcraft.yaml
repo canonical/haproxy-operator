@@ -97,8 +97,9 @@ config:
       default: false
       type: boolean
       description: |
-        Send the http response header Strict-Transport-Security for https only domains.
-        The header will be sent with the value "max-age=2592000;".
+        Send the http response header Strict-Transport-Security for domains provided
+        through the `haproxy-route` relation without the allow_http attribute.
+        The Strict-Transport-Security header value is "max-age=2592000;".
 
 actions:
   get-certificate:
