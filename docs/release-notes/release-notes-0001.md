@@ -8,12 +8,12 @@ These release notes cover new features and changes in HAProxy for revisions
 
 Main features:
 
-* Added support for TCP is added via the new `haproxy-route-tcp` relation.
+* Added support for TCP is added with the new `haproxy-route-tcp` relation.
 * Added support for downstream HTTPS is added together with the `certificate_transfer` relation.
 * The product's Terraform module now supports keepalived as an alternative option to `hacluster` for high-availability.
 * Removed the restriction on header rewrite expressions in the `haproxy-route` relation ( previously HAProxy's reserved characters were forbidden )
 * Added HTTP/2 support over HTTPS for backend communication. Note that this requires the backend to set `protocol=HTTPS` and the use of the `certificate_transfer` relation is also required.
-* Requirers can now request for backends to be made available via HTTP using the new `allow_http` attribute of the `haproxy-route` relation.
+* Requirers can now request for backends to be made available through HTTP using the new `allow_http` attribute of the `haproxy-route` relation.
 
 Main bug fixes:
 
@@ -75,7 +75,7 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/224)
 
-### Added http-server-close support
+### Added `http-server-close` support
 
 Added the `http-server-close` argument to the HAProxy configuration.
 When this argument is set, it closes the connection after the request.
@@ -147,7 +147,11 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/262)
 
+<!-- vale Canonical.007-Headings-sentence-case = NO -->
+
 ### Added SPOE Auth interface library
+
+<!-- vale Canonical.007-Headings-sentence-case = YES -->
 
 Add the `charms.haproxy.v0.spoe_auth` library to enable SPOE authentication integration.
 
@@ -172,7 +176,11 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/188)
 
-### Added HAProxy SPOE Auth Charm
+<!-- vale Canonical.007-Headings-sentence-case = NO -->
+
+### Added HAProxy SPOE Auth charm
+
+<!-- vale Canonical.007-Headings-sentence-case = YES -->
 
 Added a new charm for HAProxy SPOE authentication.
 
