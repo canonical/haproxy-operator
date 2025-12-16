@@ -1,3 +1,5 @@
+(release_notes_release_notes_rev216)=
+
 # HAProxy release notes – 2.8/stable, revision 216
 
 These release notes cover new features and changes in HAProxy for revisions
@@ -13,7 +15,7 @@ Main bug fixes:
 * Fixed a typo in the cookie fetch method in the load-balancing algorithm ([PR](https://github.com/canonical/haproxy-operator/pull/179)).
 * Fixed an ambiguous endpoint in an integration test ([PR](https://github.com/canonical/haproxy-operator/pull/129)).
 
-See our [Release policy and schedule](landing-page.md).
+See our [Release policy and schedule](index.md).
 
 ## Requirements and compatibility
 
@@ -118,7 +120,7 @@ Relevant links:
 ### Added new field to the requirer application databag
 
 The requirer application databag now has a "protocol" field to
-support HTTPS supstream servers.
+support HTTPS upstream servers.
 
 Relevant links:
 
@@ -147,7 +149,7 @@ Relevant links:
 
 ### Added first scenario test
 
-Added the first scenario test which kickstarts the transition process from Harness to Scenario.
+Added the first scenario test which starts the transition process from Harness to Scenario.
 
 Relevant links:
 
@@ -208,4 +210,4 @@ Relevant links:
 
 ## Thanks to our contributors
 
-[Thanhphan1147](https://github.com/Thanhphan1147), [dimaqq](https://github.com/dimaqq), [yhaliaw](https://github.com/yhaliaw), [erinecon](https://github.com/erinecon), [swetha1654](https://github.com/swetha1654), [javierdelapuente](https://github.com/javierdelapuente), [alithethird](https://github.com/alithethird), [arturo-seijas](https://github.com/arturo-seijas)
+[`Thanhphan1147`](https://github.com/Thanhphan1147), [`dimaqq`](https://github.com/dimaqq), [`yhaliaw`](https://github.com/yhaliaw), [`erinecon`](https://github.com/erinecon), [`swetha1654`](https://github.com/swetha1654), [`javierdelapuente`](https://github.com/javierdelapuente), [`alithethird`](https://github.com/alithethird), [`arturo-seijas`](https://github.com/arturo-seijas)

@@ -1,3 +1,5 @@
+(explanation_security)=
+
 # Security
 
 This document describes the security design of the HAProxy charm.
@@ -32,7 +34,7 @@ Encrypting these requests would help to prevent any machine-in-the-middle attack
 ### Good practices
 
 Encryption can be achieved by giving a TLS certificate to the charm, configuring it to accept an HTTPS request over an unencrypted HTTP request.
-TLS certificate can be provided via the [`certificates` integration](https://charmhub.io/haproxy/integrations?channel=2.8/edge#certificates) to the HAProxy charm.
+TLS certificate can be provided through the [`certificates` integration](https://charmhub.io/haproxy/integrations?channel=2.8/edge) to the HAProxy charm.
 
 ### Summary
 
@@ -45,7 +47,7 @@ TLS certificate can be provided via the [`certificates` integration](https://cha
 This type of attack refers to attackers overloading a service by issuing many requests in a short period of time.
 Attackers hope to exhaust the service's resources, e.g., memory and CPU cycles.
 
-The common way to deal with this type of attack is by limiting the number of requests per IP address.
+The common way to deal with this type of attack is by limiting the number of requests for each IP address.
 While it does not prevent all DoS attacks depending on the scale of the attack, it is generally an effective mitigation strategy.
 
 ### Good practices
@@ -54,4 +56,4 @@ The charm offers a configuration to set the maximum concurrent connection. This 
 
 ### Summary
 
-- Set a reasonable maximum concurrent connection via the [`global-maxconn` charm configuration](https://charmhub.io/haproxy/configurations?channel=2.8/edge#global-maxconn).
+- Set a reasonable maximum concurrent connection using the [`global-maxconn` charm configuration](https://charmhub.io/haproxy/configurations?channel=2.8/edge#global-maxconn).

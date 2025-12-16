@@ -1,0 +1,5 @@
+configurator
+Configurator
+databag
+monorepo
+proxied
