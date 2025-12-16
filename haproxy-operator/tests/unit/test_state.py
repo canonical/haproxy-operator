@@ -38,11 +38,15 @@ from state.tls import TLSInformation
 
 @pytest.fixture(scope="module", name="haproxy_route_tcp_relation_data")
 def haproxy_route_tcp_relation_data_fixture() -> typing.Callable[
-    [int], HaproxyRouteTcpRequirersData
+    ..., HaproxyRouteTcpRequirersData
 ]:
     """Mock systemd lib methods."""
 
-    def generate_requirer_data(port: int) -> HaproxyRouteTcpRequirersData:
+    def generate_requirer_data(
+        *,
+        relation_id: int = 0,
+        **application_data: typing.Any,
+    ) -> HaproxyRouteTcpRequirersData:
         """Generate haproxy-route-tcp relation data with custom port.
 
         Args:
@@ -54,11 +58,11 @@ def haproxy_route_tcp_relation_data_fixture() -> typing.Callable[
         return HaproxyRouteTcpRequirersData(
             requirers_data=[
                 HaproxyRouteTcpRequirerData(
-                    relation_id=0,
+                    relation_id=relation_id,
                     application="tcp-route-requirer",
                     application_data=typing.cast(
                         TcpRequirerApplicationData,
-                        TcpRequirerApplicationData.from_dict({"port": port}),
+                        TcpRequirerApplicationData.from_dict(application_data),
                     ),
                     units_data=[
                         typing.cast(
@@ -75,10 +79,15 @@ def haproxy_route_tcp_relation_data_fixture() -> typing.Callable[
 
 
 @pytest.fixture(scope="module", name="haproxy_route_relation_data")
-def haproxy_route_relation_data_fixture() -> typing.Callable[[str], HaproxyRouteRequirerData]:
+def haproxy_route_relation_data_fixture() -> typing.Callable[..., HaproxyRouteRequirerData]:
     """Mock systemd lib methods."""
 
-    def generate_requirer_data(service: str) -> HaproxyRouteRequirerData:
+    def generate_requirer_data(
+        service: str,
+        *,
+        relation_id: int = 1,
+        **application_data: typing.Any,
+    ) -> HaproxyRouteRequirerData:
         """Generate haproxy-route relation data with custom service name.
 
         Args:
@@ -87,11 +96,17 @@ def haproxy_route_relation_data_fixture() -> typing.Callable[[str], HaproxyRoute
         Returns:
             HaproxyRouteRequirerData: Generated relation data.
         """
+        application_data_dict = {
+            "service": service,
+            "ports": [80],
+        }
+        application_data_dict.update(application_data)
+
         return HaproxyRouteRequirerData(
-            relation_id=1,
+            relation_id=relation_id,
             application_data=typing.cast(
                 RequirerApplicationData,
-                RequirerApplicationData.from_dict({"service": service, "ports": [80]}),
+                RequirerApplicationData.from_dict(application_data_dict),
             ),
             units_data=[
                 typing.cast(RequirerUnitData, RequirerUnitData.from_dict({"address": "10.0.0.1"}))
@@ -205,8 +220,8 @@ def test_proxy_mode_tcp():
 
 
 def test_haproxy_route_requirer_information_reserved_ports(
-    haproxy_route_tcp_relation_data: typing.Callable[[int], HaproxyRouteTcpRequirersData],
-    haproxy_route_relation_data: typing.Callable[[str], HaproxyRouteRequirerData],
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirersData],
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
 ):
     """
     arrange: Setup mock haproxy-route and haproxy-route-tcp relation providers.
@@ -215,7 +230,7 @@ def test_haproxy_route_requirer_information_reserved_ports(
     """
     haproxy_route_tcp_provider_mock = MagicMock()
     haproxy_route_tcp_provider_mock.get_data = MagicMock(
-        return_value=haproxy_route_tcp_relation_data(80)
+        return_value=haproxy_route_tcp_relation_data(port=80)
     )
     haproxy_route_provider_mock = MagicMock()
     haproxy_route_provider_mock.get_data = MagicMock(
@@ -238,8 +253,8 @@ def test_haproxy_route_requirer_information_reserved_ports(
 
 
 def test_haproxy_route_requirer_information(
-    haproxy_route_tcp_relation_data: typing.Callable[[int], HaproxyRouteTcpRequirersData],
-    haproxy_route_relation_data: typing.Callable[[str], HaproxyRouteRequirerData],
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirersData],
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
 ):
     """
     arrange: Setup all relation providers mock.
@@ -248,7 +263,7 @@ def test_haproxy_route_requirer_information(
     """
     haproxy_route_tcp_provider_mock = MagicMock()
     haproxy_route_tcp_provider_mock.get_data = MagicMock(
-        return_value=haproxy_route_tcp_relation_data(4000)
+        return_value=haproxy_route_tcp_relation_data(port=4000)
     )
     haproxy_route_provider_mock = MagicMock()
     haproxy_route_provider_mock.get_data = MagicMock(
@@ -266,7 +281,7 @@ def test_haproxy_route_requirer_information(
         peers=[],
         ca_certs_configured=False,
     )
-    assert len(haproxy_route_information.tcp_endpoints) == 1
+    assert len(haproxy_route_information.valid_tcp_endpoints) == 1
 
 
 def test_tls_allow_no_certificate():
@@ -293,7 +308,7 @@ def test_tls_allow_no_certificate():
 
 
 def test_haproxy_route_tcp_endpoint(
-    haproxy_route_tcp_relation_data: typing.Callable[[int], HaproxyRouteTcpRequirersData],
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirersData],
 ):
     """
     arrange: Generate TCP relation data.
@@ -301,7 +316,7 @@ def test_haproxy_route_tcp_endpoint(
     assert: The class correctly parses the information.
     """
     haproxy_route_tcp: HaproxyRouteTcpRequirerData = haproxy_route_tcp_relation_data(
-        4000
+        port=4000
     ).requirers_data[0]
     tcp_endpoint = HAProxyRouteTcpEndpoint.from_haproxy_route_tcp_requirer_data(haproxy_route_tcp)
     assert tcp_endpoint.relation_id == haproxy_route_tcp.relation_id
@@ -309,3 +324,207 @@ def test_haproxy_route_tcp_endpoint(
     assert tcp_endpoint.servers[0].address == haproxy_route_tcp.units_data[0].address
     assert tcp_endpoint.servers[0].server_name == f"{haproxy_route_tcp.application}-0"
     assert tcp_endpoint.servers[0].port == haproxy_route_tcp.application_data.backend_port
+
+
+def test_tcp_http_port_conflict_custom_grpc_port(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirersData],
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
+):
+    """
+    arrange: Setup TCP endpoint on custom gRPC port and HTTP backend with same custom port.
+    act: Initialize HaproxyRouteRequirersInformation with both.
+    assert: Both TCP endpoint and backend are marked as invalid.
+    """
+    tcp_relation_id = 0
+    haproxy_route_tcp_provider_mock = MagicMock()
+    haproxy_route_tcp_provider_mock.get_data = MagicMock(
+        return_value=haproxy_route_tcp_relation_data(port=5000, relation_id=tcp_relation_id)
+    )
+
+    http_relation_id = 1
+    haproxy_route_provider_mock = MagicMock()
+    haproxy_route_provider_mock.get_data = MagicMock(
+        return_value=HaproxyRouteRequirersData(
+            requirers_data=[
+                haproxy_route_relation_data(
+                    "grpc_service",
+                    relation_id=http_relation_id,
+                    ports=[80],
+                    protocol="https",
+                    external_grpc_port=5000,
+                )
+            ],
+            relation_ids_with_invalid_data=[],
+        )
+    )
+
+    haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
+        haproxy_route=haproxy_route_provider_mock,
+        haproxy_route_tcp=haproxy_route_tcp_provider_mock,
+        external_hostname="haproxy.internal",
+        peers=[],
+        ca_certs_configured=True,
+    )
+
+    assert 0 in haproxy_route_information.relation_ids_with_invalid_data_tcp
+    assert http_relation_id in haproxy_route_information.relation_ids_with_invalid_data
+    assert len(haproxy_route_information.valid_backends) == 0
+    assert len(haproxy_route_information.valid_tcp_endpoints) == 0
+
+
+@pytest.mark.parametrize("tcp_port", [80, 443])
+def test_tcp_http_port_conflict_standard_ports_only_tcp_invalid(
+    tcp_port: int,
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirersData],
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
+):
+    """
+    arrange: Setup TCP endpoint on standard port (80 or 443) and HTTP backend without external_grpc_port.
+    act: Initialize HaproxyRouteRequirersInformation with both.
+    assert: Only TCP endpoint is marked as invalid, backend remains valid.
+    """
+    haproxy_route_tcp_provider_mock = MagicMock()
+    haproxy_route_tcp_provider_mock.get_data = MagicMock(
+        return_value=haproxy_route_tcp_relation_data(port=tcp_port)
+    )
+
+    haproxy_route_provider_mock = MagicMock()
+
+    haproxy_route_provider_mock.get_data = MagicMock(
+        return_value=HaproxyRouteRequirersData(
+            requirers_data=[
+                haproxy_route_relation_data("http_service"),
+            ],
+            relation_ids_with_invalid_data=[],
+        )
+    )
+
+    haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
+        haproxy_route=haproxy_route_provider_mock,
+        haproxy_route_tcp=haproxy_route_tcp_provider_mock,
+        external_hostname="haproxy.internal",
+        peers=[],
+        ca_certs_configured=False,
+    )
+
+    assert 0 in haproxy_route_information.relation_ids_with_invalid_data_tcp
+    assert 1 not in haproxy_route_information.relation_ids_with_invalid_data
+    assert len(haproxy_route_information.valid_backends) == 1
+    assert len(haproxy_route_information.valid_tcp_endpoints) == 0
+
+
+def test_tcp_http_no_conflict_different_ports(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirersData],
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
+):
+    """
+    arrange: Setup TCP endpoint on port 5000 and HTTP backend with custom gRPC port 6000.
+    act: Initialize HaproxyRouteRequirersInformation with both.
+    assert: Both remain valid as they use different ports.
+    """
+    haproxy_route_tcp_provider_mock = MagicMock()
+    haproxy_route_tcp_provider_mock.get_data = MagicMock(
+        return_value=haproxy_route_tcp_relation_data(port=5000)
+    )
+
+    haproxy_route_provider_mock = MagicMock()
+    haproxy_route_provider_mock.get_data = MagicMock(
+        return_value=HaproxyRouteRequirersData(
+            requirers_data=[
+                haproxy_route_relation_data(
+                    "grpc_service",
+                    relation_id=1,
+                    ports=[80],
+                    protocol="https",
+                    external_grpc_port=6000,
+                )
+            ],
+            relation_ids_with_invalid_data=[],
+        )
+    )
+
+    haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
+        haproxy_route=haproxy_route_provider_mock,
+        haproxy_route_tcp=haproxy_route_tcp_provider_mock,
+        external_hostname="haproxy.internal",
+        peers=[],
+        ca_certs_configured=True,
+    )
+
+    assert 0 not in haproxy_route_information.relation_ids_with_invalid_data_tcp
+    assert 1 not in haproxy_route_information.relation_ids_with_invalid_data
+    assert len(haproxy_route_information.valid_backends) == 1
+    assert len(haproxy_route_information.valid_tcp_endpoints) == 1
+
+
+def test_tcp_http_no_conflict_no_http_backends(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirersData],
+):
+    """
+    arrange: Setup only TCP endpoint without any HTTP backends.
+    act: Initialize HaproxyRouteRequirersInformation.
+    assert: TCP endpoint remains valid as there are no backends to conflict with.
+    """
+    haproxy_route_tcp_provider_mock = MagicMock()
+    haproxy_route_tcp_provider_mock.get_data = MagicMock(
+        return_value=haproxy_route_tcp_relation_data(port=4000)
+    )
+
+    haproxy_route_provider_mock = MagicMock()
+    haproxy_route_provider_mock.get_data = MagicMock(
+        return_value=HaproxyRouteRequirersData(
+            requirers_data=[],
+            relation_ids_with_invalid_data=[],
+        )
+    )
+
+    haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
+        haproxy_route=haproxy_route_provider_mock,
+        haproxy_route_tcp=haproxy_route_tcp_provider_mock,
+        external_hostname="test.example.com",
+        peers=[],
+        ca_certs_configured=False,
+    )
+
+    assert len(haproxy_route_information.relation_ids_with_invalid_data_tcp) == 0
+    assert len(haproxy_route_information.relation_ids_with_invalid_data) == 0
+    assert len(haproxy_route_information.valid_tcp_endpoints) == 1
+
+
+def test_tcp_http_no_conflict_no_tcp_endpoints(
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
+):
+    """
+    arrange: Setup only HTTP backend without any TCP endpoints.
+    act: Initialize HaproxyRouteRequirersInformation.
+    assert: Backend remains valid as there are no TCP endpoints to conflict with.
+    """
+    haproxy_route_tcp_provider_mock = MagicMock()
+    haproxy_route_tcp_provider_mock.get_data = MagicMock(
+        return_value=HaproxyRouteTcpRequirersData(
+            requirers_data=[],
+            relation_ids_with_invalid_data=[],
+        )
+    )
+
+    haproxy_route_provider_mock = MagicMock()
+    haproxy_route_provider_mock.get_data = MagicMock(
+        return_value=HaproxyRouteRequirersData(
+            requirers_data=[
+                haproxy_route_relation_data("http_service"),
+            ],
+            relation_ids_with_invalid_data=[],
+        )
+    )
+
+    haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
+        haproxy_route=haproxy_route_provider_mock,
+        haproxy_route_tcp=haproxy_route_tcp_provider_mock,
+        external_hostname="haproxy.internal",
+        peers=[],
+        ca_certs_configured=False,
+    )
+
+    assert len(haproxy_route_information.relation_ids_with_invalid_data_tcp) == 0
+    assert len(haproxy_route_information.relation_ids_with_invalid_data) == 0
+    assert len(haproxy_route_information.valid_backends) == 1
