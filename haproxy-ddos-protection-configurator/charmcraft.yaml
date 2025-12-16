@@ -54,9 +54,9 @@ config:
     limit-policy:
       type: string
       description: |
-        Space separated string of the policy (drop / reject / deny) to be applied if the requests 
-        exceed the above limits and optionally the HTTP status code to respond to for the limit 
-        policy. For example: "deny 503" or simply "drop".
+        Policy to be applied when the above limits are exceeded. Specify one of: drop, reject, or 
+        deny. Optionally append an HTTP status code for deny. Examples: "reject", "deny", 
+        "deny 503".
       default: drop
     ip-allow-list:
       type: string
