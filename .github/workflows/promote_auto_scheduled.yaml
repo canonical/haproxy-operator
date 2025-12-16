@@ -23,6 +23,7 @@ jobs:
       base-channel: 24.04
       base-name: ubuntu
       base-architecture: amd64
+      tag-prefix: haproxy
 
   promote-haproxy-charm-edge-to-candidate:
     needs: [promote-haproxy-charm-candidate-to-stable]
@@ -35,6 +36,7 @@ jobs:
       base-channel: 24.04
       base-name: ubuntu
       base-architecture: amd64
+      tag-prefix: haproxy
 
   promote-haproxy-spoe-auth-charm-candidate-to-stable:
     needs: [require-approval]
@@ -47,6 +49,7 @@ jobs:
       base-channel: 24.04
       base-name: ubuntu
       base-architecture: amd64
+      tag-prefix: haproxy-spoe-auth
 
   promote-haproxy-spoe-auth-charm-edge-to-candidate:
     needs: [promote-haproxy-spoe-auth-charm-candidate-to-stable]
@@ -59,3 +62,4 @@ jobs:
       base-channel: 24.04
       base-name: ubuntu
       base-architecture: amd64
+      tag-prefix: haproxy-spoe-auth

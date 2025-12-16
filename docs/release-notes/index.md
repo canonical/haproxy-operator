@@ -33,8 +33,11 @@ Release notes are published for the `haproxy` charm with every revision of the `
 ## Releases
 
 * [HAProxy release notes – 2.8/stable, revision 216](release-notes-rev216.md)
+* [HAProxy release notes – 2.8/stable, revision 283](release-notes-0001.md)
 
 ```{toctree}
 :hidden:
 :maxdepth: 1
-release-notes-rev216.md
+Revision 216 <release-notes-rev216>
+Revision 283 <release-notes-0001>
+```
