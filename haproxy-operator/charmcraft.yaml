@@ -93,6 +93,12 @@ config:
     vip:
       type: string
       description: Virtual IP address, used in active-passive ha mode.
+    enable-hsts:
+      default: false
+      type: boolean
+      description: |
+        Send the http response header Strict-Transport-Security for https only domains.
+        The header will be sent with the value "max-age=2592000;".
 
 actions:
   get-certificate:
