@@ -11,14 +11,10 @@ import pytest
 from charms.haproxy.v0.haproxy_route_tcp import (
     HaproxyRouteTcpRequirerData,
     HaproxyRouteTcpRequirersData,
-    TcpRequirerApplicationData,
-    TcpRequirerUnitData,
 )
 from charms.haproxy.v1.haproxy_route import (
     HaproxyRouteRequirerData,
     HaproxyRouteRequirersData,
-    RequirerApplicationData,
-    RequirerUnitData,
 )
 from charms.tls_certificates_interface.v4.tls_certificates import TLSCertificatesRequiresV4
 from charms.traefik_k8s.v1.ingress_per_unit import DataValidationError as V1DataValidationError
@@ -34,86 +30,6 @@ from state.ingress_per_unit import (
     IngressPerUnitRequirersInformation,
 )
 from state.tls import TLSInformation
-
-
-@pytest.fixture(scope="module", name="haproxy_route_tcp_relation_data")
-def haproxy_route_tcp_relation_data_fixture() -> typing.Callable[
-    ..., HaproxyRouteTcpRequirersData
-]:
-    """Mock systemd lib methods."""
-
-    def generate_requirer_data(
-        *,
-        relation_id: int = 0,
-        **application_data: typing.Any,
-    ) -> HaproxyRouteTcpRequirersData:
-        """Generate haproxy-route-tcp relation data with custom port.
-
-        Args:
-            port: Port included in the relation data.
-
-        Returns:
-            HaproxyRouteTcpRequirersData: Generated relation data.
-        """
-        return HaproxyRouteTcpRequirersData(
-            requirers_data=[
-                HaproxyRouteTcpRequirerData(
-                    relation_id=relation_id,
-                    application="tcp-route-requirer",
-                    application_data=typing.cast(
-                        TcpRequirerApplicationData,
-                        TcpRequirerApplicationData.from_dict(application_data),
-                    ),
-                    units_data=[
-                        typing.cast(
-                            TcpRequirerUnitData,
-                            TcpRequirerUnitData.from_dict({"address": "10.0.0.1"}),
-                        )
-                    ],
-                )
-            ],
-            relation_ids_with_invalid_data=[],
-        )
-
-    return generate_requirer_data
-
-
-@pytest.fixture(scope="module", name="haproxy_route_relation_data")
-def haproxy_route_relation_data_fixture() -> typing.Callable[..., HaproxyRouteRequirerData]:
-    """Mock systemd lib methods."""
-
-    def generate_requirer_data(
-        service: str,
-        *,
-        relation_id: int = 1,
-        **application_data: typing.Any,
-    ) -> HaproxyRouteRequirerData:
-        """Generate haproxy-route relation data with custom service name.
-
-        Args:
-            service: Service name.
-
-        Returns:
-            HaproxyRouteRequirerData: Generated relation data.
-        """
-        application_data_dict = {
-            "service": service,
-            "ports": [80],
-        }
-        application_data_dict.update(application_data)
-
-        return HaproxyRouteRequirerData(
-            relation_id=relation_id,
-            application_data=typing.cast(
-                RequirerApplicationData,
-                RequirerApplicationData.from_dict(application_data_dict),
-            ),
-            units_data=[
-                typing.cast(RequirerUnitData, RequirerUnitData.from_dict({"address": "10.0.0.1"}))
-            ],
-        )
-
-    return generate_requirer_data
 
 
 def test_ingress_per_unit_from_provider():
