@@ -54,19 +54,25 @@ config:
     limit-policy:
       type: string
       description: |
-        Policy (drop / deny / reject) to be applied if the requests exceed the above limits.
+        Space seperated string of the policy (drop / reject / deny) to be applied if the requests 
+        exceed the above limits and optionally the HTTP status code to respond to for the limit 
+        policy. For example: "deny 503" or simply "drop".
       default: drop
     ip-allow-list:
       type: string
       description: Comma-separated list of IPs to be allowed on both TCP and HTTP levels.
-    http_request_timeout:
+    http-request-timeout:
       type: int
       description: Timeout for HTTP requests in seconds.
-    http_keepalive_timeout:
+    http-keepalive-timeout:
       type: int
       description: Timeout for HTTP keep-alive connections in seconds.
-    client_timeout:
+    client-timeout:
       type: int
       description: Timeout for client connections in seconds. Default is 50 seconds.
+    deny-paths:
+      type: string
+      description: Comma-seperated list of paths to deny.
+
 
 
