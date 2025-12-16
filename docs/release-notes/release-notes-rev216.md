@@ -210,4 +210,4 @@ Relevant links:
 
 ## Thanks to our contributors
 
-[Thanhphan1147](https://github.com/Thanhphan1147), [dimaqq](https://github.com/dimaqq), [yhaliaw](https://github.com/yhaliaw), [erinecon](https://github.com/erinecon), [swetha1654](https://github.com/swetha1654), [javierdelapuente](https://github.com/javierdelapuente), [alithethird](https://github.com/alithethird), [arturo-seijas](https://github.com/arturo-seijas)
+[`Thanhphan1147`](https://github.com/Thanhphan1147), [`dimaqq`](https://github.com/dimaqq), [`yhaliaw`](https://github.com/yhaliaw), [`erinecon`](https://github.com/erinecon), [`swetha1654`](https://github.com/swetha1654), [`javierdelapuente`](https://github.com/javierdelapuente), [`alithethird`](https://github.com/alithethird), [`arturo-seijas`](https://github.com/arturo-seijas)

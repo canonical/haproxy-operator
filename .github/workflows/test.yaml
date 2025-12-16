@@ -4,21 +4,21 @@ on:
   pull_request:
 
 jobs:
-  unit-tests:
+  test:
+    strategy:
+      matrix:
+        charm:
+          - name: haproxy-operator
+            working-directory: ./haproxy-operator
+          - name: haproxy-spoe-auth-operator
+            working-directory: ./haproxy-spoe-auth-operator
+          - name: haproxy-ddos-protection-configurator
+            working-directory: ./haproxy-ddos-protection-configurator
+    name: Unit tests for ${{ matrix.charm.name }}
     uses: canonical/operator-workflows/.github/workflows/test.yaml@main
     secrets: inherit
     with:
       self-hosted-runner: true
       self-hosted-runner-image: "noble"
-      working-directory: ./haproxy-operator
-      with-uv: true
-  haproxy-spoe-auth-operator:
-    name: Unit tests for the haproxy-spoe-auth-operator charm
-    uses: canonical/operator-workflows/.github/workflows/test.yaml@main
-    secrets: inherit
-    with:
-      self-hosted-runner: true
-      self-hosted-runner-image: "noble"
-      python-version: 3.12
-      working-directory: ./haproxy-spoe-auth-operator
+      working-directory: ${{ matrix.charm.working-directory }}
       with-uv: true
