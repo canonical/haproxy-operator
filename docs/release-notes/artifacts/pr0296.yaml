@@ -8,7 +8,7 @@ changes:
     description: |
       Add new config option to the charm enable Strict-Transport-Security response header
       with the default value "max-age=2592000;". This http response header will apply to
-      the the http-route relation for domains without the allow_http attribute.
+      the http-route relation for domains without the allow_http attribute.
     urls:
       pr: https://github.com/canonical/haproxy-operator/pull/296
       related_doc:
