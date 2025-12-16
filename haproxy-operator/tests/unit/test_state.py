@@ -249,9 +249,9 @@ def test_haproxy_route_tcp_endpoint(
 def test_tcp_http_port_conflict_custom_grpc_port(
     haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
     haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
-):
+) -> None:
     """
-    arrange: Setup TCP endpoint on custom gRPC port and HTTP backend with same custom port.
+    arrange: Setup TCP endpoint on custom port and HTTP backend with same custom port.
     act: Initialize HaproxyRouteRequirersInformation with both.
     assert: Both TCP endpoint and backend are marked as invalid.
     """
@@ -305,7 +305,7 @@ def test_tcp_http_port_conflict_standard_ports_only_tcp_invalid(
     tcp_port: int,
     haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
     haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
-):
+) -> None:
     """
     arrange: Setup TCP endpoint on standard port (80 or 443) and HTTP backend without external_grpc_port.
     act: Initialize HaproxyRouteRequirersInformation with both.
@@ -353,9 +353,9 @@ def test_tcp_http_port_conflict_standard_ports_only_tcp_invalid(
 def test_tcp_http_no_conflict_different_ports(
     haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
     haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
-):
+) -> None:
     """
-    arrange: Setup TCP endpoint on port 5000 and HTTP backend with custom gRPC port 6000.
+    arrange: Setup TCP endpoint on port 5000 and HTTP backend with external gRPC port 6000.
     act: Initialize HaproxyRouteRequirersInformation with both.
     assert: Both remain valid as they use different ports.
     """
@@ -406,7 +406,7 @@ def test_tcp_http_no_conflict_different_ports(
 
 def test_tcp_http_no_conflict_no_http_backends(
     haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
-):
+) -> None:
     """
     arrange: Setup only TCP endpoint without any HTTP backends.
     act: Initialize HaproxyRouteRequirersInformation.
@@ -449,7 +449,7 @@ def test_tcp_http_no_conflict_no_http_backends(
 
 def test_tcp_http_no_conflict_no_tcp_endpoints(
     haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
-):
+) -> None:
     """
     arrange: Setup only HTTP backend without any TCP endpoints.
     act: Initialize HaproxyRouteRequirersInformation.

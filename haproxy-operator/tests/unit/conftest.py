@@ -436,20 +436,21 @@ def mock_out_validate_global_max_conn_check(monkeypatch):
 
 @pytest.fixture(scope="module", name="haproxy_route_tcp_relation_data")
 def haproxy_route_tcp_relation_data_fixture() -> typing.Callable[..., HaproxyRouteTcpRequirerData]:
-    """Mock systemd lib methods."""
+    """Get haproxy-route-tcp relation data generator."""
 
     def generate_requirer_data(
         *,
         relation_id: int = 0,
         **application_data: typing.Any,
     ) -> HaproxyRouteTcpRequirerData:
-        """Generate haproxy-route-tcp relation data with custom port.
+        """Generate haproxy-route-tcp relation data.
 
         Args:
-            port: Port included in the relation data.
+            relation_id: Relation ID.
+            application_data: Application data fields.
 
         Returns:
-            HaproxyRouteTcpRequirersData: Generated relation data.
+            HaproxyRouteTcpRequirerData: Generated relation data.
         """
         return HaproxyRouteTcpRequirerData(
             relation_id=relation_id,
@@ -471,7 +472,7 @@ def haproxy_route_tcp_relation_data_fixture() -> typing.Callable[..., HaproxyRou
 
 @pytest.fixture(scope="module", name="haproxy_route_relation_data")
 def haproxy_route_relation_data_fixture() -> typing.Callable[..., HaproxyRouteRequirerData]:
-    """Mock systemd lib methods."""
+    """Get haproxy-route relation data generator."""
 
     def generate_requirer_data(
         service: str,
@@ -479,10 +480,12 @@ def haproxy_route_relation_data_fixture() -> typing.Callable[..., HaproxyRouteRe
         relation_id: int = 1,
         **application_data: typing.Any,
     ) -> HaproxyRouteRequirerData:
-        """Generate haproxy-route relation data with custom service name.
+        """Generate haproxy-route relation data.
 
         Args:
             service: Service name.
+            relation_id: Relation ID.
+            application_data: Application data fields.
 
         Returns:
             HaproxyRouteRequirerData: Generated relation data.

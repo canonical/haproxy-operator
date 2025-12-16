@@ -140,7 +140,7 @@ def test_rewrite_expression_does_not_allow_newline():
 
 def test_check_external_grpc_port_with_https(
     haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
-):
+) -> None:
     """
     arrange: Create HaproxyRouteRequirersData with external_grpc_port and https protocol.
     act: Instantiate HaproxyRouteRequirersData.
@@ -162,7 +162,7 @@ def test_check_external_grpc_port_with_https(
 
 def test_check_external_grpc_port_with_http_invalid(
     haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
-):
+) -> None:
     """
     arrange: Create HaproxyRouteRequirersData with external_grpc_port and http protocol.
     act: Instantiate HaproxyRouteRequirersData.
