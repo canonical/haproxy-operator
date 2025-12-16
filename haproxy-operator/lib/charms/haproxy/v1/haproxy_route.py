@@ -153,7 +153,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 10
+LIBPATCH = 11
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -722,9 +722,8 @@ class HaproxyRouteRequirersData:
     @model_validator(mode="after")
     def check_external_grpc_port_unique(self) -> Self:
         """Check that external gRPC ports are unique across units.
-
-        Raises:
-            DataValidationError: When units declared duplicate external gRPC ports.
+        If multiple units declare the same external gRPC port,
+        their relation ids are added to relation_ids_with_invalid_data.
 
         Returns:
             The validated model.
@@ -747,6 +746,7 @@ class HaproxyRouteRequirersData:
     @model_validator(mode="after")
     def check_grpc_requires_https(self) -> Self:
         """Check that backends with external_grpc_port use https protocol.
+        If not, their relation ids are added to relation_ids_with_invalid_data.
 
         Returns:
             Self: The validated model
