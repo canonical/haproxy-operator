@@ -12,6 +12,10 @@ Each revision is versioned by the date of the revision.
 
 - Added support for custom gRPC frontend port using the `external_grpc_port` attribute.
 
+## 2025-12-11
+
+- Added the skeleton code for the HAProxy DDoS protection configurator charm.
+
 ## 2025-11-27
 
 - Updated the change artifact compliance workflow with an opt-out ability.
