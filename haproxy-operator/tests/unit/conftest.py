@@ -435,16 +435,14 @@ def mock_out_validate_global_max_conn_check(monkeypatch):
 
 
 @pytest.fixture(scope="module", name="haproxy_route_tcp_relation_data")
-def haproxy_route_tcp_relation_data_fixture() -> typing.Callable[
-    ..., HaproxyRouteTcpRequirersData
-]:
+def haproxy_route_tcp_relation_data_fixture() -> typing.Callable[..., HaproxyRouteTcpRequirerData]:
     """Mock systemd lib methods."""
 
     def generate_requirer_data(
         *,
         relation_id: int = 0,
         **application_data: typing.Any,
-    ) -> HaproxyRouteTcpRequirersData:
+    ) -> HaproxyRouteTcpRequirerData:
         """Generate haproxy-route-tcp relation data with custom port.
 
         Args:
@@ -453,24 +451,19 @@ def haproxy_route_tcp_relation_data_fixture() -> typing.Callable[
         Returns:
             HaproxyRouteTcpRequirersData: Generated relation data.
         """
-        return HaproxyRouteTcpRequirersData(
-            requirers_data=[
-                HaproxyRouteTcpRequirerData(
-                    relation_id=relation_id,
-                    application="tcp-route-requirer",
-                    application_data=typing.cast(
-                        TcpRequirerApplicationData,
-                        TcpRequirerApplicationData.from_dict(application_data),
-                    ),
-                    units_data=[
-                        typing.cast(
-                            TcpRequirerUnitData,
-                            TcpRequirerUnitData.from_dict({"address": "10.0.0.1"}),
-                        )
-                    ],
+        return HaproxyRouteTcpRequirerData(
+            relation_id=relation_id,
+            application="tcp-route-requirer",
+            application_data=typing.cast(
+                TcpRequirerApplicationData,
+                TcpRequirerApplicationData.from_dict(application_data),
+            ),
+            units_data=[
+                typing.cast(
+                    TcpRequirerUnitData,
+                    TcpRequirerUnitData.from_dict({"address": "10.0.0.1"}),
                 )
             ],
-            relation_ids_with_invalid_data=[],
         )
 
     return generate_requirer_data

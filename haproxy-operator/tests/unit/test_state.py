@@ -136,7 +136,7 @@ def test_proxy_mode_tcp():
 
 
 def test_haproxy_route_requirer_information_reserved_ports(
-    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirersData],
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
     haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
 ):
     """
@@ -146,7 +146,10 @@ def test_haproxy_route_requirer_information_reserved_ports(
     """
     haproxy_route_tcp_provider_mock = MagicMock()
     haproxy_route_tcp_provider_mock.get_data = MagicMock(
-        return_value=haproxy_route_tcp_relation_data(port=80)
+        return_value=HaproxyRouteTcpRequirersData(
+            requirers_data=[haproxy_route_tcp_relation_data(port=80)],
+            relation_ids_with_invalid_data=[],
+        )
     )
     haproxy_route_provider_mock = MagicMock()
     haproxy_route_provider_mock.get_data = MagicMock(
@@ -169,7 +172,7 @@ def test_haproxy_route_requirer_information_reserved_ports(
 
 
 def test_haproxy_route_requirer_information(
-    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirersData],
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
     haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
 ):
     """
@@ -179,7 +182,10 @@ def test_haproxy_route_requirer_information(
     """
     haproxy_route_tcp_provider_mock = MagicMock()
     haproxy_route_tcp_provider_mock.get_data = MagicMock(
-        return_value=haproxy_route_tcp_relation_data(port=4000)
+        return_value=HaproxyRouteTcpRequirersData(
+            requirers_data=[haproxy_route_tcp_relation_data(port=4000)],
+            relation_ids_with_invalid_data=[],
+        )
     )
     haproxy_route_provider_mock = MagicMock()
     haproxy_route_provider_mock.get_data = MagicMock(
@@ -224,16 +230,14 @@ def test_tls_allow_no_certificate():
 
 
 def test_haproxy_route_tcp_endpoint(
-    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirersData],
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
 ):
     """
     arrange: Generate TCP relation data.
     act: Initialize the HAProxyRouteTcpEndpoint class with the generated relation data.
     assert: The class correctly parses the information.
     """
-    haproxy_route_tcp: HaproxyRouteTcpRequirerData = haproxy_route_tcp_relation_data(
-        port=4000
-    ).requirers_data[0]
+    haproxy_route_tcp: HaproxyRouteTcpRequirerData = haproxy_route_tcp_relation_data(port=4000)
     tcp_endpoint = HAProxyRouteTcpEndpoint.from_haproxy_route_tcp_requirer_data(haproxy_route_tcp)
     assert tcp_endpoint.relation_id == haproxy_route_tcp.relation_id
     assert tcp_endpoint.application == haproxy_route_tcp.application
@@ -243,7 +247,7 @@ def test_haproxy_route_tcp_endpoint(
 
 
 def test_tcp_http_port_conflict_custom_grpc_port(
-    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirersData],
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
     haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
 ):
     """
@@ -254,7 +258,15 @@ def test_tcp_http_port_conflict_custom_grpc_port(
     tcp_relation_id = 0
     haproxy_route_tcp_provider_mock = MagicMock()
     haproxy_route_tcp_provider_mock.get_data = MagicMock(
-        return_value=haproxy_route_tcp_relation_data(port=5000, relation_id=tcp_relation_id)
+        return_value=HaproxyRouteTcpRequirersData(
+            requirers_data=[
+                haproxy_route_tcp_relation_data(
+                    port=5000,
+                    relation_id=tcp_relation_id,
+                )
+            ],
+            relation_ids_with_invalid_data=[],
+        )
     )
 
     http_relation_id = 1
@@ -291,7 +303,7 @@ def test_tcp_http_port_conflict_custom_grpc_port(
 @pytest.mark.parametrize("tcp_port", [80, 443])
 def test_tcp_http_port_conflict_standard_ports_only_tcp_invalid(
     tcp_port: int,
-    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirersData],
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
     haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
 ):
     """
@@ -302,7 +314,15 @@ def test_tcp_http_port_conflict_standard_ports_only_tcp_invalid(
     tcp_relation_id = 0
     haproxy_route_tcp_provider_mock = MagicMock()
     haproxy_route_tcp_provider_mock.get_data = MagicMock(
-        return_value=haproxy_route_tcp_relation_data(port=tcp_port, relation_id=tcp_relation_id)
+        return_value=HaproxyRouteTcpRequirersData(
+            requirers_data=[
+                haproxy_route_tcp_relation_data(
+                    port=tcp_port,
+                    relation_id=tcp_relation_id,
+                )
+            ],
+            relation_ids_with_invalid_data=[],
+        )
     )
 
     http_relation_id = 1
@@ -331,7 +351,7 @@ def test_tcp_http_port_conflict_standard_ports_only_tcp_invalid(
 
 
 def test_tcp_http_no_conflict_different_ports(
-    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirersData],
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
     haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
 ):
     """
@@ -342,7 +362,15 @@ def test_tcp_http_no_conflict_different_ports(
     tcp_relation_id = 0
     haproxy_route_tcp_provider_mock = MagicMock()
     haproxy_route_tcp_provider_mock.get_data = MagicMock(
-        return_value=haproxy_route_tcp_relation_data(port=5000, relation_id=tcp_relation_id)
+        return_value=HaproxyRouteTcpRequirersData(
+            requirers_data=[
+                haproxy_route_tcp_relation_data(
+                    port=5000,
+                    relation_id=tcp_relation_id,
+                )
+            ],
+            relation_ids_with_invalid_data=[],
+        )
     )
 
     http_relation_id = 1
@@ -377,7 +405,7 @@ def test_tcp_http_no_conflict_different_ports(
 
 
 def test_tcp_http_no_conflict_no_http_backends(
-    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirersData],
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
 ):
     """
     arrange: Setup only TCP endpoint without any HTTP backends.
@@ -387,7 +415,15 @@ def test_tcp_http_no_conflict_no_http_backends(
     tcp_relation_id = 0
     haproxy_route_tcp_provider_mock = MagicMock()
     haproxy_route_tcp_provider_mock.get_data = MagicMock(
-        return_value=haproxy_route_tcp_relation_data(port=4000, relation_id=tcp_relation_id)
+        return_value=HaproxyRouteTcpRequirersData(
+            requirers_data=[
+                haproxy_route_tcp_relation_data(
+                    port=4000,
+                    relation_id=tcp_relation_id,
+                )
+            ],
+            relation_ids_with_invalid_data=[],
+        )
     )
 
     haproxy_route_provider_mock = MagicMock()
