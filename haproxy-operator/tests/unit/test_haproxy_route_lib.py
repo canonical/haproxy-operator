@@ -136,3 +136,49 @@ def test_rewrite_expression_does_not_allow_newline():
             expression="data\ninjection data",
         )
     assert "invalid character" in str(exc)
+
+
+def test_check_external_grpc_port_with_https(
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
+):
+    """
+    arrange: Create HaproxyRouteRequirersData with external_grpc_port and https protocol.
+    act: Instantiate HaproxyRouteRequirersData.
+    assert: relation_ids_with_invalid_data is empty.
+    """
+    requirer_data = haproxy_route_relation_data(
+        "grpc-service",
+        protocol="https",
+        external_grpc_port=9000,
+    )
+
+    data = HaproxyRouteRequirersData(
+        requirers_data=[requirer_data],
+        relation_ids_with_invalid_data=[],
+    )
+
+    assert data.relation_ids_with_invalid_data == []
+
+
+def test_check_external_grpc_port_with_http_invalid(
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
+):
+    """
+    arrange: Create HaproxyRouteRequirersData with external_grpc_port and http protocol.
+    act: Instantiate HaproxyRouteRequirersData.
+    assert: relation_ids_with_invalid_data contains the relation_id.
+    """
+    relation_id = 1
+    requirer_data = haproxy_route_relation_data(
+        "grpc-service",
+        relation_id=relation_id,
+        protocol="http",
+        external_grpc_port=9000,
+    )
+
+    data = HaproxyRouteRequirersData(
+        requirers_data=[requirer_data],
+        relation_ids_with_invalid_data=[],
+    )
+
+    assert data.relation_ids_with_invalid_data == [relation_id]
