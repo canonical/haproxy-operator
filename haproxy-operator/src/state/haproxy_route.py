@@ -351,18 +351,14 @@ class HaproxyRouteRequirersInformation:
         for tcp_endpoint in self.valid_tcp_endpoints:
             tcp_port = tcp_endpoint.application_data.port
             if tcp_port in (80, 443) and backends_using_standard_ports:
-                logger.error(
-                    f"TCP backend on port {tcp_port} conflicts with HTTP backend."
-                )
+                logger.error(f"TCP backend on port {tcp_port} conflicts with HTTP backend.")
                 # For standard ports, dismiss only the TCP endpoint
                 self.relation_ids_with_invalid_data_tcp.append(tcp_endpoint.relation_id)
                 continue
 
             conflicting_backend = port_to_backend.get(tcp_port)
             if conflicting_backend:
-                logger.error(
-                    f"TCP backend on port {tcp_port} conflicts with HTTP backend."
-                )
+                logger.error(f"TCP backend on port {tcp_port} conflicts with HTTP backend.")
                 self.relation_ids_with_invalid_data_tcp.append(tcp_endpoint.relation_id)
                 self.relation_ids_with_invalid_data.append(conflicting_backend.relation_id)
 
