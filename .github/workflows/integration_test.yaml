@@ -7,45 +7,42 @@ on:
 
 jobs:
   integration-tests:
-    uses:
-      canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+    strategy:
+      matrix:
+        charm:
+          - name: haproxy-operator
+            working-directory: ./haproxy-operator
+            modules: |
+              [
+                "test_action.py",
+                "test_actions.py",
+                "test_charm.py",
+                "test_config.py",
+                "test_cos.py",
+                "test_ha.py",
+                "test_haproxy_route.py",
+                "test_http_interface.py",
+                "test_ingress.py",
+                "test_ingress_per_unit.py",
+                "test_haproxy_route_tcp.py"
+              ]
+          - name: haproxy-spoe-auth-operator
+            working-directory: ./haproxy-spoe-auth-operator
+            modules: '["test_charm.py"]'
+          - name: haproxy-ddos-protection-configurator
+            working-directory: ./haproxy-ddos-protection-configurator
+            modules: '["test_charm.py"]'
+    name: Integration tests for ${{ matrix.charm.name }}
+    uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@main
     secrets: inherit
     with:
       provider: lxd
       juju-channel: 3/stable
       self-hosted-runner: true
-      working-directory: ./haproxy-operator
-      modules: |
-        [
-          "test_action.py",
-          "test_actions.py",
-          "test_charm.py",
-          "test_config.py",
-          "test_cos.py",
-          "test_ha.py",
-          "test_haproxy_route.py",
-          "test_http_interface.py",
-          "test_ingress.py",
-          "test_ingress_per_unit.py",
-          "test_haproxy_route_tcp.py"
-        ]
+      charmcraft-channel: latest/edge
+      working-directory: ${{ matrix.charm.working-directory }}
+      modules: ${{ matrix.charm.modules }}
       with-uv: true
-  allure-report:
-    if: ${{ !cancelled() && github.event_name == 'schedule' }}
-    needs:
-    - integration-tests
-    uses: canonical/operator-workflows/.github/workflows/allure_report.yaml@main
-  haproxy-spoe-auth-operator:
-    name: Integration tests for the haproxy-spoe-auth-operator charm
-    uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@main
-    secrets: inherit
-    with:
-      juju-channel: '3/stable'
-      provider: lxd
-      self-hosted-runner: true
-      working-directory: ./haproxy-spoe-auth-operator
-      with-uv: True
-      modules: '["test_charm.py",]'
   integration-tests-global:
     uses:
       canonical/operator-workflows/.github/workflows/integration_test.yaml@main
@@ -62,3 +59,9 @@ jobs:
         ]
       with-uv: true
       pre-run-script: ./tests/integration/setup-integration-tests.sh
+  allure-report:
+    if: ${{ !cancelled() && github.event_name == 'schedule' }}
+    needs:
+    - integration-tests
+    - integration-tests-global
+    uses: canonical/operator-workflows/.github/workflows/allure_report.yaml@main
