@@ -64,7 +64,6 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/223)
 
-
 ### Added `haproxy-spoe-auth` snap
 
 Now the repository contains a snap package running a
@@ -76,7 +75,6 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/224)
 
-
 ### Added http-server-close support
 
 Added the `http-server-close` argument to the HAProxy configuration.
@@ -85,7 +83,6 @@ When this argument is set, it closes the connection after the request.
 Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/175)
-
 
 ### Removed `haproxy_route` restriction for expressions
 
@@ -96,7 +93,6 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/257)
 
-
 ### Updated Terraform module to support keepalived
 
 The Terraform module was updated to provide support for keepalived, and
@@ -106,7 +102,6 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/243)
 
-
 ### Added `rsyslog` configuration when HAProxy is installed
 
 Now the `rsyslog` configuration is added when the HAProxy package
@@ -115,7 +110,6 @@ is installed, setting the logging destination to the Unix socket.
 Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/187)
-
 
 ### Documented release policy and schedule for the `haproxy-operator` monorepo
 
@@ -127,7 +121,6 @@ Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/272)
 * {ref}`Related documentation <release_notes_index>`
 
-
 ### Added HTTPS backend support for HAProxy routing
 
 Enable HAProxy to route traffic to HTTPS backends with certificate handling and validation.
@@ -136,15 +129,14 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/172)
 
-
 ### Allow enabling HTTP for haproxy route backend
 
 Add a new `allow_http attribute` to allow disabling mandatory HTTPS redirection for backends.
 Add logic to build the required ACL and rendering logic in the Jinja2 template.
 
 Relevant links:
-* [PR](https://github.com/canonical/haproxy-operator/pull/230)
 
+* [PR](https://github.com/canonical/haproxy-operator/pull/230)
 
 ### Run renovate only twice a month
 
@@ -155,7 +147,6 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/262)
 
-
 ### Added SPOE Auth interface library
 
 Add the `charms.haproxy.v0.spoe_auth` library to enable SPOE authentication integration.
@@ -164,7 +155,6 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/229)
 
-
 ### Added HTTP/2 support to HAProxy
 
 Added HTTP/2 support in the HAProxy charm for both frontend and backend connections.
@@ -172,7 +162,6 @@ Added HTTP/2 support in the HAProxy charm for both frontend and backend connecti
 Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/249)
-
 
 ### Updated TCP ports behavior after updating HAProxy configuration
 
@@ -183,7 +172,6 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/188)
 
-
 ### Added HAProxy SPOE Auth Charm
 
 Added a new charm for HAProxy SPOE authentication.
@@ -191,7 +179,6 @@ Added a new charm for HAProxy SPOE authentication.
 Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/232)
-
 
 ### Migrated the Python project to use `uv` and `ruff`
 
