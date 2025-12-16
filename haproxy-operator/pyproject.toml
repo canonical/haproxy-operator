@@ -65,7 +65,7 @@ integration = [
 package = false
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py312"
 line-length = 99
 
 lint.select = [ "A", "B", "C", "CPY", "D", "E", "F", "I", "N", "RUF", "S", "SIM", "TC", "UP", "W" ]
