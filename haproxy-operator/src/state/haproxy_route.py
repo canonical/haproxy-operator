@@ -4,7 +4,6 @@
 """HAproxy route charm state component."""
 
 import logging
-from collections import defaultdict
 from functools import cached_property
 from typing import Optional, cast
 

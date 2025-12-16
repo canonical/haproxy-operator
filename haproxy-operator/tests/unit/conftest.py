@@ -13,7 +13,6 @@ import pytest
 import scenario
 from charms.haproxy.v0.haproxy_route_tcp import (
     HaproxyRouteTcpRequirerData,
-    HaproxyRouteTcpRequirersData,
     TcpRequirerApplicationData,
     TcpRequirerUnitData,
 )
