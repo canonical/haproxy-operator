@@ -28,7 +28,7 @@ description: |
 summary: DDoS protection configurator for HAProxy charm.
 links:
   documentation: 
-    https://discourse.charmhub.io/t/haproxy-ddos-protection-configurator-documentation/19426
+    https://documentation.ubuntu.com/haproxy-charm/latest/
   issues: https://github.com/canonical/haproxy-operator/issues
   source: https://github.com/canonical/haproxy-operator/haproxy-ddos-protection-configurator
   contact:
