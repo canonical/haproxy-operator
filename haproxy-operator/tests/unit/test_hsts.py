@@ -67,7 +67,7 @@ def test_hsts_enabled(monkeypatch: pytest.MonkeyPatch, certificates_integration)
     render_file_mock.assert_any_call(
         pathlib.Path("/etc/haproxy/haproxy.cfg"),
         RegexMatcher(
-            'http-response set-header Strict-Transport-Security "max-age=2592000;" if { ssl_fc } \n'
+            'http-response set-header Strict-Transport-Security "max-age=2592000" if { ssl_fc } \n'
         ),
         ANY,
     )
@@ -100,7 +100,7 @@ def test_hsts_disabled_allow_http(monkeypatch: pytest.MonkeyPatch, certificates_
         pathlib.Path("/etc/haproxy/haproxy.cfg"),
         RegexMatcher(
             re.escape(
-                'http-response set-header Strict-Transport-Security "max-age=2592000;" if { ssl_fc }  !{ req.hdr(Host) -m str haproxy.internal }\n'
+                'http-response set-header Strict-Transport-Security "max-age=2592000" if { ssl_fc }  !{ req.hdr(Host) -m str haproxy.internal }\n'
             )
         ),
         ANY,
