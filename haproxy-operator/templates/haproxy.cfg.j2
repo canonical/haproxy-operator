@@ -2,8 +2,8 @@
 {% if not disable_ddos_protection %}
     acl invalid_method method TRACE TRACK DEBUG
     acl empty_method   method -i ""
-    acl missing_host   !{ hdr(Host) -m found }
-    http-request silent-drop if invalid_method empty_method missing_host
+    acl has_host hdr(Host) -m found
+    http-request silent-drop if invalid_method empty_method !has_host
 {% endif %}
 {%- endmacro -%}
 
@@ -49,7 +49,7 @@ frontend prometheus
 {% block proxy_configuration %}
 frontend default
     bind :80
-    {{ ddos_protection_rules() }}
+{{ ddos_protection_rules() }}
     default_backend default
 {% endblock %}
 

@@ -13,7 +13,7 @@ frontend ingress_per_unit
     # Redirect HTTP to HTTPS
     http-request redirect scheme https unless { ssl_fc }
 
-    {{ ddos_protection_rules() }}
+{{ ddos_protection_rules() }}
 
     # generate path ACLs for ingress
     acl host_{{ config_external_hostname }} hdr(host) -i {{ config_external_hostname }}

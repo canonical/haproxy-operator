@@ -26,7 +26,7 @@ def test_ddos_protection_enabled(
 
     assert "acl invalid_method" in haproxy_config
     assert "acl empty_method" in haproxy_config
-    assert "acl missing_host" in haproxy_config
+    assert "acl has_host" in haproxy_config
     assert "http-request silent-drop" in haproxy_config
 
 
@@ -52,5 +52,5 @@ def test_ddos_protection_disabled(
 
     assert "acl invalid_method" not in haproxy_config
     assert "acl empty_method" not in haproxy_config
-    assert "acl missing_host" not in haproxy_config
+    assert "acl has_host" not in haproxy_config
     assert "http-request silent-drop" not in haproxy_config
