@@ -301,7 +301,7 @@ def test_tcp_http_port_conflict_custom_grpc_port(
 
 
 @pytest.mark.parametrize("tcp_port", [80, 443])
-def test_tcp_http_port_conflict_standard_ports_only_tcp_invalid(
+def test_tcp_port_conflict_standard_ports(
     tcp_port: int,
     haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
     haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
@@ -348,6 +348,56 @@ def test_tcp_http_port_conflict_standard_ports_only_tcp_invalid(
     assert http_relation_id not in haproxy_route_information.relation_ids_with_invalid_data
     assert len(haproxy_route_information.valid_backends) == 1
     assert len(haproxy_route_information.valid_tcp_endpoints) == 0
+
+
+@pytest.mark.parametrize("grpc_port", [80, 443])
+def test_grpc_port_conflict_standard_ports(
+    grpc_port: int,
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
+) -> None:
+    """
+    arrange: Setup gRPC backend on standard port (80 or 443) and HTTP backend without external_grpc_port.
+    act: Initialize HaproxyRouteRequirersInformation with both.
+    assert: Only gRPC backend is marked as invalid, HTTP backend remains valid.
+    """
+    haproxy_route_tcp_provider_mock = MagicMock()
+    haproxy_route_tcp_provider_mock.get_data = MagicMock(
+        return_value=HaproxyRouteTcpRequirersData(
+            requirers_data=[],
+            relation_ids_with_invalid_data=[],
+        )
+    )
+
+    grpc_relation_id = 1
+    http_relation_id = 2
+    haproxy_route_provider_mock = MagicMock()
+    haproxy_route_provider_mock.get_data = MagicMock(
+        return_value=HaproxyRouteRequirersData(
+            requirers_data=[
+                haproxy_route_relation_data(
+                    "grpc_service",
+                    relation_id=grpc_relation_id,
+                    ports=[80],
+                    protocol="https",
+                    external_grpc_port=grpc_port,
+                ),
+                haproxy_route_relation_data("http_service", relation_id=http_relation_id),
+            ],
+            relation_ids_with_invalid_data=[],
+        )
+    )
+
+    haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
+        haproxy_route=haproxy_route_provider_mock,
+        haproxy_route_tcp=haproxy_route_tcp_provider_mock,
+        external_hostname="haproxy.internal",
+        peers=[],
+        ca_certs_configured=True,
+    )
+
+    assert grpc_relation_id in haproxy_route_information.relation_ids_with_invalid_data
+    assert http_relation_id not in haproxy_route_information.relation_ids_with_invalid_data
+    assert len(haproxy_route_information.valid_backends) == 1
 
 
 def test_tcp_http_no_conflict_different_ports(
