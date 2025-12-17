@@ -180,15 +180,6 @@ class HAProxyRouteBackend:
             rewrite_configurations.append(f"{rewrite.method.value!s} {rewrite.expression}")
         return rewrite_configurations
 
-    @property
-    def external_grpc_port(self) -> int | None:
-        """Get the external grpc port if grpc is used.
-
-        Returns:
-            int | None: The external grpc port.
-        """
-        return self.application_data.external_grpc_port
-
 
 # pylint: disable=too-many-locals
 @dataclass(frozen=True)
@@ -338,12 +329,12 @@ class HaproxyRouteRequirersInformation:
             return self
 
         port_to_backend: dict[int, HAProxyRouteBackend] = {
-            backend.external_grpc_port: backend
+            backend.application_data.external_grpc_port: backend
             for backend in self.valid_backends
-            if backend.external_grpc_port
+            if backend.application_data.external_grpc_port
         }
         backends_using_standard_ports = bool(
-            backend for backend in self.valid_backends if not backend.external_grpc_port
+            backend for backend in self.valid_backends if not backend.application_data.external_grpc_port
         )
 
         # Check for conflicts with TCP endpoints

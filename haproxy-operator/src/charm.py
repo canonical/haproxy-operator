@@ -372,9 +372,9 @@ class HAProxyCharm(ops.CharmBase):
                 for tcp_endpoint in haproxy_route_requirers_information.valid_tcp_endpoints
             ),
             *(
-                backend.external_grpc_port
+                backend.application_data.external_grpc_port
                 for backend in haproxy_route_requirers_information.valid_backends
-                if backend.external_grpc_port is not None
+                if backend.application_data.external_grpc_port is not None
             ),
         )
         if self.unit.is_leader():

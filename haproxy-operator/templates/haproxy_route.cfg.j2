@@ -20,7 +20,7 @@ frontend haproxy
 {% endfor %}
 {% endif %}
 
-{% for backend in backends if not backend.external_grpc_port %}
+{% for backend in backends if not backend.application_data.external_grpc_port %}
 {% if backend.path_acl_required %}
     acl acl_path_{{ backend.backend_name }} path_beg -i {% for path in backend.application_data.paths %}{{ path }} {% endfor +%}
 {% endif %}
@@ -41,7 +41,7 @@ peers haproxy_peers
     table {{ entry }} type ip size 100k expire 2m store http_req_rate(1m)
 {% endfor %}
 
-{% for backend in backends if not backend.external_grpc_port %}
+{% for backend in backends if not backend.application_data.external_grpc_port %}
 backend {{ backend.backend_name }}
     balance {{ backend.load_balancing_configuration }}
 {% if backend.consistent_hashing %}
