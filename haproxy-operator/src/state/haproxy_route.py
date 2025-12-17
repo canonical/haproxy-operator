@@ -320,37 +320,53 @@ class HaproxyRouteRequirersInformation:
 
     @model_validator(mode="after")
     def check_tcp_http_port_conflicts(self) -> Self:
-        """Check that TCP and HTTP backends don't use the same frontend port.
+        """Check for port conflicts between HTTP backends and TCP/gRPC backends.
+        If conflict between HTTP and TCP/gRPC backends is found,
+        the TCP/gRPC backend relation_id is added to the invalid data list.
+        If conflict between TCP and gRPC backends is found,
+        both relation_ids are added to the invalid data lists.
 
         Returns:
             Self: The validated model
         """
-        if not self.valid_backends or not self.valid_tcp_endpoints:
-            return self
+        standard_ports = {80, 443}
+        has_http_backends = any(
+            not b.application_data.external_grpc_port for b in self.valid_backends
+        )
 
-        port_to_backend: dict[int, HAProxyRouteBackend] = {
+        grpc_ports = {
             backend.application_data.external_grpc_port: backend
             for backend in self.valid_backends
             if backend.application_data.external_grpc_port
         }
-        backends_using_standard_ports = bool(
-            backend for backend in self.valid_backends if not backend.application_data.external_grpc_port
-        )
+        tcp_ports = {
+            tcp_endpoint.application_data.port: tcp_endpoint
+            for tcp_endpoint in self.valid_tcp_endpoints
+        }
 
-        # Check for conflicts with TCP endpoints
-        for tcp_endpoint in self.valid_tcp_endpoints:
-            tcp_port = tcp_endpoint.application_data.port
-            if tcp_port in (80, 443) and backends_using_standard_ports:
-                logger.error(f"TCP backend on port {tcp_port} conflicts with HTTP backend.")
-                # For standard ports, dismiss only the TCP endpoint
-                self.relation_ids_with_invalid_data_tcp.append(tcp_endpoint.relation_id)
-                continue
+        # Check for conflicts between standard HTTP and TCP/gRPC ports
+        if has_http_backends:
+            for standard_port in standard_ports:
+                if standard_port in tcp_ports:
+                    logger.error(
+                        f"TCP backend conflicts with HTTP backends on external port {standard_port}."
+                    )
+                    self.relation_ids_with_invalid_data_tcp.append(
+                        tcp_ports[standard_port].relation_id
+                    )
+                if standard_port in grpc_ports:
+                    logger.error(
+                        f"gRPC backend conflicts with HTTP backends on external port {standard_port}."
+                    )
+                    self.relation_ids_with_invalid_data.append(
+                        grpc_ports[standard_port].relation_id
+                    )
 
-            conflicting_backend = port_to_backend.get(tcp_port)
-            if conflicting_backend:
-                logger.error(f"TCP backend on port {tcp_port} conflicts with HTTP backend.")
-                self.relation_ids_with_invalid_data_tcp.append(tcp_endpoint.relation_id)
-                self.relation_ids_with_invalid_data.append(conflicting_backend.relation_id)
+        # Check for conflicts between gRPC and TCP ports
+        for port in grpc_ports.keys() & tcp_ports.keys():
+            logger.error(f"Conflicting TCP backend and gRPC backend on external port {port}.")
+            self.relation_ids_with_invalid_data_tcp.append(tcp_ports[port].relation_id)
+            self.relation_ids_with_invalid_data.append(grpc_ports[port].relation_id)
 
         return self
 
