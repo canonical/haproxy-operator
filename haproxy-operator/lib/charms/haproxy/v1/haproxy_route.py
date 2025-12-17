@@ -611,7 +611,7 @@ class RequirerApplicationData(_DatabagModel):
         description="Whether to allow HTTP traffic in addition to HTTPS.", default=False
     )
     external_grpc_port: int | None = Field(
-        description="Optional external gRPC port.", default=None
+        description="Optional external gRPC port.", default=None, gt=0, le=65535
     )
 
     @field_validator("load_balancing")
