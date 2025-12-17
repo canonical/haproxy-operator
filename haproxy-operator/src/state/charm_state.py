@@ -17,10 +17,9 @@ from charms.haproxy.v0.haproxy_route_tcp import HaproxyRouteTcpProvider
 from charms.haproxy.v1.haproxy_route import HaproxyRouteProvider
 from charms.traefik_k8s.v1.ingress_per_unit import IngressPerUnitProvider
 from charms.traefik_k8s.v2.ingress import IngressPerAppProvider
+from http_interface import HTTPRequirer
 from pydantic import Field, ValidationError, field_validator
 from pydantic.dataclasses import dataclass
-
-from http_interface import HTTPRequirer
 
 from .exception import CharmStateValidationBaseError
 
@@ -67,6 +66,7 @@ class CharmState:
     """
 
     mode: ProxyMode
+    enable_hsts: bool
     global_max_connection: int = Field(gt=0, alias="global_max_connection")
     disable_ddos_protection: bool = False
 
@@ -189,6 +189,7 @@ class CharmState:
             CharmState: Instance of the charm state component.
         """
         global_max_connection = typing.cast(int, charm.config.get("global-maxconn"))
+        enable_hsts = typing.cast(bool, charm.config.get("enable-hsts"))
         disable_ddos_protection = typing.cast(bool, charm.config.get("disable-ddos-protection"))
         try:
             return cls(
@@ -200,6 +201,7 @@ class CharmState:
                     reverseproxy_requirer,
                 ),
                 global_max_connection=global_max_connection,
+                enable_hsts=enable_hsts,
                 disable_ddos_protection=disable_ddos_protection,
             )
         except ValidationError as exc:

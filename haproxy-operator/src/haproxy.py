@@ -16,7 +16,6 @@ from subprocess import CalledProcessError, run  # nosec
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-
 from state.charm_state import CharmState
 from state.haproxy_route import HaproxyRouteRequirersInformation
 from state.ingress import IngressRequirersInformation
@@ -160,6 +159,7 @@ class HAProxyService:
         """
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
+            "enable_hsts": charm_state.enable_hsts,
             "disable_ddos_protection": charm_state.disable_ddos_protection,
             "backends": haproxy_route_requirers_information.backends,
             "tcp_endpoints": haproxy_route_requirers_information.tcp_endpoints,

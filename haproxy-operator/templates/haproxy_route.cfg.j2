@@ -8,6 +8,11 @@ frontend haproxy
     # Redirect HTTP to HTTPS
     http-request redirect scheme https unless { ssl_fc } {% for acl in acls_for_allow_http %} || {{ acl }}{% endfor %}
 
+{% if enable_hsts %}
+    # Add HSTS header for HTTPS connections (only when HTTP is not allowed)
+    http-response set-header Strict-Transport-Security "max-age=2592000" if { ssl_fc } {% for acl in acls_for_allow_http %} !{{ acl }}{% endfor %}
+{% endif %}
+
     {{ ddos_protection_rules() }}
 
 {% for spoe_auth_info in spoe_auth_info_list  %}
