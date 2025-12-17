@@ -13,6 +13,8 @@ frontend ingress
     # Redirect HTTP to HTTPS
     http-request redirect scheme https unless { ssl_fc }
 
+    {{ ddos_protection_rules() }}
+
     # generate path ACLs for ingress
 {% for backend in ingress_requirers_information.backends %}
     acl path_{{ backend.backend_name }} path -i -m beg /{{ backend.backend_name }}

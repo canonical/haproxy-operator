@@ -8,6 +8,8 @@ frontend haproxy
     # Redirect HTTP to HTTPS
     http-request redirect scheme https unless { ssl_fc } {% for acl in acls_for_allow_http %} || {{ acl }}{% endfor %}
 
+    {{ ddos_protection_rules() }}
+
 {% for spoe_auth_info in spoe_auth_info_list  %}
     acl oidc_host_{{ spoe_auth_info.id }} req.hdr(Host) -m str {{ spoe_auth_info.hostname }}
     acl oidc_callback_path_{{ spoe_auth_info.id }} path_beg -i {{ spoe_auth_info.oidc_callback_path }}

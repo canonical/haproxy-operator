@@ -20,14 +20,20 @@ from charms.haproxy.v1.haproxy_route import (
     RequirerApplicationData,
     RequirerUnitData,
 )
-from charms.tls_certificates_interface.v4.tls_certificates import TLSCertificatesRequiresV4
-from charms.traefik_k8s.v1.ingress_per_unit import DataValidationError as V1DataValidationError
+from charms.tls_certificates_interface.v4.tls_certificates import (
+    TLSCertificatesRequiresV4,
+)
+from charms.traefik_k8s.v1.ingress_per_unit import (
+    DataValidationError as V1DataValidationError,
+)
 from charms.traefik_k8s.v2.ingress import DataValidationError as V2DataValidationError
-
 from state.charm_state import CharmState, ProxyMode
 from state.haproxy_route import HaproxyRouteRequirersInformation
 from state.haproxy_route_tcp import HAProxyRouteTcpEndpoint
-from state.ingress import IngressIntegrationDataValidationError, IngressRequirersInformation
+from state.ingress import (
+    IngressIntegrationDataValidationError,
+    IngressRequirersInformation,
+)
 from state.ingress_per_unit import (
     HAProxyBackend,
     IngressPerUnitIntegrationDataValidationError,
@@ -309,3 +315,43 @@ def test_haproxy_route_tcp_endpoint(
     assert tcp_endpoint.servers[0].address == haproxy_route_tcp.units_data[0].address
     assert tcp_endpoint.servers[0].server_name == f"{haproxy_route_tcp.application}-0"
     assert tcp_endpoint.servers[0].port == haproxy_route_tcp.application_data.backend_port
+
+
+@pytest.mark.parametrize(
+    "disable_ddos,expected_value",
+    [(False, False), (True, True)],
+    ids=["protection_enabled", "protection_disabled"],
+)
+def test_charm_state_disable_ddos_protection(disable_ddos, expected_value):
+    """
+    arrange: Setup a mock charm with disable-ddos-protection config.
+    act: Initialize the CharmState from the charm.
+    assert: The disable_ddos_protection field matches the expected value.
+    """
+    charm_mock = MagicMock(spec=ops.CharmBase)
+    charm_mock.config.get.side_effect = lambda key: {
+        "global-maxconn": 4096,
+        "disable-ddos-protection": disable_ddos,
+    }.get(key)
+
+    ingress_provider_mock = MagicMock()
+    ingress_provider_mock.relations = []
+    ingress_per_unit_provider_mock = MagicMock()
+    ingress_per_unit_provider_mock.relations = []
+    haproxy_route_provider_mock = MagicMock()
+    haproxy_route_provider_mock.relations = []
+    haproxy_route_tcp_provider_mock = MagicMock()
+    haproxy_route_tcp_provider_mock.relations = []
+    reverseproxy_requirer_mock = MagicMock()
+    reverseproxy_requirer_mock.relations = []
+
+    charm_state = CharmState.from_charm(
+        charm=charm_mock,
+        ingress_provider=ingress_provider_mock,
+        ingress_per_unit_provider=ingress_per_unit_provider_mock,
+        haproxy_route_provider=haproxy_route_provider_mock,
+        haproxy_route_tcp_provider=haproxy_route_tcp_provider_mock,
+        reverseproxy_requirer=reverseproxy_requirer_mock,
+    )
+
+    assert charm_state.disable_ddos_protection is expected_value

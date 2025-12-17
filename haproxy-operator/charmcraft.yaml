@@ -93,6 +93,13 @@ config:
     vip:
       type: string
       description: Virtual IP address, used in active-passive ha mode.
+    disable-ddos-protection:
+      type: boolean
+      default: false
+      description: |
+        Disable basic DDoS protection mechanisms, including http-request, http-keep-alive and 
+        client timeouts, automatic dropping of connections with invalid, empty, or 
+        missing host headers.
 
 actions:
   get-certificate:

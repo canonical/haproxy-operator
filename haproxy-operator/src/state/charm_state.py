@@ -63,10 +63,12 @@ class CharmState:
         mode: The current proxy mode of the charm.
         global_max_connection: The maximum per-process number of concurrent connections.
         Must be between 0 and "fs.nr_open" sysctl config.
+        disable_ddos_protection: Whether to disable basic DDoS protection mechanisms.
     """
 
     mode: ProxyMode
     global_max_connection: int = Field(gt=0, alias="global_max_connection")
+    disable_ddos_protection: bool = False
 
     @field_validator("global_max_connection")
     @classmethod
@@ -187,6 +189,7 @@ class CharmState:
             CharmState: Instance of the charm state component.
         """
         global_max_connection = typing.cast(int, charm.config.get("global-maxconn"))
+        disable_ddos_protection = typing.cast(bool, charm.config.get("disable-ddos-protection"))
         try:
             return cls(
                 mode=cls._validate_state(
@@ -197,6 +200,7 @@ class CharmState:
                     reverseproxy_requirer,
                 ),
                 global_max_connection=global_max_connection,
+                disable_ddos_protection=disable_ddos_protection,
             )
         except ValidationError as exc:
             error_field_str = ",".join(f"{field}" for field in get_invalid_config_fields(exc))
