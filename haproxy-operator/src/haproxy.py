@@ -158,8 +158,17 @@ class HAProxyService:
         """
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
-            "backends": haproxy_route_requirers_information.valid_backends,
+            "http_backends": [
+                backend
+                for backend in haproxy_route_requirers_information.valid_backends
+                if not backend.application_data.external_grpc_port
+            ],
             "tcp_endpoints": haproxy_route_requirers_information.valid_tcp_endpoints,
+            "grpc_backends": [
+                backend
+                for backend in haproxy_route_requirers_information.valid_backends
+                if backend.application_data.external_grpc_port
+            ],
             "stick_table_entries": haproxy_route_requirers_information.stick_table_entries,
             "peer_units_address": haproxy_route_requirers_information.peers,
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
