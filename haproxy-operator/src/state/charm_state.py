@@ -17,9 +17,10 @@ from charms.haproxy.v0.haproxy_route_tcp import HaproxyRouteTcpProvider
 from charms.haproxy.v1.haproxy_route import HaproxyRouteProvider
 from charms.traefik_k8s.v1.ingress_per_unit import IngressPerUnitProvider
 from charms.traefik_k8s.v2.ingress import IngressPerAppProvider
-from http_interface import HTTPRequirer
 from pydantic import Field, ValidationError, field_validator
 from pydantic.dataclasses import dataclass
+
+from http_interface import HTTPRequirer
 
 from .exception import CharmStateValidationBaseError
 
