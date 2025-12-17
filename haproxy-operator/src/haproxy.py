@@ -158,6 +158,7 @@ class HAProxyService:
         """
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
+            "enable_hsts": charm_state.enable_hsts,
             "http_backends": [
                 backend
                 for backend in haproxy_route_requirers_information.valid_backends

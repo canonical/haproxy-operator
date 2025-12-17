@@ -66,6 +66,7 @@ class CharmState:
     """
 
     mode: ProxyMode
+    enable_hsts: bool
     global_max_connection: int = Field(gt=0, alias="global_max_connection")
 
     @field_validator("global_max_connection")
@@ -187,6 +188,7 @@ class CharmState:
             CharmState: Instance of the charm state component.
         """
         global_max_connection = typing.cast(int, charm.config.get("global-maxconn"))
+        enable_hsts = typing.cast(bool, charm.config.get("enable-hsts"))
         try:
             return cls(
                 mode=cls._validate_state(
@@ -197,6 +199,7 @@ class CharmState:
                     reverseproxy_requirer,
                 ),
                 global_max_connection=global_max_connection,
+                enable_hsts=enable_hsts,
             )
         except ValidationError as exc:
             error_field_str = ",".join(f"{field}" for field in get_invalid_config_fields(exc))
