@@ -722,7 +722,7 @@ class HaproxyRouteRequirersData:
     @model_validator(mode="after")
     def check_external_grpc_port_unique(self) -> Self:
         """Check that external gRPC ports are unique across requirer applications.
-        If multiple units declare the same external gRPC port,
+        If multiple requirer applications declare the same external gRPC port,
         their relation ids are added to relation_ids_with_invalid_data.
 
         Returns:
