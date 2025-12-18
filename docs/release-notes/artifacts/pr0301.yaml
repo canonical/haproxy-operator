@@ -1,0 +1,14 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+changes:
+  - title: Parametrize app_name for subordinates in Terraform product
+    author: arturo.seijas
+    type: major
+    description: You can now set the app_name for the subordinates in https://github.com/canonical/haproxy-operator/tree/main/terraform/product 
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/301
+      related_doc: 
+      related_issue: 
+    visibility: public
+    highlight: false
