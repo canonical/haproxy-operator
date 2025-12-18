@@ -331,9 +331,7 @@ class HaproxyRouteRequirersInformation:
         """
         standard_ports = {80, 443}
         valid_backends = self.valid_backends()
-        has_http_backends = any(
-            not b.application_data.external_grpc_port for b in valid_backends
-        )
+        has_http_backends = any(not b.application_data.external_grpc_port for b in valid_backends)
 
         grpc_ports = {
             backend.application_data.external_grpc_port: backend
