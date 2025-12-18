@@ -695,11 +695,11 @@ class HaproxyRouteRequirersData:
 
     Attributes:
         requirers_data: List of requirer data.
-        relation_ids_with_invalid_data: List of relation ids that contains invalid data.
+        relation_ids_with_invalid_data: Set of relation ids that contains invalid data.
     """
 
     requirers_data: list[HaproxyRouteRequirerData]
-    relation_ids_with_invalid_data: list[int]
+    relation_ids_with_invalid_data: set[int]
 
     @model_validator(mode="after")
     def check_services_unique(self) -> Self:
@@ -735,11 +735,11 @@ class HaproxyRouteRequirersData:
                     requirer_data.relation_id
                 )
 
-        self.relation_ids_with_invalid_data.extend(
+        self.relation_ids_with_invalid_data.update(
             relation_id
             for relation_ids in relation_ids_per_port.values()
             for relation_id in relation_ids
-            if len(relation_ids) > 1 and relation_id not in self.relation_ids_with_invalid_data
+            if len(relation_ids) > 1
         )
         return self
 
@@ -756,10 +756,10 @@ class HaproxyRouteRequirersData:
                 [
                     requirer_data.application_data.external_grpc_port is not None,
                     requirer_data.application_data.protocol != "https",
-                    requirer_data.relation_id not in self.relation_ids_with_invalid_data,
+                    requirer_data.relation_id,
                 ]
             ):
-                self.relation_ids_with_invalid_data.append(requirer_data.relation_id)
+                self.relation_ids_with_invalid_data.add(requirer_data.relation_id)
         return self
 
 
@@ -858,7 +858,7 @@ class HaproxyRouteProvider(Object):
             HaproxyRouteRequirersData: Validated data from all haproxy-route requirers.
         """
         requirers_data: list[HaproxyRouteRequirerData] = []
-        relation_ids_with_invalid_data: list[int] = []
+        relation_ids_with_invalid_data: set[int] = set()
         for relation in relations:
             try:
                 application_data = self._get_requirer_application_data(relation)
@@ -879,7 +879,7 @@ class HaproxyRouteProvider(Object):
                     raise HaproxyRouteInvalidRelationDataError(
                         f"haproxy-route data validation failed for relation: {relation}"
                     ) from exc
-                relation_ids_with_invalid_data.append(relation.id)
+                relation_ids_with_invalid_data.add(relation.id)
                 continue
         return HaproxyRouteRequirersData(
             requirers_data=requirers_data,

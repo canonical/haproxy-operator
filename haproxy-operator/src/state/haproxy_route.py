@@ -190,9 +190,9 @@ class HaproxyRouteRequirersInformation:
         backends: The list of backends each corresponds to a requirer application.
         stick_table_entries: List of stick table entries in the haproxy "peer" section.
         peers: List of IP address of haproxy peer units.
-        relation_ids_with_invalid_data: List of haproxy-route relation ids
+        relation_ids_with_invalid_data: Set of haproxy-route relation ids
             that contains invalid data.
-        relation_ids_with_invalid_data_tcp: List of haproxy-route-tcp relation ids
+        relation_ids_with_invalid_data_tcp: Set of haproxy-route-tcp relation ids
             that contains invalid data.
         tcp_endpoints: List of frontend/backend pairs in TCP mode.
     """
@@ -200,8 +200,8 @@ class HaproxyRouteRequirersInformation:
     backends: list[HAProxyRouteBackend]
     stick_table_entries: list[str]
     peers: list[IPvAnyAddress]
-    relation_ids_with_invalid_data: list[int]
-    relation_ids_with_invalid_data_tcp: list[int]
+    relation_ids_with_invalid_data: set[int]
+    relation_ids_with_invalid_data_tcp: set[int]
     tcp_endpoints: list[HAProxyRouteTcpEndpoint] = Field(strict=False)
 
     @classmethod
@@ -254,7 +254,7 @@ class HaproxyRouteRequirersInformation:
                 )
 
                 if not backend.hostname_acls:
-                    relation_ids_with_invalid_data.append(requirer.relation_id)
+                    relation_ids_with_invalid_data.add(requirer.relation_id)
                     continue
 
                 if (
@@ -262,7 +262,7 @@ class HaproxyRouteRequirersInformation:
                     and backend.servers[0].protocol == "https"
                     and not ca_certs_configured
                 ):
-                    relation_ids_with_invalid_data.append(requirer.relation_id)
+                    relation_ids_with_invalid_data.add(requirer.relation_id)
                     continue
 
                 backends.append(backend)
@@ -272,10 +272,10 @@ class HaproxyRouteRequirersInformation:
                 haproxy_route_tcp.relations
             )
             relation_ids_with_invalid_data_tcp = tcp_requirers.relation_ids_with_invalid_data
-            for tcp_requirer in tcp_requirers.requirers_data:
-                tcp_endpoints.append(
-                    HAProxyRouteTcpEndpoint.from_haproxy_route_tcp_requirer_data(tcp_requirer)
-                )
+            tcp_endpoints.extend(
+                HAProxyRouteTcpEndpoint.from_haproxy_route_tcp_requirer_data(tcp_requirer)
+                for tcp_requirer in tcp_requirers.requirers_data
+            )
 
             return HaproxyRouteRequirersInformation(
                 # Sort backend by the max depth of the required path.
@@ -350,22 +350,20 @@ class HaproxyRouteRequirersInformation:
                     logger.error(
                         f"TCP backend conflicts with HTTP backends on external port {standard_port}."
                     )
-                    self.relation_ids_with_invalid_data_tcp.append(
+                    self.relation_ids_with_invalid_data_tcp.add(
                         tcp_ports[standard_port].relation_id
                     )
                 if standard_port in grpc_ports:
                     logger.error(
                         f"gRPC backend conflicts with HTTP backends on external port {standard_port}."
                     )
-                    self.relation_ids_with_invalid_data.append(
-                        grpc_ports[standard_port].relation_id
-                    )
+                    self.relation_ids_with_invalid_data.add(grpc_ports[standard_port].relation_id)
 
         # Check for conflicts between gRPC and TCP ports
         for port in grpc_ports.keys() & tcp_ports.keys():
             logger.error(f"Conflicting TCP backend and gRPC backend on external port {port}.")
-            self.relation_ids_with_invalid_data_tcp.append(tcp_ports[port].relation_id)
-            self.relation_ids_with_invalid_data.append(grpc_ports[port].relation_id)
+            self.relation_ids_with_invalid_data_tcp.add(tcp_ports[port].relation_id)
+            self.relation_ids_with_invalid_data.add(grpc_ports[port].relation_id)
 
         return self
 

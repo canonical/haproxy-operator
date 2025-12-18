@@ -64,7 +64,7 @@ def mock_haproxy_route_relation_data_fixture(
     """Create mock requirer application data with allow_http enabled."""
     return HaproxyRouteRequirersData(
         requirers_data=[mock_haproxy_route_requirer_data],
-        relation_ids_with_invalid_data=[],
+        relation_ids_with_invalid_data=set(),
     )
 
 
@@ -108,7 +108,7 @@ def test_haproxy_route_requirer_information(
     haproxy_route_tcp_provider_mock = MagicMock()
     haproxy_route_tcp_provider_mock.get_data = MagicMock(
         return_value=HaproxyRouteTcpRequirersData(
-            requirers_data=[], relation_ids_with_invalid_data=[]
+            requirers_data=[], relation_ids_with_invalid_data=set()
         )
     )
     haproxy_route_provider_mock = MagicMock()
@@ -154,10 +154,10 @@ def test_check_external_grpc_port_with_https(
 
     data = HaproxyRouteRequirersData(
         requirers_data=[requirer_data],
-        relation_ids_with_invalid_data=[],
+        relation_ids_with_invalid_data=set(),
     )
 
-    assert data.relation_ids_with_invalid_data == []
+    assert len(data.relation_ids_with_invalid_data) == 0
 
 
 def test_check_external_grpc_port_with_http_invalid(
@@ -178,10 +178,10 @@ def test_check_external_grpc_port_with_http_invalid(
 
     data = HaproxyRouteRequirersData(
         requirers_data=[requirer_data],
-        relation_ids_with_invalid_data=[],
+        relation_ids_with_invalid_data=set(),
     )
 
-    assert data.relation_ids_with_invalid_data == [relation_id]
+    assert data.relation_ids_with_invalid_data == {relation_id}
 
 
 def test_check_external_grpc_port_unique(
@@ -259,7 +259,7 @@ def test_check_external_grpc_port_unique(
             requirer_data_7,
             requirer_data_8,
         ],
-        relation_ids_with_invalid_data=[],
+        relation_ids_with_invalid_data=set(),
     )
 
-    assert set(data.relation_ids_with_invalid_data) == {1, 2, 3, 4, 5}
+    assert data.relation_ids_with_invalid_data == {1, 2, 3, 4, 5}
