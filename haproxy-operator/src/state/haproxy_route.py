@@ -362,7 +362,7 @@ class HaproxyRouteRequirersInformation:
                     )
 
         # Check for conflicts between gRPC and TCP ports
-        for port in (grpc_ports.keys() & tcp_ports.keys()):
+        for port in grpc_ports.keys() & tcp_ports.keys():
             logger.error(f"Conflicting TCP backend and gRPC backend on external port {port}.")
             self.relation_ids_with_invalid_data_tcp.append(tcp_ports[port].relation_id)
             self.relation_ids_with_invalid_data.append(grpc_ports[port].relation_id)
