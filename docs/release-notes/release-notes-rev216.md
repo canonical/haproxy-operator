@@ -37,15 +37,16 @@ The following major and minor features were added in this release.
 ### Add consistent hashing support
 
 Consistent hashing reduce redistribution of clients to another backend server when server is added/removed. On HAProxy it will add 
+
 ```
 hash-type consistent
 ```
+
 to the configuration.
 
 Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/171)
-
 
 ### Allow customization to configure port for HTTP check
 
@@ -55,7 +56,6 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/119)
 
-
 ### Added hosts attribute to requirer data
 
 You can now override the unit IP addresses used to generate server entries in the HAProxy configuration.
@@ -63,7 +63,6 @@ You can now override the unit IP addresses used to generate server entries in th
 Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/149)
-
 
 ### Validated requirer relation data object
 
@@ -75,7 +74,6 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/118)
 
-
 ### Updated integration tests
 
 The integration tests now only run one unit to save CI time.
@@ -84,7 +82,6 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/131)
 
-
 ### Updated certifications handling
 
 The charm now requests a new certification for each subdomain during initialization.
@@ -92,7 +89,6 @@ The charm now requests a new certification for each subdomain during initializat
 Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/150)
-
 
 ### Refactored source code and tests
 
@@ -105,7 +101,6 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/158)
 
-
 ### Added a new relation
 
 Added the `ingress-per-unit` relation to support reaching each
@@ -116,7 +111,6 @@ Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/153)
 * [Related issue](https://github.com/canonical/haproxy-operator/issues/88)
 
-
 ### Added new field to the requirer application databag
 
 The requirer application databag now has a "protocol" field to
@@ -125,7 +119,6 @@ support HTTPS upstream servers.
 Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/164)
-
 
 ### Added `http-server-close` support
 
@@ -136,7 +129,6 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/175)
 
-
 ### Enforce health check fields to all be set
 
 To avoid any issue with partial health checks configuration, all related fields
@@ -146,7 +138,6 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/170)
 
-
 ### Added first scenario test
 
 Added the first scenario test which starts the transition process from Harness to Scenario.
@@ -154,7 +145,6 @@ Added the first scenario test which starts the transition process from Harness t
 Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/108)
-
 
 ### Rendered `retry` configuration in template and remove `retry_interval` attribute
 
@@ -164,7 +154,6 @@ To configure the time between 2 retries we can use `timeout.connect`.
 Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/166)
-
 
 ### Added terraform charm and product module
 
@@ -201,7 +190,6 @@ Relevant links:
 * Fixed Jinja2 handling of newlines to prevent invalid configuration generation ([PR](https://github.com/canonical/haproxy-operator/pull/139)).
 * Mitigated bug in Terraform provider by setting subordinate charm units to `1` ([PR](https://github.com/canonical/haproxy-operator/pull/135)).
 * Fixed an ambiguous endpoint in an integration test ([PR](https://github.com/canonical/haproxy-operator/pull/129)).
-
 
 ## Known issues
 
