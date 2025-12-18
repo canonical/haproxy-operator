@@ -2,11 +2,11 @@
 
 schema_version: 1
 changes:
-  - title: Add basic DDoS protection mechanisms with option to disable them.
+  - title: Added basic DDoS protection mechanisms with option to disable them.
     author: swetha1654
     type: minor
     description: |
-      Add sensible security defaults to prevent basic DDoS attacks.
+      Added sensible security defaults to prevent basic DDoS attacks.
       By default, basic DDoS protection mechanisms are enabled, including
       http-request, http-keep-alive and client timeouts, automatic dropping of connections
       with invalid, empty, or missing host headers.
