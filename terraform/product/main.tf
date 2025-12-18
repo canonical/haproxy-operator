@@ -18,11 +18,13 @@ module "haproxy" {
   config      = var.haproxy.config
 
   use_hacluster            = local.use_hacluster
+  hacluster_app_name       = local.use_hacluster ? var.hacluster.app_name : null
   hacluster_charm_channel  = local.use_hacluster ? var.hacluster.channel : null
   hacluster_charm_revision = local.use_hacluster ? var.hacluster.revision : null
   hacluster_config         = local.use_hacluster ? var.hacluster.config : {}
 
   use_keepalived            = local.use_keepalived
+  keepalived_app_name       = local.use_keepalived ? var.keepalived.app_name : null
   keepalived_charm_channel  = local.use_keepalived ? var.keepalived.channel : null
   keepalived_charm_revision = local.use_keepalived ? var.keepalived.revision : null
   keepalived_config         = local.use_keepalived ? var.keepalived.config : {}
@@ -34,7 +36,7 @@ resource "juju_application" "grafana_agent" {
   units      = 1
 
   charm {
-    name     = "grafana-agent"
+    name     = var.grafana_agent.app_name
     revision = var.grafana_agent.revision
     channel  = var.grafana_agent.channel
     base     = var.haproxy.base
