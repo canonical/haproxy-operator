@@ -497,7 +497,7 @@ def test_tcp_only_happy_path(
     assert len(haproxy_route_information.valid_tcp_endpoints()) == 1
 
 
-def test_tcp_http_no_conflict_no_tcp_endpoints(
+def test_http_only_happy_path(
     haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
 ) -> None:
     """
