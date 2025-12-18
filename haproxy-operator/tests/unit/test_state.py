@@ -167,7 +167,7 @@ def test_haproxy_route_requirer_information_reserved_ports(
         peers=[],
         ca_certs_configured=False,
     )
-    assert not haproxy_route_information.valid_tcp_endpoints
+    assert not haproxy_route_information.valid_tcp_endpoints()
     assert len(haproxy_route_information.relation_ids_with_invalid_data_tcp) == 1
 
 
@@ -203,7 +203,7 @@ def test_haproxy_route_requirer_information(
         peers=[],
         ca_certs_configured=False,
     )
-    assert len(haproxy_route_information.valid_tcp_endpoints) == 1
+    assert len(haproxy_route_information.valid_tcp_endpoints()) == 1
 
 
 def test_tls_allow_no_certificate():
@@ -296,8 +296,8 @@ def test_tcp_http_port_conflict_custom_grpc_port(
 
     assert tcp_relation_id in haproxy_route_information.relation_ids_with_invalid_data_tcp
     assert http_relation_id in haproxy_route_information.relation_ids_with_invalid_data
-    assert len(haproxy_route_information.valid_backends) == 0
-    assert len(haproxy_route_information.valid_tcp_endpoints) == 0
+    assert len(haproxy_route_information.valid_backends()) == 0
+    assert len(haproxy_route_information.valid_tcp_endpoints()) == 0
 
 
 @pytest.mark.parametrize("tcp_port", [80, 443])
@@ -346,8 +346,8 @@ def test_tcp_port_conflict_standard_ports(
 
     assert tcp_relation_id in haproxy_route_information.relation_ids_with_invalid_data_tcp
     assert http_relation_id not in haproxy_route_information.relation_ids_with_invalid_data
-    assert len(haproxy_route_information.valid_backends) == 1
-    assert len(haproxy_route_information.valid_tcp_endpoints) == 0
+    assert len(haproxy_route_information.valid_backends()) == 1
+    assert len(haproxy_route_information.valid_tcp_endpoints()) == 0
 
 
 @pytest.mark.parametrize("grpc_port", [80, 443])
@@ -397,7 +397,7 @@ def test_grpc_port_conflict_standard_ports(
 
     assert grpc_relation_id in haproxy_route_information.relation_ids_with_invalid_data
     assert http_relation_id not in haproxy_route_information.relation_ids_with_invalid_data
-    assert len(haproxy_route_information.valid_backends) == 1
+    assert len(haproxy_route_information.valid_backends()) == 1
 
 
 def test_tcp_http_no_conflict_different_ports(
@@ -450,8 +450,8 @@ def test_tcp_http_no_conflict_different_ports(
 
     assert tcp_relation_id not in haproxy_route_information.relation_ids_with_invalid_data_tcp
     assert http_relation_id not in haproxy_route_information.relation_ids_with_invalid_data
-    assert len(haproxy_route_information.valid_backends) == 1
-    assert len(haproxy_route_information.valid_tcp_endpoints) == 1
+    assert len(haproxy_route_information.valid_backends()) == 1
+    assert len(haproxy_route_information.valid_tcp_endpoints()) == 1
 
 
 def test_tcp_http_no_conflict_no_http_backends(
@@ -494,7 +494,7 @@ def test_tcp_http_no_conflict_no_http_backends(
 
     assert len(haproxy_route_information.relation_ids_with_invalid_data_tcp) == 0
     assert len(haproxy_route_information.relation_ids_with_invalid_data) == 0
-    assert len(haproxy_route_information.valid_tcp_endpoints) == 1
+    assert len(haproxy_route_information.valid_tcp_endpoints()) == 1
 
 
 def test_tcp_http_no_conflict_no_tcp_endpoints(
@@ -534,4 +534,4 @@ def test_tcp_http_no_conflict_no_tcp_endpoints(
 
     assert len(haproxy_route_information.relation_ids_with_invalid_data_tcp) == 0
     assert len(haproxy_route_information.relation_ids_with_invalid_data) == 0
-    assert len(haproxy_route_information.valid_backends) == 1
+    assert len(haproxy_route_information.valid_backends()) == 1

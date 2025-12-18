@@ -330,18 +330,19 @@ class HaproxyRouteRequirersInformation:
             Self: The validated model
         """
         standard_ports = {80, 443}
+        valid_backends = self.valid_backends()
         has_http_backends = any(
-            not b.application_data.external_grpc_port for b in self.valid_backends
+            not b.application_data.external_grpc_port for b in valid_backends
         )
 
         grpc_ports = {
             backend.application_data.external_grpc_port: backend
-            for backend in self.valid_backends
+            for backend in valid_backends
             if backend.application_data.external_grpc_port
         }
         tcp_ports = {
             tcp_endpoint.application_data.port: tcp_endpoint
-            for tcp_endpoint in self.valid_tcp_endpoints
+            for tcp_endpoint in self.valid_tcp_endpoints()
         }
 
         # Check for conflicts between standard HTTP and TCP/gRPC ports
@@ -370,7 +371,6 @@ class HaproxyRouteRequirersInformation:
 
         return self
 
-    @property
     def valid_backends(self) -> list[HAProxyRouteBackend]:
         """Get the list of valid backends (not in the invalid list).
 
@@ -383,7 +383,6 @@ class HaproxyRouteRequirersInformation:
             if backend.relation_id not in self.relation_ids_with_invalid_data
         ]
 
-    @property
     def valid_tcp_endpoints(self) -> list[HAProxyRouteTcpEndpoint]:
         """Get the list of valid TCP endpoints (not in the invalid list).
 

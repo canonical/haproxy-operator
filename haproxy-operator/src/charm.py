@@ -369,11 +369,11 @@ class HAProxyCharm(ops.CharmBase):
             443,
             *(
                 tcp_endpoint.application_data.port
-                for tcp_endpoint in haproxy_route_requirers_information.valid_tcp_endpoints
+                for tcp_endpoint in haproxy_route_requirers_information.valid_tcp_endpoints()
             ),
             *(
                 backend.application_data.external_grpc_port
-                for backend in haproxy_route_requirers_information.valid_backends
+                for backend in haproxy_route_requirers_information.valid_backends()
                 if backend.application_data.external_grpc_port is not None
             ),
         )

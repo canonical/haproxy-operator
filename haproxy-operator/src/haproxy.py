@@ -156,18 +156,19 @@ class HAProxyService:
             haproxy_route_requirers_information: HaproxyRouteRequirersInformation state component.
             spoe_oauth_info_list: Information about SPOE auth providers.
         """
+        valid_backends = haproxy_route_requirers_information.valid_backends()
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
             "enable_hsts": charm_state.enable_hsts,
             "http_backends": [
                 backend
-                for backend in haproxy_route_requirers_information.valid_backends
+                for backend in valid_backends
                 if not backend.application_data.external_grpc_port
             ],
-            "tcp_endpoints": haproxy_route_requirers_information.valid_tcp_endpoints,
+            "tcp_endpoints": haproxy_route_requirers_information.valid_tcp_endpoints(),
             "grpc_backends": [
                 backend
-                for backend in haproxy_route_requirers_information.valid_backends
+                for backend in valid_backends
                 if backend.application_data.external_grpc_port
             ],
             "stick_table_entries": haproxy_route_requirers_information.stick_table_entries,
