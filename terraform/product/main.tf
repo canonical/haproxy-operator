@@ -31,12 +31,12 @@ module "haproxy" {
 }
 
 resource "juju_application" "grafana_agent" {
-  name       = "grafana-agent"
+  name       = var.grafana_agent.app_name
   model_uuid = var.model_uuid
   units      = 1
 
   charm {
-    name     = var.grafana_agent.app_name
+    name     = "grafana-agent"
     revision = var.grafana_agent.revision
     channel  = var.grafana_agent.channel
     base     = var.haproxy.base

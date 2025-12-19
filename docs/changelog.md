@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2025-12-19
+
+- Added support for custom gRPC frontend port using the `external_grpc_port` attribute.
+
 ## 2025-12-18
 
 - Added the `ddos_protection` interface.
