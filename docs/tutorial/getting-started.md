@@ -43,13 +43,12 @@ curl $HAPROXY_IP
 ```
 
 If successful, the terminal will output:
+
 ```
 Default page for the haproxy-operator charm
 ```
 
-<!-- valeCanonical.007-Headings-sentence-case = NO -->
 ## Deploy the backend application
-<!-- valeCanonical.007-Headings-sentence-case = YES -->
 
 For this tutorial we'll use the [Pollen charm](https://charmhub.io/pollen). Start by deploying the Pollen charm:
 
