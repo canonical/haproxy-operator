@@ -23,6 +23,7 @@ from charms.traefik_k8s.v1.ingress_per_unit import (
     DataValidationError as V1DataValidationError,
 )
 from charms.traefik_k8s.v2.ingress import DataValidationError as V2DataValidationError
+
 from state.charm_state import CharmState, ProxyMode
 from state.haproxy_route import HaproxyRouteRequirersInformation
 from state.haproxy_route_tcp import HAProxyRouteTcpEndpoint
