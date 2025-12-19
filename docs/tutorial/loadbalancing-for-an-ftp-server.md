@@ -19,6 +19,7 @@ juju add-model haproxy-tutorial
 ```
 
 ## Deploy the HAProxy charm
+
 We will deploy charm from Charmhub using the `2.8/edge` channel:
 
 ```

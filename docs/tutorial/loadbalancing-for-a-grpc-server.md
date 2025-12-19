@@ -19,6 +19,7 @@ juju add-model haproxy-tutorial
 ```
 
 ## Deploy the HAProxy charm
+
 We will deploy charm from Charmhub using the `2.8/edge` channel:
 
 ```
@@ -26,6 +27,7 @@ juju deploy haproxy --channel=2.8/edge
 ```
 
 ## Configure TLS
+
 HAProxy enforces HTTPS when using the `haproxy-route` relation. To set up the TLS for the HAProxy charm, deploy the `self-signed-certificates` charm and integrate with the HAProxy charm:
 
 ```
