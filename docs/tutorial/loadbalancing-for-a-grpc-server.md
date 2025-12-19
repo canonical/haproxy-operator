@@ -1,8 +1,8 @@
-(tutorial_getting_started)=
+(tutorial_loadbalancing_for_a_grpc_server)=
 
 # Loadbalancing for a gRPC server
 
-In this tutorial we'll look at how to deploy the HAProxy charm to provide loadbalancing for a VM running `flagd`. This tutorial is done on LXD and assumes that you have a Juju controller bootstrapped and a machine model to deploy charms.
+In this tutorial we'll look at how to deploy the HAProxy charm to provide loadbalancing for a VM running [`flagd`](https://flagd.dev). This tutorial is done on LXD and assumes that you have a Juju controller bootstrapped and a machine model to deploy charms.
 
 ## Requirements
 
@@ -32,41 +32,42 @@ juju integrate haproxy:certificates self-signed-certificates
 
 ## Deploy and configure `flagd`
 
-First, we'll spin up a juju machine to host our FTP server:
+First, we'll spin up a juju machine to host the `flagd` service:
 ```sh
 juju add-machine
 ```
 
-Once the machine is in an "Active" state, install and configure the `flagd` server. The following command will fetch the `flagd` binary and setup a dedicated configuration folder:
+Once the machine is in an "Active" state, install and configure the `flagd` server. The following command will fetch the `flagd` binary and setup a dedicated working directory for the `flagd` service:
 ```sh
 cat << EOF | juju ssh 1
 curl -L -s https://github.com/open-feature/flagd/releases/download/flagd%2Fv0.12.9/flagd_0.12.9_Linux_x86_64.tar.gz | tar xzvf -
 sudo mv flagd_linux_x86_64 /usr/bin/flagd
 sudo mkdir -p /etc/flagd
-```
-
-Loadbalancing gRPC in the HAProxy charm requires the backend to support the standard HTTP/2 over TLS protocol. To do this, first, we need to generate a server certificate and a private key for `flagd`:
-```sh
-GRPC_SERVER_ADDRESS=$(juju status --format json | jq -r  '.machines."1"."ip-addresses".[0]')
-openssl genrsa -out ca.key 4096
-openssl req -x509 -new -nodes -key ca.key -sha256 -days 1024 -out ca.crt -subj "/C=FR/ST=CA/O=, Inc./CN=$GRPC_SERVER_ADDRESS"
-openssl genrsa -out server.key 2048
-openssl req -new -sha256 -key server.key -subj "/C=FR/ST=P/O=, Inc./CN=$GRPC_SERVER_ADDRESS" -out server.csr
-openssl x509 -req -days 365 -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt
-```
-
-Then, copy the server certificate and private key to the machine running `flagd`, and configure HAProxy to trust the CA that signed the server certificate:
-```sh
-juju scp server.{crt,key} 1:~
-
-juju scp ca.crt haproxy/0:~
-cat << EOF | juju ssh haproxy/0
-sudo mv ca.crt /usr/local/share/ca-certificates/flagd.ca.crt
-sudo update-ca-certificates
 EOF
 ```
 
-Finally, setup the `systemd` service:
+Before continuing further, we need to get a certificate for the `flagd` service. This is because loadbalancing gRPC in the HAProxy charm requires the backend to support the standard HTTP/2 over TLS protocol. To do this, first, deploy the [TLS Certificates Requirer charm](https://charmhub.io/tls-certificates-requirer) to request a certificate for `flagd`:
+```sh
+GRPC_SERVER_ADDRESS=$(juju status --format json | jq -r  '.machines."1"."ip-addresses".[0]')
+juju deploy tls-certificates-requirer --channel=latest/edge --config common_name=$GRPC_SERVER_ADDRESS
+juju integrate tls-certificates-requirer self-signed-certificates
+```
+
+Then, once the `tls-certificates-requirer` charm has settled into an "Active" state, fetch the certificate and the private key and copy them to the machine running `flagd`. We'll use the [`jhack`](https://snapcraft.io/jhack) debugging tool to fetch the private key from the charm:
+```sh
+sudo snap install jhack --channel=latest/stable
+echo "y" | jhack eval tls-certificates-requirer/0 self.certificates.private_key 2>/dev/null | tail -n +2 | awk '{$1=$1;print}' > server.key
+juju run tls-certificates-requirer/0 get-certificate --format json | jq -r '."tls-certificates-requirer/0".results.certificates' | jq -r '.[0].certificate' > server.crt
+
+juju scp server.{crt,key} 1:~
+```
+
+Then, configure haproxy to retrieve and trust the CA certificate from the `self-signed-certificates` charm:
+```sh
+juju integrate haproxy:receive-ca-certs self-signed-certificates
+```
+
+Finally, setup the `systemd` service for `flagd`:
 ```sh
 cat << EOF | juju ssh 1
 cat << EEOF | sudo tee /etc/systemd/system/flagd.service
@@ -86,10 +87,6 @@ EEOF
 sudo systemctl daemon-reload
 sudo systemctl restart flagd
 EOF
-```
-
-```sh
-grpcurl -plaintext -d '{"flagKey":"myStringFlag","context":{}}' -proto=evaluation.proto -import-path /var/snap/grpcurl/current localhost:8013 flagd.evaluation.v1.Service/ResolveString
 ```
 
 ## Deploy and configure the ingress configurator charms
@@ -113,21 +110,28 @@ juju integrate grpc-configurator:haproxy-route haproxy
 
 ## Verify connection to the gRPC server
 
+Install `grpcurl` and fetch the protocol for the evaluation service of `flagd`:
+```sh
+sudo snap install grpcurl --edge
+curl https://buf.build/open-feature/flagd/raw/main/-/flagd/evaluation/v1/evaluation.proto | sudo tee /var/snap/grpcurl/current/evaluation.proto
+```
+
 Once all of the charms have settled into an "Active" state, verify that the gRPC server is reachable through HAProxy:
 ```sh
 HAPROXY_IP=$(juju status --format json | jq -r '.applications.haproxy.units."haproxy/0"."public-address"')
-ftp -P 2100 ftp://$HAPROXY_IP
+echo $HAPROXY_IP flagd.haproxy.internal | sudo tee -a /etc/hosts
+
+grpcurl -insecure -d '{"flagKey":"myStringFlag","context":{}}' -proto=evaluation.proto -import-path /var/snap/grpcurl/current flagd.haproxy.internal flagd.evaluation.v1.Service/ResolveString
 ```
 
-After running the command you should see `230 Login successful` and an interactive session is openned:
+After running the command you should see the reply from `flagd`:
 ```sh
-...
-331 Please specify the password.
-230 Login successful.
-Remote system type is UNIX.
-Using binary mode to transfer files.
-200 Switching to Binary mode.
-ftp>
+{
+  "value": "val1",
+  "reason": "STATIC",
+  "variant": "key1",
+  "metadata": {}
+}
 ```
 
 ## Clean up the environment

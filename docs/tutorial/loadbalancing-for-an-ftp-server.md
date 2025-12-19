@@ -1,4 +1,4 @@
-(tutorial_getting_started)=
+(tutorial_loadbalancing_for_an_ftp_server)=
 
 # TCP loadbalancing for an FTP server
 
