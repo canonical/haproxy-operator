@@ -141,7 +141,7 @@ class _DatabagModel(BaseModel):
     """Pydantic config."""
 
     @classmethod
-    def load(cls, databag: MutableMapping[str, str]) -> "_DatabagModel":
+    def load(cls, databag: MutableMapping[str, str]) -> Self:
         """Load this model from a Juju json databag.
 
         Args:
@@ -151,7 +151,7 @@ class _DatabagModel(BaseModel):
             DataValidationError: When model validation failed.
 
         Returns:
-            _DatabagModel: The validated model.
+            Self: The validated model.
         """
         try:
             data = {
@@ -172,27 +172,18 @@ class _DatabagModel(BaseModel):
             logger.error(msg)
             raise DataValidationError(msg) from e
 
-    def dump(
-        self, databag: MutableMapping[str, str] | None = None, clear: bool = True
-    ) -> MutableMapping[str, str] | None:
+    def dump(self, databag: MutableMapping[str, str], clear: bool = True) -> None:
         """Write the contents of this model to Juju databag.
 
         Args:
             databag: The databag to write to.
             clear: Whether to clear the databag before writing.
-
-        Returns:
-            MutableMapping: The databag.
         """
-        if clear and databag:
+        if clear:
             databag.clear()
-
-        if databag is None:
-            databag = {}
 
         dct = self.model_dump(mode="json", by_alias=True, exclude_defaults=True)
         databag.update({k: json.dumps(v) for k, v in dct.items()})
-        return databag
 
 
 class RateLimitPolicy(Enum):
@@ -296,14 +287,11 @@ class DDoSProtectionProviderAppData(_DatabagModel):
         Returns:
             The validated model.
         """
-        if (
-            not isinstance(self, dict)
-            or "limit_policy" not in self
-            or self["limit_policy"] is None
-        ):
+        data = cast(dict, self)
+        if not data.get("limit_policy"):
             return self
 
-        limit_policy_input = self["limit_policy"]
+        limit_policy_input = data["limit_policy"]
 
         parts = limit_policy_input.strip().split()
         policy_str = parts[0]
@@ -322,19 +310,14 @@ class DDoSProtectionProviderAppData(_DatabagModel):
         if policy == RateLimitPolicy.DENY and len(parts) > 1:
             try:
                 status_code = int(parts[1])
-                if not (100 <= status_code <= 599):
-                    raise ValueError(
-                        f"Invalid HTTP status code '{status_code}' in limit_policy. "
-                        f"Must be between 100 and 599."
-                    )
-                self["policy_status_code"] = status_code
+                data["policy_status_code"] = status_code
             except ValueError as e:
                 raise ValueError(
                     f"Invalid limit_policy format. Expected 'deny' or 'deny <status_code>', "
                     f"got '{limit_policy_input}'"
                 ) from e
 
-        self["limit_policy"] = policy
+        data["limit_policy"] = policy
 
         return self
 
