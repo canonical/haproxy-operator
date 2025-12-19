@@ -18,45 +18,79 @@ juju add-model haproxy-tutorial
 ```
 
 ## Deploy the HAProxy charm
-We will deploy charm from Charmhub using the `2.8/stable` channel:
+We will deploy charm from Charmhub using the `2.8/edge` channel:
 ```
-juju deploy haproxy --channel=2.8/stable
+juju deploy haproxy --channel=2.8/edge
 ```
 
-<!-- valeCanonical.007-Headings-sentence-case = NO -->
-## Deploy the FTP server
-<!-- valeCanonical.007-Headings-sentence-case = YES -->
+## Deploy and configure the FTP server
 
-For this tutorial we'll use the [Pollen charm](https://charmhub.io/pollen). Start by deploying the Pollen charm:
+First, we'll spin up a juju machine to host our FTP server:
 ```sh
 juju add-machine
 ```
 
-Configure a hostname for HAProxy and integrate the Pollen charm with HAProxy:
+Once the machine is in an "Active" state, install and configure the FTP server. The following command will install `vsftpd` and configure the daemon to run in passive mode with anonymous login enabled:
 ```sh
-juju config haproxy external-hostname=pollen.internal
-juju integrate pollen haproxy:haproxy-route
+cat << EOF | juju ssh 1
+sudo apt update; sudo apt install vsftpd -y
+
+sudo sed -i -e 's/anonymous_enable=NO/anonymous_enable=YES/g' /etc/vsftpd.conf
+cat << EEOF | sudo tee -a /etc/vsftpd.conf
+pasv_enable=Yes
+pasv_max_port=10100
+pasv_min_port=10100
+EEOF
+
+sudo systemctl reload vsftpd.service
+EOF
 ```
 
-Let's check that the request has been properly proxied to the backend service. using the `pollinate` script:
+## Deploy and configure the ingress configurator charms
+
+To expose our FTP server through HAProxy, we need to deploy two instance of the [Ingress Configurator charm](https://charmhub.io/ingress-configurator), one to configure the control port and the other to configure the data port. Add a machine to host the two charms:
+```sh
+juju add-machine
+```
+Then, deploy the two charms to the new machine:
+
+```sh
+juju deploy ingress-configurator ftp-control --channel=latest/edge --to 2
+juju deploy ingress-configurator ftp-data --channel=latest/edge --to 2
+```
+
+Once the two charms have settled into an "Active" state, update their configuration and integrate them with HAProxy via the `haproxy-route-tcp` relation:
+```sh
+FTP_SERVER_ADDRESS = $(juju status --format json | jq -r  '.machines."5"."ip-addresses".[0]')
+juju config ftp-control tcp-backend-addresses=$FTP_SERVER_ADDRESS tcp-backend-port=21 tcp-frontend-port=2100
+juju config ftp-data tcp-backend-addresses=$FTP_SERVER_ADDRESS tcp-backend-port=10100 tcp-frontend-port=10100
+
+juju integrate ftp-control:haproxy-route-tcp haproxy
+juju integrate ftp-data:haproxy-route-tcp haproxy
+```
+
+## Verify connection to the FTP server
+
+Once all of the charms have settled into an "Active" state, verify that the FTP server is reachable through HAProxy:
 ```sh
 HAPROXY_IP=$(juju status --format json | jq -r '.applications.haproxy.units."haproxy/0"."public-address"')
-echo "$HAPROXY_IP pollen.internal" | sudo tee /etc/hosts
-sudo pollinate -s https://pollen.internal -r -i
+ftp -P 2100 ftp://$HAPROXY_IP
 ```
 
-If successful, you should see a success message in the terminal:
-```
-<13>Dec 17 20:45:02 pollinate[59078]: system was previously seeded at [2025-12-17 00:08:36.226000000 +0100]
-<13>Dec 17 20:45:02 pollinate[59078]: client sent challenge to [https://pollen.internal]
-<13>Dec 17 20:45:02 pollinate[59078]: client verified challenge/response with [https://pollen.internal]
-<13>Dec 17 20:45:02 pollinate[59078]: client hashed response from [https://pollen.internal]
-<13>Dec 17 20:45:02 pollinate[59078]: client successfully seeded [/dev/urandom]
+After running the command you should see `230 Login successful` and an interactive session is openned:
+```sh
+...
+331 Please specify the password.
+230 Login successful.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+200 Switching to Binary mode.
+ftp>
 ```
 
 ## Clean up the environment
 
-Well done! You've successfully completed the HAProxy tutorial.
+Well done! You've successfully completed this tutorial.
 
 To remove the model environment you created, use the following command:
 ```
