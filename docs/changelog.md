@@ -14,6 +14,10 @@ Each revision is versioned by the date of the revision.
 
 ## 2025-12-19
 
+- Added `app_name` and missing endpoint outputs to the Terraform product.
+
+## 2025-12-19
+
 - Added support for custom gRPC frontend port using the `external_grpc_port` attribute.
 
 ## 2025-12-18
