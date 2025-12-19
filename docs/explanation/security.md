@@ -41,7 +41,9 @@ TLS certificate can be provided through the [`certificates` integration](https:/
 - Use TLS certificates to encrypt traffic.
 
 <!-- vale Canonical.007-Headings-sentence-case = NO -->
+
 ## Denial-of-service (DoS) attack
+
 <!-- vale Canonical.007-Headings-sentence-case = YES -->
 
 This type of attack refers to attackers overloading a service by issuing many requests in a short period of time.

@@ -12,6 +12,10 @@ Each revision is versioned by the date of the revision.
 
 - Added the DDoS defaults in the HAProxy config files and a config option to disable the defaults.
 
+## 2025-12-18
+
+- Parametrize app_name for subordinates in Terraform product.
+
 ## 2025-12-11
 
 - Added the skeleton code for the HAProxy DDoS protection configurator charm.
