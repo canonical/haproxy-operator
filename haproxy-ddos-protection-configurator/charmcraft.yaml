@@ -54,13 +54,15 @@ config:
     limit-policy:
       type: string
       description: |
-        Policy to be applied when the above limits are exceeded. Specify one of: drop, reject, or 
-        deny. Optionally append an HTTP status code for deny (default is 403). Examples: "reject", 
-        "deny", "deny 503".
-      default: drop
+        Policy to be applied when the above limits are exceeded. Specify one of: silent-drop, 
+        reject, or deny. Optionally append an HTTP status code for deny (default is 403). 
+        Examples: "reject", "deny", "deny 503".
+      default: silent-drop
     ip-allow-list:
       type: string
-      description: Comma-separated list of IPs to be allowed on both TCP and HTTP levels.
+      description: |
+        Comma-separated list of IPv4 addresses or CIDR blocks to be allowed on both TCP and 
+        HTTP levels.
     http-request-timeout:
       type: int
       description: Timeout for HTTP requests in seconds.
