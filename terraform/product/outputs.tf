@@ -8,7 +8,7 @@ output "grafana_agent" {
 
 output "haproxy_app_name" {
   description = "Name of the deployed haproxy application."
-  value       = haproxy.haproxy.app_name
+  value       = module.haproxy.app_name
 }
 
 output "provides" {
