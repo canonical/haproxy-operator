@@ -13,18 +13,21 @@ this process by using a [Multipass](https://multipass.run/) VM as outlined in th
 ## Set up a tutorial model
 
 To manage resources effectively and to separate this tutorial's workload from your usual work, create a new model using the following command:
+
 ```
 juju add-model haproxy-tutorial
 ```
 
 ## Deploy the HAProxy charm
 We will deploy charm from Charmhub using the `2.8/edge` channel:
+
 ```
 juju deploy haproxy --channel=2.8/edge
 ```
 
 ## Configure TLS
 HAProxy enforces HTTPS when using the `haproxy-route` relation. To set up the TLS for the HAProxy charm, deploy the `self-signed-certificates` charm and integrate with the HAProxy charm:
+
 ```
 juju deploy self-signed-certificates
 juju integrate haproxy:certificates self-signed-certificates
@@ -33,11 +36,13 @@ juju integrate haproxy:certificates self-signed-certificates
 ## Deploy and configure `flagd`
 
 First, we'll spin up a juju machine to host the `flagd` service:
+
 ```sh
 juju add-machine
 ```
 
 Once the machine is in an "Active" state, install and configure the `flagd` server. The following command will fetch the `flagd` binary and setup a dedicated working directory for the `flagd` service:
+
 ```sh
 cat << EOF | juju ssh 1
 curl -L -s https://github.com/open-feature/flagd/releases/download/flagd%2Fv0.12.9/flagd_0.12.9_Linux_x86_64.tar.gz | tar xzvf -
@@ -47,6 +52,7 @@ EOF
 ```
 
 Before continuing further, we need to get a certificate for the `flagd` service. This is because loadbalancing gRPC in the HAProxy charm requires the backend to support the standard HTTP/2 over TLS protocol. To do this, first, deploy the [TLS Certificates Requirer charm](https://charmhub.io/tls-certificates-requirer) to request a certificate for `flagd`:
+
 ```sh
 GRPC_SERVER_ADDRESS=$(juju status --format json | jq -r  '.machines."1"."ip-addresses".[0]')
 juju deploy tls-certificates-requirer --channel=latest/edge --config common_name=$GRPC_SERVER_ADDRESS
@@ -54,6 +60,7 @@ juju integrate tls-certificates-requirer self-signed-certificates
 ```
 
 Then, once the `tls-certificates-requirer` charm has settled into an "Active" state, fetch the certificate and the private key and copy them to the machine running `flagd`. We'll use the [`jhack`](https://snapcraft.io/jhack) debugging tool to fetch the private key from the charm:
+
 ```sh
 sudo snap install jhack --channel=latest/stable
 echo "y" | jhack eval tls-certificates-requirer/0 self.certificates.private_key 2>/dev/null | tail -n +2 | awk '{$1=$1;print}' > server.key
@@ -63,11 +70,13 @@ juju scp server.{crt,key} 1:~
 ```
 
 Then, configure haproxy to retrieve and trust the CA certificate from the `self-signed-certificates` charm:
+
 ```sh
 juju integrate haproxy:receive-ca-certs self-signed-certificates
 ```
 
 Finally, setup the `systemd` service for `flagd`:
+
 ```sh
 cat << EOF | juju ssh 1
 cat << EEOF | sudo tee /etc/systemd/system/flagd.service
@@ -92,11 +101,13 @@ EOF
 ## Deploy and configure the ingress configurator charms
 
 To expose our gRPC server through HAProxy, we need to deploy the [Ingress Configurator charm](https://charmhub.io/ingress-configurator):
+
 ```sh
 juju deploy ingress-configurator grpc-configurator --channel=latest/edge
 ```
 
 Once the charm has settled into an "Active" state, update its configuration and integrate with HAProxy via the `haproxy-route` relation:
+
 ```sh
 GRPC_SERVER_ADDRESS=$(juju status --format json | jq -r  '.machines."1"."ip-addresses".[0]')
 juju config grpc-configurator \
@@ -111,12 +122,14 @@ juju integrate grpc-configurator:haproxy-route haproxy
 ## Verify connection to the gRPC server
 
 Install `grpcurl` and fetch the protocol for the evaluation service of `flagd`:
+
 ```sh
 sudo snap install grpcurl --edge
 curl https://buf.build/open-feature/flagd/raw/main/-/flagd/evaluation/v1/evaluation.proto | sudo tee /var/snap/grpcurl/current/evaluation.proto
 ```
 
 Once all of the charms have settled into an "Active" state, verify that the gRPC server is reachable through HAProxy:
+
 ```sh
 HAPROXY_IP=$(juju status --format json | jq -r '.applications.haproxy.units."haproxy/0"."public-address"')
 echo $HAPROXY_IP flagd.haproxy.internal | sudo tee -a /etc/hosts
@@ -125,6 +138,7 @@ grpcurl -insecure -d '{"flagKey":"myStringFlag","context":{}}' -proto=evaluation
 ```
 
 After running the command you should see the reply from `flagd`:
+
 ```sh
 {
   "value": "val1",
@@ -139,6 +153,7 @@ After running the command you should see the reply from `flagd`:
 Well done! You've successfully completed this tutorial.
 
 To remove the model environment you created, use the following command:
+
 ```
 juju destroy-model haproxy-tutorial
 ```
