@@ -27,7 +27,7 @@ Getting Started <getting-started.md>
 
 ## Protocol-specific setup
 
-In these tutorials you will learn how to use HAProxy to provide loadbalancing for different protocols.
+In these tutorials you will learn how to use HAProxy to provide load balancing for different protocols.
 
 ```{toctree}
 :glob:
