@@ -217,7 +217,8 @@ def test_tcp_requirers_data_duplicate_ports():
     )
 
     requirers_data = HaproxyRouteTcpRequirersData(
-        requirers_data=[tcp_requirer_data1, tcp_requirer_data2], relation_ids_with_invalid_data=[]
+        requirers_data=[tcp_requirer_data1, tcp_requirer_data2],
+        relation_ids_with_invalid_data=set(),
     )
 
     # The validator should detect duplicate ports and add relation IDs to invalid list

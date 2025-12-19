@@ -1,5 +1,4 @@
-{% extends 'haproxy_route.cfg.j2' %}
-{% macro render_server(server) -%}
+{% macro render_tcp_server(server) -%}
     server
 {{ server.server_name }}
 {{ server.address }}:{{ server.port }}
@@ -14,7 +13,6 @@ maxconn {{ server.maxconn }}
 {% endif %}
 {%- endmacro %}
 
-{% block haproxy_route_tcp %}
 {% for endpoint in tcp_endpoints %}
 frontend {{ endpoint.name }}
     mode tcp
@@ -43,8 +41,6 @@ backend {{ endpoint.name }}
 {% endfor %}
 
 {% for server in endpoint.servers %}
-    {{ render_server(server) | replace("\n", " ") }}
+    {{ render_tcp_server(server) | replace("\n", " ") }}
 {% endfor %}
 {% endfor %}
-
-{% endblock %}
