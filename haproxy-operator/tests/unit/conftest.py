@@ -11,8 +11,17 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import scenario
+from charms.haproxy.v0.haproxy_route_tcp import (
+    HaproxyRouteTcpRequirerData,
+    TcpRequirerApplicationData,
+    TcpRequirerUnitData,
+)
 from charms.haproxy.v0.spoe_auth import SpoeAuthProviderAppData, SpoeAuthProviderUnitData
-from charms.haproxy.v1.haproxy_route import RequirerApplicationData, RequirerUnitData
+from charms.haproxy.v1.haproxy_route import (
+    HaproxyRouteRequirerData,
+    RequirerApplicationData,
+    RequirerUnitData,
+)
 from charms.tls_certificates_interface.v4.tls_certificates import (
     Certificate,
     CertificateSigningRequest,
@@ -422,3 +431,79 @@ def mock_out_validate_global_max_conn_check(monkeypatch):
     monkeypatch.setattr(
         "state.charm_state.check_output", Mock(return_value="fs.file-max = 9223372036854775807")
     )
+
+
+@pytest.fixture(scope="module", name="haproxy_route_tcp_relation_data")
+def haproxy_route_tcp_relation_data_fixture() -> typing.Callable[..., HaproxyRouteTcpRequirerData]:
+    """Get haproxy-route-tcp relation data generator."""
+
+    def generate_requirer_data(
+        *,
+        relation_id: int = 0,
+        **application_data: typing.Any,
+    ) -> HaproxyRouteTcpRequirerData:
+        """Generate haproxy-route-tcp relation data.
+
+        Args:
+            relation_id: Relation ID.
+            application_data: Application data fields.
+
+        Returns:
+            HaproxyRouteTcpRequirerData: Generated relation data.
+        """
+        return HaproxyRouteTcpRequirerData(
+            relation_id=relation_id,
+            application="tcp-route-requirer",
+            application_data=typing.cast(
+                TcpRequirerApplicationData,
+                TcpRequirerApplicationData.from_dict(application_data),
+            ),
+            units_data=[
+                typing.cast(
+                    TcpRequirerUnitData,
+                    TcpRequirerUnitData.from_dict({"address": "10.0.0.1"}),
+                )
+            ],
+        )
+
+    return generate_requirer_data
+
+
+@pytest.fixture(scope="module", name="haproxy_route_relation_data")
+def haproxy_route_relation_data_fixture() -> typing.Callable[..., HaproxyRouteRequirerData]:
+    """Get haproxy-route relation data generator."""
+
+    def generate_requirer_data(
+        service: str,
+        *,
+        relation_id: int = 1,
+        **application_data: typing.Any,
+    ) -> HaproxyRouteRequirerData:
+        """Generate haproxy-route relation data.
+
+        Args:
+            service: Service name.
+            relation_id: Relation ID.
+            application_data: Application data fields.
+
+        Returns:
+            HaproxyRouteRequirerData: Generated relation data.
+        """
+        application_data_dict = {
+            "service": service,
+            "ports": [80],
+        }
+        application_data_dict.update(application_data)
+
+        return HaproxyRouteRequirerData(
+            relation_id=relation_id,
+            application_data=typing.cast(
+                RequirerApplicationData,
+                RequirerApplicationData.from_dict(application_data_dict),
+            ),
+            units_data=[
+                typing.cast(RequirerUnitData, RequirerUnitData.from_dict({"address": "10.0.0.1"}))
+            ],
+        )
+
+    return generate_requirer_data
