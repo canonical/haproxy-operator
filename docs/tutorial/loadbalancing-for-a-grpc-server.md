@@ -28,7 +28,7 @@ juju deploy haproxy --channel=2.8/edge
 
 ## Configure TLS
 
-HAProxy enforces HTTPS when using the `haproxy-route` relation. To set up the TLS for the HAProxy charm, deploy the `self-signed-certificates` charm and integrate with the HAProxy charm:
+HAProxy enforces HTTPS when using the `haproxy-route` relation. To set up the TLS for the HAProxy charm, deploy the `self-signed-certificates` charm and integrate it with the HAProxy charm:
 
 ```
 juju deploy self-signed-certificates
