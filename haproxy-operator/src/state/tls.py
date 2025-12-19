@@ -76,7 +76,7 @@ class TLSInformation:
         tls_cert_and_ca_chain = {}
 
         provider_certificates, private_key = certificates.get_assigned_certificates()
-        if not private_key:
+        if not private_key and not allow_no_certificates:
             raise PrivateKeyNotGeneratedError("Waiting for private key creation")
 
         for provider_certificate in provider_certificates:
