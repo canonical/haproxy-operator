@@ -11,6 +11,7 @@ Each revision is versioned by the date of the revision.
 ## 2025-12-18
 
 - Added the `ddos_protection` interface.
+- Parametrize app_name for subordinates in Terraform product.
 
 ## 2025-12-11
 
