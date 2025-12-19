@@ -289,7 +289,7 @@ class HAProxyCharm(ops.CharmBase):
     def _configure_ingress(
         self,
         charm_state: CharmState,
-        requirer_class: IngressRequirersInformation | IngressPerUnitRequirersInformation,
+        requirer_class: type[IngressRequirersInformation | IngressPerUnitRequirersInformation],
     ) -> None:
         """Configure the ingress or ingress-per-unit relation."""
         tls_information = TLSInformation.from_charm(self, self.certificates)
@@ -347,7 +347,7 @@ class HAProxyCharm(ops.CharmBase):
         # 1. there's only haproxy-route-tcp relations
         # AND
         # 2. All requirers must enable TLS passthrough or disable TLS termination
-        allow_no_certificates = (
+        allow_no_certificates = bool(
             not haproxy_route_requirers_information.backends
             and haproxy_route_requirers_information.tcp_endpoints
             and all(
@@ -369,7 +369,12 @@ class HAProxyCharm(ops.CharmBase):
             443,
             *(
                 tcp_endpoint.application_data.port
-                for tcp_endpoint in haproxy_route_requirers_information.tcp_endpoints
+                for tcp_endpoint in haproxy_route_requirers_information.valid_tcp_endpoints()
+            ),
+            *(
+                backend.application_data.external_grpc_port
+                for backend in haproxy_route_requirers_information.valid_backends()
+                if backend.application_data.external_grpc_port is not None
             ),
         )
         if self.unit.is_leader():

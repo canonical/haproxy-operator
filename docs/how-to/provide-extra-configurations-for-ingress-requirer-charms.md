@@ -1,15 +1,19 @@
 (how_to_provide_extra_configurations_for_ingress_requirer_charms)=
 
 # How to provide extra configuration to ingress requirers
+
 This guide will show you how a charm implementing only the `ingress` relation can leverage the added functionalities of the `haproxy-route` relation with the help of the `ingress-configurator` charm.
 
 ## Deploy an ingress requirer charm
+
 Deploy `any-charm`:
+
 ```sh
 juju deploy any-charm ingress-requirer --channel=beta
 ```
 
 Configure `any-charm` to use the ingress relation:
+
 ```sh
 juju config ingress-requirer src-overwrite="$(cat << EOF | python3 -
 import json
@@ -48,24 +52,29 @@ EOF
 ```
 
 Finally, start the web server on the `any-charm` unit:
+
 ```sh
 juju run ingress-requirer/0 rpc method=start_server
 ```
 
-
 ## Verify that the requirer application is responding to requests
+
 Send a request with `curl` to the `any-charm` unit:
+
 ```sh
 curl $(juju status --format=json | jq -r '.applications["ingress-requirer"].units["ingress-requirer/0"]."public-address"')
 ```
 
 You should see the Apache server reply with the unit's hostname:
+
 ```sh
 juju-344909-3
 ```
 
 ## Deploy and configure the `haproxy` charm
+
 Deploy the `haproxy` and `self-signed-certificates` charms. Please refer to the {ref}`Tutorial <getting_started>` for a more detailed explanation.
+
 ```sh
 juju deploy haproxy --channel=2.8/edge --base=ubuntu@24.04
 juju deploy self-signed-certificates cert
@@ -73,30 +82,37 @@ juju integrate haproxy:certificates cert
 ```
 
 ## Deploy the `ingress-configurator` charm
+
 ```sh
 juju deploy ingress-configurator --channel edge
 ```
 
 ## Configure relations
+
 Integrate `any-charm` with the `ingress-configurator` charm and the `ingress-configurator` charm with the `haproxy` charm:
+
 ```sh
 juju integrate haproxy ingress-configurator
 juju integrate ingress-configurator ingress-requirer:require-ingress
 ```
 
 Then, configure a hostname for the requirer charm:
+
 ```sh
 juju config ingress-configurator hostname=example.com
 ```
 
 ## Verify that the requirer charm is reachable through `haproxy`
+
 Send a request with `curl` to the `haproxy` charm unit:
+
 ```sh
 curl https://$(juju status --format=json | jq -r '.applications["haproxy"].units["haproxy/0"]."public-address"') \
     -H "Host: example.com" --insecure
 ```
 
 You should see the `any-charm` unit's hostname in the returned response:
+
 ```sh
 juju-344909-3
 ```

@@ -122,6 +122,7 @@ class SomeCharm(CharmBase):
 
 import json
 import logging
+from collections import defaultdict
 from enum import Enum
 from functools import partial
 from typing import Annotated, Any, Literal, MutableMapping, Optional, cast
@@ -152,7 +153,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 10
+LIBPATCH = 11
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -554,11 +555,12 @@ class RequirerApplicationData(_DatabagModel):
         http_server_close: Configure server close after request.
         allow_http: Whether to allow HTTP traffic in addition to HTTPS. Defaults to False.
             Warning: enabling HTTP is a security risk, make sure you apply the necessary precautions.
+        external_grpc_port: Optional external gRPC port.
     """
 
     service: VALIDSTR = Field(description="The name of the service.")
     ports: list[int] = Field(description="The list of ports listening for this service.")
-    protocol: Optional[Literal["http", "https"]] = Field(
+    protocol: Literal["http", "https"] = Field(
         description="The protocol that the service speaks.",
         default="http",
     )
@@ -607,6 +609,9 @@ class RequirerApplicationData(_DatabagModel):
     )
     allow_http: bool = Field(
         description="Whether to allow HTTP traffic in addition to HTTPS.", default=False
+    )
+    external_grpc_port: int | None = Field(
+        description="Optional external gRPC port.", default=None, gt=0, le=65535
     )
 
     @field_validator("load_balancing")
@@ -690,11 +695,11 @@ class HaproxyRouteRequirersData:
 
     Attributes:
         requirers_data: List of requirer data.
-        relation_ids_with_invalid_data: List of relation ids that contains invalid data.
+        relation_ids_with_invalid_data: Set of relation ids that contains invalid data.
     """
 
     requirers_data: list[HaproxyRouteRequirerData]
-    relation_ids_with_invalid_data: list[int]
+    relation_ids_with_invalid_data: set[int]
 
     @model_validator(mode="after")
     def check_services_unique(self) -> Self:
@@ -712,6 +717,49 @@ class HaproxyRouteRequirersData:
         if len(services) != len(set(services)):
             raise DataValidationError("Services declaration by requirers must be unique.")
 
+        return self
+
+    @model_validator(mode="after")
+    def check_external_grpc_port_unique(self) -> Self:
+        """Check that external gRPC ports are unique across requirer applications.
+        If multiple requirer applications declare the same external gRPC port,
+        their relation ids are added to relation_ids_with_invalid_data.
+
+        Returns:
+            The validated model.
+        """
+        relation_ids_per_port: dict[int, list[int]] = defaultdict(list[int])
+        for requirer_data in self.requirers_data:
+            if requirer_data.application_data.external_grpc_port:
+                relation_ids_per_port[requirer_data.application_data.external_grpc_port].append(
+                    requirer_data.relation_id
+                )
+
+        self.relation_ids_with_invalid_data.update(
+            relation_id
+            for relation_ids in relation_ids_per_port.values()
+            for relation_id in relation_ids
+            if len(relation_ids) > 1
+        )
+        return self
+
+    @model_validator(mode="after")
+    def check_grpc_requires_https(self) -> Self:
+        """Check that backends with external_grpc_port use https protocol.
+        If not, their relation ids are added to relation_ids_with_invalid_data.
+
+        Returns:
+            Self: The validated model
+        """
+        for requirer_data in self.requirers_data:
+            if all(
+                [
+                    requirer_data.application_data.external_grpc_port is not None,
+                    requirer_data.application_data.protocol != "https",
+                    requirer_data.relation_id,
+                ]
+            ):
+                self.relation_ids_with_invalid_data.add(requirer_data.relation_id)
         return self
 
 
@@ -810,7 +858,7 @@ class HaproxyRouteProvider(Object):
             HaproxyRouteRequirersData: Validated data from all haproxy-route requirers.
         """
         requirers_data: list[HaproxyRouteRequirerData] = []
-        relation_ids_with_invalid_data: list[int] = []
+        relation_ids_with_invalid_data: set[int] = set()
         for relation in relations:
             try:
                 application_data = self._get_requirer_application_data(relation)
@@ -831,7 +879,7 @@ class HaproxyRouteProvider(Object):
                     raise HaproxyRouteInvalidRelationDataError(
                         f"haproxy-route data validation failed for relation: {relation}"
                     ) from exc
-                relation_ids_with_invalid_data.append(relation.id)
+                relation_ids_with_invalid_data.add(relation.id)
                 continue
         return HaproxyRouteRequirersData(
             requirers_data=requirers_data,
@@ -1104,6 +1152,7 @@ class HaproxyRouteRequirer(Object):
         unit_address: Optional[str] = None,
         http_server_close: bool = False,
         allow_http: bool = False,
+        external_grpc_port: Optional[int] = None,
     ) -> None:
         """Update haproxy-route requirements data in the relation.
 
@@ -1143,6 +1192,7 @@ class HaproxyRouteRequirer(Object):
             allow_http: Whether to allow HTTP traffic in addition to HTTPS.
                 Warning: enabling HTTP is a security risk,
                 make sure you apply the necessary precautions.
+            external_grpc_port: Optional external gRPC port.
         """
         self._unit_address = unit_address
         self._application_data = self._generate_application_data(
@@ -1177,6 +1227,7 @@ class HaproxyRouteRequirer(Object):
             server_maxconn,
             http_server_close,
             allow_http,
+            external_grpc_port,
         )
         self.update_relation_data()
 
@@ -1214,6 +1265,7 @@ class HaproxyRouteRequirer(Object):
         server_maxconn: Optional[int] = None,
         http_server_close: bool = False,
         allow_http: bool = False,
+        external_grpc_port: Optional[int] = None,
     ) -> dict[str, Any]:
         """Generate the complete application data structure.
 
@@ -1252,6 +1304,7 @@ class HaproxyRouteRequirer(Object):
             allow_http: Whether to allow HTTP traffic in addition to HTTPS.
                 Warning: enabling HTTP is a security risk,
                 make sure you apply the necessary precautions.
+            external_grpc_port: Optional external gRPC port.
 
         Returns:
             dict: A dictionary containing the complete application data structure.
@@ -1305,6 +1358,7 @@ class HaproxyRouteRequirer(Object):
             ),
             "http_server_close": http_server_close,
             "allow_http": allow_http,
+            "external_grpc_port": external_grpc_port,
         }
 
         if allow_http:
