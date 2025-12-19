@@ -12,6 +12,10 @@ Each revision is versioned by the date of the revision.
 
 - Added the DDoS defaults in the HAProxy config files and a config option to disable the defaults.
 
+## 2025-12-19
+
+- Added support for custom gRPC frontend port using the `external_grpc_port` attribute.
+
 ## 2025-12-18
 
 - Parametrize app_name for subordinates in Terraform product.

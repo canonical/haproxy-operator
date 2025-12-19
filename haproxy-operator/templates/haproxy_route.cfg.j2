@@ -1,6 +1,6 @@
 {% extends 'haproxy.cfg.j2' %}
 {% block proxy_configuration %}
-{% if backends %}
+{% if http_backends %}
 frontend haproxy
     mode http
     bind [::]:80 v4v6
@@ -27,7 +27,7 @@ frontend haproxy
 {% endfor %}
 {% endif %}
 
-{% for backend in backends %}
+{% for backend in http_backends %}
 {% if backend.path_acl_required %}
     acl acl_path_{{ backend.backend_name }} path_beg -i {% for path in backend.application_data.paths %}{{ path }} {% endfor +%}
 {% endif %}
@@ -48,7 +48,7 @@ peers haproxy_peers
     table {{ entry }} type ip size 100k expire 2m store http_req_rate(1m)
 {% endfor %}
 
-{% for backend in backends %}
+{% for backend in http_backends %}
 backend {{ backend.backend_name }}
     balance {{ backend.load_balancing_configuration }}
 {% if backend.consistent_hashing %}
@@ -121,5 +121,8 @@ backend spop_auth_{{ spoe_auth_info.id }}
 {% endfor %}
 {% endfor %}
 
-{% block haproxy_route_tcp %}{% endblock %}
+{% if tcp_endpoints %}{% include 'haproxy_route_tcp.cfg.j2' %}{% endif %}
+
+{% if grpc_backends %}{% include 'haproxy_route_grpc.cfg.j2' %}{% endif %}
+
 {% endblock %}
