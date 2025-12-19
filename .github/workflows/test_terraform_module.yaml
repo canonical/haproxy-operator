@@ -16,7 +16,7 @@ jobs:
     env:
       WORKING_DIR: 'terraform/tests'
     steps:
-    - uses: actions/checkout@v6.0.0
+    - uses: actions/checkout@v6.0.1
     - name: Prepare juju tf provider environment
       run: |
         sudo snap install --classic concierge
