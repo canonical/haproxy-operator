@@ -36,7 +36,7 @@ def test_get_proxied_endpoints_action(
                         "ports": [80],
                         "hostname": "ok.haproxy.internal",
                         "additional_hostnames": ["ok2.haproxy.internal", "ok3.haproxy.internal"],
-                        "paths": ["v1", "v2"],
+                        "paths": ["/v1", "/v2"],
                     }
                 ]
             ),
