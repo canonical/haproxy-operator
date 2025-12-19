@@ -5,7 +5,9 @@
 This guide will show you how non-charm applications can use the `haproxy` charm to load balance traffic with the help of the `ingress-configurator` charm.
 
 ## Deploy and configure the `haproxy` charm
+
 Deploy the `haproxy` and `self-signed-certificates` charms. Please refer to the {ref}`Tutorial <tutorial_getting_started>` for a more detailed explanation.
+
 ```sh
 juju deploy haproxy --channel=2.8/edge --base=ubuntu@24.04
 juju deploy self-signed-certificates cert
