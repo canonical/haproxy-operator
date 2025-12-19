@@ -319,21 +319,21 @@ def test_haproxy_route_tcp_endpoint(
 
 
 @pytest.mark.parametrize(
-    "disable_ddos,expected_value",
+    "ddos_protection,expected_value",
     [(False, False), (True, True)],
-    ids=["protection_enabled", "protection_disabled"],
+    ids=["protection_disabled", "protection_enabled"],
 )
-def test_charm_state_disable_ddos_protection(disable_ddos, expected_value):
+def test_charm_state_ddos_protection(ddos_protection, expected_value):
     """
-    arrange: Setup a mock charm with disable-ddos-protection config.
+    arrange: Setup a mock charm with ddos-protection config.
     act: Initialize the CharmState from the charm.
-    assert: The disable_ddos_protection field matches the expected value.
+    assert: The ddos_protection field matches the expected value.
     """
     charm_mock = MagicMock(spec=ops.CharmBase)
     charm_mock.config.get.side_effect = lambda key: {
         "global-maxconn": 4096,
         "enable-hsts": False,
-        "disable-ddos-protection": disable_ddos,
+        "ddos-protection": ddos_protection,
     }.get(key)
 
     ingress_provider_mock = MagicMock()
@@ -356,4 +356,4 @@ def test_charm_state_disable_ddos_protection(disable_ddos, expected_value):
         reverseproxy_requirer=reverseproxy_requirer_mock,
     )
 
-    assert charm_state.disable_ddos_protection is expected_value
+    assert charm_state.ddos_protection is expected_value

@@ -1,7 +1,7 @@
 {%- macro ddos_protection_rules() -%}
-{% if not disable_ddos_protection %}
+{% if ddos_protection %}
     acl invalid_method method TRACE TRACK DEBUG
-    acl empty_method   method -i ""
+    acl empty_method method -i ""
     acl has_host hdr(Host) -m found
     http-request silent-drop if invalid_method empty_method !has_host
 {% endif %}
@@ -34,9 +34,11 @@ defaults
     option dontlognull
     retries 3
     timeout queue 20000
+{% if ddos_protection %}
     timeout http-request 60000
     timeout http-keep-alive 30000
     timeout client 50000
+{% endif %}
     timeout connect 5000
     timeout server 50000
 
@@ -49,7 +51,6 @@ frontend prometheus
 {% block proxy_configuration %}
 frontend default
     bind :80
-{{ ddos_protection_rules() }}
     default_backend default
 {% endblock %}
 

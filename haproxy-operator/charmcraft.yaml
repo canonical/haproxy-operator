@@ -93,11 +93,11 @@ config:
     vip:
       type: string
       description: Virtual IP address, used in active-passive ha mode.
-    disable-ddos-protection:
+    ddos-protection:
       type: boolean
-      default: false
+      default: true
       description: |
-        Disable basic DDoS protection mechanisms, including http-request, http-keep-alive and 
+        Enable basic DDoS protection mechanisms, including http-request, http-keep-alive and 
         client timeouts, automatic dropping of connections with invalid, empty, or 
         missing host headers.
     enable-hsts:
