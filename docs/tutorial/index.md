@@ -17,7 +17,7 @@ Overview <self>
 
 ## Getting started
 
-This tutorial walks through the deployment of the HAProxy charm to provide HTTP load balancing to a basic webserver charm.
+This tutorial walks through the deployment of the HAProxy charm to provide HTTP load balancing to a basic web server charm.
 
 ```{toctree}
 :glob:

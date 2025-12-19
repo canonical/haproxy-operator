@@ -1,8 +1,8 @@
 (tutorial_loadbalancing_for_a_grpc_server)=
 
-# Loadbalancing for a gRPC server
+# Loadbalancing for a grpc server
 
-In this tutorial we'll look at how to deploy the HAProxy charm to provide loadbalancing for a VM running [`flagd`](https://flagd.dev). This tutorial is done on LXD and assumes that you have a Juju controller bootstrapped and a machine model to deploy charms.
+In this tutorial we'll look at how to deploy the HAProxy charm to provide load balancing for a VM running [`flagd`](https://flagd.dev). This tutorial is done on LXD and assumes that you have a Juju controller bootstrapped and a machine model to deploy charms.
 
 ## Requirements
 
@@ -37,7 +37,7 @@ juju integrate haproxy:certificates self-signed-certificates
 
 ## Deploy and configure `flagd`
 
-First, we'll spin up a juju machine to host the `flagd` service:
+First, we'll spin up a Juju machine to host the `flagd` service:
 
 ```sh
 juju add-machine
@@ -53,7 +53,7 @@ sudo mkdir -p /etc/flagd
 EOF
 ```
 
-Before continuing further, we need to get a certificate for the `flagd` service. This is because loadbalancing gRPC in the HAProxy charm requires the backend to support the standard HTTP/2 over TLS protocol. To do this, first, deploy the [TLS Certificates Requirer charm](https://charmhub.io/tls-certificates-requirer) to request a certificate for `flagd`:
+Before continuing further, we need to get a certificate for the `flagd` service. This is because load balancing gRPC in the HAProxy charm requires the backend to support the standard HTTP/2 over TLS protocol. To do this, first, deploy the [TLS Certificates Requirer charm](https://charmhub.io/tls-certificates-requirer) to request a certificate for `flagd`:
 
 ```sh
 GRPC_SERVER_ADDRESS=$(juju status --format json | jq -r  '.machines."1"."ip-addresses".[0]')
@@ -108,7 +108,7 @@ To expose our gRPC server through HAProxy, we need to deploy the [Ingress Config
 juju deploy ingress-configurator grpc-configurator --channel=latest/edge
 ```
 
-Once the charm has settled into an "Active" state, update its configuration and integrate with HAProxy via the `haproxy-route` relation:
+Once the charm has settled into an "Active" state, update its configuration and integrate with HAProxy using the `haproxy-route` relation:
 
 ```sh
 GRPC_SERVER_ADDRESS=$(juju status --format json | jq -r  '.machines."1"."ip-addresses".[0]')

@@ -1,6 +1,6 @@
 (tutorial_loadbalancing_for_an_ftp_server)=
 
-# TCP loadbalancing for an FTP server
+# Loadbalancing for an ftp server
 
 In this tutorial we'll look at how to deploy the HAProxy charm to provide TCP loadbalancing for a VM running an FTP server. This tutorial is done on LXD and assumes that you have a Juju controller bootstrapped and a machine model to deploy charms.
 
@@ -28,7 +28,7 @@ juju deploy haproxy --channel=2.8/edge
 
 ## Deploy and configure the FTP server
 
-First, we'll spin up a juju machine to host our FTP server:
+First, we'll spin up a Juju machine to host our FTP server:
 
 ```sh
 juju add-machine
@@ -66,7 +66,7 @@ juju deploy ingress-configurator ftp-control --channel=latest/edge --to 2
 juju deploy ingress-configurator ftp-data --channel=latest/edge --to 2
 ```
 
-Once the two charms have settled into an "Active" state, update their configuration and integrate them with HAProxy via the `haproxy-route-tcp` relation:
+Once the two charms have settled into an "Active" state, update their configuration and integrate them with HAProxy using the `haproxy-route-tcp` relation:
 
 ```sh
 FTP_SERVER_ADDRESS = $(juju status --format json | jq -r  '.machines."5"."ip-addresses".[0]')
