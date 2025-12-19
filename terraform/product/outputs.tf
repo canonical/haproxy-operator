@@ -9,7 +9,7 @@ output "grafana_agent" {
 output "provides" {
   value = {
     ingress          = "ingress"
-    haproxy_route    = "haproxy_route"
+    haproxy_route    = "haproxy-route"
     logging_provider = "logging-provider"
   }
 }
