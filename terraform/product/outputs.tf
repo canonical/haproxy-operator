@@ -6,6 +6,11 @@ output "grafana_agent" {
   value       = juju_application.grafana_agent.name
 }
 
+output "haproxy_app_name" {
+  description = "Name of the deployed haproxy application."
+  value       = haproxy.haproxy.app_name
+}
+
 output "provides" {
   value = {
     ingress          = "ingress"
@@ -18,6 +23,7 @@ output "requires" {
   value = {
     reverseproxy                = "reverseproxy"
     certificates                = "certificates"
+    receive_ca_certs            = "receive-ca-certs"
     metrics_endpoint            = "metrics-endpoint"
     send_remote_write           = "send-remote-write"
     grafana_dashboards_consumer = "grafana-dashboards-consumer"
