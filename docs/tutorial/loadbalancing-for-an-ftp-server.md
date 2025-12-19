@@ -58,6 +58,7 @@ To expose our FTP server through HAProxy, we need to deploy two instance of the 
 ```sh
 juju add-machine
 ```
+
 Then, deploy the two charms to the new machine:
 
 ```sh
