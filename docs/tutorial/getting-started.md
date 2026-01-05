@@ -75,8 +75,11 @@ curl $HAPROXY_IP
 ```
 
 If successful, the terminal will output:
+If successful, the terminal will output:
 
-```
+```{terminal}
+:output-only:
+
 Default page for the haproxy-operator charm
 ```
 
