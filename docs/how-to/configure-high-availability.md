@@ -2,7 +2,7 @@
 
 # Configure high-availability
 
-High availability (HA) allows the HAProxy charm to continue to function even if some units fails, while maintaining the same address across all units. We'll do that with the help of the `hacluster` subordinate charm.
+High availability (HA) allows the HAProxy charm to continue to function even if some units fails, while maintaining the same address across all units. This guide walks you through how to configure HA with the help of the `hacluster` subordinate charm.
 
 ## Scale the HAProxy charm to three units
 
