@@ -36,4 +36,4 @@ Test our configuration by sending a request to the `$VIP`. You should see that t
 curl "${VIP}"
 ```
 
-If successful, HAProxy will response with `Default page for the haproxy operator.`.
+If successful, HAProxy will reply with `Default page for the haproxy operator.`.
