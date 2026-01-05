@@ -2,7 +2,7 @@
 
 # Deploy the HAProxy charm
 
-In this tutorial we'll look at how to deploy the HAProxy charm to provide ingress to a backend application, then configure high-avalability using the `hacluster` relation. This tutorial is done on LXD and assumes that you have a Juju controller bootstrapped and a machine model to deploy charms.
+In this tutorial we'll deploy the HAProxy charm to provide ingress to a backend application, then configure high-avalability using the `hacluster` relation. This tutorial is done on LXD and assumes that you have a Juju controller bootstrapped and a machine model to deploy charms.
 
 ## Requirements
 
