@@ -46,6 +46,7 @@ The `oauth` interface is provided by the [Canonical Identity Platform](https://c
 or by the [`oauth-external-idp-integrator` charm](https://charmhub.io/oauth-external-idp-integrator).
 
 With a deployed and configured `oauth-external-idp-integrator` charm, you can integrate it with `haproxy-spoe-auth` with:
+
 ```sh
 juju integrate haproxy-spoe-auth oauth-external-idp-integrator
 ```
