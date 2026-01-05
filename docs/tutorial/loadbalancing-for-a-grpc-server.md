@@ -134,7 +134,7 @@ EOF
 
 ## Deploy and configure the ingress configurator charms
 
-To expose our gRPC server through HAProxy, we need to deploy the [Ingress Configurator charm](https://charmhub.io/ingress-configurator):
+To expose our gRPC server through HAProxy, let's deploy the [Ingress Configurator charm](https://charmhub.io/ingress-configurator):
 
 ```sh
 juju deploy ingress-configurator grpc-configurator --channel=latest/edge
