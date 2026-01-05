@@ -231,6 +231,7 @@ redirects = {
     'reference/doc-cheat-sheet/': '../rst-syntax-reference',
     'reference/style-guide-myst/': '../myst-syntax-reference',
     'reference/style-guide/': '../rst-syntax-reference',
+    './getting-started': './tutorial/getting-started',
 }
 
 
