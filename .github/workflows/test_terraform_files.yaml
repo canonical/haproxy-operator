@@ -17,7 +17,7 @@ jobs:
       WORKING_DIR: 'terraform'
     steps:
       - name: Check out code
-        uses: actions/checkout@v6.0.0
+        uses: actions/checkout@v6.0.1
 
       - name: Prepare juju tf provider environment
         run: |

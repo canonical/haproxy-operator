@@ -1,3 +1,12 @@
+{%- macro ddos_protection_rules() -%}
+{% if ddos_protection %}
+    acl invalid_method method TRACE TRACK DEBUG
+    acl empty_method method -i ""
+    acl has_host hdr(Host) -m found
+    http-request silent-drop if invalid_method empty_method !has_host
+{% endif %}
+{%- endmacro -%}
+
 global
     maxconn {{ config_global_max_connection }}
     user haproxy
@@ -25,7 +34,11 @@ defaults
     option dontlognull
     retries 3
     timeout queue 20000
+{% if ddos_protection %}
+    timeout http-request 60000
+    timeout http-keep-alive 30000
     timeout client 50000
+{% endif %}
     timeout connect 5000
     timeout server 50000
 
