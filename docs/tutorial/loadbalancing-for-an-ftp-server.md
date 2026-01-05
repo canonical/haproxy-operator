@@ -1,6 +1,6 @@
 (tutorial_loadbalancing_for_an_ftp_server)=
 
-# Loadbalancing for an ftp server
+# Loadbalancing for an FTP server
 
 In this tutorial we'll look at how to deploy the HAProxy charm to provide TCP load balancing for a VM running an FTP server. This tutorial is done on LXD and assumes that you have a Juju controller bootstrapped and a machine model to deploy charms.
 
