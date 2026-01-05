@@ -108,7 +108,9 @@ sudo pollinate -s https://pollen.internal -r -i
 
 If successful, you should see a success message in the terminal:
 
-```
+```{terminal}
+:output-only:
+
 <13>Dec 17 20:45:02 pollinate[59078]: system was previously seeded at [2025-12-17 00:08:36.226000000 +0100]
 <13>Dec 17 20:45:02 pollinate[59078]: client sent challenge to [https://pollen.internal]
 <13>Dec 17 20:45:02 pollinate[59078]: client verified challenge/response with [https://pollen.internal]
