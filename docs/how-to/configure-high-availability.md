@@ -6,7 +6,7 @@ High availability (HA) allows the HAProxy charm to continue to function even if 
 
 ## Scale the HAProxy charm to three units
 
-We'll start by scaling the HAProxy charm to three units as it's the minimum required by the `hacluster` charm.
+Scale the HAProxy charm to three units since it's the minimum required by the `hacluster` charm.
 
 ```
 juju add-unit haproxy -n 3
