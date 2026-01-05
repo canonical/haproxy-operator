@@ -109,7 +109,7 @@ Then, configure haproxy to retrieve and trust the CA certificate from the `self-
 juju integrate haproxy:receive-ca-certs self-signed-certificates
 ```
 
-Finally, setup the `systemd` service for `flagd`:
+Finally, set up the `systemd` service for `flagd`:
 
 ```sh
 cat << EOF | juju ssh 1
