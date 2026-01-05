@@ -49,7 +49,6 @@ HAPROXY_INGRESS_CONFIG_TEMPLATE = "haproxy_ingress.cfg.j2"
 HAPROXY_INGRESS_PER_UNIT_CONFIG_TEMPLATE = "haproxy_ingress_per_unit.cfg.j2"
 HAPROXY_LEGACY_CONFIG_TEMPLATE = "haproxy_legacy.cfg.j2"
 HAPROXY_ROUTE_CONFIG_TEMPLATE = "haproxy_route.cfg.j2"
-HAPROXY_ROUTE_TCP_CONFIG_TEMPLATE = "haproxy_route_tcp.cfg.j2"
 SPOE_AUTH_CONFIG_TEMPLATE = "spoe_auth.conf.j2"
 
 HAPROXY_DEFAULT_CONFIG_TEMPLATE = "haproxy.cfg.j2"
@@ -130,6 +129,7 @@ class HAProxyService:
         """
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
+            "ddos_protection": charm_state.ddos_protection,
             "ingress_requirers_information": ingress_requirers_information,
             "config_external_hostname": external_hostname,
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
@@ -157,10 +157,22 @@ class HAProxyService:
             haproxy_route_requirers_information: HaproxyRouteRequirersInformation state component.
             spoe_oauth_info_list: Information about SPOE auth providers.
         """
+        valid_backends = haproxy_route_requirers_information.valid_backends()
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
-            "backends": haproxy_route_requirers_information.backends,
-            "tcp_endpoints": haproxy_route_requirers_information.tcp_endpoints,
+            "enable_hsts": charm_state.enable_hsts,
+            "ddos_protection": charm_state.ddos_protection,
+            "http_backends": [
+                backend
+                for backend in valid_backends
+                if not backend.application_data.external_grpc_port
+            ],
+            "tcp_endpoints": haproxy_route_requirers_information.valid_tcp_endpoints(),
+            "grpc_backends": [
+                backend
+                for backend in valid_backends
+                if backend.application_data.external_grpc_port
+            ],
             "stick_table_entries": haproxy_route_requirers_information.stick_table_entries,
             "peer_units_address": haproxy_route_requirers_information.peers,
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
@@ -168,12 +180,7 @@ class HAProxyService:
             "acls_for_allow_http": haproxy_route_requirers_information.acls_for_allow_http,
             "spoe_auth_info_list": spoe_oauth_info_list,
         }
-        template = (
-            HAPROXY_ROUTE_TCP_CONFIG_TEMPLATE
-            if haproxy_route_requirers_information.tcp_endpoints
-            else HAPROXY_ROUTE_CONFIG_TEMPLATE
-        )
-        self._render_haproxy_config(template, template_context)
+        self._render_haproxy_config(HAPROXY_ROUTE_CONFIG_TEMPLATE, template_context)
         if spoe_oauth_info_list:
             spoe_auth_template_context = {
                 "spoe_auth_info_list": spoe_oauth_info_list,
@@ -194,6 +201,7 @@ class HAProxyService:
             HAPROXY_DEFAULT_CONFIG_TEMPLATE,
             {
                 "config_global_max_connection": charm_state.global_max_connection,
+                "ddos_protection": charm_state.ddos_protection,
             },
         )
         self._validate_haproxy_config()

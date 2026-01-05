@@ -8,14 +8,15 @@ output "app_name" {
 output "provides" {
   value = {
     ingress       = "ingress"
-    haproxy_route = "haproxy_route"
+    haproxy_route = "haproxy-route"
     cos_agent     = "cos-agent"
   }
 }
 
 output "requires" {
   value = {
-    certificates = "certificates"
-    reverseproxy = "reverseproxy"
+    certificates     = "certificates"
+    receive_ca_certs = "receive-ca-certs"
+    reverseproxy     = "reverseproxy"
   }
 }

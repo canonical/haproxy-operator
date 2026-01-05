@@ -93,6 +93,20 @@ config:
     vip:
       type: string
       description: Virtual IP address, used in active-passive ha mode.
+    ddos-protection:
+      type: boolean
+      default: true
+      description: |
+        Enable basic DDoS protection mechanisms, including http-request, http-keep-alive and 
+        client timeouts, automatic dropping of connections with invalid, empty, or 
+        missing host headers.
+    enable-hsts:
+      default: false
+      type: boolean
+      description: |
+        Send the http response header Strict-Transport-Security for domains provided
+        through the `haproxy-route` relation without the allow_http attribute.
+        The Strict-Transport-Security header value is "max-age=2592000;".
 
 actions:
   get-certificate:

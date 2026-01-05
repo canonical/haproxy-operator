@@ -498,7 +498,7 @@ requires-dist = [
     { name = "charmlibs-snap", specifier = "==1.0.1" },
     { name = "jinja2", specifier = "==3.1.6" },
     { name = "jsonschema", specifier = "==4.25.1" },
-    { name = "ops", specifier = "==3.4.0" },
+    { name = "ops", specifier = "==3.5.0" },
     { name = "pydantic", specifier = "==2.12.5" },
 ]
 
@@ -509,7 +509,7 @@ coverage-report = [
 ]
 fmt = [{ name = "ruff" }]
 integration = [
-    { name = "jubilant", specifier = "==1.6.1" },
+    { name = "jubilant", specifier = "==1.6.2" },
     { name = "juju", specifier = "==3.6.1.3" },
     { name = "pytest" },
     { name = "pytest-operator" },
@@ -679,14 +679,14 @@ wheels = [
 
 [[package]]
 name = "jubilant"
-version = "1.6.1"
+version = "1.6.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b3/13/c38036a0b2d44bae765216f5f85d4feed8f1a254110b0d1df7158b7a35f0/jubilant-1.6.1.tar.gz", hash = "sha256:bb57dc215b1960d31716ef071ba6be121331991bbbbe3449257471f5e7795d06", size = 31998, upload-time = "2025-11-26T20:58:40.867Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8c/7f/4b1a751930713ee585ea0a4dcf4af30d19f4af478cf7658376ca788adbf3/jubilant-1.6.2.tar.gz", hash = "sha256:d841610fd86f7d77419da8be08e6c936412e581652f55faa23c6c19536b87a8f", size = 32016, upload-time = "2025-12-17T21:20:04.382Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e2/38/c054fa0b9de01d0b108f91f892c288bf99e68abd6593b55c2a8964de40f2/jubilant-1.6.1-py3-none-any.whl", hash = "sha256:a74ea1184eea43b9e8921dcad22ffeb14a238e91c9024f5d41fe2e210fd05be2", size = 33005, upload-time = "2025-11-26T20:58:39.566Z" },
+    { url = "https://files.pythonhosted.org/packages/78/13/22f29f41fc6e2467f039a2d38179f59c069245090524ebc3d8aaf64d3d4b/jubilant-1.6.2-py3-none-any.whl", hash = "sha256:fa81995b64e0519fa59407beabbbc2aae097437895addcb3df54f33ab207fbfb", size = 33034, upload-time = "2025-12-17T21:20:03.265Z" },
 ]
 
 [[package]]
@@ -911,16 +911,16 @@ wheels = [
 
 [[package]]
 name = "ops"
-version = "3.4.0"
+version = "3.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "opentelemetry-api" },
     { name = "pyyaml" },
     { name = "websocket-client" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/eb/50/f0bae442ba54114c0ed4983a7bece9330f9f170dfbd04caa8284c8deb476/ops-3.4.0.tar.gz", hash = "sha256:e100d904f0616eb11345547ad35a95caf5a2d178efa8ad4beebd7f045192a64a", size = 573216, upload-time = "2025-11-27T04:45:58.852Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/65/0d/c351db0b13bb1872c9a8235c7529109dcee2a053439c76e6720444184238/ops-3.5.0.tar.gz", hash = "sha256:e3427889054285bd2711a3a297a77218384eacaf0d1001590ee4437cca115577", size = 575897, upload-time = "2025-12-18T02:26:31.119Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ef/e6/262240beb2e3f2fd981ebb82412148c93f830606bfe1fcabf92cdb967c56/ops-3.4.0-py3-none-any.whl", hash = "sha256:d5ea906cd9bf403fe0e83d10ee5ab9bd2307596a97c1690784f937d54d5a738c", size = 211359, upload-time = "2025-11-27T04:45:54.161Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/46/f3c6f4553a338e0551eb09464f0c93273f347b3fdf21cd26bda8a5d2fad6/ops-3.5.0-py3-none-any.whl", hash = "sha256:07b1d1dbc0f3ca59534d5fe5020a66ee95c528f2430e004922350274509420c6", size = 211356, upload-time = "2025-12-18T02:26:26.982Z" },
 ]
 
 [package.optional-dependencies]
@@ -930,15 +930,16 @@ testing = [
 
 [[package]]
 name = "ops-scenario"
-version = "8.4.0"
+version = "8.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ops" },
     { name = "pyyaml" },
+    { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/80/a4/50dbe351488fed7621931962626563c7a8c6b65035fae09616251f03f16f/ops_scenario-8.4.0.tar.gz", hash = "sha256:b8837dfe6d58596d1287589c62101cfe6ca350f43d8c64ba41c5305dd741af0c", size = 111219, upload-time = "2025-11-27T04:46:00.551Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/46/b0/beee165ffd15078bf23dcd69dec6690cdeee5420828df0ab0c96d8aca935/ops_scenario-8.5.0.tar.gz", hash = "sha256:66e8ce8ee17e9eec50e899da7cdb8988e30765b9ed51e2aec90faea70e0a3053", size = 112542, upload-time = "2025-12-18T02:26:32.445Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/80/1c/c0d3cccc0ff50c88d21dc3b5ce2944c71f8d094f8de9daa7e555b1dd30e1/ops_scenario-8.4.0-py3-none-any.whl", hash = "sha256:a8de25b75a896bdc8958d7e4dc38ab06ef6cb07bfaeb4c725e64cadde712a7dd", size = 63250, upload-time = "2025-11-27T04:45:55.776Z" },
+    { url = "https://files.pythonhosted.org/packages/4d/01/0edc24c3e403d6fda89e1b9d6534c322a911b72aeeb41992823ce3d3f9e3/ops_scenario-8.5.0-py3-none-any.whl", hash = "sha256:eb19764a4f1ecc493cfb0a4bfb1c55b4a5808679882a687473838416cd3b9bd2", size = 63947, upload-time = "2025-12-18T02:26:28.497Z" },
 ]
 
 [[package]]

@@ -1,12 +1,19 @@
 {% extends 'haproxy.cfg.j2' %}
 {% block proxy_configuration %}
-{% if backends %}
+{% if http_backends %}
 frontend haproxy
     mode http
     bind [::]:80 v4v6
     bind [::]:443 v4v6 ssl crt {{ haproxy_crt_dir }} alpn h2,http/1.1
     # Redirect HTTP to HTTPS
     http-request redirect scheme https unless { ssl_fc } {% for acl in acls_for_allow_http %} || {{ acl }}{% endfor %}
+
+{% if enable_hsts %}
+    # Add HSTS header for HTTPS connections (only when HTTP is not allowed)
+    http-response set-header Strict-Transport-Security "max-age=2592000" if { ssl_fc } {% for acl in acls_for_allow_http %} !{{ acl }}{% endfor %}
+{% endif %}
+
+{{ ddos_protection_rules() }}
 
 {% for spoe_auth_info in spoe_auth_info_list  %}
     acl oidc_host_{{ spoe_auth_info.id }} req.hdr(Host) -m str {{ spoe_auth_info.hostname }}
@@ -20,7 +27,7 @@ frontend haproxy
 {% endfor %}
 {% endif %}
 
-{% for backend in backends %}
+{% for backend in http_backends %}
 {% if backend.path_acl_required %}
     acl acl_path_{{ backend.backend_name }} path_beg -i {% for path in backend.application_data.paths %}{{ path }} {% endfor +%}
 {% endif %}
@@ -41,7 +48,7 @@ peers haproxy_peers
     table {{ entry }} type ip size 100k expire 2m store http_req_rate(1m)
 {% endfor %}
 
-{% for backend in backends %}
+{% for backend in http_backends %}
 backend {{ backend.backend_name }}
     balance {{ backend.load_balancing_configuration }}
 {% if backend.consistent_hashing %}
@@ -114,5 +121,8 @@ backend spop_auth_{{ spoe_auth_info.id }}
 {% endfor %}
 {% endfor %}
 
-{% block haproxy_route_tcp %}{% endblock %}
+{% if tcp_endpoints %}{% include 'haproxy_route_tcp.cfg.j2' %}{% endif %}
+
+{% if grpc_backends %}{% include 'haproxy_route_grpc.cfg.j2' %}{% endif %}
+
 {% endblock %}

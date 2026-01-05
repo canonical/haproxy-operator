@@ -22,6 +22,7 @@ variable "haproxy" {
 
 variable "hacluster" {
   type = object({
+    app_name = optional(string, "hacluster")
     channel  = optional(string, "2.4/edge")
     config   = optional(map(string), {})
     revision = optional(number, null)
@@ -31,6 +32,7 @@ variable "hacluster" {
 
 variable "keepalived" {
   type = object({
+    app_name = optional(string, "keepalived")
     channel  = optional(string, "latest/edge")
     config   = optional(map(string), {})
     revision = optional(number, null)
@@ -44,6 +46,7 @@ variable "keepalived" {
 
 variable "grafana_agent" {
   type = object({
+    app_name = optional(string, "grafana-agent")
     channel  = optional(string, "2/stable")
     config   = optional(map(string), {})
     revision = optional(number, null)

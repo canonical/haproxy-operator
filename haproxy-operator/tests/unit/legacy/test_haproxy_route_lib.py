@@ -195,7 +195,7 @@ def test_requirers_data_duplicate_services():
 
     with pytest.raises(DataValidationError):
         HaproxyRouteRequirersData(
-            requirers_data=[requirer_data1, requirer_data2], relation_ids_with_invalid_data=[]
+            requirers_data=[requirer_data1, requirer_data2], relation_ids_with_invalid_data=set()
         )
 
 
