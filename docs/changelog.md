@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2025-12-17
+
+- Added the DDoS defaults in the HAProxy config files and a config option to disable the defaults.
+
+## 2025-12-19
+
+- Added `app_name` and missing endpoint outputs to the Terraform product.
+
 ## 2025-12-19
 
 - Added support for custom gRPC frontend port using the `external_grpc_port` attribute.
