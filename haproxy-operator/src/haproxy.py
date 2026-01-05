@@ -129,6 +129,7 @@ class HAProxyService:
         """
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
+            "ddos_protection": charm_state.ddos_protection,
             "ingress_requirers_information": ingress_requirers_information,
             "config_external_hostname": external_hostname,
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
@@ -160,6 +161,7 @@ class HAProxyService:
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
             "enable_hsts": charm_state.enable_hsts,
+            "ddos_protection": charm_state.ddos_protection,
             "http_backends": [
                 backend
                 for backend in valid_backends
@@ -199,6 +201,7 @@ class HAProxyService:
             HAPROXY_DEFAULT_CONFIG_TEMPLATE,
             {
                 "config_global_max_connection": charm_state.global_max_connection,
+                "ddos_protection": charm_state.ddos_protection,
             },
         )
         self._validate_haproxy_config()
