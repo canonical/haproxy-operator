@@ -21,7 +21,7 @@ juju deploy hacluster --channel=2.4/edge --base=ubuntu@24.04
 juju integrate hacluster haproxy
 ```
 
-## Configure a virtual IP (vip)
+## Configure a virtual IP
 
 A virtual IP is shared between all HAProxy units and serves as the single entrypoint to all requirer applications. To add a virtual IP to the HAProxy charm, use a free IP address from the network of the HAProxy units. This example takes the first available address on the LXD subnet.
 
