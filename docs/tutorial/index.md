@@ -1,7 +1,7 @@
 ---
 myst:
   html_meta:
-    "description lang=en": "How-to guides covering the HAProxy charm operations lifecycle."
+    "description lang=en": "Tutorials covering a basic deployment and loadbalancing for the HAProxy charm."
 ---
 
 (tutorial_index)=
