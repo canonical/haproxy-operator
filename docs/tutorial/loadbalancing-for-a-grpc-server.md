@@ -173,7 +173,9 @@ grpcurl -insecure -d '{"flagKey":"myStringFlag","context":{}}' -proto=evaluation
 
 After running the command you should see the reply from `flagd`:
 
-```sh
+```{terminal}
+:output-only:
+
 {
   "value": "val1",
   "reason": "STATIC",
