@@ -103,7 +103,7 @@ juju run tls-certificates-requirer/0 get-certificate --format json | jq -r '."tl
 juju scp server.{crt,key} 1:~
 ```
 
-Then, configure haproxy to retrieve and trust the CA certificate from the `self-signed-certificates` charm:
+Then, configure HAProxy to retrieve and trust the CA certificate from the `self-signed-certificates` charm:
 
 ```sh
 juju integrate haproxy:receive-ca-certs self-signed-certificates
