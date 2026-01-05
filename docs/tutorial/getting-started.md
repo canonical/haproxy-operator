@@ -132,9 +132,5 @@ juju destroy-model haproxy-tutorial
 
 Check out these advanced tutorials to learn how to use HAProxy to provide load balancing for different protocols.
 
-```{toctree}
-:glob:
-:titlesonly:
-Loadbalancing for an FTP server <loadbalancing-for-an-ftp-server.md>
-Loadbalancing for a gRPC server <loadbalancing-for-a-grpc-server.md>
-```
+* {ref}`tutorial_loadbalancing_for_an_ftp_server`
+* {ref}`tutorial_loadbalancing_for_a_grpc_server`
