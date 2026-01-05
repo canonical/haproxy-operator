@@ -98,7 +98,7 @@ juju config haproxy external-hostname=pollen.internal
 juju integrate pollen haproxy:haproxy-route
 ```
 
-Let's check that the request has been properly proxied to the backend service. using the `pollinate` script:
+Let's check that the request has been properly proxied to the backend service using the `pollinate` script:
 
 ```sh
 HAPROXY_IP=$(juju status --format json | jq -r '.applications.haproxy.units."haproxy/0"."public-address"')
