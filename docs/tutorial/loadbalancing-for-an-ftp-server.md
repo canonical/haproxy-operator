@@ -1,14 +1,46 @@
 (tutorial_loadbalancing_for_an_ftp_server)=
 
-# Loadbalancing for an ftp server
+# Loadbalancing for an FTP server
 
 In this tutorial we'll look at how to deploy the HAProxy charm to provide TCP load balancing for a VM running an FTP server. This tutorial is done on LXD and assumes that you have a Juju controller bootstrapped and a machine model to deploy charms.
 
 ## Requirements
 
-* A working station, e.g., a laptop, with amd64 architecture.
-* Juju 3.3 or higher installed and bootstrapped to a LXD controller. You can accomplish
-this process by using a [Multipass](https://multipass.run/) VM as outlined in this guide: {ref}`Set up your test environment <juju:set-things-up>`
+You will need a working station, e.g., a laptop, with AMD64 architecture. Your working station
+should have at least 4 CPU cores, 8 GB of RAM, and 50 GB of disk space.
+
+````{tip}
+You can use Multipass to create an isolated environment by running:
+```
+multipass launch 24.04 --name charm-tutorial-vm --cpus 4 --memory 8G --disk 50G
+```
+````
+
+This tutorial requires the following software to be installed on your working station
+(either locally or in the Multipass VM):
+
+- Juju 3.3
+- MicroK8s 1.33
+
+Use [Concierge](https://github.com/canonical/concierge) to set up Juju and LXD:
+
+```
+sudo snap install --classic concierge
+sudo concierge prepare -p machine
+```
+
+This first command installs Concierge, and the second command uses Concierge to install
+and configure Juju and LXD.
+
+For this tutorial, Juju must be bootstrapped to a LXD controller. Concierge should
+complete this step for you, and you can verify by checking for `msg="Bootstrapped Juju" provider=lxd`
+in the terminal output and by running `juju controllers`.
+
+If Concierge did not perform the bootstrap, run:
+
+```bash
+juju bootstrap lxd tutorial-controller
+```
 
 ## Set up a tutorial model
 
