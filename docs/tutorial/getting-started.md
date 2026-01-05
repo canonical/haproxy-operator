@@ -2,7 +2,7 @@
 
 # Deploy the HAProxy charm
 
-In this tutorial we'll look at how to deploy the HAProxy charm to provide ingress to a backend application, then configure high-avalability using the `hacluster` relation. This tutorial is done on LXD and assumes that you have a Juju controller bootstrapped and a machine model to deploy charms.
+In this tutorial we'll deploy the HAProxy charm to provide ingress to a backend application, then configure high-avalability using the `hacluster` relation. This tutorial is done on LXD and assumes that you have a Juju controller bootstrapped and a machine model to deploy charms.
 
 ## Requirements
 
@@ -20,7 +20,7 @@ This tutorial requires the following software to be installed on your working st
 (either locally or in the Multipass VM):
 
 - Juju 3.3
-- MicroK8s 1.33
+- LXD 5.21.4
 
 Use [Concierge](https://github.com/canonical/concierge) to set up Juju and LXD:
 
@@ -98,7 +98,7 @@ juju config haproxy external-hostname=pollen.internal
 juju integrate pollen haproxy:haproxy-route
 ```
 
-Let's check that the request has been properly proxied to the backend service. using the `pollinate` script:
+Let's check that the request has been properly proxied to the backend service using the `pollinate` script:
 
 ```sh
 HAPROXY_IP=$(juju status --format json | jq -r '.applications.haproxy.units."haproxy/0"."public-address"')
@@ -132,9 +132,5 @@ juju destroy-model haproxy-tutorial
 
 Check out these advanced tutorials to learn how to use HAProxy to provide load balancing for different protocols.
 
-```{toctree}
-:glob:
-:titlesonly:
-Loadbalancing for an FTP server <loadbalancing-for-an-ftp-server.md>
-Loadbalancing for a gRPC server <loadbalancing-for-a-grpc-server.md>
-```
+* {ref}`tutorial_loadbalancing_for_an_ftp_server`
+* {ref}`tutorial_loadbalancing_for_a_grpc_server`

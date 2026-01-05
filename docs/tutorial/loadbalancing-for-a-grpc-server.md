@@ -20,7 +20,7 @@ This tutorial requires the following software to be installed on your working st
 (either locally or in the Multipass VM):
 
 - Juju 3.3
-- MicroK8s 1.33
+- LXD 5.21.4
 
 Use [Concierge](https://github.com/canonical/concierge) to set up Juju and LXD:
 
@@ -103,13 +103,13 @@ juju run tls-certificates-requirer/0 get-certificate --format json | jq -r '."tl
 juju scp server.{crt,key} 1:~
 ```
 
-Then, configure haproxy to retrieve and trust the CA certificate from the `self-signed-certificates` charm:
+Then, configure HAProxy to retrieve and trust the CA certificate from the `self-signed-certificates` charm:
 
 ```sh
 juju integrate haproxy:receive-ca-certs self-signed-certificates
 ```
 
-Finally, setup the `systemd` service for `flagd`:
+Finally, set up the `systemd` service for `flagd`:
 
 ```sh
 cat << EOF | juju ssh 1
@@ -134,7 +134,7 @@ EOF
 
 ## Deploy and configure the ingress configurator charms
 
-To expose our gRPC server through HAProxy, we need to deploy the [Ingress Configurator charm](https://charmhub.io/ingress-configurator):
+To expose our gRPC server through HAProxy, let's deploy the [Ingress Configurator charm](https://charmhub.io/ingress-configurator):
 
 ```sh
 juju deploy ingress-configurator grpc-configurator --channel=latest/edge
@@ -173,7 +173,9 @@ grpcurl -insecure -d '{"flagKey":"myStringFlag","context":{}}' -proto=evaluation
 
 After running the command you should see the reply from `flagd`:
 
-```sh
+```{terminal}
+:output-only:
+
 {
   "value": "val1",
   "reason": "STATIC",

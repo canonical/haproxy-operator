@@ -20,7 +20,7 @@ This tutorial requires the following software to be installed on your working st
 (either locally or in the Multipass VM):
 
 - Juju 3.3
-- MicroK8s 1.33
+- LXD 5.21.4
 
 Use [Concierge](https://github.com/canonical/concierge) to set up Juju and LXD:
 
@@ -120,7 +120,9 @@ ftp -P 2100 ftp://$HAPROXY_IP
 
 After running the command you should see `230 Login successful` and an interactive session is opened:
 
-```sh
+```{terminal}
+:output-only:
+
 ...
 331 Please specify the password.
 230 Login successful.
