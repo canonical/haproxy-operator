@@ -15,7 +15,8 @@ output "provides" {
 
 output "requires" {
   value = {
-    certificates = "certificates"
-    reverseproxy = "reverseproxy"
+    certificates     = "certificates"
+    receive_ca_certs = "receive-ca-certs"
+    reverseproxy     = "reverseproxy"
   }
 }

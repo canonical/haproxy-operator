@@ -1,6 +1,12 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+[project]
+name = "haproxy-operator-monorepo"
+version = "0.1.0"
+requires-python = ">=3.12"
+readme = "README.md"
+
 [dependency-groups]
 fmt = [ "ruff" ]
 lint = [
