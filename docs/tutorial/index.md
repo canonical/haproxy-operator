@@ -10,7 +10,6 @@ myst:
 
 This section contains a step-by-step guide to help you start exploring how to deploy and configure the HAProxy charm to provide ingress to a backend application.
 
-
 ## Get started
 
 This tutorial walks through the deployment of the HAProxy charm to provide HTTP load balancing to a basic web server charm.
