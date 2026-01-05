@@ -23,7 +23,7 @@ juju integrate hacluster haproxy
 
 ## Configure a virtual IP (vip)
 
-A virtual IP is shared between all HAProxy units and serves as the single entrypoint to all requirer applications. To add a virtual IP to the HAProxy charm we take a free IP address from the network of the HAProxy units. In this example we take the first available address on the LXD subnet.
+A virtual IP is shared between all HAProxy units and serves as the single entrypoint to all requirer applications. To add a virtual IP to the HAProxy charm, use a free IP address from the network of the HAProxy units. This example takes the first available address on the LXD subnet.
 
 ```
 VIP="$(echo "${HAPROXY_IP}" | awk -F'.' '{print $1,$2,$3,2}' OFS='.')"
