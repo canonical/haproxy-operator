@@ -1,4 +1,4 @@
-(how_to_configure_high_availability=)
+(how_to_configure_high_availability)=
 
 # Configure high-availability
 
