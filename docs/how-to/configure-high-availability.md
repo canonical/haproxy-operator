@@ -6,10 +6,10 @@ High availability (HA) allows the HAProxy charm to continue to function even if 
 
 ## Scale the HAProxy charm to three units
 
-Scale the HAProxy charm to three units since it's the minimum required by the `hacluster` charm.
+Deploy the HAProxy charm with three units since it's the minimum required by the `hacluster` charm.
 
 ```
-juju add-unit haproxy -n 3
+juju deploy haproxy --channel=2.8/edge -n 3
 ```
 
 ## Deploy and integrate the `hacluster` subordinate charm
@@ -30,10 +30,10 @@ VIP="$(echo "${HAPROXY_IP}" | awk -F'.' '{print $1,$2,$3,2}' OFS='.')"
 juju config haproxy vip=$VIP
 ```
 
-Performing the same request as before, replace `$HAPROXY_IP` with `$VIP`. You should see that the request is properly routed to the requirer.
+Test our configuration by sending a request to the `$VIP`. You should see that the request is properly handled by HAProxy.
 
 ```
-curl -H "Host: $HAPROXY_HOSTNAME" "${VIP}" -L --insecure --resolve "$HAPROXY_HOSTNAME:443:$VIP"
+curl "${VIP}"
 ```
 
-If successful, the terminal will respond with `ok!`.
+If successful, HAProxy will response with `Default page for the haproxy operator.`.
