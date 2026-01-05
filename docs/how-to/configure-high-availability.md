@@ -30,7 +30,7 @@ VIP="$(echo "${HAPROXY_IP}" | awk -F'.' '{print $1,$2,$3,2}' OFS='.')"
 juju config haproxy vip=$VIP
 ```
 
-Performing the same request as before, let's replace `$HAPROXY_IP` with `$VIP`. We should see that the request is properly routed to the requirer.
+Performing the same request as before, replace `$HAPROXY_IP` with `$VIP`. You should see that the request is properly routed to the requirer.
 
 ```
 curl -H "Host: $HAPROXY_HOSTNAME" "${VIP}" -L --insecure --resolve "$HAPROXY_HOSTNAME:443:$VIP"
