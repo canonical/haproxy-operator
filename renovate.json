@@ -2,7 +2,7 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "automerge": true,
   "extends": [
-    "config:base",
+    "config:recommended",
     "group:allNonMajor"
   ],
   "packageRules": [
@@ -15,7 +15,7 @@
     },
     {
       "enabled": false,
-      "matchFiles": [
+      "matchFileNames": [
         "rockcraft.yaml"
       ],
       "matchUpdateTypes": [
@@ -25,12 +25,13 @@
       ]
     }
   ],
-  "regexManagers": [
+  "customManagers": [
     {
+      "customType": "regex",
       "datasourceTemplate": "docker",
       "description": "Update base image references",
-      "fileMatch": [
-        "(^|/)rockcraft.yaml$"
+      "managerFilePatterns": [
+        "/(^|/)rockcraft.yaml$/"
       ],
       "matchStrings": [
         "# renovate: build-base:\\s+(?<depName>[^:]*):(?<currentValue>[^\\s@]*)(@(?<currentDigest>sha256:[0-9a-f]*))?",
