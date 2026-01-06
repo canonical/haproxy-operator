@@ -40,6 +40,7 @@
 | Name | Description |
 |------|-------------|
 | <a name="output_grafana_agent"></a> [grafana\_agent](#output\_grafana\_agent) | Name of the deployed grafana-agent application. |
+| <a name="output_haproxy_app_name"></a> [haproxy\_app\_name](#output\_haproxy\_app\_name) | Name of the deployed haproxy application. |
 | <a name="output_provides"></a> [provides](#output\_provides) | n/a |
 | <a name="output_requires"></a> [requires](#output\_requires) | n/a |
 <!-- END_TF_DOCS -->
