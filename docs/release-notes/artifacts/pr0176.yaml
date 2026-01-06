@@ -8,7 +8,7 @@ changes:
     description: |
     urls: 
       pr: https://github.com/canonical/haproxy-operator/pull/176
-      related_doc: https://github.com/canonical/haproxy-operator/blob/main/docs/getting-started.md
+      related_doc: https://github.com/canonical/haproxy-operator/blob/main/docs/tutorial/getting-started.md
       related_issue: 
     visibility: hidden
     highlight: false
