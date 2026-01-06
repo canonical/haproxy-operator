@@ -346,6 +346,7 @@ class DDoSProtectionProvider(Object):
         relations = self.charm.model.relations.get(self._relation_name, [])
         for relation in relations:
             self._provider_data.dump(relation.data[self.charm.app], clear=True)
+
     def set_config(
         self,
         *,
