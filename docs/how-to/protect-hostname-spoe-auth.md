@@ -18,6 +18,10 @@ juju integrate haproxy:certificates cert
 
 ## Deploy and integrate the ingress configurator charm
 
+To specify the protected hostname, use the `haproxy-route` relation. In this how-to
+we use the `ingress-configurator` charm, which serves as an adapter between
+the `ingress` and `haproxy-route` relations or as an integrator.
+
 ```sh
 juju deploy ingress-configurator --channel=edge --config hostname=protected.internal --config backend-addresses=<backend-address>
 juju integrate ingress-configurator:haproxy-route haproxy
@@ -27,12 +31,18 @@ By default, `haproxy` serves the `protected.internal` hostname without forward a
 
 ## Deploy and integrate the haproxy-spoe-auth charm
 
+The `haproxy-spoe-auth` charm provides the SPOE agent for the OpenID Connect authentication.
+Deploy and integrate it with `haproxy`:
+
 ```sh
 juju deploy haproxy-spoe-auth --channel=edge
 juju integrate haproxy-spoe-auth haproxy
 ```
 
-## Configure the hostname to protect
+## Configure the hostname in the haproxy-spoe-auth charm
+
+The hostname to protect is specified as a configuration option in the
+`haproxy-spoe-auth` charm:
 
 ```sh
 juju config haproxy-spoe-auth hostname=protected.internal
