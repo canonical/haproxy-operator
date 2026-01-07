@@ -53,3 +53,25 @@ variable "grafana_agent" {
   })
   default = {}
 }
+
+
+# Todo the haproxy-spoe-auth
+variable "protected_hostnames" {
+  description = "TODO: haproxy_route Adds one by spoe auth per each..."
+  type    = list(string)
+  default = []
+}
+
+variable "haproxy_spoe_auth" {
+  type = object({
+    # A number will be appended to the app_name
+    app_name = optional(string, "haproxy-spoe-auth")
+    channel     = optional(string, "latest/stable")
+    config      = optional(map(string), {})
+    constraints = optional(string, "arch=amd64")
+    revision    = optional(number)
+    base        = optional(string, "ubuntu@24.04")
+    units       = optional(number, 1)
+  })
+  default = {}
+}

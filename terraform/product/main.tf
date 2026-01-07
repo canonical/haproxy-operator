@@ -58,3 +58,60 @@ resource "juju_integration" "grafana_agent" {
     endpoint = "cos-agent"
   }
 }
+
+module "haproxy_spoe_auth" {
+  source = "../charm/haproxy_spoe_auth"
+
+  for_each = {
+    for idx, hostname in var.protected_hostnames :
+    hostname => {
+      index    = idx
+      hostname = hostname
+    }
+  }
+
+  model_uuid  = var.model_uuid
+  app_name    = format("%s%d", var.haproxy_spoe_auth.app_name, each.value.index)
+  channel     = var.haproxy_spoe_auth.channel
+  revision    = var.haproxy_spoe_auth.revision
+  base        = var.haproxy_spoe_auth.base
+  units       = var.haproxy_spoe_auth.units
+  constraints = var.haproxy_spoe_auth.constraints
+  config = {
+    hostname = each.value.hostname
+  }
+}
+
+resource "juju_integration" "haproxy_spoe_auth" {
+  for_each = module.haproxy_spoe_auth
+  model_uuid = var.model_uuid
+
+  application {
+    name     = each.value.app_name
+    endpoint = each.value.provides.spoe_auth
+  }
+
+  application {
+    name     = juju_application.haproxy.app_name
+    endpoint = module.haproxy.provides.spoe_auth
+  }
+}
+
+# TODO For now only this is supported.
+resource "juju_application" "oauth_external_idp_integrator" {
+  count      = length(var.protected_hostnames) > 0 ? 1 : 0
+
+  name       = var.oauth_external_idp_integrator.app_name
+  model_uuid  = var.model_uuid
+  units      = 1
+
+  charm {
+    name     = "oauth-external-idp-integrator"
+    revision = var.oauth_external_idp_integrator.revision
+    channel  = var.oauth_external_idp_integrator.channel
+    base     = var.oauth_external_idp_integrator.base
+  }
+
+  config = var.oauth_external_idp_integrator.config
+}
+
