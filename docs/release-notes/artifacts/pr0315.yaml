@@ -6,8 +6,8 @@ changes:
     author: javierdelapuente
     type: minor
     description: |
-      Add how-to and reference on how to use haproxy as a forward
-      authentication proxy using OpenID Connect.
+      Now the documentation contains a how-to guide and reference page on using HAProxy as a forward
+      authentication proxy with OpenID Connect.
     urls: 
       pr: https://github.com/canonical/haproxy-operator/pull/315
       related_doc: 
