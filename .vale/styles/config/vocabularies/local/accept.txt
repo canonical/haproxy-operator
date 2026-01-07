@@ -1,3 +1,5 @@
 configurator
 databag
+hardcoded
+hostnames
 proxied
