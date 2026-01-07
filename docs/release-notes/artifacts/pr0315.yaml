@@ -2,7 +2,7 @@
 
 schema_version: 1
 changes:
-  - title: Documentation for haproxy-spoe-auth
+  - title: Added documentation for `haproxy-spoe-auth`
     author: javierdelapuente
     type: minor
     description: |
