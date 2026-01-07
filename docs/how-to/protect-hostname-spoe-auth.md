@@ -22,7 +22,7 @@ juju integrate haproxy:certificates cert
 
 ## Deploy and integrate the `ingress-configurator` charm
 
-To specify the protected hostname, use the `haproxy-route` relation. In this how-to
+To specify the protected hostname, use the `haproxy-route` relation. In this guide
 we use the `ingress-configurator` charm, which serves as an adapter between
 the `ingress` and `haproxy-route` relations or as an integrator.
 
