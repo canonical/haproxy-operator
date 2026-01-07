@@ -6,7 +6,7 @@ locals {
 }
 
 module "haproxy" {
-  source = "../charm"
+  source = "../charm/haproxy"
 
   model_uuid  = var.model_uuid
   app_name    = var.haproxy.app_name
