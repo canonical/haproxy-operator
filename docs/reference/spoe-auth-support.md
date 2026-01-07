@@ -1,12 +1,16 @@
 (reference_spoe-auth_support)=
 
+<!-- vale Canonical.007-Headings-sentence-case = NO -->
+
 # HAProxy forward authentication proxy using OpenID Connect
+
+<!-- vale Canonical.007-Headings-sentence-case = YES -->
 
 The HAProxy operator provides support for authenticating hostnames using
 [HAProxy SPOE Authentication](https://github.com/criteo/haproxy-spoe-auth)
 with OpenID Connect.
 
-To protect a hostname exposed via the `haproxy-route` integration,
+To protect a hostname exposed through the `haproxy-route` integration,
 relate the `haproxy` charm with the [`haproxy-spoe-auth`](https://charmhub.io/haproxy-spoe-auth)
 charm.
 
