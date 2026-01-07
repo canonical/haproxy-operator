@@ -11,7 +11,7 @@ The HAProxy operator provides support for authenticating hostnames using
 with OpenID Connect.
 
 To protect a hostname exposed through the `haproxy-route` integration,
-relate the `haproxy` charm with the [`haproxy-spoe-auth`](https://charmhub.io/haproxy-spoe-auth)
+integrate the `haproxy` charm with the [`haproxy-spoe-auth`](https://charmhub.io/haproxy-spoe-auth)
 charm.
 
 ## Limitations
