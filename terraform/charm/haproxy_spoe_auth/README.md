@@ -28,7 +28,7 @@ No modules.
 |------|-------------|------|---------|:--------:|
 | <a name="input_app_name"></a> [app\_name](#input\_app\_name) | Application name of the deployed haproxy-spoe-auth charm. | `string` | `"haproxy-spoe-auth"` | no |
 | <a name="input_base"></a> [base](#input\_base) | Base of the haproxy-spoe-auth charm. | `string` | `"ubuntu@24.04"` | no |
-| <a name="input_channel"></a> [channel](#input\_channel) | Revision of the haproxy-spoe-auth charm. | `string` | `"2.8/edge"` | no |
+| <a name="input_channel"></a> [channel](#input\_channel) | Channel of the haproxy-spoe-auth charm. | `string` | `"latest/edge"` | no |
 | <a name="input_config"></a> [config](#input\_config) | haproxy-spoe-auth charm config. | `map(string)` | `{}` | no |
 | <a name="input_constraints"></a> [constraints](#input\_constraints) | haproxy-spoe-auth constraints. | `string` | `"arch=amd64"` | no |
 | <a name="input_model_uuid"></a> [model\_uuid](#input\_model\_uuid) | ID of the Juju model to deploy to. | `string` | n/a | yes |
