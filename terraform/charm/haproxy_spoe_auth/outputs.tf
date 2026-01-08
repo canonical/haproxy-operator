@@ -11,7 +11,7 @@ output "provides" {
   }
 }
 
-output "provides" {
+output "requires" {
   value = {
     oauth = "oauth"
   }
