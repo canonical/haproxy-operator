@@ -79,7 +79,8 @@ variable "protected_hostnames_idp_configuration" {
   description = <<EOF
 For each hostname, the configuration for the oauth-external-idp-integrator.
 The hostnames should also be declared in protected_hostnames.
-Hostnames not declared in this variable, will not have a oauth-external-idp-integrator.
+Hostnames not declared in this variable, will not have a oauth-external-idp-integrator,
+and will have to be integrated by the caller of the module.
 EOF
   type = map(object({
     issuer_url             = optional(string, "https://login.canonical.com")
