@@ -65,7 +65,7 @@ module "haproxy_spoe_auth" {
   for_each = {
     for hostname in var.protected_hostnames :
     hostname => {
-      suffix    = substr(md5(hostname), 0, 8)
+      suffix   = substr(md5(hostname), 0, 8)
       hostname = hostname
     }
   }
@@ -83,7 +83,7 @@ module "haproxy_spoe_auth" {
 }
 
 resource "juju_integration" "haproxy_spoe_auth" {
-  for_each = module.haproxy_spoe_auth
+  for_each   = module.haproxy_spoe_auth
   model_uuid = var.model_uuid
 
   application {
@@ -101,7 +101,7 @@ resource "juju_application" "oauth_external_idp_integrator" {
   for_each = var.protected_hostnames_idp_configuration
 
   name       = format("%s%s", var.oauth_external_idp_integrator.app_name, substr(md5(each.key), 0, 8))
-  model_uuid  = var.model_uuid
+  model_uuid = var.model_uuid
   units      = 1
 
   charm {
@@ -114,7 +114,7 @@ resource "juju_application" "oauth_external_idp_integrator" {
 }
 
 resource "juju_integration" "oauth_external_idp_integrator" {
-  for_each = var.protected_hostnames_idp_configuration
+  for_each   = var.protected_hostnames_idp_configuration
   model_uuid = var.model_uuid
 
   application {

@@ -7,6 +7,6 @@ output "app_name" {
 
 output "provides" {
   value = {
-    spoe_auth       = "spoe-auth"
+    spoe_auth = "spoe-auth"
   }
 }
