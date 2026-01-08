@@ -76,7 +76,8 @@ variable "haproxy_spoe_auth" {
   default = {}
 }
 
-variable "protected_hostnames_configuration" {
+variable "protected_hostnames_idp_configuration" {
+  description = "TODO: haproxy_route Adds one by spoe auth per each..."
   type = map(object({
     issuer_url             = optional(string, "https://login.canonical.com")
     authorization_endpoint = optional(string, "https://login.canonical.com/oauth2/auth")

@@ -97,11 +97,10 @@ resource "juju_integration" "haproxy_spoe_auth" {
   }
 }
 
-# TODO For now only this is supported.
 resource "juju_application" "oauth_external_idp_integrator" {
-  count      = length(var.protected_hostnames) > 0 ? 1 : 0
+  for_each = var.protected_hostnames_idp_configuration
 
-  name       = var.oauth_external_idp_integrator.app_name
+  name       = format("%s%s", var.oauth_external_idp_integrator.app_name, substr(md5(each.key), 0, 8))
   model_uuid  = var.model_uuid
   units      = 1
 
@@ -111,5 +110,20 @@ resource "juju_application" "oauth_external_idp_integrator" {
     channel  = var.oauth_external_idp_integrator.channel
     base     = var.oauth_external_idp_integrator.base
   }
-  # config = var.oauth_external_idp_integrator.config
+  config = each.value
+}
+
+resource "juju_integration" "oauth_external_idp_integrator" {
+  for_each = var.protected_hostnames_idp_configuration
+  model_uuid = var.model_uuid
+
+  application {
+    name     = juju_application.oauth_external_idp_integrator[each.key].name
+    endpoint = "oauth"
+  }
+
+  application {
+    name     = module.haproxy_spoe_auth[each.key].app_name
+    endpoint = "oauth"
+  }
 }
