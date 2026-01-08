@@ -1,6 +1,8 @@
 configurator
 Configurator
 databag
+hardcoded
+hostnames
 monorepo
 proxied
 Requirers
