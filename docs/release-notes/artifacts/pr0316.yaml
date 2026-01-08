@@ -1,0 +1,19 @@
+# --- Release notes change artifact ----
+
+schema_version: 1
+changes:
+  - title: Added terraform for `haproxy-spoe-auth` charm and product.
+    author: javierdelapuente
+    type: minor
+    description: |
+      Refactor terraform/charm, so the modules are under a subdirectory, one per charm.
+      Add terraform charm module for `haproxy-spoe-auth`.
+      Update terraform product module to include the options to protect hostnames and
+      have the option to deploy the oauth-external-idp-integrator if the configuration
+      is given.
+    urls:
+      pr: https://github.com/canonical/haproxy-operator/pull/316
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false
