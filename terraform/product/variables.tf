@@ -85,7 +85,7 @@ EOF
   type = map(object({
     issuer_url             = optional(string, "https://login.canonical.com")
     authorization_endpoint = optional(string, "https://login.canonical.com/oauth2/auth")
-    # This is not used in OIDC, but requres a value.
+    # This is not used in OIDC, but requires a value.
     introspection_endpoint = optional(string, "https://login.canonical.com/tokeninfo")
     jwks_endpoint          = optional(string, "https://login.canonical.com/.well-known/jwks.json")
     token_endpoint         = optional(string, "https://login.canonical.com/oauth2/token")
