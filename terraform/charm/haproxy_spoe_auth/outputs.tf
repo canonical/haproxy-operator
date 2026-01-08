@@ -10,3 +10,9 @@ output "provides" {
     spoe_auth = "spoe-auth"
   }
 }
+
+output "provides" {
+  value = {
+    oauth = "oauth"
+  }
+}

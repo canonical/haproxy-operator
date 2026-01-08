@@ -55,16 +55,15 @@ variable "grafana_agent" {
 }
 
 
-# Todo the haproxy-spoe-auth
 variable "protected_hostnames" {
-  description = "TODO: haproxy_route Adds one by spoe auth per each..."
+  description = "Name of the hostnames to protect. They have to be provided by the haproxy_route relation."
   type        = set(string)
   default     = []
 }
 
 variable "haproxy_spoe_auth" {
   type = object({
-    # A number will be appended to the app_name
+    # A number will be appended to each app_name
     app_name    = optional(string, "haproxy-spoe-auth")
     channel     = optional(string, "latest/stable")
     config      = optional(map(string), {})
@@ -77,7 +76,11 @@ variable "haproxy_spoe_auth" {
 }
 
 variable "protected_hostnames_idp_configuration" {
-  description = "TODO: haproxy_route Adds one by spoe auth per each..."
+  description = <<EOF
+For each hostname, the configuration for the oauth-external-idp-integrator.
+The hostnames should also be declared in protected_hostnames.
+Hostnames not declared in this variable, will not have a oauth-external-idp-integrator.
+EOF
   type = map(object({
     issuer_url             = optional(string, "https://login.canonical.com")
     authorization_endpoint = optional(string, "https://login.canonical.com/oauth2/auth")

@@ -8,7 +8,7 @@ variable "app_name" {
 }
 
 variable "channel" {
-  description = "Revision of the haproxy-spoe-auth charm."
+  description = "Channel of the haproxy-spoe-auth charm."
   type        = string
   default     = "latest/edge"
 }
@@ -31,7 +31,7 @@ variable "model_uuid" {
 }
 
 variable "revision" {
-  description = "Revision of the haproxy charm."
+  description = "Revision of the haproxy-spoe-auth charm."
   type        = number
   default     = null
 }

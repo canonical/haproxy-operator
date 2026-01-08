@@ -32,11 +32,11 @@ output "requires" {
 
 output "haproxy_spoe_auth_provides" {
   value = {
-    spoe_auth = "spoe-auth"
+    oauth = "oauth"
   }
 }
 
 output "haproxy_spoe_auth_app_names_map" {
-  description = "Name of the deployed haproxy-spoe-auth applications per hostname."
+  description = "Map of hostnames to haproxy-spoe-auth application name."
   value       = { for k, m in module.haproxy_spoe_auth : k => m.app_name }
 }
