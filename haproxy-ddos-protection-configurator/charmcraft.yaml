@@ -57,7 +57,6 @@ config:
         Policy to be applied when the above limits are exceeded. Specify one of: silent-drop, 
         reject, or deny. Optionally append an HTTP status code for deny (default is 403). 
         Examples: "reject", "deny", "deny 503".
-      default: silent-drop
     ip-allow-list:
       type: string
       description: |
@@ -76,5 +75,13 @@ config:
       type: string
       description: Comma-seperated list of paths to deny.
 
+charm-libs:
+- lib: haproxy.ddos_protection
+  version: "0"
 
+provides:
+  ddos-protection:
+    interface: ddos-protection
+    limit: 1
+    scope: container
 

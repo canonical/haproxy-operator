@@ -59,6 +59,10 @@ requires:
   spoe-auth:
     interface: spoe-auth
     description: Relation to provide authentication proxy to HAProxy.
+  ddos-protection:
+    interface: ddos_protection
+    limit: 1
+
 
 provides:
   ingress:
@@ -133,3 +137,5 @@ actions:
 charm-libs:
 - lib: traefik_k8s.ingress_per_unit
   version: "1"
+- lib: haproxy.ddos_protection
+  version: "0"
