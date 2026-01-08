@@ -201,7 +201,7 @@ class TestGetProxiedEndpointsAction:
                         f"ok3.{TEST_EXTERNAL_HOSTNAME_CONFIG}",
                     ]
                 ),
-                "paths": '["v1", "v2"]',
+                "paths": '["/v1", "/v2"]',
                 "ports": "[443]",
                 "protocol": '"http"',
                 "service": '"haproxy-tutorial-ingress-configurator"',
@@ -284,7 +284,7 @@ class TestGetProxiedEndpointsAction:
 
         out = context.action_results
 
-        assert out == {"endpoints": f'["https://{TEST_EXTERNAL_HOSTNAME_CONFIG}/"]'}
+        assert out == {"endpoints": f'["https://{TEST_EXTERNAL_HOSTNAME_CONFIG}"]'}
 
     def test_with_backend_filter_non_existing_backend(self) -> None:
         """
