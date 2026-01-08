@@ -63,15 +63,15 @@ module "haproxy_spoe_auth" {
   source = "../charm/haproxy_spoe_auth"
 
   for_each = {
-    for idx, hostname in var.protected_hostnames :
+    for hostname in var.protected_hostnames :
     hostname => {
-      index    = idx
+      suffix    = substr(md5(hostname), 0, 8)
       hostname = hostname
     }
   }
 
   model_uuid  = var.model_uuid
-  app_name    = format("%s%d", var.haproxy_spoe_auth.app_name, each.value.index)
+  app_name    = format("%s%s", var.haproxy_spoe_auth.app_name, each.value.suffix)
   channel     = var.haproxy_spoe_auth.channel
   revision    = var.haproxy_spoe_auth.revision
   base        = var.haproxy_spoe_auth.base
@@ -92,7 +92,7 @@ resource "juju_integration" "haproxy_spoe_auth" {
   }
 
   application {
-    name     = juju_application.haproxy.app_name
+    name     = module.haproxy.app_name
     endpoint = module.haproxy.provides.spoe_auth
   }
 }
@@ -111,7 +111,5 @@ resource "juju_application" "oauth_external_idp_integrator" {
     channel  = var.oauth_external_idp_integrator.channel
     base     = var.oauth_external_idp_integrator.base
   }
-
-  config = var.oauth_external_idp_integrator.config
+  # config = var.oauth_external_idp_integrator.config
 }
-

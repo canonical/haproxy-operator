@@ -29,3 +29,14 @@ output "requires" {
     grafana_dashboards_consumer = "grafana-dashboards-consumer"
   }
 }
+
+output "haproxy_spoe_auth_provides" {
+  value = {
+    spoe_auth= "spoe-auth"
+  }
+}
+
+output "haproxy_spoe_auth_app_names_map" {
+  description = "Name of the deployed haproxy-spoe-auth applications."
+  value = { for k, m in module.haproxy_spoe_auth : k => m.app_name }
+}

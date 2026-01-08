@@ -58,7 +58,7 @@ variable "grafana_agent" {
 # Todo the haproxy-spoe-auth
 variable "protected_hostnames" {
   description = "TODO: haproxy_route Adds one by spoe auth per each..."
-  type    = list(string)
+  type = set(string)
   default = []
 }
 
@@ -71,6 +71,35 @@ variable "haproxy_spoe_auth" {
     constraints = optional(string, "arch=amd64")
     revision    = optional(number)
     base        = optional(string, "ubuntu@24.04")
+    units       = optional(number, 1)
+  })
+  default = {}
+}
+
+variable "protected_hostnames_configuration" {
+  type = map(object({
+    issuer_url             = optional(string, "https://login.canonical.com")
+    authorization_endpoint = optional(string, "https://login.canonical.com/oauth2/auth")
+    # This is not used in OIDC, but requres a value.
+    introspection_endpoint = optional(string, "https://login.canonical.com/tokeninfo")
+    jwks_endpoint          = optional(string, "https://login.canonical.com/.well-known/jwks.json")
+    token_endpoint         = optional(string, "https://login.canonical.com/oauth2/token")
+    userinfo_endpoint      = optional(string, "https://login.canonical.com/userinfo")
+    scope                  = optional(string, "openid profile email")
+    client_id              = string
+    client_secret          = string
+  }))
+  default = {}
+}
+
+variable "oauth_external_idp_integrator" {
+  type = object({
+    # A number will be appended to the app_name
+    app_name    = optional(string, "oauth-external-idp-integrator")
+    channel     = optional(string, "latest/edge")
+    constraints = optional(string, "arch=amd64")
+    revision    = optional(number)
+    base        = optional(string, "ubuntu@22.04")
     units       = optional(number, 1)
   })
   default = {}
