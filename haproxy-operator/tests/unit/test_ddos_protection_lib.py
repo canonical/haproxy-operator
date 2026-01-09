@@ -103,11 +103,11 @@ def test_ddos_protection_provider_app_data_ip_allow_list():
     """
     data = DDoSProtectionProviderAppData(
         rate_limit_requests_per_minute=100,
-        ip_allow_list=["192.168.1.1", "10.0.0.0/8"],
+        ip_allow_list=["192.168.0.0/16", "10.0.0.0/8"],
     )
 
     assert len(data.ip_allow_list) == 2
-    assert str(data.ip_allow_list[0]) == "192.168.1.1"
+    assert str(data.ip_allow_list[0]) == "192.168.0.0/16"
     assert str(data.ip_allow_list[1]) == "10.0.0.0/8"
 
 
@@ -141,7 +141,52 @@ def test_ddos_protection_provider_app_data_empty():
     """
     arrange: Create a DDoSProtectionProviderAppData model with no arguments.
     act: Validate the model.
-    assert: Model validation passes with the default limit policy.
+    assert: Model validation passes with limit_policy as None (no rate limits configured).
     """
     data = DDoSProtectionProviderAppData()
+    assert data.limit_policy is None
+
+
+def test_ddos_protection_provider_app_data_limit_policy_requires_rate_limits():
+    """
+    arrange: Create a DDoSProtectionProviderAppData model with limit_policy but no rate limits.
+    act: Validate the model.
+    assert: Validation fails with appropriate error.
+    """
+    with pytest.raises(ValidationError, match="limit_policy can only be set"):
+        DDoSProtectionProviderAppData(
+            limit_policy="reject",
+        )
+
+
+def test_ddos_protection_provider_app_data_rate_limit_defaults_policy_to_silent():
+    """
+    arrange: Create a DDoSProtectionProviderAppData model with rate limit but no policy.
+    act: Validate the model.
+    assert: limit_policy is automatically set to SILENT.
+    """
+    data = DDoSProtectionProviderAppData(
+        rate_limit_requests_per_minute=100,
+    )
+    assert data.limit_policy == RateLimitPolicy.SILENT
+
+
+@pytest.mark.parametrize(
+    "rate_limit_field,rate_limit_value",
+    [
+        ("rate_limit_requests_per_minute", 100),
+        ("rate_limit_connections_per_minute", 50),
+        ("concurrent_connections_limit", 1000),
+        ("error_rate", 10),
+    ],
+)
+def test_ddos_protection_provider_app_data_any_rate_limit_defaults_policy(
+    rate_limit_field: str, rate_limit_value: int
+):
+    """
+    arrange: Create a DDoSProtectionProviderAppData model with each type of rate limit.
+    act: Validate the model.
+    assert: limit_policy is automatically set to SILENT for any rate limit field.
+    """
+    data = DDoSProtectionProviderAppData(**{rate_limit_field: rate_limit_value})
     assert data.limit_policy == RateLimitPolicy.SILENT

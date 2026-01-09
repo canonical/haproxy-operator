@@ -12,6 +12,10 @@ Each revision is versioned by the date of the revision.
 
 - Updated HAProxy config to track connections per minute instead of rate limit.
 
+## 2026-01-08
+
+- Added the provider side of the `ddos-protection` interface.
+
 ## 2025-12-17
 
 - Added the DDoS defaults in the HAProxy config files and a config option to disable the defaults.
