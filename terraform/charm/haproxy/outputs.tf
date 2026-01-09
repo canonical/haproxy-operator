@@ -10,6 +10,7 @@ output "provides" {
     ingress       = "ingress"
     haproxy_route = "haproxy-route"
     cos_agent     = "cos-agent"
+    spoe_auth     = "spoe-auth"
   }
 }
 
