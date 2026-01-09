@@ -42,6 +42,7 @@ commands = [
 dependency_groups = [ "fmt" ]
 
 [env.lint]
+basepython = ["python3.12"]
 description = "Check code against coding style standards"
 commands = [
   [
@@ -77,6 +78,7 @@ commands = [
 dependency_groups = [ "lint" ]
 
 [env.unit]
+basepython = ["python3.12"]
 description = "Run unit tests"
 commands = [
   [
@@ -129,6 +131,7 @@ commands = [
 dependency_groups = [ "integration" ]
 
 [env.lint-fix]
+basepython = ["python3.12"]
 description = "Apply coding style standards to code"
 commands = [
   [

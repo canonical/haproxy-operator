@@ -17,7 +17,7 @@ PYTHONBREAKPOINT = "ipdb.set_trace"
 PY_COLORS = "1"
 
 [env.fmt]
-base_python = ["python3.12"]
+basepython = ["python3.12"]
 description = "Apply coding style standards to code"
 commands = [
   [
@@ -43,7 +43,7 @@ commands = [
 dependency_groups = [ "fmt" ]
 
 [env.lint]
-base_python = ["python3.12"]
+basepython = ["python3.12"]
 description = "Check code against coding style standards"
 commands = [
   [
@@ -79,7 +79,7 @@ commands = [
 dependency_groups = [ "lint" ]
 
 [env.unit]
-base_python = ["python3.12"]
+basepython = ["python3.12"]
 description = "Run unit tests"
 commands = [
   [
@@ -116,7 +116,7 @@ commands = [ [ "bandit", "-c", "{toxinidir}/pyproject.toml", "-r", "{[vars]src_p
 dependency_groups = [ "static" ]
 
 [env.integration]
-base_python = ["python3.12"]
+basepython = ["python3.12"]
 description = "Run integration tests"
 commands = [
   [
@@ -135,6 +135,7 @@ commands = [
 dependency_groups = [ "integration" ]
 
 [env.lint-fix]
+basepython = ["python3.12"]
 description = "Apply coding style standards to code"
 commands = [
   [
