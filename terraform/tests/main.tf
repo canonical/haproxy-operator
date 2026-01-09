@@ -24,7 +24,7 @@ locals {
         config = {
           issuer_url             = "https://login.example.com"
           authorization_endpoint = "https://login.example.com/oauth2/auth"
-          # This is not needed for OIDC oauth-external-idp-integrator requires it.
+          # This is not needed for OIDC but oauth-external-idp-integrator requires it.
           introspection_endpoint = "https://login.canonical.com/tokeninfo"
           jwks_endpoint          = "https://login.example.com/.well-known/jwks.json"
           token_endpoint         = "https://login.example.com/oauth2/token"
