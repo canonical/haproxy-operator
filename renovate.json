@@ -42,7 +42,7 @@
     }
   ],
   "schedule": [
-    "* 0-5 1,15 * *"
+    "* * * * 0,6"
   ],
   "vulnerabilityAlerts": {
     "enabled": true
