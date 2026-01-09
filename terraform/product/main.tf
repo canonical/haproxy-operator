@@ -63,21 +63,18 @@ module "haproxy_spoe_auth" {
   source = "../charm/haproxy_spoe_auth"
 
   for_each = {
-    for hostname in var.protected_hostnames :
-    hostname => {
-      suffix   = substr(md5(hostname), 0, 8)
-      hostname = hostname
-    }
+    for protected_hostnames_configuration in var.protected_hostnames_configuration :
+    protected_hostnames_configuration.hostname => protected_hostnames_configuration.haproxy_spoe_auth
   }
 
   model_uuid  = var.model_uuid
-  app_name    = format("%s%s", var.haproxy_spoe_auth.app_name, each.value.suffix)
-  channel     = var.haproxy_spoe_auth.channel
-  revision    = var.haproxy_spoe_auth.revision
-  base        = var.haproxy_spoe_auth.base
-  units       = var.haproxy_spoe_auth.units
-  constraints = var.haproxy_spoe_auth.constraints
-  config      = merge(var.haproxy_spoe_auth.config, { hostname = each.value.hostname })
+  app_name    = format("%s%s", each.value.app_name, substr(md5(each.key), 0, 8))
+  channel     = each.value.channel
+  revision    = each.value.revision
+  base        = each.value.base
+  units       = each.value.units
+  constraints = each.value.constraints
+  config      = merge(each.value.config, { hostname = each.key })
 }
 
 resource "juju_integration" "haproxy_spoe_auth" {
@@ -96,23 +93,31 @@ resource "juju_integration" "haproxy_spoe_auth" {
 }
 
 resource "juju_application" "oauth_external_idp_integrator" {
-  for_each = var.protected_hostnames_idp_configuration
+  for_each = {
+    for protected_hostnames_configuration in var.protected_hostnames_configuration :
+    protected_hostnames_configuration.hostname => protected_hostnames_configuration.oauth_external_idp_integrator
+    if protected_hostnames_configuration.oauth_external_idp_integrator != null
+  }
 
-  name       = format("%s%s", var.oauth_external_idp_integrator.app_name, substr(md5(each.key), 0, 8))
+  name       = format("%s%s", each.value.app_name, substr(md5(each.key), 0, 8))
   model_uuid = var.model_uuid
   units      = 1
 
   charm {
     name     = "oauth-external-idp-integrator"
-    revision = var.oauth_external_idp_integrator.revision
-    channel  = var.oauth_external_idp_integrator.channel
-    base     = var.oauth_external_idp_integrator.base
+    revision = each.value.revision
+    channel  = each.value.channel
+    base     = each.value.base
   }
-  config = each.value
+  config = each.value.config
 }
 
 resource "juju_integration" "oauth_external_idp_integrator" {
-  for_each   = var.protected_hostnames_idp_configuration
+  for_each = toset([
+    for protected_hostnames_configuration in var.protected_hostnames_configuration :
+    protected_hostnames_configuration.hostname
+    if protected_hostnames_configuration.oauth_external_idp_integrator != null
+  ])
   model_uuid = var.model_uuid
 
   application {
