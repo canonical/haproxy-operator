@@ -401,7 +401,7 @@ class HaproxyRouteRequirersInformation:
         allow_http_acls: list[str] = []
         for backend in self.backends:
             if backend.application_data.allow_http:
-                acl = f"{{ req.hdr(Host) -m str {' '.join(backend.hostname_acls)} }}"
+                acl = f"{{ req.hdr(host),field(1,:) -i {' '.join(backend.hostname_acls)} }}"
                 if backend.path_acl_required:
                     acl += f" {{ path_beg -i {' '.join(backend.application_data.paths)} }}"
                 if backend.deny_path_acl_required:
