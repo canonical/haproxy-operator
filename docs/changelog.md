@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-01-09
+
+- Updated HAProxy config to track connections per minute instead of rate limit.
+
 ## 2026-01-08
 
 - Added the provider side of the `ddos-protection` interface.
