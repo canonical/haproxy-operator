@@ -374,13 +374,13 @@ class DDoSProtectionProvider(Object):
         super().__init__(charm, relation_name)
 
         self._relation_name = relation_name
-        self.charm = charm
+        self._charm = charm
 
     def _update_relation_data(self) -> None:
         """Update the relation data with the current provider configuration."""
-        relations = self.charm.model.relations.get(self._relation_name, [])
+        relations = self._charm.model.relations.get(self._relation_name, [])
         for relation in relations:
-            self._provider_data.dump(relation.data[self.charm.app], clear=True)
+            self._provider_data.dump(relation.data[self._charm.app], clear=True)
 
     def set_config(
         self,
@@ -431,9 +431,7 @@ class DDoSProtectionProvider(Object):
             logger.error(msg)
             raise DataValidationError(msg) from e
 
-        # Only update relation data if at least one field is set
-        if self._provider_data.model_dump(exclude_defaults=True):
-            self._update_relation_data()
+        self._update_relation_data()
 
 
 class DDoSProtectionRequirer(Object):
@@ -453,7 +451,7 @@ class DDoSProtectionRequirer(Object):
         super().__init__(charm, relation_name)
 
         self._relation_name = relation_name
-        self.charm = charm
+        self._charm = charm
 
     def get_ddos_config(self) -> Optional[DDoSProtectionProviderAppData]:
         """Retrieve the DDoS protection configuration from the provider.
@@ -465,7 +463,7 @@ class DDoSProtectionRequirer(Object):
         Raises:
             DDoSProtectionInvalidRelationDataError: When data validation fails.
         """
-        relations = self.charm.model.relations.get(self._relation_name, [])
+        relations = self._charm.model.relations.get(self._relation_name, [])
         if not relations:
             return None
 
