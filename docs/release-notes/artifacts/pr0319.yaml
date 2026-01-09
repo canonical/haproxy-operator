@@ -1,5 +1,5 @@
 schema_version: 1
-title: Update HAProxy config to track connections per minute instead of rate limit
+title: Updated HAProxy config to track connections per minute instead of rate limit
 author: swetha1654
 type: minor
 description: >
