@@ -77,9 +77,7 @@ module "haproxy_spoe_auth" {
   base        = var.haproxy_spoe_auth.base
   units       = var.haproxy_spoe_auth.units
   constraints = var.haproxy_spoe_auth.constraints
-  config = {
-    hostname = each.value.hostname
-  }
+  config      = merge(var.haproxy_spoe_auth.config, { hostname = each.value.hostname })
 }
 
 resource "juju_integration" "haproxy_spoe_auth" {
