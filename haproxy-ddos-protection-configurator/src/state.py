@@ -108,13 +108,13 @@ class CharmState:
 
 
 def get_invalid_config_fields(exc: ValidationError) -> Set[int | str]:
-    """Return a list on invalid config from pydantic validation error.
+    """Return a set of invalid configuration fields from a pydantic validation error.
 
     Args:
         exc: The validation error exception.
 
     Returns:
-        str: list of fields that failed validation.
+        set[int | str]: Set of field locations that failed validation.
     """
     error_fields = set(itertools.chain.from_iterable(error["loc"] for error in exc.errors()))
     return error_fields
