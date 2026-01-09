@@ -6,6 +6,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+
 from state import CharmState, InvalidDDoSProtectionConfigError
 
 
