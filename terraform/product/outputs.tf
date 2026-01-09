@@ -38,5 +38,5 @@ output "haproxy_spoe_auth_provides" {
 
 output "haproxy_spoe_auth_app_names_map" {
   description = "Map of hostnames to haproxy-spoe-auth application name."
-  value       = { for k, m in module.haproxy_spoe_auth : k => m.app_name }
+  value       = { for hostname, spoe_auth in module.haproxy_spoe_auth : hostname => spoe_auth.app_name }
 }
