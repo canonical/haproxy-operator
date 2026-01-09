@@ -101,7 +101,7 @@ resource "juju_application" "oauth_external_idp_integrator" {
 
   name       = format("%s%s", each.value.app_name, substr(md5(each.key), 0, 8))
   model_uuid = var.model_uuid
-  units      = 1
+  units      = each.value.units
 
   charm {
     name     = "oauth-external-idp-integrator"
