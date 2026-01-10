@@ -1,0 +1,8 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"
+    Deploy haproxy.
+    Deploy three anycharms that implement haproxy-route using three different hostnames.
+    Protect two of them with haproxy-spoe-auth.
+    The two protected ones should require OIDC authentication.
+    The unprotected one can be accessed directly.
+    ","221926","test_oauth_spoe","tests.integration","2026-01-10","passed","2026-01-10","","test_oauth_spoe","",""
