@@ -1,0 +1,15 @@
+schema_version: 1
+title: Update log-format and add new panels to the grafana dashboard to analise ddos attacks.
+author: javierdelapuente
+type: minor
+description: >
+  Run `systemd-tmpfiles --create` when installing haproxy to fix /var/log permissions.
+  Update the log-format to "ip=%ci method=%HM path=%HP status=%ST bytes=%B".
+  Add new grafana panels with:
+  1. Top 10 client IPs with maximum requests over the last 5 minutes.
+  2. Top 10 client IPs with maximum bytes in their requests over the last 5 minutes.
+  3. Top 10 URLs queried over the last 5 minutes.
+urls:
+  - https://github.com/canonical/haproxy-operator/pull/321
+visibility: public
+highlight: false
