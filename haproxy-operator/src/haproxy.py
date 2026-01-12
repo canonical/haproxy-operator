@@ -84,6 +84,7 @@ class HAProxyService:
 
     def install(self) -> None:
         """Install the haproxy apt package."""
+        run_systemd_tmpfiles_create()
         apt.add_package(package_names=APT_PACKAGE_NAME, update_cache=True)
         pin_haproxy_package_version()
         render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
@@ -317,3 +318,14 @@ def pin_haproxy_package_version() -> None:
     except CalledProcessError as exc:
         logger.error("Failed calling apt-mark hold haproxy: %s", exc.stderr)
         raise HaproxyPackageVersionPinError("Failed pinning the haproxy package version") from exc
+
+
+def run_systemd_tmpfiles_create() -> None:
+    """Run systemd-tmpfiles --create.
+
+    This is necessary for /var/log to be writable by syslog without rebooting the machine.
+    """
+    try:
+        run(["/usr/bin/systemd-tmpfiles", "--create"], check=True)  # nosec
+    except CalledProcessError as exc:
+        logger.error("Failed calling systemd-tmpfiles --create: %s", exc.stderr)
