@@ -30,7 +30,7 @@ global
 defaults
     log global
     mode http
-    option httplog
+    log-format "ip=%ci method=%HM path=%HP status=%ST bytes=%B"
     option dontlognull
     retries 3
     timeout queue 20000
