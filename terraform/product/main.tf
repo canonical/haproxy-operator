@@ -6,7 +6,7 @@ locals {
 }
 
 module "haproxy" {
-  source = "../charm"
+  source = "../charm/haproxy"
 
   model_uuid  = var.model_uuid
   app_name    = var.haproxy.app_name
@@ -56,5 +56,77 @@ resource "juju_integration" "grafana_agent" {
   application {
     name     = juju_application.grafana_agent.name
     endpoint = "cos-agent"
+  }
+}
+
+module "haproxy_spoe_auth" {
+  source = "../charm/haproxy_spoe_auth"
+
+  for_each = {
+    for protected_hostnames_configuration in var.protected_hostnames_configuration :
+    protected_hostnames_configuration.hostname => protected_hostnames_configuration.haproxy_spoe_auth
+  }
+
+  model_uuid  = var.model_uuid
+  app_name    = format("%s%s", each.value.app_name, substr(md5(each.key), 0, 8))
+  channel     = each.value.channel
+  revision    = each.value.revision
+  base        = each.value.base
+  units       = each.value.units
+  constraints = each.value.constraints
+  config      = merge({ hostname = each.key }, each.value.config)
+}
+
+resource "juju_integration" "haproxy_spoe_auth" {
+  for_each   = module.haproxy_spoe_auth
+  model_uuid = var.model_uuid
+
+  application {
+    name     = each.value.app_name
+    endpoint = each.value.provides.spoe_auth
+  }
+
+  application {
+    name     = module.haproxy.app_name
+    endpoint = module.haproxy.provides.spoe_auth
+  }
+}
+
+resource "juju_application" "oauth_external_idp_integrator" {
+  for_each = {
+    for protected_hostnames_configuration in var.protected_hostnames_configuration :
+    protected_hostnames_configuration.hostname => protected_hostnames_configuration.oauth_external_idp_integrator
+    if protected_hostnames_configuration.oauth_external_idp_integrator != null
+  }
+
+  name       = format("%s%s", each.value.app_name, substr(md5(each.key), 0, 8))
+  model_uuid = var.model_uuid
+  units      = each.value.units
+
+  charm {
+    name     = "oauth-external-idp-integrator"
+    revision = each.value.revision
+    channel  = each.value.channel
+    base     = each.value.base
+  }
+  config = each.value.config
+}
+
+resource "juju_integration" "oauth_external_idp_integrator" {
+  for_each = toset([
+    for protected_hostnames_configuration in var.protected_hostnames_configuration :
+    protected_hostnames_configuration.hostname
+    if protected_hostnames_configuration.oauth_external_idp_integrator != null
+  ])
+  model_uuid = var.model_uuid
+
+  application {
+    name     = juju_application.oauth_external_idp_integrator[each.key].name
+    endpoint = "oauth"
+  }
+
+  application {
+    name     = module.haproxy_spoe_auth[each.key].app_name
+    endpoint = "oauth"
   }
 }

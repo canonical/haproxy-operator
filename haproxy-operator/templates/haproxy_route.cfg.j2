@@ -16,7 +16,7 @@ frontend haproxy
 {{ ddos_protection_rules() }}
 
 {% for spoe_auth_info in spoe_auth_info_list  %}
-    acl oidc_host_{{ spoe_auth_info.id }} req.hdr(Host) -m str {{ spoe_auth_info.hostname }}
+    acl oidc_host_{{ spoe_auth_info.id }} req.hdr(host),field(1,:) -i {{ spoe_auth_info.hostname }}
     acl oidc_callback_path_{{ spoe_auth_info.id }} path_beg -i {{ spoe_auth_info.oidc_callback_path }}
     use_backend spoe_oidc_callback_{{ spoe_auth_info.id }} if oidc_host_{{ spoe_auth_info.id }} oidc_callback_path_{{ spoe_auth_info.id }}
 
@@ -31,7 +31,7 @@ frontend haproxy
 {% if backend.path_acl_required %}
     acl acl_path_{{ backend.backend_name }} path_beg -i {% for path in backend.application_data.paths %}{{ path }} {% endfor +%}
 {% endif %}
-    acl acl_host_{{ backend.backend_name }} req.hdr(Host) -m str {% for hostname in backend.hostname_acls%}{{hostname}} {% endfor +%}
+    acl acl_host_{{ backend.backend_name }} req.hdr(host),field(1,:) -i {% for hostname in backend.hostname_acls%}{{hostname}} {% endfor +%}
 {% if backend.deny_path_acl_required %}
     acl acl_deny_path_{{ backend.backend_name }} path_beg -i {% for path in backend.application_data.deny_paths %}{{ path }} {% endfor +%}
 {% endif %}
@@ -75,8 +75,9 @@ backend {{ backend.backend_name }}
     http-check send hdr Host {{ backend.hostname_acls[0] }}
 {% if backend.application_data.rate_limit %}
     http-request track-sc0 src table  haproxy_peers/{{ backend.backend_name }}_rate_limit
-    http-request {{ backend.application_data.rate_limit.policy.value }} if { sc_http_req_rate(0,haproxy_peers/{{ backend.backend_name }}_rate_limit) gt {{ backend.application_data.rate_limit.connections_per_minute }} }
+    http-request {{ backend.application_data.rate_limit.policy.value }} if { sc_conn_rate(0,haproxy_peers/{{ backend.backend_name }}_rate_limit) gt {{ backend.application_data.rate_limit.connections_per_minute }} }
 {% endif %}
+
 {% if backend.application_data.bandwidth_limit.download %}
 
     filter bwlim-out download default-limit {{ backend.application_data.bandwidth_limit.download }} default-period 1s

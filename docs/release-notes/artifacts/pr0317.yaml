@@ -1,0 +1,13 @@
+schema_version: 1
+title: Allow hostname matching with port in Host header
+author: tphan025
+type: minor
+description: >
+  Updated HAProxy ACL configuration to handle Host headers that include port numbers.
+  Changed from `req.hdr(Host) -m str` to `req.hdr(host),field(1,:) -i` to extract only
+  the hostname portion before the colon, allowing requests with ports (e.g., example.com:8080)
+  to match hostname ACLs correctly. This also makes hostname matching case-insensitive.
+urls:
+  - https://github.com/canonical/haproxy-operator/pull/317
+visibility: public
+highlight: false
