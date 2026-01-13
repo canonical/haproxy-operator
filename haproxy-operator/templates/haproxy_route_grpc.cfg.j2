@@ -14,9 +14,14 @@ frontend {{ backend.backend_name }}
 
 backend {{ backend.backend_name }}
     balance {{ backend.load_balancing_configuration }}
+{% if backend.consistent_hashing %}
+    hash-type consistent
+{% endif %}
     timeout server {{ backend.application_data.timeout.server }}s
     timeout connect {{ backend.application_data.timeout.connect }}s
+    timeout queue {{ backend.application_data.timeout.queue }}s
+{% endif %}
     {% for server in backend.servers %}
-    server {{ server.server_name }} {{ server.address }}:{{ server.port }} ssl ca-file {{ haproxy_cas_file }} alpn h2
+    server {{ server.server_name }} {{ server.address }}:{{ server.port }}{% if server.maxconn %} maxconn {{ server.maxconn }}{% endif %} ssl ca-file {{ haproxy_cas_file }} alpn h2
     {% endfor %}
 {% endfor %}
