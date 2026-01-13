@@ -1,5 +1,5 @@
 schema_version: 1
-title: Add new panels to the grafana dashboard to analyse ddos attacks.
+title: Added new panels to the grafana dashboard to analyse ddos attacks.
 author: javierdelapuente
 type: minor
 description: >
