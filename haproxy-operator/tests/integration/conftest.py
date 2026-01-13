@@ -48,7 +48,6 @@ def charm_fixture(pytestconfig: pytest.Config):
 @pytest.fixture(scope="module", name="juju")
 def juju_fixture(request: pytest.FixtureRequest):
     """Pytest fixture that wraps :meth:`jubilant.with_model`."""
-
     model = request.config.getoption("--model")
     if model:
         juju = jubilant.Juju(model=model)
