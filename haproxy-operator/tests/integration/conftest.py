@@ -49,22 +49,11 @@ def charm_fixture(pytestconfig: pytest.Config):
 def juju_fixture(request: pytest.FixtureRequest):
     """Pytest fixture that wraps :meth:`jubilant.with_model`."""
 
-    def show_debug_log(juju: jubilant.Juju):
-        """Show the debug log if tests failed.
-
-        Args:
-            juju: Jubilant juju instance.
-        """
-        if request.session.testsfailed:
-            log = juju.debug_log(limit=1000)
-            print(log, end="")
-
     model = request.config.getoption("--model")
     if model:
         juju = jubilant.Juju(model=model)
         juju.wait_timeout = JUJU_WAIT_TIMEOUT
         yield juju
-        show_debug_log(juju)
         return
 
     keep_models = typing.cast(bool, request.config.getoption("--keep-models"))
