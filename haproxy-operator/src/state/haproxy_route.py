@@ -172,7 +172,7 @@ class HAProxyRouteBackend:
         """
         rewrite_configurations: list[str] = []
         for rewrite in self.application_data.rewrites:
-            if allowed_methods is not None and rewrite.method not in allowed_methods:
+            if allowed_methods and rewrite.method not in allowed_methods:
                 continue
 
             match rewrite.method:
