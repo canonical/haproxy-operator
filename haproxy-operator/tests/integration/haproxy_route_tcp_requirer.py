@@ -93,3 +93,25 @@ class AnyCharm(AnyCharmBase):
             check_send="ping\r\n",
             check_expect="pong",
         )
+
+    def update_relation_with_sticky_sessions(self):
+        """Update haproxy-route-tcp relation data with sticky sessions"""
+        self._haproxy_route_tcp.provide_haproxy_route_tcp_requirements(
+            port=4444,
+            backend_port=4000,
+            sni=CNAME,
+            check_type=TCPHealthCheckType.GENERIC,
+            check_interval=60,
+            check_rise=3,
+            check_fall=3,
+            check_send="ping\r\n",
+            check_expect="pong",
+            load_balancing={
+                "algorithm": "source",
+                "consistent_hashing": True
+            },
+            retry={
+                "count": 3,
+                "redispatch": True
+            }
+        )
