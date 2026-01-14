@@ -307,22 +307,22 @@ def any_charm_haproxy_route_requirer_fixture(
     )
 
 
-@pytest.fixture(scope="function", name="any_charm_haproxy_route_tcp_requirer")
+@pytest.fixture(scope="function", name="any_charm_haproxy_route_tcp_requirer_base")
 @pytestconfig_arg_no_deploy(application=ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION)
-def any_charm_haproxy_route_tcp_requirer_fixture(
-    request: pytest.FixtureRequest, _pytestconfig: pytest.Config, juju: jubilant.Juju
+def any_charm_haproxy_route_tcp_requirer_base_fixture(
+    _pytestconfig: pytest.Config, juju: jubilant.Juju
 ):
     """Deploy any-charm and configure it to serve as a requirer for the haproxy-route
     integration.
-
-    This fixture accepts a parameter (suffix) to create unique application names for each test.
     """
-    suffix = getattr(request, "param", "basic")
-    app_name = f"{ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION}-{suffix}"
-
+    if ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION in juju.status().apps:
+        logger.warning(
+            "Using existing application: %s", ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION
+        )
+        return ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION
     juju.deploy(
         "any-charm",
-        app=app_name,
+        app=ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION,
         channel="beta",
         config={
             "src-overwrite": json.dumps(
@@ -339,8 +339,38 @@ def any_charm_haproxy_route_tcp_requirer_fixture(
         },
     )
     juju.wait(
-        lambda status: jubilant.all_active(status, app_name),
+        lambda status: (
+            jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION)
+        ),
         timeout=JUJU_WAIT_TIMEOUT,
     )
+    return ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION
 
-    return app_name
+
+@pytest.fixture(name="any_charm_haproxy_route_tcp_requirer")
+def any_charm_haproxy_route_tcp_requirer_fixture(
+    any_charm_haproxy_route_tcp_requirer_base: str,
+    juju: jubilant.Juju,
+):
+    """Provide haproxy route tcp requirer and clean up test-specific relations after each test.
+
+    This function-scoped fixture wraps the module-scoped any_charm_haproxy_route_tcp_requirer_base
+    and ensures that relations created during tests are removed, while preserving the
+    base application for reuse across tests.
+    """
+    yield any_charm_haproxy_route_tcp_requirer_base
+
+    # Remove all relations except peer relations
+    app_name = any_charm_haproxy_route_tcp_requirer_base
+    if app_name not in juju.status().apps:
+        return
+
+    for endpoint, app_status_relation in juju.status().apps[app_name].relations.items():
+        for relation in app_status_relation:
+            if relation.related_app == app_name:
+                continue
+            juju.remove_relation(f"{app_name}:{endpoint}", relation.related_app)
+
+    juju.wait(
+        lambda status: (jubilant.all_agents_idle(status)),
+    )
