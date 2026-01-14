@@ -8,10 +8,10 @@
     tcp-request connection {{ ddos_protection_config.limit_policy }} if { sc_conn_cur(0) gt {{ ddos_protection_config.concurrent_connections_limit }} }
 {% endif %}
 {% if ddos_protection_config.error_rate %}
-    http-request {{ ddos_protection_config.limit_policy }} if { sc_http_err_rate(0) gt {{ ddos_protection_config.error_rate }} }
+    http-request {{ ddos_protection_config.limit_policy }} {{ ddos_protection_config.policy_status_code if ddos_protection_config.limit_policy == 'deny' and ddos_protection_config.policy_status_code }} if { sc_http_err_rate(0) gt {{ ddos_protection_config.error_rate }} }
 {% endif %}
 {% if ddos_protection_config.rate_limit_requests_per_minute %}
-    http-request {{ ddos_protection_config.limit_policy }} if { sc_http_req_rate(0) gt {{ ddos_protection_config.rate_limit_requests_per_minute }} }
+    http-request {{ ddos_protection_config.limit_policy }} {{ ddos_protection_config.policy_status_code if ddos_protection_config.limit_policy == 'deny' and ddos_protection_config.policy_status_code }} if { sc_http_req_rate(0) gt {{ ddos_protection_config.rate_limit_requests_per_minute }} }
 {% endif %}
 {% endif %}
 {% if ddos_protection %}

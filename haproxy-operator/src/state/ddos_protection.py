@@ -25,8 +25,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-IP_ALLOW_LIST_FILE = Path("/var/lib/haproxy/ip_allow_list.json")
-DENY_PATHS_FILE = Path("/var/lib/haproxy/deny_paths.json")
+IP_ALLOW_LIST_FILE = Path("/var/lib/haproxy/ip_allow_list.lst")
+DENY_PATHS_FILE = Path("/var/lib/haproxy/deny_paths.lst")
 
 
 def _is_http_mode(
@@ -109,20 +109,25 @@ class DDosProtection:
             file_path: Path to the file where data will be stored.
 
         Returns:
-            Path to the file if data was stored, None otherwise.
+            Path to the file if data is present, None otherwise.
         """
-        if data:
-            data_to_store = [str(item) for item in data]
-            file_path.write_text(json.dumps(data_to_store), encoding="utf-8")
-            logger.debug(
-                "Stored DDoS configuration to %s: %s",
-                file_path,
-                data_to_store,
-            )
-            return file_path
-        else:
+        if not data:
             file_path.unlink(missing_ok=True)
+            logger.debug("Removed DDoS configuration file %s (no data)", file_path)
             return None
+
+        lines = [str(item).strip() for item in data if str(item).strip()]
+        content = "\n".join(lines) + "\n"
+
+        file_path.write_text(content, encoding="utf-8")
+
+        logger.debug(
+            "Stored DDoS configuration to %s with %d entries",
+            file_path,
+            len(lines),
+        )
+
+        return file_path
 
     @staticmethod
     def _get_limit_policy(
