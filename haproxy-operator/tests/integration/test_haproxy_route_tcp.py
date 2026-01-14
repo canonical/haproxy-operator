@@ -51,6 +51,11 @@ def test_haproxy_route_tcp(
 
 
 @pytest.mark.abort_on_fail
+@pytest.mark.parametrize(
+    "any_charm_haproxy_route_tcp_requirer",
+    ["sticky-sessions"],
+    indirect=True,
+)
 def test_haproxy_route_tcp_with_sticky_sessions(
     configured_application_with_tls: str,
     any_charm_haproxy_route_tcp_requirer: str,
@@ -64,8 +69,6 @@ def test_haproxy_route_tcp_with_sticky_sessions(
         f"{configured_application_with_tls}:haproxy-route-tcp",
         any_charm_haproxy_route_tcp_requirer,
     )
-    # We set the removed retry-interval config option here as
-    # ingress-configurator is not yet synced with the updated lib. This will be removed.
     juju.run(
         f"{any_charm_haproxy_route_tcp_requirer}/0",
         "rpc",
