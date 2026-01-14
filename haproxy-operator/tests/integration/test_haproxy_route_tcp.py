@@ -13,7 +13,7 @@ from .helper import get_unit_ip_address
 
 
 @pytest.mark.abort_on_fail
-async def test_haproxy_route_tcp(
+def test_haproxy_route_tcp(
     configured_application_with_tls: str,
     any_charm_haproxy_route_tcp_requirer: str,
     juju: jubilant.Juju,
@@ -51,7 +51,7 @@ async def test_haproxy_route_tcp(
 
 
 @pytest.mark.abort_on_fail
-async def test_haproxy_route_tcp_with_sticky_sessions(
+def test_haproxy_route_tcp_with_sticky_sessions(
     configured_application_with_tls: str,
     any_charm_haproxy_route_tcp_requirer: str,
     juju: jubilant.Juju,
