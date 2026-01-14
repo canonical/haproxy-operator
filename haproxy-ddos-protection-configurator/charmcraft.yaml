@@ -81,7 +81,7 @@ charm-libs:
 
 provides:
   ddos-protection:
-    interface: ddos-protection
+    interface: ddos_protection
     limit: 1
     scope: container
 
