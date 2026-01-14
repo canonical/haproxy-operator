@@ -17,6 +17,12 @@ maxconn {{ server.maxconn }}
 frontend {{ endpoint.name }}
     mode tcp
     option tcplog
+{% if endpoint.application_data.retry %}
+    retries {{ endpoint.application_data.retry.count }}
+{% if endpoint.application_data.retry.redispatch %}
+    option redispatch
+{% endif %}
+{% endif %}
     bind [::]:{{ endpoint.application_data.port }} v4v6 {% if endpoint.application_data.tls_terminate %} ssl crt {{ haproxy_crt_dir }} {% endif +%}
 {% if endpoint.application_data.enforce_tls %}
     tcp-request content accept if { req_ssl_hello_type 1 }
@@ -36,6 +42,12 @@ frontend {{ endpoint.name }}
 
 backend {{ endpoint.name }}
     mode tcp
+{% if endpoint.application_data.load_balancing %}
+    balance {{ endpoint.application_data.load_balancing.algorithm }}
+{% if endpoint.application_data.load_balancing.consistent_hashing %}
+    hash-type consistent
+{% endif %}
+{% endif %}
 {% for option in endpoint.tcp_check_options %}
     {{ option }}
 {% endfor %}
