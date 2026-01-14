@@ -3,7 +3,6 @@
 
 """HAProxy charm DDoS protection information."""
 
-import json
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union
