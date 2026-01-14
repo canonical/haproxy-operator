@@ -43,7 +43,7 @@ frontend {{ endpoint.name }}
 backend {{ endpoint.name }}
     mode tcp
 {% if endpoint.application_data.load_balancing %}
-    balance {{ endpoint.application_data.load_balancing.algorithm }}
+    balance {{ endpoint.application_data.load_balancing.algorithm.value }}
 {% if endpoint.application_data.load_balancing.consistent_hashing %}
     hash-type consistent
 {% endif %}
