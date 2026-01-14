@@ -10,10 +10,11 @@ frontend ingress_per_unit
     compression type text/css text/html text/javascript application/javascript text/plain text/xml application/json
     compression offload
 
+{{ ddos_protection_rules() }}
+
     # Redirect HTTP to HTTPS
     http-request redirect scheme https unless { ssl_fc }
 
-{{ ddos_protection_rules() }}
 
     # generate path ACLs for ingress
     acl host_{{ config_external_hostname }} hdr(host) -i {{ config_external_hostname }}

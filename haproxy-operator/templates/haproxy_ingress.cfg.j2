@@ -10,10 +10,10 @@ frontend ingress
     compression type text/css text/html text/javascript application/javascript text/plain text/xml application/json
     compression offload
 
+{{ ddos_protection_rules() }}
+
     # Redirect HTTP to HTTPS
     http-request redirect scheme https unless { ssl_fc }
-
-{{ ddos_protection_rules() }}
 
     # generate path ACLs for ingress
 {% for backend in ingress_requirers_information.backends %}
