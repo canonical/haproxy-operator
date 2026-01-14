@@ -331,7 +331,10 @@ def test_haproxy_route_grpcs_support(
 ):
     """Deploy the charm with anycharm haproxy route requirer that runs a gRPC server with TLS.
 
-    Assert that gRPCs requests can be proxied through HAProxy.
+    Assert that:
+    - gRPCs requests can be proxied through HAProxy on default and custom ports
+    - Header rewrites work correctly for gRPC backends
+    - Path and query rewrites are filtered out for gRPC
     """
     juju.integrate(
         f"{any_charm_haproxy_route_requirer}:require-tls-certificates",
@@ -397,6 +400,7 @@ def test_haproxy_route_grpcs_support(
         root_certificates=ca_cert_content.results["ca-certificate"].encode()
     )
 
+    # Test gRPC on default port (443)
     with grpc.secure_channel(
         f"{haproxy_ip_address}:443",
         ssl_credentials,
@@ -422,7 +426,7 @@ def test_haproxy_route_grpcs_support(
         echo_response = echo_stub.Echo(echo_request)
         assert echo_response.message == "Test!"
 
-    # Configure gRPC server on custom port
+    # Configure gRPC server on custom port with header rewrites
     juju.run(
         f"{any_charm_haproxy_route_requirer}/0",
         "rpc",
@@ -440,6 +444,12 @@ def test_haproxy_route_grpcs_support(
                         "http_server_close": False,
                         "protocol": "https",
                         "external_grpc_port": 8443,
+                        "header_rewrite_expressions": [
+                            ["X-Custom-Header", "RewrittenByHAProxy"],
+                        ],
+                        # These should be filtered out for gRPC
+                        "path_rewrite_expressions": ["/should-not-apply"],
+                        "query_rewrite_expressions": ["should-not-apply=true"],
                     }
                 ]
             ),
@@ -451,6 +461,8 @@ def test_haproxy_route_grpcs_support(
             status, configured_application_with_tls, any_charm_haproxy_route_requirer
         ),
     )
+
+    # Test gRPC on custom port with header rewrite
     with grpc.secure_channel(
         f"{haproxy_ip_address}:8443",
         ssl_credentials,
@@ -476,103 +488,8 @@ def test_haproxy_route_grpcs_support(
         echo_response = echo_stub.Echo(echo_request)
         assert echo_response.message == "Test!"
 
-
-def test_haproxy_route_grpc_header_rewrites(
-    configured_application_with_tls: str,
-    any_charm_haproxy_route_requirer: str,
-    juju: jubilant.Juju,
-    certificate_provider_application: str,
-):
-    """Test that header rewrites work correctly for gRPC backends.
-
-    Assert that header rewrites are applied.
-    """
-    juju.integrate(
-        f"{any_charm_haproxy_route_requirer}:require-tls-certificates",
-        f"{certificate_provider_application}:certificates",
-    )
-    juju.integrate(
-        f"{configured_application_with_tls}:receive-ca-certs",
-        f"{certificate_provider_application}:send-ca-cert",
-    )
-    juju.integrate(
-        f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
-    )
-
-    juju.wait(
-        lambda status: jubilant.all_active(
-            status, any_charm_haproxy_route_requirer, certificate_provider_application
-        )
-    )
-
-    # Start gRPC SSL server
-    juju.run(
-        f"{any_charm_haproxy_route_requirer}/0",
-        "rpc",
-        {
-            "method": "start_ssl_server",
-            "kwargs": json.dumps({"grpc": True}),
-        },
-    )
-
-    # Configure haproxy-route for gRPC with header rewrites
-    juju.run(
-        f"{any_charm_haproxy_route_requirer}/0",
-        "rpc",
-        {
-            "method": "update_relation",
-            "args": json.dumps(
-                [
-                    {
-                        "service": "grpc_with_header_rewrites",
-                        "ports": [50051],
-                        "protocol": "https",
-                        "external_grpc_port": 9443,
-                        "header_rewrite_expressions": [
-                            ["X-Custom-Header", "RewrittenByHAProxy"],
-                        ],
-                        # These should be filtered out for gRPC
-                        "path_rewrite_expressions": ["/should-not-apply"],
-                        "query_rewrite_expressions": ["should-not-apply=true"],
-                    }
-                ]
-            ),
-        },
-    )
-
-    juju.wait(
-        lambda status: jubilant.all_active(
-            status, configured_application_with_tls, any_charm_haproxy_route_requirer
-        ),
-    )
-
-    # Verify that only header rewrites are in the HAProxy config
-    haproxy_config = juju.ssh(
-        f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
-    )
-    assert "http-request set-header X-Custom-Header RewrittenByHAProxy" in haproxy_config
-    assert "set-path /should-not-apply" not in haproxy_config
-    assert "set-query should-not-apply=true" not in haproxy_config
-
-    haproxy_ip_address = get_unit_ip_address(juju, configured_application_with_tls)
-    ca_cert_content = juju.run(f"{certificate_provider_application}/0", "get-ca-certificate")
-
-    ssl_credentials = grpc.ssl_channel_credentials(
-        root_certificates=ca_cert_content.results["ca-certificate"].encode()
-    )
-
-    # Test that the gRPC call works and receives the rewritten header
-    with grpc.secure_channel(
-        f"{haproxy_ip_address}:9443",
-        ssl_credentials,
-        options=[
-            ("grpc.default_authority", TEST_EXTERNAL_HOSTNAME_CONFIG),
-            ("grpc.ssl_target_name_override", TEST_EXTERNAL_HOSTNAME_CONFIG),
-        ],
-    ) as channel:
+        # Test header rewrite functionality
         echo_request = echo_pb2.EchoRequest(message="Header rewrite test")  # type: ignore[attr-defined]
-        echo_stub = echo_pb2_grpc.EchoServiceStub(channel)
-
         call_future = echo_stub.Echo.future(echo_request)
         echo_response = call_future.result()
         trailing_metadata = dict(call_future.trailing_metadata())
