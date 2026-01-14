@@ -106,12 +106,8 @@ class AnyCharm(AnyCharmBase):
             check_fall=3,
             check_send="ping\r\n",
             check_expect="pong",
-            load_balancing={
-                "algorithm": "source",
-                "consistent_hashing": True
-            },
-            retry={
-                "count": 3,
-                "redispatch": True
-            }
+            load_balancing_algorithm="source",
+            load_balancing_consistent_hashing=True,
+            retry_count=3,
+            retry_redispatch=True,
         )
