@@ -84,6 +84,22 @@ class DDosProtection:
     ip_allow_list_file_path: Optional[Path] = None
     deny_paths_file_path: Optional[Path] = None
 
+    @property
+    def has_rate_limiting(self) -> bool:
+        """Check if rate limiting should be applied.
+
+        Returns True if limit_policy is set AND at least one rate limiting metric is configured.
+        """
+        return bool(
+            self.limit_policy
+            and (
+                self.rate_limit_connections_per_minute
+                or self.concurrent_connections_limit
+                or self.error_rate
+                or self.rate_limit_requests_per_minute
+            )
+        )
+
     @staticmethod
     def _store_config_to_file(data: Optional[list[str]], file_path: Path) -> Optional[Path]:
         """Store configuration data to a file.

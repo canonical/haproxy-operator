@@ -24,7 +24,7 @@ frontend ingress_per_unit
 {% endfor %}
 
 peers haproxy_peers
-{% if ddos_protection_config.limit_policy %}
+{% if ddos_protection_config.has_rate_limiting %}
 {% for address in peer_units_address %}
     peer {{ address }}
 {% endfor %}
