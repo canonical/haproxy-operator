@@ -23,6 +23,14 @@ frontend ingress
     default_backend default
 {% endfor %}
 
+peers haproxy_peers
+{% if ddos_protection_config.limit_policy %}
+{% for address in peer_units_address %}
+    peer {{ address }}
+{% endfor %}
+    table ddos_protection_ip type ip size 100k expire 2m store http_req_rate(1m),conn_rate(1m),conn_cur
+{% endif %}
+
 {% for backend in ingress_requirers_information.backends %}
 backend {{ backend.backend_name }}
     balance roundrobin

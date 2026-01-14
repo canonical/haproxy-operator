@@ -66,7 +66,7 @@ def test_ingress_per_unit_from_provider():
         "strip-prefix": unit_data[unit.name][2],
     }
 
-    result = IngressPerUnitRequirersInformation.from_provider(provider)
+    result = IngressPerUnitRequirersInformation.from_provider(provider, peers=[])
 
     expected = [
         HAProxyBackend(
@@ -98,7 +98,7 @@ def test_ingress_per_unit_from_provider_validation_error():
     provider.get_data.side_effect = V1DataValidationError()
 
     with pytest.raises(IngressPerUnitIntegrationDataValidationError):
-        IngressPerUnitRequirersInformation.from_provider(provider)
+        IngressPerUnitRequirersInformation.from_provider(provider, peers=[])
 
 
 def test_ingress_from_provider_validation_error():
@@ -112,7 +112,7 @@ def test_ingress_from_provider_validation_error():
     provider.get_data.side_effect = V2DataValidationError()
 
     with pytest.raises(IngressIntegrationDataValidationError):
-        IngressRequirersInformation.from_provider(provider)
+        IngressRequirersInformation.from_provider(provider, peers=[])
 
 
 def test_proxy_mode_tcp():

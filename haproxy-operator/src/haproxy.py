@@ -18,6 +18,7 @@ from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from state.charm_state import CharmState
+from state.ddos_protection import DDosProtection
 from state.haproxy_route import HaproxyRouteRequirersInformation
 from state.ingress import IngressRequirersInformation
 from state.ingress_per_unit import IngressPerUnitRequirersInformation
@@ -118,6 +119,7 @@ class HAProxyService:
             IngressRequirersInformation | IngressPerUnitRequirersInformation
         ),
         external_hostname: str,
+        ddos_protection_config: DDosProtection,
     ) -> None:
         """Render the haproxy config for ingress proxying and reload the service.
 
@@ -126,6 +128,7 @@ class HAProxyService:
             ingress_requirers_information: Parsed information about ingress or ingress
                 per unit requirers.
             external_hostname: Configured external-hostname for TLS.
+            ddos_protection_config: DDoS protection configuration.
         """
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
@@ -133,6 +136,8 @@ class HAProxyService:
             "ingress_requirers_information": ingress_requirers_information,
             "config_external_hostname": external_hostname,
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
+            "ddos_protection_config": ddos_protection_config,
+            "peer_units_address": ingress_requirers_information.peers,
         }
         template = (
             HAPROXY_INGRESS_CONFIG_TEMPLATE
@@ -149,6 +154,7 @@ class HAProxyService:
         charm_state: CharmState,
         haproxy_route_requirers_information: HaproxyRouteRequirersInformation,
         spoe_oauth_info_list: list[SpoeAuthInformation],
+        ddos_protection_config: DDosProtection,
     ) -> None:
         """Render the haproxy config for haproxy-route.
 
@@ -156,12 +162,14 @@ class HAProxyService:
             charm_state: The charm state component.
             haproxy_route_requirers_information: HaproxyRouteRequirersInformation state component.
             spoe_oauth_info_list: Information about SPOE auth providers.
+            ddos_protection_config: DDoS protection configuration.
         """
         valid_backends = haproxy_route_requirers_information.valid_backends()
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
             "enable_hsts": charm_state.enable_hsts,
             "ddos_protection": charm_state.ddos_protection,
+            "ddos_protection_config": ddos_protection_config,
             "http_backends": [
                 backend
                 for backend in valid_backends

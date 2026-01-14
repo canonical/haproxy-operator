@@ -18,6 +18,7 @@ from charms.certificate_transfer_interface.v1.certificate_transfer import (
     CertificateTransferRequires,
 )
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
+from charms.haproxy.v0.ddos_protection import DDOS_PROTECTION_RELATION_NAME, DDoSProtectionRequirer
 from charms.haproxy.v0.haproxy_route_tcp import HaproxyRouteTcpProvider
 from charms.haproxy.v0.spoe_auth import (
     SpoeAuthRequirer,
@@ -51,6 +52,7 @@ from http_interface import (
     HTTPRequirer,
 )
 from state.charm_state import CharmState, ProxyMode
+from state.ddos_protection import DDosProtection
 from state.exception import CharmStateValidationBaseError
 from state.ha import HACLUSTER_INTEGRATION, HAPROXY_PEER_INTEGRATION, HAInformation
 from state.haproxy_route import (
@@ -119,6 +121,7 @@ class HAProxyCharm(ops.CharmBase):
         self.haproxy_route_provider = HaproxyRouteProvider(self)
         self.haproxy_route_tcp_provider = HaproxyRouteTcpProvider(self)
         self.spoe_auth_requirer = SpoeAuthRequirer(self, SPOE_AUTH_RELATION)
+        self.ddos_requirer = DDoSProtectionRequirer(self)
 
         self.recv_ca_certs = CertificateTransferRequires(self, RECV_CA_CERTS_RELATION)
         self.certificates = TLSCertificatesRequiresV4(
@@ -198,6 +201,12 @@ class HAProxyCharm(ops.CharmBase):
         )
         self.framework.observe(
             self.on[SPOE_AUTH_RELATION].relation_broken, self._on_config_changed
+        )
+        self.framework.observe(
+            self.on[DDOS_PROTECTION_RELATION_NAME].relation_changed, self._on_config_changed
+        )
+        self.framework.observe(
+            self.on[DDOS_PROTECTION_RELATION_NAME].relation_broken, self._on_config_changed
         )
 
     @validate_config_and_tls(defer=False)
@@ -300,10 +309,18 @@ class HAProxyCharm(ops.CharmBase):
             if requirer_class is IngressRequirersInformation
             else self._ingress_per_unit_provider
         )
-        ingress_requirers_information = requirer_class.from_provider(ingress_provider)
+        ingress_requirers_information = requirer_class.from_provider(
+            ingress_provider, self._get_peer_units_address()
+        )
+        ddos_protection_config = DDosProtection.from_charm(
+            self.ddos_requirer, ingress_requirers_information
+        )
         self.unit.set_ports(80, 443)
         self.haproxy_service.reconcile_ingress(
-            charm_state, ingress_requirers_information, tls_information.hostnames[0]
+            charm_state,
+            ingress_requirers_information,
+            tls_information.hostnames[0],
+            ddos_protection_config,
         )
 
     def _configure_legacy(self, charm_state: CharmState) -> None:
@@ -358,11 +375,17 @@ class HAProxyCharm(ops.CharmBase):
         )
         tls_information = TLSInformation.from_charm(self, self.certificates, allow_no_certificates)
         self._tls.certificate_available(tls_information)
+        ddos_protection_config = DDosProtection.from_charm(
+            self.ddos_requirer, haproxy_route_requirers_information
+        )
 
         spoe_oauth_info_list = SpoeAuthInformation.from_requirer(self.spoe_auth_requirer)
 
         self.haproxy_service.reconcile_haproxy_route(
-            charm_state, haproxy_route_requirers_information, spoe_oauth_info_list
+            charm_state,
+            haproxy_route_requirers_information,
+            spoe_oauth_info_list,
+            ddos_protection_config,
         )
         self.unit.set_ports(
             80,

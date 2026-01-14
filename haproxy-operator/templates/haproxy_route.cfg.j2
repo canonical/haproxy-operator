@@ -47,6 +47,9 @@ peers haproxy_peers
 {% for entry in stick_table_entries %}
     table {{ entry }} type ip size 100k expire 2m store http_req_rate(1m)
 {% endfor %}
+{% if ddos_protection_config.limit_policy %}
+    table ddos_protection_ip type ip size 100k expire 2m store http_req_rate(1m),conn_rate(1m),conn_cur
+{% endif %}
 
 {% for backend in http_backends %}
 backend {{ backend.backend_name }}
