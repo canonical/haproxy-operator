@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-01-14
+
+- Added header rewrite support for gRPC backends.
+
 ## 2026-01-09
 
 - Updated HAProxy config to track connections per minute instead of rate limit.
