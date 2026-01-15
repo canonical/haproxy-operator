@@ -16,7 +16,6 @@ backend {{ backend.backend_name }}
     balance {{ backend.load_balancing_configuration }}
     timeout server {{ backend.application_data.timeout.server }}s
     timeout connect {{ backend.application_data.timeout.connect }}s
-{% endif %}
 {% for rewrite_configuration in backend.rewrite_header_configurations %}
     http-request {{ rewrite_configuration }}
 {% endfor %}
