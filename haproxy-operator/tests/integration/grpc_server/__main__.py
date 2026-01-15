@@ -24,6 +24,10 @@ class EchoService(echo_pb2_grpc.EchoServiceServicer):
     """gRPC Echo Service implementation."""
 
     def Echo(self, request, context):  # noqa: N802 (invalid-function-name)
+        # Echo back a custom header from the request metadata if present
+        metadata = dict(context.invocation_metadata())
+        if "x-custom-header" in metadata:
+            context.set_trailing_metadata([("x-echoed-header", metadata["x-custom-header"])])
         return echo_pb2.EchoResponse(message=request.message)  # type: ignore[attr-defined]
 
 
