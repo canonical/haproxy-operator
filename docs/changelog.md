@@ -8,9 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
-## 2026-01-14
+## 2026-01-15
 
 - Added header rewrite support for gRPC backends.
+
+## 2026-01-15
+
+- Added missing settings from haproxy-route-tcp relation template.
 
 ## 2026-01-09
 
