@@ -437,11 +437,7 @@ def test_haproxy_route_grpcs_support(
                     {
                         "service": "any_charm_with_retry",
                         "ports": [50051],
-                        "retry_count": 3,
-                        "retry_redispatch": True,
                         "load_balancing_algorithm": "source",
-                        "load_balancing_consistent_hashing": True,
-                        "http_server_close": False,
                         "protocol": "https",
                         "external_grpc_port": 8443,
                         "header_rewrite_expressions": [
