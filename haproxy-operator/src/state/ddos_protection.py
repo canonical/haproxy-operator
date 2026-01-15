@@ -106,6 +106,8 @@ class DDosProtection:
         ddos_requirer: DDoSProtectionRequirer,
     ) -> "DDosProtection":
         """Get DDoS protection configuration from charm's ddos-protection relation.
+        Write the IP allow list and deny paths to files.
+        Convert timeouts from seconds to milliseconds.
 
         Args:
             ddos_requirer: The DDoSProtectionRequirer instance from the charm.
