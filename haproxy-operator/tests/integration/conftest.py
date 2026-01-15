@@ -307,7 +307,7 @@ def any_charm_haproxy_route_requirer_fixture(
     )
 
 
-@pytest.fixture(scope="function", name="any_charm_haproxy_route_tcp_requirer_base")
+@pytest.fixture(scope="module", name="any_charm_haproxy_route_tcp_requirer_base")
 @pytestconfig_arg_no_deploy(application=ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION)
 def any_charm_haproxy_route_tcp_requirer_base_fixture(
     _pytestconfig: pytest.Config, juju: jubilant.Juju
@@ -315,11 +315,6 @@ def any_charm_haproxy_route_tcp_requirer_base_fixture(
     """Deploy any-charm and configure it to serve as a requirer for the haproxy-route
     integration.
     """
-    if ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION in juju.status().apps:
-        logger.warning(
-            "Using existing application: %s", ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION
-        )
-        return ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION
     juju.deploy(
         "any-charm",
         app=ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION,
