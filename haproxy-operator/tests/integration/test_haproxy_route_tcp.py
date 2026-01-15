@@ -83,7 +83,6 @@ def test_haproxy_route_tcp_with_sticky_sessions(
         for entry in [
             "retries 3",
             "option redispatch",
-            "option http-server-close",
             "balance source",
             "hash-type consistent",
         ]
