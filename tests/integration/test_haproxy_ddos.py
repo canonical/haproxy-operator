@@ -3,6 +3,7 @@
 
 """Integration tests for HAProxy DDoS protection functionality."""
 
+import json
 import logging
 
 import jubilant
@@ -24,6 +25,26 @@ def test_haproxy_ddos_protection_integration(
     lxd_juju.integrate(
         f"{configured_application_with_tls}:haproxy-route", HAPROXY_ROUTE_REQUIRER_NAME
     )
+    lxd_juju.wait(
+        lambda status: not status.apps[HAPROXY_ROUTE_REQUIRER_NAME].is_waiting,
+        timeout=5 * 60,
+    )
+    lxd_juju.run(
+        f"{HAPROXY_ROUTE_REQUIRER_NAME}/0",
+        "rpc",
+        {
+            "method": "update_relation",
+            "args": json.dumps(
+                [
+                    {
+                        "service": HAPROXY_ROUTE_REQUIRER_NAME,
+                        "ports": [80],
+                        "hostname": "haproxy1.internal",
+                    }
+                ]
+            ),
+        },
+    )
     lxd_juju.integrate(
         f"{ddos_protection_configurator}:ddos-protection",
         f"{configured_application_with_tls}:ddos-protection",
@@ -40,7 +61,7 @@ def test_haproxy_ddos_protection_configuration(
     """Test that HAProxy receives correct DDoS protection configuration."""
     lxd_juju.config(
         ddos_protection_configurator,
-        **{
+        {
             "rate-limit-connections-per-minute": 500,
             "limit-policy": "reject",
             "ip-allow-list": "192.168.1.1,10.0.0.0/8",
