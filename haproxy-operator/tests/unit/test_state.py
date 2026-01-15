@@ -4,7 +4,7 @@
 """Unit tests for the states of different modes."""
 
 import typing
-from unittest.mock import MagicMock, Mock, create_autospec
+from unittest.mock import MagicMock, Mock
 
 import ops
 import pytest
@@ -12,7 +12,6 @@ from charms.haproxy.v0.ddos_protection import (
     DDoSProtectionInvalidRelationDataError,
     DDoSProtectionProviderAppData,
     DDoSProtectionRequirer,
-    RateLimitPolicy,
 )
 from charms.haproxy.v0.haproxy_route_tcp import (
     HaproxyRouteTcpRequirerData,
@@ -31,11 +30,7 @@ from charms.traefik_k8s.v1.ingress_per_unit import (
 from charms.traefik_k8s.v2.ingress import DataValidationError as V2DataValidationError
 
 from state.charm_state import CharmState, ProxyMode
-from state.ddos_protection import (
-    DDosProtection,
-    DDosProtectionValidationError,
-    _is_http_mode,
-)
+from state.ddos_protection import DDosProtection, DDosProtectionValidationError
 from state.haproxy_route import HaproxyRouteRequirersInformation
 from state.haproxy_route_tcp import HAProxyRouteTcpEndpoint
 from state.ingress import (
@@ -597,48 +592,11 @@ def test_charm_state_ddos_protection(ddos_protection, expected_value):
 
 
 @pytest.mark.parametrize(
-    "requirer_info, expected",
-    [
-        (
-            create_autospec(
-                HaproxyRouteRequirersInformation,
-                instance=True,
-                tcp_endpoints=[],
-            ),
-            True,
-        ),
-        (
-            create_autospec(
-                HaproxyRouteRequirersInformation,
-                instance=True,
-                tcp_endpoints=[MagicMock()],
-            ),
-            False,
-        ),
-        (
-            create_autospec(
-                IngressRequirersInformation,
-                instance=True,
-            ),
-            True,
-        ),
-    ],
-    ids=[
-        "haproxy_route_without_tcp_endpoints",
-        "haproxy_route_with_tcp_endpoints",
-        "ingress_requirer",
-    ],
-)
-def test_is_http_mode(requirer_info, expected):
-    assert _is_http_mode(requirer_info) is expected
-
-
-@pytest.mark.parametrize(
     "ddos_kwargs, expected",
     [
         (
             {
-                "limit_policy": "reject",
+                "limit_policy_http": "reject",
                 "rate_limit_requests_per_minute": 100,
                 "concurrent_connections_limit": 50,
             },
@@ -646,7 +604,14 @@ def test_is_http_mode(requirer_info, expected):
         ),
         (
             {
-                "limit_policy": "reject",
+                "limit_policy_tcp": "reject",
+                "concurrent_connections_limit": 50,
+            },
+            True,
+        ),
+        (
+            {
+                "limit_policy_http": "reject",
             },
             False,
         ),
@@ -659,7 +624,8 @@ def test_is_http_mode(requirer_info, expected):
         ),
     ],
     ids=[
-        "policy_and_metrics_configured",
+        "http_policy_and_metrics_configured",
+        "tcp_policy_and_metrics_configured",
         "policy_without_metrics",
         "metrics_without_policy",
     ],
@@ -708,51 +674,6 @@ def test_store_config_to_file_with_empty_data(tmp_path):
     assert not test_file.exists()
 
 
-def test_get_limit_policy_tcp_mode_with_deny_raises_error():
-    """
-    arrange: Create mock DDoSProtectionProviderAppData with deny policy.
-    act: Call _get_limit_policy in TCP mode.
-    assert: Raises DDosProtectionValidationError.
-    """
-    mock_config = MagicMock(spec=DDoSProtectionProviderAppData)
-    mock_config.limit_policy = RateLimitPolicy.DENY
-
-    with pytest.raises(DDosProtectionValidationError) as exc_info:
-        DDosProtection._get_limit_policy(mock_config, is_http_mode=False)
-
-    assert "'deny' policy is not supported when TCP endpoints are configured" in str(
-        exc_info.value
-    )
-
-
-@pytest.mark.parametrize(
-    "policy_enum,is_http_mode,expected",
-    [
-        (RateLimitPolicy.REJECT, True, "reject"),
-        (RateLimitPolicy.REJECT, False, "reject"),
-        (RateLimitPolicy.SILENT, True, "silent-drop"),
-        (RateLimitPolicy.SILENT, False, "silent-drop"),
-        (RateLimitPolicy.DENY, True, "deny"),
-        (None, True, None),
-    ],
-    ids=[
-        "reject_http",
-        "reject_tcp",
-        "silent_http",
-        "silent_tcp",
-        "deny_http",
-        "none_http",
-    ],
-)
-def test_get_limit_policy_valid_combinations(policy_enum, is_http_mode, expected):
-    config = MagicMock(spec=DDoSProtectionProviderAppData)
-    config.limit_policy = policy_enum
-
-    result = DDosProtection._get_limit_policy(config, is_http_mode)
-
-    assert result == expected
-
-
 def test_ddos_protection_from_charm_no_config():
     """
     arrange: Create mock DDoSProtectionRequirer that returns no config.
@@ -761,9 +682,8 @@ def test_ddos_protection_from_charm_no_config():
     """
     mock_ddos_requirer = MagicMock(spec=DDoSProtectionRequirer)
     mock_ddos_requirer.get_ddos_config.return_value = None
-    mock_requirer_info = MagicMock()
 
-    result = DDosProtection.from_charm(mock_ddos_requirer, mock_requirer_info)
+    result = DDosProtection.from_charm(mock_ddos_requirer)
 
     assert result == DDosProtection()
 
@@ -791,7 +711,7 @@ def test_ddos_protection_from_charm_with_config(tmp_path, monkeypatch):
         rate_limit_connections_per_minute=500,
         concurrent_connections_limit=100,
         error_rate=50,
-        limit_policy="reject",
+        limit_policy_http="reject",
         policy_status_code=429,
         http_request_timeout=30,
         http_keepalive_timeout=5,
@@ -803,16 +723,14 @@ def test_ddos_protection_from_charm_with_config(tmp_path, monkeypatch):
     ddos_requirer = MagicMock(spec=DDoSProtectionRequirer)
     ddos_requirer.get_ddos_config.return_value = config
 
-    requirer_info = MagicMock(spec=HaproxyRouteRequirersInformation)
-    requirer_info.tcp_endpoints = []
-
-    result = DDosProtection.from_charm(ddos_requirer, requirer_info)
+    result = DDosProtection.from_charm(ddos_requirer)
 
     assert result.rate_limit_requests_per_minute == 1000
     assert result.rate_limit_connections_per_minute == 500
     assert result.concurrent_connections_limit == 100
     assert result.error_rate == 50
-    assert result.limit_policy == "reject"
+    assert result.limit_policy_http == "reject"
+    assert result.limit_policy_tcp == "silent-drop"
     assert result.policy_status_code == 429
 
     assert result.http_request_timeout == 30000
@@ -836,10 +754,9 @@ def test_ddos_protection_from_charm_relation_data_error():
     mock_ddos_requirer.get_ddos_config.side_effect = DDoSProtectionInvalidRelationDataError(
         "Invalid relation data"
     )
-    mock_requirer_info = MagicMock()
 
     with pytest.raises(DDosProtectionValidationError) as exc_info:
-        DDosProtection.from_charm(mock_ddos_requirer, mock_requirer_info)
+        DDosProtection.from_charm(mock_ddos_requirer)
 
     assert "Failed to load DDoS protection configuration" in str(exc_info.value)
     assert "Invalid relation data" in str(exc_info.value)

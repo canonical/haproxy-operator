@@ -18,11 +18,12 @@ from charms.certificate_transfer_interface.v1.certificate_transfer import (
     CertificateTransferRequires,
 )
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
-from charms.haproxy.v0.ddos_protection import DDOS_PROTECTION_RELATION_NAME, DDoSProtectionRequirer
-from charms.haproxy.v0.haproxy_route_tcp import HaproxyRouteTcpProvider
-from charms.haproxy.v0.spoe_auth import (
-    SpoeAuthRequirer,
+from charms.haproxy.v0.ddos_protection import (
+    DDOS_PROTECTION_RELATION_NAME,
+    DDoSProtectionRequirer,
 )
+from charms.haproxy.v0.haproxy_route_tcp import HaproxyRouteTcpProvider
+from charms.haproxy.v0.spoe_auth import SpoeAuthRequirer
 from charms.haproxy.v1.haproxy_route import HaproxyRouteProvider
 from charms.tls_certificates_interface.v4.tls_certificates import (
     CertificateAvailableEvent,
@@ -312,9 +313,7 @@ class HAProxyCharm(ops.CharmBase):
         ingress_requirers_information = requirer_class.from_provider(
             ingress_provider, self._get_peer_units_address()
         )
-        ddos_protection_config = DDosProtection.from_charm(
-            self.ddos_requirer, ingress_requirers_information
-        )
+        ddos_protection_config = DDosProtection.from_charm(self.ddos_requirer)
         self.unit.set_ports(80, 443)
         self.haproxy_service.reconcile_ingress(
             charm_state,
@@ -375,9 +374,7 @@ class HAProxyCharm(ops.CharmBase):
         )
         tls_information = TLSInformation.from_charm(self, self.certificates, allow_no_certificates)
         self._tls.certificate_available(tls_information)
-        ddos_protection_config = DDosProtection.from_charm(
-            self.ddos_requirer, haproxy_route_requirers_information
-        )
+        ddos_protection_config = DDosProtection.from_charm(self.ddos_requirer)
 
         spoe_oauth_info_list = SpoeAuthInformation.from_requirer(self.spoe_auth_requirer)
 
@@ -647,4 +644,5 @@ class HAProxyCharm(ops.CharmBase):
 
 
 if __name__ == "__main__":  # pragma: nocover
+    ops.main(HAProxyCharm)
     ops.main(HAProxyCharm)

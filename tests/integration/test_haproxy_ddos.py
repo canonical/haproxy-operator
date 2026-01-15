@@ -63,7 +63,7 @@ def test_haproxy_ddos_protection_configuration(
         ddos_protection_configurator,
         {
             "rate-limit-connections-per-minute": 500,
-            "limit-policy": "reject",
+            "limit-policy-tcp": "reject",
             "ip-allow-list": "192.168.1.1,10.0.0.0/8",
             "http-request-timeout": 30,
             "http-keepalive-timeout": 5,

@@ -39,7 +39,8 @@ def test_charm_state_from_charm_successful():
         "rate-limit-connections-per-minute": None,
         "concurrent-connections-limit": None,
         "error-rate-per-minute": None,
-        "limit-policy": "reject",
+        "limit-policy-http": "reject",
+        "limit-policy-tcp": "reject",
         "ip-allow-list": "192.168.1.1, 10.0.0.0/8",
         "http-request-timeout": 30,
         "http-keepalive-timeout": 60,
@@ -50,7 +51,8 @@ def test_charm_state_from_charm_successful():
     state = CharmState.from_charm(mock_charm)
 
     assert state.rate_limit_requests_per_minute == 100
-    assert state.limit_policy == "reject"
+    assert state.limit_policy_http == "reject"
+    assert state.limit_policy_tcp == "reject"
     assert state.ip_allow_list == ["192.168.1.1", "10.0.0.0/8"]
     assert state.deny_paths == ["/admin", "/internal"]
 
@@ -70,7 +72,8 @@ def test_charm_state_from_charm_with_empty_config():
     assert state.rate_limit_connections_per_minute is None
     assert state.concurrent_connections_limit is None
     assert state.error_rate_per_minute is None
-    assert state.limit_policy is None
+    assert state.limit_policy_http is None
+    assert state.limit_policy_tcp is None
     assert state.ip_allow_list is None
     assert state.http_request_timeout is None
     assert state.http_keepalive_timeout is None

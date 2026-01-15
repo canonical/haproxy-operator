@@ -6,7 +6,8 @@
 import pytest
 from charms.haproxy.v0.ddos_protection import (
     DDoSProtectionProviderAppData,
-    RateLimitPolicy,
+    HttpRateLimitPolicy,
+    TcpRateLimitPolicy,
 )
 from pydantic import ValidationError
 
@@ -22,7 +23,8 @@ def test_ddos_protection_provider_app_data_validation():
         rate_limit_connections_per_minute=50,
         concurrent_connections_limit=1000,
         error_rate=10,
-        limit_policy="reject",
+        limit_policy_http="deny 503",
+        limit_policy_tcp="reject",
         ip_allow_list=["192.168.1.1", "192.168.1.0/24"],
         http_request_timeout=30,
         http_keepalive_timeout=60,
@@ -34,7 +36,9 @@ def test_ddos_protection_provider_app_data_validation():
     assert data.rate_limit_connections_per_minute == 50
     assert data.concurrent_connections_limit == 1000
     assert data.error_rate == 10
-    assert data.limit_policy == RateLimitPolicy.REJECT
+    assert data.limit_policy_http == HttpRateLimitPolicy.DENY
+    assert data.policy_status_code == 503
+    assert data.limit_policy_tcp == TcpRateLimitPolicy.REJECT
     assert len(data.ip_allow_list) == 2
     assert data.http_request_timeout == 30
     assert data.http_keepalive_timeout == 60
@@ -43,16 +47,18 @@ def test_ddos_protection_provider_app_data_validation():
 
 
 @pytest.mark.parametrize(
-    "policy_input,expected_policy,expected_status_code",
+    "http_policy_input,expected_http_policy,expected_status_code",
     [
-        ("deny 503", RateLimitPolicy.DENY, 503),
-        ("reject", RateLimitPolicy.REJECT, None),
-        ("silent-drop", RateLimitPolicy.SILENT, None),
-        ("deny", RateLimitPolicy.DENY, None),
+        ("deny 503", HttpRateLimitPolicy.DENY, 503),
+        ("reject", HttpRateLimitPolicy.REJECT, None),
+        ("silent-drop", HttpRateLimitPolicy.SILENT, None),
+        ("deny", HttpRateLimitPolicy.DENY, None),
     ],
 )
-def test_ddos_protection_provider_app_data_with_different_policies(
-    policy_input: str, expected_policy: RateLimitPolicy, expected_status_code: int | None
+def test_ddos_protection_provider_app_data_with_different_http_policies(
+    http_policy_input: str,
+    expected_http_policy: HttpRateLimitPolicy,
+    expected_status_code: int | None,
 ):
     """
     arrange: Create a DDoSProtectionProviderAppData model with different policies and status codes.
@@ -61,15 +67,15 @@ def test_ddos_protection_provider_app_data_with_different_policies(
     """
     data = DDoSProtectionProviderAppData(
         rate_limit_requests_per_minute=100,
-        limit_policy=policy_input,
+        limit_policy_http=http_policy_input,
     )
 
-    assert data.limit_policy == expected_policy
+    assert data.limit_policy_http == expected_http_policy
     assert data.policy_status_code == expected_status_code
 
 
 @pytest.mark.parametrize(
-    "invalid_policy",
+    "invalid_http_policy",
     [
         "reject 503",
         "silent-drop 503",
@@ -79,18 +85,66 @@ def test_ddos_protection_provider_app_data_with_different_policies(
         "invalid-policy",
     ],
 )
-def test_ddos_protection_provider_app_data_status_code_with_invalid_policy(
-    invalid_policy: str,
+def test_ddos_protection_provider_app_data_status_code_with_invalid_http_policy(
+    invalid_http_policy: str,
 ):
     """
-    arrange: Create a DDoSProtectionProviderAppData model with invalid policy.
+    arrange: Create a DDoSProtectionProviderAppData model with invalid HTTP policy.
     act: Validate the model.
     assert: Validation fails.
     """
     with pytest.raises(ValidationError):
         DDoSProtectionProviderAppData(
             rate_limit_requests_per_minute=100,
-            limit_policy=invalid_policy,  # type: ignore
+            limit_policy_http=invalid_http_policy,  # type: ignore
+        )
+
+
+@pytest.mark.parametrize(
+    "tcp_policy_input,expected_tcp_policy",
+    [
+        ("reject", TcpRateLimitPolicy.REJECT),
+        ("silent-drop", TcpRateLimitPolicy.SILENT),
+    ],
+)
+def test_ddos_protection_provider_app_data_with_different_tcp_policies(
+    tcp_policy_input: str, expected_tcp_policy: TcpRateLimitPolicy
+):
+    """
+    arrange: Create a DDoSProtectionProviderAppData model with different TCP policies.
+    act: Validate the model.
+    assert: TCP Policy is correctly parsed and set.
+    """
+    data = DDoSProtectionProviderAppData(
+        rate_limit_connections_per_minute=50,
+        limit_policy_tcp=tcp_policy_input,
+    )
+
+    assert data.limit_policy_tcp == expected_tcp_policy
+
+
+@pytest.mark.parametrize(
+    "invalid_tcp_policy",
+    [
+        "deny",  # deny not allowed for TCP
+        "deny 503",  # deny with status code not allowed for TCP
+        "reject 503",  # status codes not allowed for TCP
+        "silent-drop 503",  # status codes not allowed for TCP
+        "invalid-policy",
+    ],
+)
+def test_ddos_protection_provider_app_data_with_invalid_tcp_policy(
+    invalid_tcp_policy: str,
+):
+    """
+    arrange: Create a DDoSProtectionProviderAppData model with invalid TCP policy.
+    act: Validate the model.
+    assert: Validation fails.
+    """
+    with pytest.raises(ValidationError):
+        DDoSProtectionProviderAppData(
+            rate_limit_connections_per_minute=50,
+            limit_policy_tcp=invalid_tcp_policy,  # type: ignore
         )
 
 
@@ -137,56 +191,61 @@ def test_ddos_protection_provider_app_data_deny_paths_empty_string():
         )
 
 
-def test_ddos_protection_provider_app_data_empty():
+def test_ddos_protection_provider_app_data_http_limit_policy_requires_rate_limits():
     """
-    arrange: Create a DDoSProtectionProviderAppData model with no arguments.
-    act: Validate the model.
-    assert: Model validation passes with limit_policy as None (no rate limits configured).
-    """
-    data = DDoSProtectionProviderAppData()
-    assert data.limit_policy is None
-
-
-def test_ddos_protection_provider_app_data_limit_policy_requires_rate_limits():
-    """
-    arrange: Create a DDoSProtectionProviderAppData model with limit_policy but no rate limits.
+    arrange: Create a DDoSProtectionProviderAppData model with HTTP limit_policy but no HTTP rate limits.
     act: Validate the model.
     assert: Validation fails with appropriate error.
     """
-    with pytest.raises(ValidationError, match="limit_policy can only be set"):
+    with pytest.raises(ValidationError, match="limit_policy_http can only be set"):
         DDoSProtectionProviderAppData(
-            limit_policy="reject",
+            limit_policy_http="reject",
         )
 
 
 def test_ddos_protection_provider_app_data_rate_limit_defaults_policy_to_silent():
     """
-    arrange: Create a DDoSProtectionProviderAppData model with rate limit but no policy.
+    arrange: Create a DDoSProtectionProviderAppData model with both HTTP and TCP rate limits but no policies.
     act: Validate the model.
-    assert: limit_policy is automatically set to SILENT.
+    assert: Both limit_policies are automatically set to SILENT.
     """
     data = DDoSProtectionProviderAppData(
         rate_limit_requests_per_minute=100,
+        rate_limit_connections_per_minute=50,
     )
-    assert data.limit_policy == RateLimitPolicy.SILENT
+    assert data.limit_policy_http == HttpRateLimitPolicy.SILENT
+    assert data.limit_policy_tcp == TcpRateLimitPolicy.SILENT
 
 
 @pytest.mark.parametrize(
-    "rate_limit_field,rate_limit_value",
+    "rate_limit_field,rate_limit_value,expected_http_policy,expected_tcp_policy",
     [
-        ("rate_limit_requests_per_minute", 100),
-        ("rate_limit_connections_per_minute", 50),
-        ("concurrent_connections_limit", 1000),
-        ("error_rate", 10),
+        ("rate_limit_requests_per_minute", 100, HttpRateLimitPolicy.SILENT, None),
+        ("rate_limit_connections_per_minute", 50, None, TcpRateLimitPolicy.SILENT),
+        ("concurrent_connections_limit", 1000, None, TcpRateLimitPolicy.SILENT),
+        ("error_rate", 10, HttpRateLimitPolicy.SILENT, None),
     ],
 )
 def test_ddos_protection_provider_app_data_any_rate_limit_defaults_policy(
-    rate_limit_field: str, rate_limit_value: int
+    rate_limit_field: str, rate_limit_value: int, expected_http_policy, expected_tcp_policy
 ):
     """
     arrange: Create a DDoSProtectionProviderAppData model with each type of rate limit.
     act: Validate the model.
-    assert: limit_policy is automatically set to SILENT for any rate limit field.
+    assert: limit_policy is automatically set to SILENT for the appropriate policy type.
     """
     data = DDoSProtectionProviderAppData(**{rate_limit_field: rate_limit_value})
-    assert data.limit_policy == RateLimitPolicy.SILENT
+    assert data.limit_policy_http == expected_http_policy
+    assert data.limit_policy_tcp == expected_tcp_policy
+
+
+def test_ddos_protection_provider_app_data_tcp_limit_policy_requires_rate_limits():
+    """
+    arrange: Create a DDoSProtectionProviderAppData model with TCP limit_policy but no TCP rate limits.
+    act: Validate the model.
+    assert: Validation fails with appropriate error.
+    """
+    with pytest.raises(ValidationError, match="limit_policy_tcp can only be set"):
+        DDoSProtectionProviderAppData(
+            limit_policy_tcp="reject",
+        )

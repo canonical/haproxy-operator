@@ -28,10 +28,10 @@ frontend {{ endpoint.name }}
 {% if ddos_protection_config.has_rate_limiting %}
     tcp-request connection track-sc0 src table haproxy_peers/ddos_protection_ip
 {% if ddos_protection_config.rate_limit_connections_per_minute %}
-    tcp-request connection {{ ddos_protection_config.limit_policy }} if { conn_rate(0,haproxy_peers/ddos_protection_ip) gt {{ ddos_protection_config.rate_limit_connections_per_minute }} }
+    tcp-request connection {{ ddos_protection_config.limit_policy_tcp }} if { conn_rate(0,haproxy_peers/ddos_protection_ip) gt {{ ddos_protection_config.rate_limit_connections_per_minute }} }
 {% endif %}
 {% if ddos_protection_config.concurrent_connections_limit %}
-    tcp-request connection {{ ddos_protection_config.limit_policy }} if { conn_cur(0,haproxy_peers/ddos_protection_ip) gt {{ ddos_protection_config.concurrent_connections_limit }} }
+    tcp-request connection {{ ddos_protection_config.limit_policy_tcp }} if { conn_cur(0,haproxy_peers/ddos_protection_ip) gt {{ ddos_protection_config.concurrent_connections_limit }} }
 {% endif %}
 {% endif %}
 {% if ddos_protection_config.ip_allow_list_file_path %}
