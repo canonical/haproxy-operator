@@ -72,9 +72,9 @@ def test_haproxy_ddos_protection_configuration(
         },
     )
     lxd_juju.wait(jubilant.all_active)
-    haproxy_app = lxd_juju.model.applications[configured_application_with_tls]
-    haproxy_unit = haproxy_app.units[0]
-    haproxy_cfg = lxd_juju.cli("ssh", haproxy_unit, "cat /etc/haproxy/haproxy.cfg")
+    haproxy_cfg = lxd_juju.cli(
+        "ssh", f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
+    )
 
     assert "table ddos_protection_ip" in haproxy_cfg
     assert "tcp-request connection reject if { sc_conn_rate(0) gt 500 }" in haproxy_cfg

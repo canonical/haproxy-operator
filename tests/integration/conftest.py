@@ -298,18 +298,23 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
 
 @pytest.fixture(scope="module", name="any_charm_haproxy_route_deployer")
 def any_charm_haproxy_route_deployer_fixture(
+    pytestconfig: pytest.Config,
     lxd_juju: jubilant.Juju,
 ):
     """Return a fixture function to create haproxy_route requirer anycharms."""
 
     def deployer(app_name):
-        return deploy_any_charm_haproxy_route_requirer(lxd_juju, app_name)
+        return deploy_any_charm_haproxy_route_requirer(pytestconfig, lxd_juju, app_name)
 
     yield deployer
 
 
-def deploy_any_charm_haproxy_route_requirer(lxd_juju: jubilant.Juju, app_name):
+def deploy_any_charm_haproxy_route_requirer(
+    pytestconfig: pytest.Config, lxd_juju: jubilant.Juju, app_name
+):
     """Deploy a haproxy_route requirer anycharm."""
+    if pytestconfig.getoption("--no-deploy") and app_name in lxd_juju.status().apps:
+        return app_name
     src_overwrite = json.dumps(
         {
             "any_charm.py": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(
