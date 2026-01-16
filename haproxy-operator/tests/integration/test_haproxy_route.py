@@ -443,7 +443,9 @@ def test_haproxy_route_grpcs_support(
                         "header_rewrite_expressions": [
                             ["X-Custom-Header", "RewrittenByHAProxy"],
                         ],
-                        "path_rewrite_expressions": ["%[path,regsub(^/v1,)]"], # remove /v1 prefix from the path
+                        "path_rewrite_expressions": [
+                            "%[path,regsub(^/v1,)]"
+                        ],  # remove /v1 prefix from the path
                         "query_rewrite_expressions": ["should-not-apply=true"],
                     }
                 ]
