@@ -59,6 +59,33 @@ resource "juju_integration" "grafana_agent" {
   }
 }
 
+module "haproxy_ddos_protection_configurator" {
+  source = "../charm/haproxy_ddos_protection_configurator"
+
+  model_uuid  = var.model_uuid
+  app_name    = var.haproxy_ddos_protection_configurator.app_name
+  channel     = var.haproxy_ddos_protection_configurator.channel
+  revision    = var.haproxy_ddos_protection_configurator.revision
+  base        = var.haproxy_ddos_protection_configurator.base
+  units       = var.haproxy_ddos_protection_configurator.units
+  constraints = var.haproxy_ddos_protection_configurator.constraints
+  config      = var.haproxy_ddos_protection_configurator.config
+}
+
+resource "juju_integration" "haproxy_haproxy_ddos_protection_configurator" {
+  model_uuid = var.model_uuid
+
+  application {
+    name     = module.haproxy_ddos_protection_configurator.app_name
+    endpoint = module.haproxy_ddos_protection_configurator.provides.ddos_protection
+  }
+
+  application {
+    name     = module.haproxy.app_name
+    endpoint = module.haproxy.requires.ddos_protection
+  }
+}
+
 module "haproxy_spoe_auth" {
   source = "../charm/haproxy_spoe_auth"
 

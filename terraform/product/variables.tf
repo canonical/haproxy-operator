@@ -54,6 +54,19 @@ variable "grafana_agent" {
   default = {}
 }
 
+variable "haproxy_ddos_protection_configurator" {
+  description = "Configuration for haproxy-ddos-protection-configurator charm deployment."
+  type = object({
+    app_name    = optional(string, "haproxy-ddos-protection-configurator")
+    channel     = optional(string, "latest/edge")
+    config      = optional(map(string), {})
+    constraints = optional(string, "arch=amd64")
+    revision    = optional(number, null)
+    base        = optional(string, "ubuntu@24.04")
+    units       = optional(number, 1)
+  })
+  default = {}
+}
 
 variable "protected_hostnames_configuration" {
   description = <<EOF
