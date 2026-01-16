@@ -10,10 +10,10 @@ frontend ingress
     compression type text/css text/html text/javascript application/javascript text/plain text/xml application/json
     compression offload
 
+{{ ddos_protection_rules() }}
+
     # Redirect HTTP to HTTPS
     http-request redirect scheme https unless { ssl_fc }
-
-{{ ddos_protection_rules() }}
 
     # generate path ACLs for ingress
 {% for backend in ingress_requirers_information.backends %}
@@ -22,6 +22,14 @@ frontend ingress
     use_backend {{ backend.backend_name }} if path_{{ backend.backend_name }} host_{{ config_external_hostname }}
     default_backend default
 {% endfor %}
+
+{% if ddos_protection_config.has_rate_limiting %}
+peers haproxy_peers
+{% for address in peer_units_address %}
+    peer {{ address }}
+{% endfor %}
+    table ddos_protection_ip type ip size 100k expire 2m store http_req_rate(1m),conn_rate(1m),conn_cur
+{% endif %}
 
 {% for backend in ingress_requirers_information.backends %}
 backend {{ backend.backend_name }}

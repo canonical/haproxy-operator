@@ -5,6 +5,9 @@ frontend haproxy
     mode http
     bind [::]:80 v4v6
     bind [::]:443 v4v6 ssl crt {{ haproxy_crt_dir }} alpn h2,http/1.1
+
+{{ ddos_protection_rules() }}
+
     # Redirect HTTP to HTTPS
     http-request redirect scheme https unless { ssl_fc } {% for acl in acls_for_allow_http %} || {{ acl }}{% endfor %}
 
@@ -12,8 +15,6 @@ frontend haproxy
     # Add HSTS header for HTTPS connections (only when HTTP is not allowed)
     http-response set-header Strict-Transport-Security "max-age=2592000" if { ssl_fc } {% for acl in acls_for_allow_http %} !{{ acl }}{% endfor %}
 {% endif %}
-
-{{ ddos_protection_rules() }}
 
 {% for spoe_auth_info in spoe_auth_info_list  %}
     acl oidc_host_{{ spoe_auth_info.id }} req.hdr(host),field(1,:) -i {{ spoe_auth_info.hostname }}
@@ -47,6 +48,9 @@ peers haproxy_peers
 {% for entry in stick_table_entries %}
     table {{ entry }} type ip size 100k expire 2m store http_req_rate(1m)
 {% endfor %}
+{% if ddos_protection_config.has_rate_limiting %}
+    table ddos_protection_ip type ip size 100k expire 2m store http_req_rate(1m),conn_rate(1m),conn_cur
+{% endif %}
 
 {% for backend in http_backends %}
 backend {{ backend.backend_name }}

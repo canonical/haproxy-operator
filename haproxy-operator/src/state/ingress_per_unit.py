@@ -3,14 +3,14 @@
 
 """HAproxy ingress per unit charm state component."""
 
-from typing import Annotated
+from typing import Annotated, cast
 
 from charms.traefik_k8s.v1.ingress_per_unit import (
     DataValidationError,
     IngressPerUnitProvider,
     RequirerData,
 )
-from pydantic import Field
+from pydantic import Field, IPvAnyAddress
 from pydantic.dataclasses import dataclass
 
 from .exception import CharmStateValidationBaseError
@@ -47,18 +47,21 @@ class IngressPerUnitRequirersInformation:
 
     Attrs:
         backends: The list of backends each corresponds to a requirer unit.
+        peers: List of IP address of haproxy peer units.
     """
 
     backends: list[HAProxyBackend]
+    peers: list[IPvAnyAddress]
 
     @classmethod
     def from_provider(
-        cls, ingress_per_unit_provider: IngressPerUnitProvider
+        cls, ingress_per_unit_provider: IngressPerUnitProvider, peers: list[str]
     ) -> "IngressPerUnitRequirersInformation":
         """Get requirer information from an IngressPerUnitProvider instance.
 
         Args:
             ingress_per_unit_provider: The ingress per unit provider library.
+            peers: List of IP address of haproxy peer units.
 
         Raises:
             IngressPerUnitIntegrationDataValidationError: When data validation failed.
@@ -89,4 +92,4 @@ class IngressPerUnitRequirersInformation:
                     raise IngressPerUnitIntegrationDataValidationError(
                         "Validation of ingress per unit relation data failed."
                     ) from exc
-        return cls(backends=backends)
+        return cls(backends=backends, peers=[cast(IPvAnyAddress, peer) for peer in peers])

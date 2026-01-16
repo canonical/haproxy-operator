@@ -20,6 +20,10 @@ Each revision is versioned by the date of the revision.
 
 - Added missing settings from haproxy-route-tcp relation template.
 
+## 2026-01-14
+
+- Added provider support for the `ddos_protection` interface on the HAProxy charm.
+
 ## 2026-01-09
 
 - Updated HAProxy config to track connections per minute instead of rate limit.
