@@ -199,14 +199,14 @@ class HAProxyRouteBackend:
         return self._build_rewrite_configurations()
 
     @cached_property
-    def rewrite_header_configurations(self) -> list[str]:
+    def grpc_rewrite_configurations(self) -> list[str]:
         """Build rewrite configurations for header rewrites only.
 
         Returns:
             list[str]: The header-only rewrite configurations.
         """
         return self._build_rewrite_configurations(
-            allowed_methods={HaproxyRewriteMethod.SET_HEADER}
+            allowed_methods={HaproxyRewriteMethod.SET_HEADER, HaproxyRewriteMethod.SET_PATH}
         )
 
 

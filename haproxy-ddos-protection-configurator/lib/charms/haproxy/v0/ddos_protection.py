@@ -43,7 +43,8 @@ class DDoSConfigurator(CharmBase):
             rate_limit_connections_per_minute=50,
             concurrent_connections_limit=1000,
             error_rate=10,
-            limit_policy="reject",
+            limit_policy_http="reject",
+            limit_policy_tcp="reject",
             ip_allow_list=["192.168.1.1", "192.168.1.0/24"],
             http_request_timeout=30,
             http_keepalive_timeout=60,
@@ -111,7 +112,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 3
 
 logger = logging.getLogger(__name__)
 DDOS_PROTECTION_RELATION_NAME = "ddos-protection"
@@ -186,8 +187,8 @@ class _DatabagModel(BaseModel):
         databag.update({k: json.dumps(v) for k, v in dct.items()})
 
 
-class RateLimitPolicy(Enum):
-    """Enum of possible rate limiting policies.
+class HttpRateLimitPolicy(Enum):
+    """Enum of possible HTTP rate limiting policies.
 
     Attrs:
         DENY: Deny the connection.
@@ -201,6 +202,19 @@ class RateLimitPolicy(Enum):
     SILENT = "silent-drop"
 
 
+class TcpRateLimitPolicy(Enum):
+    """Enum of possible TCP rate limiting policies.
+
+    Attrs:
+        REJECT: Send a TCP reset packet to close the connection.
+        SILENT: disconnects immediately without notifying the client
+            that the connection has been closed (no packet sent).
+    """
+
+    REJECT = "reject"
+    SILENT = "silent-drop"
+
+
 class DDoSProtectionProviderAppData(_DatabagModel):
     """Configuration model for DDoS protection provider.
 
@@ -209,8 +223,9 @@ class DDoSProtectionProviderAppData(_DatabagModel):
         rate_limit_connections_per_minute: Maximum number of connections per minute per entry.
         concurrent_connections_limit: Maximum number of concurrent connections per entry.
         error_rate: Number of errors per minute per entry to trigger the limit policy.
-        limit_policy: Policy to be applied when limits are exceeded.
-        policy_status_code: HTTP status code for deny policy (only set when limit_policy is deny).
+        limit_policy_http: Policy to be applied when HTTP-level limits are exceeded.
+        limit_policy_tcp: Policy to be applied when TCP-level limits are exceeded.
+        policy_status_code: HTTP status code for deny policy (only set when limit_policy_http is deny).
         ip_allow_list: List of IPv4 addresses or CIDR blocks to be allowed.
         http_request_timeout: Timeout for HTTP requests in seconds.
         http_keepalive_timeout: Timeout for HTTP keep-alive connections in seconds.
@@ -222,7 +237,8 @@ class DDoSProtectionProviderAppData(_DatabagModel):
     rate_limit_connections_per_minute: Optional[int] = Field(default=None, gt=0)
     concurrent_connections_limit: Optional[int] = Field(default=None, gt=0)
     error_rate: Optional[int] = Field(default=None, gt=0)
-    limit_policy: Optional[RateLimitPolicy] = Field(default=None)
+    limit_policy_http: Optional[HttpRateLimitPolicy] = Field(default=None)
+    limit_policy_tcp: Optional[TcpRateLimitPolicy] = Field(default=None)
     policy_status_code: Optional[int] = Field(default=None, ge=100, le=599)
     ip_allow_list: Optional[list[IPv4Network | IPv4Address]] = Field(default=None)
     http_request_timeout: Optional[int] = Field(default=None, gt=0)
@@ -274,85 +290,110 @@ class DDoSProtectionProviderAppData(_DatabagModel):
         return v
 
     @model_validator(mode="before")
-    def validate_limit_policy(self) -> Self:
-        """Validate and convert the limit_policy parameter.
+    def validate_limit_policies(self) -> Self:
+        """Validate and convert the limit_policy_http and limit_policy_tcp parameters.
 
-        The limit_policy must be one of: silent-drop, reject, or deny.
+        The limit_policy_http must be one of: silent-drop, reject, or deny.
+        The limit_policy_tcp must be one of: silent-drop or reject.
         For deny, optionally an HTTP status code can be appended (e.g., "deny 503").
         Extracts and stores the status code separately in policy_status_code.
 
         Raises:
-            ValueError: When limit_policy is invalid.
+            ValueError: When limit policies are invalid.
 
         Returns:
             The validated model.
         """
         data = cast(dict, self)
-        if not data.get("limit_policy"):
-            return self
 
-        limit_policy_input = data["limit_policy"]
+        if data.get("limit_policy_http"):
+            limit_policy_http = data["limit_policy_http"]
+            parts = limit_policy_http.strip().split()
+            policy_str = parts[0]
 
-        parts = limit_policy_input.strip().split()
-        policy_str = parts[0]
-
-        try:
-            policy = RateLimitPolicy(policy_str)
-        except ValueError:
-            valid_policies = ", ".join(p.value for p in RateLimitPolicy)
-            raise ValueError(
-                f"Invalid limit_policy: '{policy_str}'. Must be one of: {valid_policies}"
-            )
-
-        if policy != RateLimitPolicy.DENY and len(parts) > 1:
-            raise ValueError("Status code can only be specified with 'deny' policy")
-
-        if policy == RateLimitPolicy.DENY and len(parts) > 1:
             try:
-                status_code = int(parts[1])
-                data["policy_status_code"] = status_code
-            except ValueError as e:
+                http_policy = HttpRateLimitPolicy(policy_str)
+            except ValueError:
+                valid_policies = ", ".join(p.value for p in HttpRateLimitPolicy)
                 raise ValueError(
-                    f"Invalid limit_policy format. Expected 'deny' or 'deny <status_code>', "
-                    f"got '{limit_policy_input}'"
-                ) from e
+                    f"Invalid limit_policy_http: '{policy_str}'. Must be one of: {valid_policies}"
+                )
 
-        data["limit_policy"] = policy
+            if http_policy != HttpRateLimitPolicy.DENY and len(parts) > 1:
+                raise ValueError("Status code can only be specified with 'deny' policy")
+
+            if http_policy == HttpRateLimitPolicy.DENY and len(parts) > 1:
+                try:
+                    status_code = int(parts[1])
+                    data["policy_status_code"] = status_code
+                except ValueError as e:
+                    raise ValueError(
+                        f"Invalid limit_policy_http format. Expected 'deny' or 'deny <status_code>', "
+                        f"got '{limit_policy_http}'"
+                    ) from e
+
+            data["limit_policy_http"] = http_policy
+
+        if data.get("limit_policy_tcp"):
+            limit_policy_tcp = data["limit_policy_tcp"].strip()
+
+            try:
+                tcp_policy = TcpRateLimitPolicy(limit_policy_tcp)
+            except ValueError:
+                valid_policies = ", ".join(p.value for p in TcpRateLimitPolicy)
+                raise ValueError(
+                    f"Invalid limit_policy_tcp: '{limit_policy_tcp}'. Must be one of: {valid_policies}"
+                )
+
+            data["limit_policy_tcp"] = tcp_policy
 
         return self
 
     @model_validator(mode="after")
-    def validate_limit_policy_with_rate_limits(self) -> Self:
-        """Validate that limit_policy is only set when rate limits are configured.
+    def validate_limit_policies_with_rate_limits(self) -> Self:
+        """Validate that limit policies are only set when corresponding rate limits are configured.
 
-        If limit_policy is set, at least one of the rate limit fields must also be set.
-        Conversely, if no rate limits are configured and limit_policy is not set,
-        default limit_policy to SILENT when any rate limit is present.
+        HTTP policy applies to: rate_limit_requests_per_minute, error_rate
+        TCP policy applies to: rate_limit_connections_per_minute, concurrent_connections_limit
+        Sets default policies to SILENT when rate limits are present but policies are not set.
 
         Raises:
-            ValueError: When limit_policy is set without any rate limits.
+            ValueError: When limit policies are set without corresponding rate limits.
 
         Returns:
             The validated model.
         """
-        has_rate_limit = any(
+        has_http_rate_limit = any(
             [
                 self.rate_limit_requests_per_minute,
-                self.rate_limit_connections_per_minute,
-                self.concurrent_connections_limit,
                 self.error_rate,
             ]
         )
 
-        if not has_rate_limit and self.limit_policy is not None:
+        has_tcp_rate_limit = any(
+            [
+                self.rate_limit_connections_per_minute,
+                self.concurrent_connections_limit,
+            ]
+        )
+
+        if not has_http_rate_limit and self.limit_policy_http is not None:
             raise ValueError(
-                "limit_policy can only be set if at least one of "
-                "rate_limit_requests_per_minute, rate_limit_connections_per_minute, "
-                "concurrent_connections_limit, or error_rate is set"
+                "limit_policy_http can only be set if at least one of "
+                "rate_limit_requests_per_minute or error_rate is set"
             )
 
-        if has_rate_limit and self.limit_policy is None:
-            object.__setattr__(self, "limit_policy", RateLimitPolicy.SILENT)
+        if not has_tcp_rate_limit and self.limit_policy_tcp is not None:
+            raise ValueError(
+                "limit_policy_tcp can only be set if at least one of "
+                "rate_limit_connections_per_minute or concurrent_connections_limit is set"
+            )
+
+        if has_http_rate_limit and self.limit_policy_http is None:
+            object.__setattr__(self, "limit_policy_http", HttpRateLimitPolicy.SILENT)
+
+        if has_tcp_rate_limit and self.limit_policy_tcp is None:
+            object.__setattr__(self, "limit_policy_tcp", TcpRateLimitPolicy.SILENT)
 
         return self
 
@@ -389,7 +430,8 @@ class DDoSProtectionProvider(Object):
         rate_limit_connections_per_minute: Optional[int] = None,
         concurrent_connections_limit: Optional[int] = None,
         error_rate: Optional[int] = None,
-        limit_policy: Optional[str] = None,
+        limit_policy_http: Optional[str] = None,
+        limit_policy_tcp: Optional[str] = None,
         ip_allow_list: Optional[list[str]] = None,
         http_request_timeout: Optional[int] = None,
         http_keepalive_timeout: Optional[int] = None,
@@ -403,7 +445,8 @@ class DDoSProtectionProvider(Object):
             rate_limit_connections_per_minute: Maximum number of connections per minute per entry.
             concurrent_connections_limit: Maximum number of concurrent connections per entry.
             error_rate: Number of errors per minute per entry to trigger the limit policy.
-            limit_policy: Policy to be applied when limits are exceeded.
+            limit_policy_http: Policy to be applied when HTTP-level limits are exceeded.
+            limit_policy_tcp: Policy to be applied when TCP-level limits are exceeded.
             ip_allow_list: List of IPv4 addresses or CIDR blocks to be allowed.
             http_request_timeout: Timeout for HTTP requests in seconds.
             http_keepalive_timeout: Timeout for HTTP keep-alive connections in seconds.
@@ -419,7 +462,8 @@ class DDoSProtectionProvider(Object):
                 rate_limit_connections_per_minute=rate_limit_connections_per_minute,
                 concurrent_connections_limit=concurrent_connections_limit,
                 error_rate=error_rate,
-                limit_policy=cast(Optional[RateLimitPolicy], limit_policy),
+                limit_policy_http=cast(Optional[HttpRateLimitPolicy], limit_policy_http),
+                limit_policy_tcp=cast(Optional[TcpRateLimitPolicy], limit_policy_tcp),
                 ip_allow_list=cast(Optional[list[IPv4Network | IPv4Address]], ip_allow_list),
                 http_request_timeout=http_request_timeout,
                 http_keepalive_timeout=http_keepalive_timeout,
