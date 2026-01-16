@@ -27,7 +27,8 @@ class CharmState:
         rate_limit_connections_per_minute: Maximum number of connections per minute per entry.
         concurrent_connections_limit: Maximum number of concurrent connections per entry.
         error_rate_per_minute: Number of errors per minute per entry to trigger the limit policy.
-        limit_policy: Policy to be applied when limits are exceeded.
+        limit_policy_http: Policy to be applied when HTTP-level limits are exceeded.
+        limit_policy_tcp: Policy to be applied when TCP-level limits are exceeded.
         ip_allow_list: Comma-separated list of IPv4 addresses or CIDR blocks to be allowed.
         http_request_timeout: Timeout for HTTP requests in seconds.
         http_keepalive_timeout: Timeout for HTTP keep-alive connections in seconds.
@@ -39,7 +40,8 @@ class CharmState:
     rate_limit_connections_per_minute: Optional[int] = Field(default=None)
     concurrent_connections_limit: Optional[int] = Field(default=None)
     error_rate_per_minute: Optional[int] = Field(default=None)
-    limit_policy: Optional[str] = Field(default=None)
+    limit_policy_http: Optional[str] = Field(default=None)
+    limit_policy_tcp: Optional[str] = Field(default=None)
     ip_allow_list: Optional[List[str]] = Field(default=None)
     http_request_timeout: Optional[int] = Field(default=None)
     http_keepalive_timeout: Optional[int] = Field(default=None)
@@ -72,7 +74,8 @@ class CharmState:
                 Optional[int], config.get("concurrent-connections-limit")
             )
             error_rate_per_minute = cast(Optional[int], config.get("error-rate-per-minute"))
-            limit_policy = cast(Optional[str], config.get("limit-policy"))
+            limit_policy_http = cast(Optional[str], config.get("limit-policy-http"))
+            limit_policy_tcp = cast(Optional[str], config.get("limit-policy-tcp"))
             ip_allow_list: Optional[list[str]] = (
                 [ip.strip() for ip in cast(str, config.get("ip-allow-list", "")).split(",")]
                 if config.get("ip-allow-list")
@@ -92,7 +95,8 @@ class CharmState:
                 rate_limit_connections_per_minute=rate_limit_connections_per_minute,
                 concurrent_connections_limit=concurrent_connections_limit,
                 error_rate_per_minute=error_rate_per_minute,
-                limit_policy=limit_policy,
+                limit_policy_http=limit_policy_http,
+                limit_policy_tcp=limit_policy_tcp,
                 ip_allow_list=ip_allow_list,
                 http_request_timeout=http_request_timeout,
                 http_keepalive_timeout=http_keepalive_timeout,

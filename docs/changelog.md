@@ -8,11 +8,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-01-16
+
+- Added path rewrite support for gRPC backends.
+
 ## 2026-01-15
 
 - Added header rewrite support for gRPC backends.
 - Added missing settings from haproxy-route-tcp relation template.
 - Added documentation for the HAProxy DDoS protection configurator charm.
+
+## 2026-01-14
+
+- Added provider support for the `ddos_protection` interface on the HAProxy charm.
 
 ## 2026-01-09
 

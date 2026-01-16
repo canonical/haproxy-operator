@@ -126,6 +126,43 @@ def application_fixture(pytestconfig: pytest.Config, lxd_juju: jubilant.Juju):
     return app_name
 
 
+@pytest.fixture(scope="module", name="ddos_protection_configurator")
+def haproxy_ddos_protection_configurator_fixture(
+    pytestconfig: pytest.Config, lxd_juju: jubilant.Juju, application: str
+):
+    """Deploy the haproxy-ddos-protection-configurator application.
+
+    Args:
+        pytestconfig: Pytest config to get charm files.
+        lxd_juju: Jubilant juju fixture.
+        application: The haproxy application name.
+
+    Returns:
+        The haproxy-ddos-protection-configurator app name.
+    """
+    ddos_app_name = "haproxy-ddos-protection-configurator"
+
+    if (
+        pytestconfig.getoption("--no-deploy")
+        and ddos_app_name in lxd_juju.status().apps
+    ):
+        return ddos_app_name
+
+    charm_file = next(
+        (f for f in pytestconfig.getoption("--charm-file") if f"{ddos_app_name}_" in f),
+        None,
+    )
+    assert charm_file, f"--charm-file with {ddos_app_name} charm should be set"
+
+    lxd_juju.deploy(
+        charm=charm_file,
+        app=ddos_app_name,
+        base="ubuntu@24.04",
+    )
+
+    return ddos_app_name
+
+
 @pytest.fixture(scope="module", name="configured_application_with_tls_base")
 def configured_application_with_tls_base_fixture(
     pytestconfig: pytest.Config,
@@ -261,18 +298,23 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
 
 @pytest.fixture(scope="module", name="any_charm_haproxy_route_deployer")
 def any_charm_haproxy_route_deployer_fixture(
+    pytestconfig: pytest.Config,
     lxd_juju: jubilant.Juju,
 ):
     """Return a fixture function to create haproxy_route requirer anycharms."""
 
     def deployer(app_name):
-        return deploy_any_charm_haproxy_route_requirer(lxd_juju, app_name)
+        return deploy_any_charm_haproxy_route_requirer(pytestconfig, lxd_juju, app_name)
 
     yield deployer
 
 
-def deploy_any_charm_haproxy_route_requirer(lxd_juju: jubilant.Juju, app_name):
+def deploy_any_charm_haproxy_route_requirer(
+    pytestconfig: pytest.Config, lxd_juju: jubilant.Juju, app_name
+):
     """Deploy a haproxy_route requirer anycharm."""
+    if pytestconfig.getoption("--no-deploy") and app_name in lxd_juju.status().apps:
+        return app_name
     src_overwrite = json.dumps(
         {
             "any_charm.py": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(
