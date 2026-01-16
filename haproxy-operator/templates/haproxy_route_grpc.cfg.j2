@@ -16,9 +16,9 @@ backend {{ backend.backend_name }}
     balance {{ backend.load_balancing_configuration }}
     timeout server {{ backend.application_data.timeout.server }}s
     timeout connect {{ backend.application_data.timeout.connect }}s
-{% for rewrite_configuration in backend.rewrite_header_configurations %}
+    {% for rewrite_configuration in backend.grpc_rewrite_configurations %}
     http-request {{ rewrite_configuration }}
-{% endfor %}
+    {% endfor %}
     {% for server in backend.servers %}
     server {{ server.server_name }} {{ server.address }}:{{ server.port }} ssl ca-file {{ haproxy_cas_file }} alpn h2
     {% endfor %}
