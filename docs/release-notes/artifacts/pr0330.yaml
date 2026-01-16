@@ -1,0 +1,13 @@
+version_schema: 2
+changes:
+  - title: Added documentation for the HAProxy DDoS protection configurator charm.
+    author: swetha1654
+    type: minor
+    description: >
+      Updated the security documentation to include information about the HAProxy DDoS protection
+      configurator charm and added a "how to" guide for configuring DDoS protection using this charm.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/330
+    visibility: public
+    highlight: false
