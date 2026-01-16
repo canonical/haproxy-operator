@@ -13,7 +13,7 @@ from .helper import get_unit_ip_address
 
 
 @pytest.mark.abort_on_fail
-async def test_haproxy_route_tcp(
+def test_haproxy_route_tcp(
     configured_application_with_tls: str,
     any_charm_haproxy_route_tcp_requirer: str,
     juju: jubilant.Juju,
@@ -48,3 +48,42 @@ async def test_haproxy_route_tcp(
         ssock.send(b"ping")
         server_response = ssock.read()
         assert "pong" in str(server_response)
+
+
+@pytest.mark.abort_on_fail
+def test_haproxy_route_tcp_with_sticky_sessions(
+    configured_application_with_tls: str,
+    any_charm_haproxy_route_tcp_requirer: str,
+    juju: jubilant.Juju,
+):
+    """Deploy the charm with anycharm ingress per unit requirer.
+
+    Assert that the sticky session settings are properly added.
+    """
+    juju.integrate(
+        f"{configured_application_with_tls}:haproxy-route-tcp",
+        any_charm_haproxy_route_tcp_requirer,
+    )
+    juju.run(
+        f"{any_charm_haproxy_route_tcp_requirer}/0",
+        "rpc",
+        {"method": "update_relation_with_sticky_sessions"},
+    )
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, any_charm_haproxy_route_tcp_requirer
+        )
+    )
+
+    haproxy_config = juju.ssh(
+        f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
+    )
+    assert all(
+        entry in haproxy_config
+        for entry in [
+            "retries 3",
+            "option redispatch",
+            "balance source",
+            "hash-type consistent",
+        ]
+    )
