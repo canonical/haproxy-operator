@@ -334,7 +334,7 @@ def test_haproxy_route_grpcs_support(
     Assert that:
     - gRPCs requests can be proxied through HAProxy on default and custom ports
     - Header rewrites work correctly for gRPC backends
-    - Path and query rewrites are filtered out for gRPC
+    - Path rewrites work correctly for gRPC backends
     """
     juju.integrate(
         f"{any_charm_haproxy_route_requirer}:require-tls-certificates",
@@ -443,8 +443,7 @@ def test_haproxy_route_grpcs_support(
                         "header_rewrite_expressions": [
                             ["X-Custom-Header", "RewrittenByHAProxy"],
                         ],
-                        # These should be filtered out for gRPC
-                        "path_rewrite_expressions": ["/should-not-apply"],
+                        "path_rewrite_expressions": ["%[path,regsub(^/v1,)]"], # remove /v1 prefix from the path
                         "query_rewrite_expressions": ["should-not-apply=true"],
                     }
                 ]
@@ -494,3 +493,26 @@ def test_haproxy_route_grpcs_support(
         assert echo_response.message == "Header rewrite test"
         assert "x-echoed-header" in trailing_metadata
         assert trailing_metadata["x-echoed-header"] == "RewrittenByHAProxy"
+
+    # Test path rewrite functionality by making a request to /v1/echo.EchoService/Echo
+    # which should be rewritten to /echo.EchoService/Echo
+    with grpc.secure_channel(
+        f"{haproxy_ip_address}:8443",
+        ssl_credentials,
+        options=[
+            ("grpc.default_authority", TEST_EXTERNAL_HOSTNAME_CONFIG),
+            ("grpc.ssl_target_name_override", TEST_EXTERNAL_HOSTNAME_CONFIG),
+        ],
+    ) as channel:
+        echo_request = echo_pb2.EchoRequest(message="Path rewrite test")  # type: ignore[attr-defined]
+
+        # Call using the versioned path /v1/echo.EchoService/Echo
+        versioned_echo = channel.unary_unary(
+            "/v1/echo.EchoService/Echo",
+            request_serializer=echo_pb2.EchoRequest.SerializeToString,  # type: ignore[attr-defined]
+            response_deserializer=echo_pb2.EchoResponse.FromString,  # type: ignore[attr-defined]
+        )
+        echo_response = versioned_echo(echo_request)
+
+        # If the path rewrite works, we should get the echoed message back
+        assert echo_response.message == "Path rewrite test"
