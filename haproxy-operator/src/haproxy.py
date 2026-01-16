@@ -56,6 +56,8 @@ HAPROXY_DEFAULT_CONFIG_TEMPLATE = "haproxy.cfg.j2"
 HAPROXY_CERTS_DIR = Path("/var/lib/haproxy/certs")
 HAPROXY_CAS_DIR = Path("/var/lib/haproxy/cas")
 HAPROXY_CAS_FILE = Path(HAPROXY_CAS_DIR / "cas.pem")
+IP_ALLOW_LIST_FILE = Path("/var/lib/haproxy/ip_allow_list.lst")
+DENY_PATHS_FILE = Path("/var/lib/haproxy/deny_paths.lst")
 
 logger = logging.getLogger()
 
@@ -131,6 +133,9 @@ class HAProxyService:
             external_hostname: Configured external-hostname for TLS.
             ddos_protection_config: DDoS protection configuration.
         """
+        store_config_to_file(ddos_protection_config.ip_allow_list, IP_ALLOW_LIST_FILE)
+        store_config_to_file(ddos_protection_config.deny_paths, DENY_PATHS_FILE)
+
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
             "ddos_protection": charm_state.ddos_protection,
@@ -139,6 +144,8 @@ class HAProxyService:
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
             "ddos_protection_config": ddos_protection_config,
             "peer_units_address": ingress_requirers_information.peers,
+            "ip_allow_list_file": IP_ALLOW_LIST_FILE,
+            "deny_paths_file": DENY_PATHS_FILE,
         }
         template = (
             HAPROXY_INGRESS_CONFIG_TEMPLATE
@@ -165,6 +172,9 @@ class HAProxyService:
             spoe_oauth_info_list: Information about SPOE auth providers.
             ddos_protection_config: DDoS protection configuration.
         """
+        store_config_to_file(ddos_protection_config.ip_allow_list, IP_ALLOW_LIST_FILE)
+        store_config_to_file(ddos_protection_config.deny_paths, DENY_PATHS_FILE)
+
         valid_backends = haproxy_route_requirers_information.valid_backends()
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
@@ -188,6 +198,8 @@ class HAProxyService:
             "haproxy_cas_file": HAPROXY_CAS_FILE,
             "acls_for_allow_http": haproxy_route_requirers_information.acls_for_allow_http,
             "spoe_auth_info_list": spoe_oauth_info_list,
+            "ip_allow_list_file": IP_ALLOW_LIST_FILE,
+            "deny_paths_file": DENY_PATHS_FILE,
         }
         self._render_haproxy_config(HAPROXY_ROUTE_CONFIG_TEMPLATE, template_context)
         if spoe_oauth_info_list:
@@ -312,6 +324,35 @@ def file_exists(path: Path) -> bool:
         bool: True if the file exists.
     """
     return path.exists()
+
+
+def store_config_to_file(data: list[str] | None, file_path: Path) -> Path | None:
+    """Store configuration data to a file.
+
+    Args:
+        data: The data to store.
+        file_path: Path to the file where data will be stored.
+
+    Returns:
+        Path to the file if data is present, None otherwise.
+    """
+    if not data:
+        file_path.unlink(missing_ok=True)
+        logger.debug("Removed DDoS configuration file %s (no data)", file_path)
+        return None
+
+    lines = [str(item).strip() for item in data if str(item).strip()]
+    content = "\n".join(lines) + "\n"
+
+    render_file(file_path, content, 0o644)
+
+    logger.debug(
+        "Stored DDoS configuration to %s with %d entries",
+        file_path,
+        len(lines),
+    )
+
+    return file_path
 
 
 def pin_haproxy_package_version() -> None:

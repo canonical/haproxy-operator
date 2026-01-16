@@ -20,12 +20,12 @@
     acl has_host hdr(Host) -m found
     http-request silent-drop if invalid_method empty_method !has_host
 {% endif %}
-{% if ddos_protection_config.ip_allow_list_file_path %}
-    acl allowed_ips src -f {{ ddos_protection_config.ip_allow_list_file_path }}
+{% if ddos_protection_config.ip_allow_list %}
+    acl allowed_ips src -f {{ ip_allow_list_file }}
     http-request allow if allowed_ips
 {% endif %}
-{% if ddos_protection_config.deny_paths_file_path %}
-    acl denied_paths path_beg -f {{ ddos_protection_config.deny_paths_file_path }}
+{% if ddos_protection_config.deny_paths %}
+    acl denied_paths path_beg -f {{ deny_paths_file }}
     http-request deny if denied_paths
 {% endif %}
 {% if ddos_protection_config.http_request_timeout %}

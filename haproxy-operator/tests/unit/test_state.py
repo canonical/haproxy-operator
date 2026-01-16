@@ -641,39 +641,6 @@ def test_ddos_protection_has_rate_limiting(ddos_kwargs, expected):
     assert ddos_protection.has_rate_limiting is expected
 
 
-def test_store_config_to_file_with_data(tmp_path):
-    """
-    arrange: Create temporary file path and test data.
-    act: Call _store_config_to_file with data.
-    assert: File is created with correct content and path is returned.
-    """
-    test_file = tmp_path / "test_config.lst"
-    test_data = ["192.168.1.1", "10.0.0.0/8", " 172.16.0.1 "]
-
-    result = DDosProtection._store_config_to_file(test_data, test_file)
-
-    assert result == test_file
-    assert test_file.exists()
-    content = test_file.read_text(encoding="utf-8")
-    expected_content = "192.168.1.1\n10.0.0.0/8\n172.16.0.1\n"
-    assert content == expected_content
-
-
-def test_store_config_to_file_with_empty_data(tmp_path):
-    """
-    arrange: Create temporary file path and empty data.
-    act: Call _store_config_to_file with empty data.
-    assert: No file is created and None is returned.
-    """
-    test_file = tmp_path / "test_config.lst"
-    test_data: list = []
-
-    result = DDosProtection._store_config_to_file(test_data, test_file)
-
-    assert result is None
-    assert not test_file.exists()
-
-
 def test_ddos_protection_from_charm_no_config():
     """
     arrange: Create mock DDoSProtectionRequirer that returns no config.
@@ -688,24 +655,12 @@ def test_ddos_protection_from_charm_no_config():
     assert result == DDosProtection()
 
 
-def test_ddos_protection_from_charm_with_config(tmp_path, monkeypatch):
+def test_ddos_protection_from_charm_with_config():
     """
     arrange: Create mock DDoSProtectionRequirer with full configuration.
     act: Call DDosProtection.from_charm.
     assert: Returns DDosProtection with all fields populated correctly.
     """
-    ip_allow_file = tmp_path / "ip_allow_list.lst"
-    deny_paths_file = tmp_path / "deny_paths.lst"
-
-    monkeypatch.setattr(
-        "state.ddos_protection.IP_ALLOW_LIST_FILE",
-        ip_allow_file,
-    )
-    monkeypatch.setattr(
-        "state.ddos_protection.DENY_PATHS_FILE",
-        deny_paths_file,
-    )
-
     config = DDoSProtectionProviderAppData(
         rate_limit_requests_per_minute=1000,
         rate_limit_connections_per_minute=500,
@@ -722,7 +677,6 @@ def test_ddos_protection_from_charm_with_config(tmp_path, monkeypatch):
 
     ddos_requirer = MagicMock(spec=DDoSProtectionRequirer)
     ddos_requirer.get_ddos_config.return_value = config
-
     result = DDosProtection.from_charm(ddos_requirer)
 
     assert result.rate_limit_requests_per_minute == 1000
@@ -737,11 +691,8 @@ def test_ddos_protection_from_charm_with_config(tmp_path, monkeypatch):
     assert result.http_keepalive_timeout == 5000
     assert result.client_timeout == 60000
 
-    assert result.ip_allow_list_file_path == ip_allow_file
-    assert result.deny_paths_file_path == deny_paths_file
-
-    assert ip_allow_file.exists()
-    assert deny_paths_file.exists()
+    assert result.ip_allow_list == ["192.168.1.1", "10.0.0.0/8"]
+    assert result.deny_paths == ["/admin", "/secret"]
 
 
 def test_ddos_protection_from_charm_relation_data_error():

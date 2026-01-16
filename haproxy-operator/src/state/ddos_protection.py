@@ -4,7 +4,6 @@
 """HAProxy charm DDoS protection information."""
 
 import logging
-from pathlib import Path
 from typing import Optional
 
 from charms.haproxy.v0.ddos_protection import (
@@ -16,9 +15,6 @@ from pydantic.dataclasses import dataclass
 from .exception import CharmStateValidationBaseError
 
 logger = logging.getLogger(__name__)
-
-IP_ALLOW_LIST_FILE = Path("/var/lib/haproxy/ip_allow_list.lst")
-DENY_PATHS_FILE = Path("/var/lib/haproxy/deny_paths.lst")
 
 
 class DDosProtectionValidationError(CharmStateValidationBaseError):
@@ -54,8 +50,8 @@ class DDosProtection:
     http_request_timeout: Optional[int] = None
     http_keepalive_timeout: Optional[int] = None
     client_timeout: Optional[int] = None
-    ip_allow_list_file_path: Optional[Path] = None
-    deny_paths_file_path: Optional[Path] = None
+    ip_allow_list: Optional[list[str]] = None
+    deny_paths: Optional[list[str]] = None
 
     @property
     def has_rate_limiting(self) -> bool:
@@ -71,42 +67,12 @@ class DDosProtection:
             )
         )
 
-    @staticmethod
-    def _store_config_to_file(data: Optional[list[str]], file_path: Path) -> Optional[Path]:
-        """Store configuration data to a file.
-
-        Args:
-            data: The data to store.
-            file_path: Path to the file where data will be stored.
-
-        Returns:
-            Path to the file if data is present, None otherwise.
-        """
-        if not data:
-            file_path.unlink(missing_ok=True)
-            logger.debug("Removed DDoS configuration file %s (no data)", file_path)
-            return None
-
-        lines = [str(item).strip() for item in data if str(item).strip()]
-        content = "\n".join(lines) + "\n"
-
-        file_path.write_text(content, encoding="utf-8")
-
-        logger.debug(
-            "Stored DDoS configuration to %s with %d entries",
-            file_path,
-            len(lines),
-        )
-
-        return file_path
-
     @classmethod
     def from_charm(
         cls,
         ddos_requirer: DDoSProtectionRequirer,
     ) -> "DDosProtection":
         """Get DDoS protection configuration from charm's ddos-protection relation.
-        Write the IP allow list and deny paths to files.
         Convert timeouts from seconds to milliseconds.
 
         Args:
@@ -138,11 +104,6 @@ class DDosProtection:
                 config.limit_policy_tcp.value if config.limit_policy_tcp else None
             )
 
-            ip_allow_list_file_path = cls._store_config_to_file(
-                config.ip_allow_list, IP_ALLOW_LIST_FILE
-            )
-            deny_paths_file_path = cls._store_config_to_file(config.deny_paths, DENY_PATHS_FILE)
-
             return cls(
                 rate_limit_requests_per_minute=config.rate_limit_requests_per_minute,
                 rate_limit_connections_per_minute=config.rate_limit_connections_per_minute,
@@ -154,8 +115,10 @@ class DDosProtection:
                 http_request_timeout=http_request_timeout,
                 http_keepalive_timeout=http_keepalive_timeout,
                 client_timeout=client_timeout,
-                ip_allow_list_file_path=ip_allow_list_file_path,
-                deny_paths_file_path=deny_paths_file_path,
+                ip_allow_list=[str(ip) for ip in config.ip_allow_list]
+                if config.ip_allow_list
+                else None,
+                deny_paths=config.deny_paths,
             )
 
         except (DDosProtectionValidationError, DDoSProtectionInvalidRelationDataError) as e:
