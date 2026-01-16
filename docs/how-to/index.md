@@ -19,4 +19,5 @@ Provide extra configurations for ingress requirer charms <provide-extra-configur
 Upgrade <upgrade.md>
 Protect a hostname using OpenID Connect <protect-hostname-spoe-auth.md>
 Contribute <contribute.md>
+Enable DDoS Protection <enable-ddos-protection.md>
 ```
