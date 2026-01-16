@@ -4,6 +4,7 @@
 """HAproxy route charm state component."""
 
 import logging
+from collections.abc import Collection
 from functools import cached_property
 from typing import Optional, cast
 
@@ -158,7 +159,32 @@ class HAProxyRouteBackend:
             in [LoadBalancingAlgorithm.COOKIE, LoadBalancingAlgorithm.SRCIP]
         )
 
-    @property
+    def _build_rewrite_configurations(
+        self, allowed_methods: Collection[HaproxyRewriteMethod] | None = None
+    ) -> list[str]:
+        """Build rewrite configurations with optional filtering.
+
+        Args:
+            allowed_methods: Optional collection of allowed rewrite methods to filter by.
+
+        Returns:
+            list[str]: The rewrite configurations.
+        """
+        rewrite_configurations: list[str] = []
+        for rewrite in self.application_data.rewrites:
+            if allowed_methods and rewrite.method not in allowed_methods:
+                continue
+
+            match rewrite.method:
+                case HaproxyRewriteMethod.SET_HEADER:
+                    rewrite_configurations.append(
+                        f"{rewrite.method.value!s} {rewrite.header} {rewrite.expression}"
+                    )
+                case HaproxyRewriteMethod.SET_PATH | HaproxyRewriteMethod.SET_QUERY:
+                    rewrite_configurations.append(f"{rewrite.method.value!s} {rewrite.expression}")
+        return rewrite_configurations
+
+    @cached_property
     def rewrite_configurations(self) -> list[str]:
         """Build the rewrite configurations.
 
@@ -170,15 +196,18 @@ class HAProxyRouteBackend:
         Returns:
             list[str]: The rewrite configurations.
         """
-        rewrite_configurations: list[str] = []
-        for rewrite in self.application_data.rewrites:
-            if rewrite.method == HaproxyRewriteMethod.SET_HEADER:
-                rewrite_configurations.append(
-                    f"{rewrite.method.value!s} {rewrite.header} {rewrite.expression}"
-                )
-                continue
-            rewrite_configurations.append(f"{rewrite.method.value!s} {rewrite.expression}")
-        return rewrite_configurations
+        return self._build_rewrite_configurations()
+
+    @cached_property
+    def rewrite_header_configurations(self) -> list[str]:
+        """Build rewrite configurations for header rewrites only.
+
+        Returns:
+            list[str]: The header-only rewrite configurations.
+        """
+        return self._build_rewrite_configurations(
+            allowed_methods={HaproxyRewriteMethod.SET_HEADER}
+        )
 
 
 # pylint: disable=too-many-locals
