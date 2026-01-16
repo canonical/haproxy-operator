@@ -19,5 +19,6 @@ output "requires" {
     certificates     = "certificates"
     receive_ca_certs = "receive-ca-certs"
     reverseproxy     = "reverseproxy"
+    ddos_protection  = "ddos-protection"
   }
 }
