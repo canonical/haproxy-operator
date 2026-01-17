@@ -1,0 +1,10 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"
+    Deploy haproxy.
+    Deploy three anycharms that implement haproxy-route using three different hostnames.
+    Protect two of them with haproxy-spoe-auth.
+    The two protected ones should require OIDC authentication.
+    The unprotected one can be accessed directly.
+    ","227119","test_oauth_spoe","tests.integration","2026-01-17","passed","2026-01-17","","test_oauth_spoe","",""
+"Test that HAProxy integrates correctly with DDoS protection configurator.","84956","test_haproxy_ddos_protection_integration","tests.integration","2026-01-17","passed","2026-01-17","","test_haproxy_ddos","",""
+"Test that HAProxy receives correct DDoS protection configuration.","5837","test_haproxy_ddos_protection_configuration","tests.integration","2026-01-17","passed","2026-01-17","","test_haproxy_ddos","",""
