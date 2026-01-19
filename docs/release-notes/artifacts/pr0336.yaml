@@ -1,0 +1,15 @@
+version_schema: 2
+
+changes:
+  - title: Removed "assumes juju >= 3.6" for the HAProxy DDoS protection configurator charm.
+    author: swetha1654
+    type: minor
+    description: >
+      The HAProxy DDoS protection configurator charm works without requiring Juju version 3.6 or 
+      higher. This change enhances compatibility with earlier Juju versions, especially for the
+      HAProxy staging environment that uses Juju version less than 3.6.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/336
+    visibility: public
+    highlight: false
