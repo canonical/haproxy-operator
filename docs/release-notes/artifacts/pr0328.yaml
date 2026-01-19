@@ -1,0 +1,13 @@
+version_schema: 2
+changes:
+  - title: Added terraform modules for the HAProxy DDoS Protection configurator charm.
+    author: swetha1654
+    type: minor
+    description: >
+      Added terraform modules for the HAProxy DDoS Protection configurator charm in the `charm`
+      and `product` directories.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/328
+    visibility: public
+    highlight: false
