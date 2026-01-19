@@ -40,9 +40,9 @@ juju integrate haproxy haproxy-ddos-protection-configurator
 
 The configurator charm provides several configuration options to customize the protection level 
 according to your needs. For a full list of all the configurations, refer to the HAProxy DDoS 
-Protection configurator's [CharmHub](https://charmhub.io/haproxy-ddos-protection-configurator/configurations) documentation.
+Protection configurator's [Charmhub](https://charmhub.io/haproxy-ddos-protection-configurator/configurations) documentation.
 
-## Example configuration
+### Example configuration
 
 Here's a example command to configure the `haproxy-ddos-protection-configurator` charm:
 
