@@ -10,7 +10,7 @@ Each revision is versioned by the date of the revision.
 
 ## 2026-01-19
 
-- Removed "assumes juju >= 3.6" for the HAProxy DDoS protection configurator charm.
+- Fixed issues with the DDoS protection configurator charm found in staging.
 
 ## 2026-01-16
 
