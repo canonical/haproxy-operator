@@ -27,7 +27,7 @@ Each revision is versioned by the date of the revision.
 
 ## 2026-01-14
 
-- Added provider support for the `ddos_protection` interface on the HAProxy charm.
+- Added requirer support for the `ddos_protection` interface on the HAProxy charm.
 
 ## 2026-01-09
 

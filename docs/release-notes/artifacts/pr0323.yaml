@@ -1,9 +1,9 @@
 schema_version: 1
-title: Added provider support for the `ddos_protection` interface on the HAProxy charm.
+title: Added requirer support for the `ddos_protection` interface on the HAProxy charm.
 author: swetha1654
 type: major
 description: >
-  Implemented the provider side of the `ddos_protection` interface in the HAProxy charm 
+  Implemented the requirer side of the `ddos_protection` interface in the HAProxy charm 
   to enhance DDoS mitigation capabilities.
 urls:
   - https://github.com/canonical/haproxy-operator/pull/323
