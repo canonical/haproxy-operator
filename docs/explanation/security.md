@@ -52,10 +52,19 @@ Attackers hope to exhaust the service's resources, e.g., memory and CPU cycles.
 The common way to deal with this type of attack is by limiting the number of requests for each IP address.
 While it does not prevent all DoS attacks depending on the scale of the attack, it is generally an effective mitigation strategy.
 
+A Distributed Denial-of-service (DDoS) attack is a variant of DoS attack where the malicious traffic originates from multiple distributed sources, making it more difficult to block and typically more severe in scale.
+
 ### Good practices
 
-The charm offers a configuration to set the maximum concurrent connection. This can prevent the charm from crashing due to high loads.
+The charm offers several ways to protect against DoS attacks:
+
+1. **Basic protection**: 
+   - Set the maximum concurrent connections configuration to prevent the charm from crashing due to high loads.
+   - The HAProxy charm includes default ACLs that provide essential security protection by blocking potentially malicious HTTP methods, empty method requests, and requests without proper host headers. These ACLs are automatically applied to HAProxy frontends and should not be disabled unless absolutely required, as they provide fundamental protection against common attack vectors.
+
+2. **Advanced DDoS protection**: Use the [HAProxy DDoS Protection Configurator charm](https://github.com/canonical/haproxy-operator/tree/main/haproxy-ddos-protection-configurator), which provides advanced rate limiting and connection blocking capabilities specifically designed to mitigate DDoS attacks. For more information on how to use the configurator charm to protect the HAProxy operator from DDoS attacks, refer to the {ref}`Enable DDoS protection <how_to_enable_ddos_protection>` guide.
 
 ### Summary
 
 - Set a reasonable maximum concurrent connection using the [`global-maxconn` charm configuration](https://charmhub.io/haproxy/configurations?channel=2.8/edge#global-maxconn).
+- For enhanced protection against DDoS attacks, deploy and integrate the HAProxy DDoS Protection Configurator charm with your HAProxy deployment.

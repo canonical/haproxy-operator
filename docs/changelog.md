@@ -20,10 +20,8 @@ Each revision is versioned by the date of the revision.
 ## 2026-01-15
 
 - Added header rewrite support for gRPC backends.
-
-## 2026-01-15
-
 - Added missing settings from haproxy-route-tcp relation template.
+- Added documentation for the HAProxy DDoS protection configurator charm.
 
 ## 2026-01-14
 
