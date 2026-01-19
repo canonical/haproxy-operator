@@ -1,4 +1,7 @@
 # --- Information about release ----
+version_schema: 2
+
+workload_with_version: HAProxy 2.8
 
 # list of change artifacts included in the release
 included_changes:
@@ -10,9 +13,3 @@ earliest_revision: 284
 
 # latest revision included in the release
 latest_revision: 290
-
-# earliest date included in the release
-earliest_date: 2025-12-10
-
-# latest date included in the release 
-latest_date: 2025-12-16
