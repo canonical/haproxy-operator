@@ -10,6 +10,7 @@ Each revision is versioned by the date of the revision.
 
 ## 2026-01-16
 
+- Added terraform modules for the HAProxy DDoS Protection configurator charm.
 - Added path rewrite support for gRPC backends.
 
 ## 2026-01-15
