@@ -52,6 +52,8 @@ Attackers hope to exhaust the service's resources, e.g., memory and CPU cycles.
 The common way to deal with this type of attack is by limiting the number of requests for each IP address.
 While it does not prevent all DoS attacks depending on the scale of the attack, it is generally an effective mitigation strategy.
 
+A Distributed Denial-of-service (DDoS) attack is a variant of DoS attack where the malicious traffic originates from multiple distributed sources, making it more difficult to block and typically more severe in scale.
+
 ### Good practices
 
 The charm offers several ways to protect against DoS attacks:

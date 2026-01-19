@@ -9,7 +9,7 @@ This guide walks you through enabling DDoS protection for your HAProxy deploymen
 Deploy the `haproxy` and `self-signed-certificates` charms. Please refer to the {ref}`Tutorial <tutorial_getting_started>` for a more detailed explanation.
 
 ```sh
-juju deploy haproxy --channel=2.8/edge --base=ubuntu@24.04
+juju deploy haproxy --channel=2.8/edge
 juju deploy self-signed-certificates cert
 juju integrate haproxy:certificates cert
 ```
