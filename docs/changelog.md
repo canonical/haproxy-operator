@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-01-19
+
+- Fixed issues with the DDoS protection configurator charm found in staging.
+
 ## 2026-01-16
 
 - Added terraform modules for the HAProxy DDoS Protection configurator charm.
@@ -21,7 +25,7 @@ Each revision is versioned by the date of the revision.
 
 ## 2026-01-14
 
-- Added provider support for the `ddos_protection` interface on the HAProxy charm.
+- Added requirer support for the `ddos_protection` interface on the HAProxy charm.
 
 ## 2026-01-09
 

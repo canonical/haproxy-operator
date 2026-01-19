@@ -34,9 +34,6 @@ links:
   contact:
   - https://launchpad.net/~canonical-is-devops
 
-assumes:
-- juju >= 3.6
-
 config:
   options:
     rate-limit-requests-per-minute:
