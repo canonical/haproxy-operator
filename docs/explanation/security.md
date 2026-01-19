@@ -59,7 +59,7 @@ A Distributed Denial-of-service (DDoS) attack is a variant of DoS attack where t
 The charm offers several ways to protect against DoS attacks:
 
 1. **Basic protection**: 
-   - Set the maximum concurrent connection configuration to prevent the charm from crashing due to high loads.
+   - Set the maximum concurrent connections configuration to prevent the charm from crashing due to high loads.
    - The HAProxy charm includes default ACLs that provide essential security protection by blocking potentially malicious HTTP methods, empty method requests, and requests without proper host headers. These ACLs are automatically applied to HAProxy frontends and should not be disabled unless absolutely required, as they provide fundamental protection against common attack vectors.
 
 2. **Advanced DDoS protection**: Use the [HAProxy DDoS Protection Configurator charm](https://github.com/canonical/haproxy-operator/tree/main/haproxy-ddos-protection-configurator), which provides advanced rate limiting and connection blocking capabilities specifically designed to mitigate DDoS attacks. For more information on how to use the configurator charm to protect the HAProxy operator from DDoS attacks, refer to the {ref}`Enable DDoS protection <how_to_enable_ddos_protection>` guide.
