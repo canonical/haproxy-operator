@@ -69,8 +69,7 @@ class HAProxyRouteBackend:
         application_data: requirer application data.
         backend_name: The name of the backend (computed).
         servers: The list of server each corresponding to a requirer unit.
-        external_hostname: Configured haproxy hostname.
-        hostname_acls: The list of hostname ACLs.
+        hostname_acls: The list of hostname ACLs for the backend.
         load_balancing_configuration: Load balancing configuration for the haproxy backend.
         rewrite_configurations: Rewrite configuration.
         path_acl_required: Indicate if path routing is required.
@@ -82,7 +81,7 @@ class HAProxyRouteBackend:
     relation_id: int
     application_data: RequirerApplicationData
     servers: list[HAProxyRouteServer]
-    external_hostname: Optional[str]
+    hostname_acls: list[str]
 
     @property
     def backend_name(self) -> str:
@@ -110,25 +109,6 @@ class HAProxyRouteBackend:
             bool: Whether the `deny_paths` attribute in the requirer data is empty.
         """
         return bool(self.application_data.deny_paths)
-
-    @cached_property
-    def hostname_acls(self) -> list[str]:
-        """Build the list of hostname ACL for the backend.
-
-        Combines the hostname and additional_hostnames attribute into a list of hostname ACLs.
-        Returns the configured external-hostname if hostname is not set.
-        Returns an empty list if both external-hostname and the hostname attribute are not set.
-
-        Returns:
-            list[str]: List of hostname for ACL matching.
-        """
-        if not self.application_data.hostname:
-            if not self.external_hostname:
-                return []
-
-            return [self.external_hostname]
-
-        return [self.application_data.hostname, *self.application_data.additional_hostnames]
 
     # We disable no-member here because pylint doesn't know that
     # self.application_data.load_balancing Has a default value set
@@ -279,7 +259,9 @@ class HaproxyRouteRequirersInformation:
                     relation_id=requirer.relation_id,
                     application_data=requirer.application_data,
                     servers=get_servers_definition_from_requirer_data(requirer),
-                    external_hostname=external_hostname,
+                    hostname_acls=generate_hostname_acls(
+                        requirer.application_data, external_hostname
+                    ),
                 )
 
                 if not backend.hostname_acls:
@@ -487,3 +469,23 @@ def get_backend_max_path_depth(backend: HAProxyRouteBackend) -> int:
     if not paths:
         return 1
     return max(len(path.rstrip("/").split("/")) for path in paths)
+
+
+def generate_hostname_acls(
+    application_data: RequirerApplicationData, external_hostname: Optional[str]
+) -> list[str]:
+    """Generate the list of hostname ACLs for a backend.
+
+    Args:
+        application_data: The requirer application data.
+        external_hostname: The charm's configured external hostname.
+
+    Returns:
+        list[str]: The combined list of hostnames.
+    """
+    if not application_data.hostname:
+        if not external_hostname:
+            return []
+
+        return [external_hostname]
+    return [application_data.hostname, *application_data.additional_hostnames]
