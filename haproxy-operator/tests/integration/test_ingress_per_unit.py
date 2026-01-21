@@ -35,12 +35,12 @@ async def test_ingress_per_unit_integration(
         )
     )
     unit_ip = get_unit_ip_address(juju, configured_application_with_tls)
-    path_suffix = f"{juju.model}-{any_charm_ingress_per_unit_requirer}/0/ok"
+    path = f"{juju.model}-{any_charm_ingress_per_unit_requirer}/0/ok"
 
     if isinstance(unit_ip, ipaddress.IPv6Address):
-        ingress_url = f"https://[{unit_ip}]{path_suffix}"
+        ingress_url = f"https://[{unit_ip}]/{path}"
     else:
-        ingress_url = f"https://{unit_ip}{path_suffix}"
+        ingress_url = f"https://{unit_ip}/{path}"
 
     response = requests.get(
         ingress_url,
