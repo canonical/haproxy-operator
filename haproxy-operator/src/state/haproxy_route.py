@@ -48,7 +48,6 @@ class HAProxyRouteServer:
         protocol: The protocol that the backend service speaks. "http" (default) or "https".
         check: Health check configuration.
         maxconn: Maximum allowed connections before requests are queued.
-        external_grpc_port: Optional external gRPC port.
     """
 
     server_name: str
@@ -57,7 +56,6 @@ class HAProxyRouteServer:
     protocol: str
     check: Optional[ServerHealthCheck]
     maxconn: Optional[int]
-    external_grpc_port: Optional[int]
 
 
 @dataclass(frozen=True)
@@ -466,7 +464,6 @@ def get_servers_definition_from_requirer_data(
                     protocol=requirer.application_data.protocol,
                     check=requirer.application_data.check,
                     maxconn=requirer.application_data.server_maxconn,
-                    external_grpc_port=requirer.application_data.external_grpc_port,
                 )
             )
     return servers
