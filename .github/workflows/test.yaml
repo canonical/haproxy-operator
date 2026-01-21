@@ -21,4 +21,3 @@ jobs:
       self-hosted-runner: true
       self-hosted-runner-image: "noble"
       working-directory: ${{ matrix.charm.working-directory }}
-      with-uv: true
