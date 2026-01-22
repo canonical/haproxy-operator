@@ -41,4 +41,5 @@ Release notes are published for the `haproxy` charm with every revision of the `
 :maxdepth: 1
 Revision 216 <release-notes-rev216>
 Revision 283 <release-notes-0001>
+Revision 290 <release-notes-0002>
 ```
