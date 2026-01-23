@@ -210,15 +210,6 @@ def any_charm_ingress_per_unit_requirer_fixture(
         lambda status: (jubilant.all_active(status, ANY_CHARM_INGRESS_PER_UNIT_REQUIRER)),
         timeout=JUJU_WAIT_TIMEOUT,
     )
-    juju.integrate(
-        f"{configured_application_with_tls}:ingress-per-unit",
-        f"{ANY_CHARM_INGRESS_PER_UNIT_REQUIRER}:require-ingress-per-unit",
-    )
-    juju.wait(
-        lambda status: jubilant.all_active(
-            status, configured_application_with_tls, ANY_CHARM_INGRESS_PER_UNIT_REQUIRER
-        )
-    )
     return ANY_CHARM_INGRESS_PER_UNIT_REQUIRER
 
 
