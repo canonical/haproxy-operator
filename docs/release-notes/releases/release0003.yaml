@@ -1,0 +1,28 @@
+# --- Information about release ----
+version_schema: 2
+
+workload_with_version: HAProxy 2.8
+
+# list of change artifacts included in the release
+included_changes:
+  - pr0287.yaml
+  - pr0299.yaml
+  - pr0300.yaml
+  - pr0302.yaml
+  - pr0315.yaml
+  - pr0316.yaml
+  - pr0317.yaml
+  - pr0318.yaml
+  - pr0319.yaml
+  - pr0321.yaml
+  - pr0323.yaml
+  - pr0324.yaml
+  - pr0325.yaml
+  - pr0328.yaml
+  - pr0329.yaml
+
+# earliest revision included in the release
+earliest_revision: 293
+
+# latest revision included in the release
+latest_revision: 314
