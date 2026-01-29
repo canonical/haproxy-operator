@@ -2,7 +2,7 @@
 
 As adoption of the HAProxy charm grows across multiple teams, and with the decision to use it as the front door for the Canonical PS7 infrastructure, the HAProxy charm has become more critical than ever. HAProxy provides multiple integration interfaces, each designed for different levels of control and different workload types. Choosing the right interface depends on your application’s requirements and operational model.
 
-This post tries to explain the different interfaces provided by HAProxy charm and the best HAProxy setup for various use cases.
+This post presents the different interfaces provided by HAProxy charm and the best HAProxy setup for various use cases.
 
 ## HAProxy interfaces
 
@@ -34,7 +34,10 @@ Examples of supported advanced features include:
 * Load balancing algorithm selection
 * Timeout configuration
 
-This interface is HAProxy-specific and should be used only when these advanced features are required.
+This interface is HAProxy-specific and should be used only when:
+* Advanced features are required which are not supported by the `ingress` relation.
+* Your application’s ingress requirements change during the charm lifecycle, and the charm must update those requirements dynamically.
+
 
 ### `tcp-ingress` (Planned)
 
@@ -89,4 +92,4 @@ The following flow chart will help you identify the ideal HAProxy setup for ever
 
 ![alt text](image.png)
 
-If you think your use case does not fit any of the above or are still unsure which interface is the best fit for you, reach out to us on the [Platform Engineering](https://chat.canonical.com/canonical/channels/platform-engineering) channel. We’re always happy to help!
+If you think your use case does not fit any of the above or are still unsure which interface is the best fit for you, please reach out to us on the [Platform Engineering](https://chat.canonical.com/canonical/channels/platform-engineering) channel. We’re always happy to help!
