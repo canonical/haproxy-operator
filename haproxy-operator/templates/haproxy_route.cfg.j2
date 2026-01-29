@@ -126,7 +126,7 @@ backend spop_auth_{{ spoe_auth_info.id }}
 {% endfor %}
 {% endfor %}
 
-{% if tcp_endpoints %}{% include 'haproxy_route_tcp.cfg.j2' %}{% endif %}
+{% if tcp_frontends %}{% include 'haproxy_route_tcp.cfg.j2' %}{% endif %}
 
 {% if grpc_backends %}{% include 'haproxy_route_grpc.cfg.j2' %}{% endif %}
 

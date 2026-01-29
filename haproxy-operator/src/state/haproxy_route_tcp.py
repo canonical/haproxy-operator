@@ -11,8 +11,26 @@ from charms.haproxy.v0.haproxy_route_tcp import (
     TCPHealthCheckType,
     TCPServerHealthCheck,
 )
-from pydantic import IPvAnyAddress
+from pydantic import Field, IPvAnyAddress
 from pydantic.dataclasses import dataclass
+from typing_extensions import NamedTuple
+
+from .exception import CharmStateValidationBaseError
+
+
+class HAProxyRouteTcpFrontendValidationError(CharmStateValidationBaseError):
+    """Exception raised when a TCP frontend is not valid."""
+
+
+class BackendRoutingConfiguration(NamedTuple):
+    """A representation of backend routing configuration.
+    Attrs:
+        acl: The ACL condition for routing.
+        use_backend: haproxy use_backend configuration.
+    """
+
+    acl: str
+    use_backend: str
 
 
 @dataclass(frozen=True)
@@ -140,3 +158,154 @@ class HAProxyRouteTcpEndpoint(HaproxyRouteTcpRequirerData):
             if check.check_type is not None:
                 return [f"option {check.check_type!s}"]
         return []
+
+
+@dataclass
+class HAProxyRouteTcpFrontend:
+    """A representation of a TCP frontend in the haproxy config.
+
+    Attrs:
+        port: The port exposed on the provider.
+        backends: List of backend endpoints for this frontend.
+        enforce_tls: Whether to enforce TLS for all traffic.
+        tls_terminate: Whether to enable TLS termination.
+    """
+
+    port: int = Field(description="The port exposed on the provider.", gt=0, le=65535)
+    backends: list[HAProxyRouteTcpEndpoint] = Field(description="List of backend endpoints.")
+    enforce_tls: bool = Field(description="Whether to enforce TLS for all traffic.", default=True)
+    tls_terminate: bool = Field(description="Whether to enable tls termination.", default=True)
+    relation_ids_with_invalid_data: set[int] = Field(
+        description="List of relation ids with invalid data.", default=set[int]()
+    )
+
+    @classmethod
+    def from_backends(cls, backends: list[HAProxyRouteTcpEndpoint]) -> "Self":
+        """Instantiate a HAProxyRouteTcpFrontend class from a list of backends.
+
+        Args:
+            backends: List of backend endpoints.
+
+        Raises:
+            HAProxyRouteTcpFrontendValidationError: When the frontend is initialized with no backends.
+
+        Returns:
+            Self: The instantiated HAProxyRouteTcpFrontend class.
+        """
+        # If there's only one backend, return the class directly with values from the backend
+        if len(backends) == 1:
+            return cls(
+                port=backends[0].application_data.port,
+                backends=backends,
+                enforce_tls=backends[0].application_data.enforce_tls,
+                tls_terminate=backends[0].application_data.tls_terminate,
+                relation_ids_with_invalid_data=set[int](),
+            )
+
+        # At this point we have more than one backend, all of them need to set enforce_tls=True
+        # and have an sni value for them to be routable and merged.
+        routable_backends: list[HAProxyRouteTcpEndpoint] = []
+        # If there are backends that set tls_terminate=True amongst the routable backends
+        # then only those will be merged.
+        routable_backends_with_tls_terminate: list[HAProxyRouteTcpEndpoint] = []
+        routable_backends_without_tls_terminate: list[HAProxyRouteTcpEndpoint] = []
+
+        relation_ids_with_invalid_data: set[int] = set[int]()
+        for backend in backends:
+            if backend.application_data.enforce_tls and backend.application_data.sni is not None:
+                routable_backends.append(backend)
+                if backend.application_data.tls_terminate:
+                    routable_backends_with_tls_terminate.append(backend)
+                else:
+                    routable_backends_without_tls_terminate.append(backend)
+            else:
+                relation_ids_with_invalid_data.add(backend.relation_id)
+
+        if routable_backends_with_tls_terminate:
+            relation_ids_with_invalid_data.update(
+                backend.relation_id for backend in routable_backends_without_tls_terminate
+            )
+
+        rendered_backends = routable_backends_with_tls_terminate or routable_backends
+        if not rendered_backends:
+            raise HAProxyRouteTcpFrontendValidationError(
+                "Cannot create HAProxyRouteTcpFrontend from empty backends list"
+            )
+        return cls(
+            port=rendered_backends[0].application_data.port,
+            backends=rendered_backends,
+            enforce_tls=rendered_backends[0].application_data.enforce_tls,
+            tls_terminate=rendered_backends[0].application_data.tls_terminate,
+            relation_ids_with_invalid_data=relation_ids_with_invalid_data,
+        )
+
+    @property
+    def backend_sni_routing_configurations(self) -> list[BackendRoutingConfiguration]:
+        """Get the routing configuration for each backend.
+
+        Returns:
+            list[BackendRoutingConfiguration]: List of SNI ACL and use_backend configuration.
+        """
+        acls: list[BackendRoutingConfiguration] = []
+        for backend in self.backends:
+            if sni := backend.application_data.sni:
+                acls.append(
+                    BackendRoutingConfiguration(
+                        acl=f"acl is_{backend.name} req.ssl_sni -i {sni}",
+                        use_backend=f"use_backend {backend.name} if is_{backend.name}",
+                    )
+                )
+        return acls
+
+    @property
+    def is_sni_routing_enabled(self) -> bool:
+        """Indicate if SNI routing is enabled for this frontend.
+
+        If SNI routing is enabled, haproxy needs to be configured with:
+        ```
+        tcp-request inspect-delay 5s
+        tcp-request content accept if { req_ssl_hello_type 1 }
+        ```
+        to properly inspect and route traffic based on the SNI value.
+
+        Returns:
+            bool: Whether SNI routing is enabled.
+        """
+        return bool(self.backend_sni_routing_configurations)
+
+    @property
+    def default_backend_name(self) -> str:
+        """Get the default backend name for this frontend.
+
+        The default backend is used when no SNI ACLs match.
+
+        Returns:
+            str: The name of the default backend.
+        """
+        return f"haproxy_route_tcp_{self.port}_default_backend"
+
+    @property
+    def content_inspect_delay_required(self) -> bool:
+        """Indicate if content inspect delay is required.
+
+        This will add `tcp-request inspect-delay 5s` to the frontend configuration.
+
+        Returns:
+            bool: Whether content inspect delay is required.
+        """
+        return self.is_sni_routing_enabled or self.enforce_tls
+
+    @property
+    def enforce_tls_configuration(self) -> str:
+        """Get the enforce TLS configuration line.
+
+        This will add `tcp-request content reject unless { req_ssl_hello_type 1 }`
+        to the frontend configuration if sni is not used, otherwise we can simply
+        do `tcp-request content reject` to not have to reevaluate the SNI ACL.
+
+        Returns:
+            str: The enforce TLS configuration line.
+        """
+        if not self.is_sni_routing_enabled:
+            return "tcp-request content reject unless { req_ssl_hello_type 1 }"
+        return "tcp-request content reject"
