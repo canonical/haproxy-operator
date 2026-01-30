@@ -249,9 +249,12 @@ class HAProxyRouteTcpFrontend:
         acls: list[BackendRoutingConfiguration] = []
         for backend in self.backends:
             if sni := backend.application_data.sni:
+                sni_fetch_method = (
+                    "ssl_fc_sni" if backend.application_data.tls_terminate else "req.ssl_sni"
+                )
                 acls.append(
                     BackendRoutingConfiguration(
-                        acl=f"acl is_{backend.name} req.ssl_sni -i {sni}",
+                        acl=f"acl is_{backend.name} {sni_fetch_method} -i {sni}",
                         use_backend=f"use_backend {backend.name} if is_{backend.name}",
                     )
                 )
