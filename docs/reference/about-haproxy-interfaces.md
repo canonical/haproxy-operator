@@ -20,7 +20,7 @@ This is the recommended default for most HTTP workloads.
 
 ### `ingress-per-unit`
 
-Some applications require a cluster unique endpoint per Juju unit. The `ingress-per-unit` interface provides this capability. 
+Some applications require each Juju unit to have its own unique endpoint. The `ingress-per-unit` interface provides this capability. 
 This is typically used when units must be individually addressable. For example: Prometheus, where each remote-write endpoint needs to be routed to separately.
 
 ### `haproxy-route`
