@@ -63,14 +63,14 @@ This interface will be deprecated in the future.
 
 Here is a table that shows which of these relations can simultaneously exist with each other and under what conditions:
 
-| reverseproxy | ingress           | haproxy-route | haproxy-route-tcp | Valid configuration? |
-|--------------|-------------------|---------------|-------------------|----------------------|
-| yes          |                   |(at least 1 yes)|                  | no                   |
-| yes          |                   | no             |                  | yes                  |
-| no           | yes               | no            | yes               | yes (request for port 80 and 443 is not possible) |
-| no           | no                | yes           | yes               | yes (request for port 80 and 443 is not possible) |
-| no           |                   |               | yes               | yes (every valid port is available to be requested) |
-| no           | yes               | yes           | any               | no                   |
+| reverseproxy | ingress           | haproxy-route |             haproxy-route-tcp                    | Supported? |
+|--------------|-------------------|---------------|--------------------------------------------------|------------|
+|       ✔      |      ✔ / ˟        |    ✔ / ˟      |                      ✔ / ˟                       |     no     |
+|       ✔      |       ˟           |       ˟       |                        ˟                         |    yes     |
+|       ˟      |       ✔           |       ˟       |       ✔ (requesting port 80/443 not possible)    |    yes     |
+|       ˟      |       ˟           |       ✔       |       ✔ (requesting port 80/443 not possible)    |    yes     |
+|       ˟      |       ˟           |       ˟       |           ✔ (all ports available)                |    yes     |
+|       ˟      |       ✔           |       ✔       |                       ✔ / ˟                      |     no     |
 
 
 ## Simplifying integrations with the configurator pattern
