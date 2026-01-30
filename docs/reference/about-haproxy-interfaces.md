@@ -1,8 +1,8 @@
 # Choosing the right HAProxy integration for your workload
 
-As adoption of the HAProxy charm grows across multiple teams, and with the decision to use it as the front door for the Canonical PS7 infrastructure, the HAProxy charm has become more critical than ever. HAProxy provides multiple integration interfaces, each designed for different levels of control and different workload types. Choosing the right interface depends on your application’s requirements and operational model.
+As more teams adopt the HAProxy charm, and with the decision to use it as the front door for the Canonical PS7 infrastructure, the charm has become more critical than ever. HAProxy provides multiple integration interfaces, each designed for different levels of control and different workload types. Choosing the right interface depends on your application’s requirements and operational model.
 
-This post presents the different interfaces provided by HAProxy charm and the best HAProxy setup for various use cases.
+This post presents the different interfaces provided by the HAProxy charm and the best HAProxy setup for various use cases.
 
 ## HAProxy interfaces
 
@@ -41,11 +41,11 @@ This interface is HAProxy-specific and should be used only when:
 
 ### `tcp-ingress` (Planned)
 
-The `tcp-ingress` interface is a controller independent interface (similar to `ingress`) which is designed for TCP routing. Note that this interface is not yet implemented but is planned for an upcoming development cycle.
+The `tcp-ingress` interface will be a controller-independent interface (similar to `ingress`) which is designed for TCP routing. Note that this interface is not yet implemented but is planned for an upcoming development cycle.
 
 ### `haproxy-route-tcp`
 
-The `haproxy-route-tcp` interface is the advanced equivalent of `tcp-ingress`. It allows HAProxy to provide TCP routing with fine-grained control. This interface is HAProxy specific and will be able to exist in parallel with the haproxy-route integration or with the ingress integration.
+The `haproxy-route-tcp` interface is the advanced equivalent of `tcp-ingress`. It allows HAProxy to provide TCP routing with fine-grained control. This interface is specific to HAProxy and will be able to exist in parallel with either the `haproxy-route` or `ingress` relations.
 
 ### `reverseproxy`
 
@@ -53,7 +53,7 @@ The `reverseproxy` interface exists only for compatibility with applications tha
 
 Things to note about this interface:
 
-* Only relation compatibility is supported (not config options).
+* Only relation compatibility is supported (not configuration options).
 * When `reverseproxy` is enabled, the charm does not support managing other integrations.
 * Using `reverseproxy` alongside `ingress`, `ingress-per-unit`, `haproxy-route`, or `haproxy-route-tcp` will block the charm.
 
@@ -75,7 +75,7 @@ Here is a table that shows which of these relations can simultaneously exist wit
 
 ## Simplifying integrations with the configurator pattern
 
-The `haproxy-route` relation provides more flexibility and control over how the backend workload is exposed than the generic ingress interface. However, workload charms that implement the `haproxy-route` relation often introduce additional charm configuration options to control how HAProxy exposes the workload. This is not considered best practice, as it is not the responsibility of the workload charm to directly configure how it’s exposed. 
+The `haproxy-route` relation provides more flexibility and control over how the backend workload is exposed than the generic `ingress` interface. However, workload charms that implement the `haproxy-route` relation often introduce additional charm configuration options to control how HAProxy exposes the workload. This is not considered best practice, as it is not the responsibility of the workload charm to directly configure how it’s exposed. 
 
 Moreover, there are some non-charmed workloads which are not part of the Juju ecosystem and still require an ingress.
 
@@ -84,11 +84,11 @@ Moreover, there are some non-charmed workloads which are not part of the Juju ec
 To address these concerns, we have developed the [ingress configurator](https://github.com/canonical/ingress-configurator-operator) operator, which provides the following modes:
 
 * **Integrator mode**: For non-charmed workloads to request an ingress.
-* **Adapter mode**: For ingress requiring applications to leverage the additional fine-grained configurations provided by the `haproxy-route` interface.
+* **Adapter mode**: For applications to leverage the additional fine-grained configurations provided by the `haproxy-route` interface.
 
 ## Choosing the right HAProxy setup
 
-The following flow chart will help you identify the ideal HAProxy setup for every use case:
+The following flow chart will help you identify the ideal HAProxy setup for different use cases:
 
 ![alt text](image.png)
 
