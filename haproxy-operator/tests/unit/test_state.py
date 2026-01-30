@@ -945,14 +945,14 @@ def test_haproxy_route_tcp_frontend_backend_sni_routing_configurations(
 
     assert len(routing_configs) == 2
     assert (
-        routing_configs[0].acl == "acl is_tcp-route-requirer_4000 req.ssl_sni -i api1.example.com"
+        routing_configs[0].acl == "acl is_tcp-route-requirer_4000 ssl_fc_sni -i api1.example.com"
     )
     assert (
         routing_configs[0].use_backend
         == "use_backend tcp-route-requirer_4000 if is_tcp-route-requirer_4000"
     )
     assert (
-        routing_configs[1].acl == "acl is_tcp-route-requirer_4000 req.ssl_sni -i api2.example.com"
+        routing_configs[1].acl == "acl is_tcp-route-requirer_4000 ssl_fc_sni -i api2.example.com"
     )
     assert (
         routing_configs[1].use_backend
