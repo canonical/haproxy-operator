@@ -92,4 +92,6 @@ The following flow chart will help you identify the ideal HAProxy setup for diff
 
 ![alt text](image.png)
 
+**NOTE:** Since `tcp-ingress` is not available as of today, the recommended approach for users with solutions involving `tcp-ingress` is to use the integrator mode in the ingress-configurator charm to get a TCP endpoint.
+
 If you think your use case does not fit any of the above or are still unsure which interface is the best fit for you, please reach out to us on the [Platform Engineering](https://chat.canonical.com/canonical/channels/platform-engineering) channel. We’re always happy to help!
