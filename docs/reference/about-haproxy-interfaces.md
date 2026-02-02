@@ -65,12 +65,12 @@ Here is a table that shows which of these relations can simultaneously exist wit
 
 | reverseproxy | ingress           | haproxy-route |             haproxy-route-tcp                    | Supported? |
 |--------------|-------------------|---------------|--------------------------------------------------|------------|
-|       ✔      |      ✔ / ˟        |    ✔ / ˟      |                      ✔ / ˟                       |     no     |
-|       ✔      |       ˟           |       ˟       |                        ˟                         |    yes     |
-|       ˟      |       ✔           |       ˟       |       ✔ (requesting port 80/443 not possible)    |    yes     |
-|       ˟      |       ˟           |       ✔       |       ✔ (requesting port 80/443 not possible)    |    yes     |
-|       ˟      |       ˟           |       ˟       |           ✔ (all ports available)                |    yes     |
-|       ˟      |       ✔           |       ✔       |                       ✔ / ˟                      |     no     |
+|       ✔      |      ✔ / ⛌        |    ✔ / ⛌      |                      ✔ / ⛌                      |     no     |
+|       ✔      |       ⛌           |       ⛌       |                        ⛌                        |    yes     |
+|       ⛌      |       ✔           |       ⛌       |       ✔ (requesting port 80/443 not possible)    |    yes     |
+|       ⛌      |       ⛌           |       ✔       |       ✔ (requesting port 80/443 not possible)    |    yes     |
+|       ⛌      |       ⛌           |       ⛌       |           ✔ (all ports available)                |    yes     |
+|       ⛌      |       ✔           |       ✔       |                       ✔ / ⛌                      |     no     |
 
 
 ## Simplifying integrations with the configurator pattern
