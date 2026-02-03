@@ -100,7 +100,7 @@ Relevant links:
 
 
 ### Remove extra slash from _get_backend_proxied_endpoints
-Remove extra slash in _get_backend_proxied_endpoints function in charm.py. Fixes bug #285
+Remove extra slash in _get_backend_proxied_endpoints function in `charm.py`. Fixes bug #285
 
 <Add more context and information about the entry>
 
