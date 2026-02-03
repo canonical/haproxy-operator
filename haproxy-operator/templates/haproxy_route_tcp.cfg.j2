@@ -37,22 +37,24 @@ frontend haproxy_route_tcp_{{ frontend.port }}
     http-request allow if allowed_ips
 {% endif %}
 
-{# SNI routing configuration. #}
+{# This configuration block is only applicable when not terminating TLS. #}
+{% if not frontend.tls_terminate %}
 {% if frontend.content_inspect_delay_required %}
     tcp-request inspect-delay 5s
 {% endif %}
 {% if frontend.is_sni_routing_enabled %}
     tcp-request content accept if { req_ssl_hello_type 1 }
 {% endif %}
+{% if frontend.enforce_tls %}
+    {{ frontend.enforce_tls_configuration }}
+{% endif %}
+{% endif %}
 
+{# Render SNI routing configurations for this frontend. #}
 {%for routing_configuration in frontend.backend_sni_routing_configurations %}
     {{ routing_configuration.acl }}
     {{ routing_configuration.use_backend }}
 {% endfor %}
-
-{% if frontend.enforce_tls %}
-    {{ frontend.enforce_tls_configuration }}
-{% endif %}
 
     default_backend {{ frontend.default_backend_name }}
 
