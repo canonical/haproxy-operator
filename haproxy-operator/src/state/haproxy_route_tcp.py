@@ -312,3 +312,20 @@ class HAProxyRouteTcpFrontend:
         if not self.is_sni_routing_enabled:
             return "tcp-request content reject unless { req_ssl_hello_type 1 }"
         return "tcp-request content reject"
+
+    @property
+    def default_backend(self) -> HAProxyRouteTcpBackend | None:
+        """Return the backend used as the default backend if it is not empty.
+
+        The default backend is not empty if there is exactly one backend and that
+        backend does not use SNI routing. This means that all traffic coming into
+        the frontend will be routed to that backend.
+
+        An empty default backend will have no servers and reject all TCP connections.
+
+        Returns:
+            HAProxyRouteTcpBackend | None: The default backend if it is not empty, otherwise None.
+        """
+        if len(self.backends) == 1 and not self.is_sni_routing_enabled:
+            return self.backends[0]
+        return None
