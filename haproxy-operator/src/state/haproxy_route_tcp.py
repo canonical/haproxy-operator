@@ -204,7 +204,6 @@ class HAProxyRouteTcpFrontend:
 
         # At this point we have more than one backend, all of them need to set enforce_tls=True
         # and have an sni value for them to be routable and merged.
-        routable_backends: list[HAProxyRouteTcpBackend] = []
         # If there are backends that set tls_terminate=True amongst the routable backends
         # then only those will be merged.
         routable_backends_with_tls_terminate: list[HAProxyRouteTcpBackend] = []
@@ -212,21 +211,23 @@ class HAProxyRouteTcpFrontend:
 
         relation_ids_with_invalid_data: set[int] = set[int]()
         for backend in backends:
-            if backend.application_data.enforce_tls and backend.application_data.sni is not None:
-                routable_backends.append(backend)
-                if backend.application_data.tls_terminate:
-                    routable_backends_with_tls_terminate.append(backend)
-                else:
-                    routable_backends_without_tls_terminate.append(backend)
-            else:
+            if not backend.application_data.enforce_tls or backend.application_data.sni is None:
                 relation_ids_with_invalid_data.add(backend.relation_id)
+                continue
+
+            if backend.application_data.tls_terminate:
+                routable_backends_with_tls_terminate.append(backend)
+            else:
+                routable_backends_without_tls_terminate.append(backend)
 
         if routable_backends_with_tls_terminate:
             relation_ids_with_invalid_data.update(
                 backend.relation_id for backend in routable_backends_without_tls_terminate
             )
 
-        rendered_backends = routable_backends_with_tls_terminate or routable_backends
+        rendered_backends = (
+            routable_backends_with_tls_terminate or routable_backends_without_tls_terminate
+        )
         if not rendered_backends:
             raise HAProxyRouteTcpFrontendValidationError(
                 "Cannot create HAProxyRouteTcpFrontend from empty backends list"
