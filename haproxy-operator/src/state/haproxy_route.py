@@ -291,7 +291,7 @@ class HaproxyRouteRequirersInformation:
             # HAProxyRouteTcpFrontend objects
             relation_ids_with_invalid_data_tcp = (
                 tcp_requirers.relation_ids_with_invalid_data.union(
-                    frontend.relation_ids_with_invalid_data for frontend in tcp_frontends
+                    *[frontend.relation_ids_with_invalid_data for frontend in tcp_frontends]
                 )
             )
 
