@@ -4,6 +4,7 @@
 """HAproxy route charm state component."""
 
 import logging
+from collections import defaultdict
 from collections.abc import Collection
 from functools import cached_property
 from typing import Optional, cast
@@ -511,13 +512,10 @@ def parse_haproxy_route_tcp_requirers_data(
     Returns:
         list[HAProxyRouteTcpFrontend]: The parsed frontend data.
     """
-    port_to_backends_mapping: dict[int, list[HAProxyRouteTcpBackend]] = {}
+    port_to_backends_mapping: dict[int, list[HAProxyRouteTcpBackend]] = defaultdict(list)
     for requirer in tcp_requirers.requirers_data:
         endpoint = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(requirer)
-        port = endpoint.application_data.port
-        if port not in port_to_backends_mapping:
-            port_to_backends_mapping[port] = []
-        port_to_backends_mapping[port].append(endpoint)
+        port_to_backends_mapping[endpoint.application_data.port].append(endpoint)
     tcp_frontends: list[HAProxyRouteTcpFrontend] = []
     for backends in port_to_backends_mapping.values():
         try:
