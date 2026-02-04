@@ -27,7 +27,7 @@ from typing_extensions import Self
 
 from .exception import CharmStateValidationBaseError
 from .haproxy_route_tcp import (
-    HAProxyRouteTcpEndpoint,
+    HAProxyRouteTcpBackend,
     HAProxyRouteTcpFrontend,
     HAProxyRouteTcpFrontendValidationError,
 )
@@ -511,9 +511,9 @@ def parse_haproxy_route_tcp_requirers_data(
     Returns:
         list[HAProxyRouteTcpFrontend]: The parsed frontend data.
     """
-    port_to_backends_mapping: dict[int, list[HAProxyRouteTcpEndpoint]] = {}
+    port_to_backends_mapping: dict[int, list[HAProxyRouteTcpBackend]] = {}
     for requirer in tcp_requirers.requirers_data:
-        endpoint = HAProxyRouteTcpEndpoint.from_haproxy_route_tcp_requirer_data(requirer)
+        endpoint = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(requirer)
         port = endpoint.application_data.port
         if port not in port_to_backends_mapping:
             port_to_backends_mapping[port] = []

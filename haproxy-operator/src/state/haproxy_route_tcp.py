@@ -53,7 +53,7 @@ class HaproxyRouteTcpServer:
 
 
 @dataclass
-class HAProxyRouteTcpEndpoint(HaproxyRouteTcpRequirerData):
+class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
     """Represent an endpoint for haproxy-route-tcp.
 
     Attrs:
@@ -65,13 +65,13 @@ class HAProxyRouteTcpEndpoint(HaproxyRouteTcpRequirerData):
 
     @classmethod
     def from_haproxy_route_tcp_requirer_data(cls, provider: HaproxyRouteTcpRequirerData) -> "Self":
-        """Instantiate a HAProxyRouteTcpEndpoint class from the parent class.
+        """Instantiate a HAProxyRouteTcpBackend class from the parent class.
 
         Args:
             provider: parent class.
 
         Returns:
-            Self: The instantiated HAProxyRouteTcpEndpoint class.
+            Self: The instantiated HAProxyRouteTcpBackend class.
         """
         return cls(
             relation_id=provider.relation_id,
@@ -172,7 +172,7 @@ class HAProxyRouteTcpFrontend:
     """
 
     port: int = Field(description="The port exposed on the provider.", gt=0, le=65535)
-    backends: list[HAProxyRouteTcpEndpoint] = Field(description="List of backend endpoints.")
+    backends: list[HAProxyRouteTcpBackend] = Field(description="List of backend endpoints.")
     enforce_tls: bool = Field(description="Whether to enforce TLS for all traffic.", default=True)
     tls_terminate: bool = Field(description="Whether to enable tls termination.", default=True)
     relation_ids_with_invalid_data: set[int] = Field(
@@ -180,7 +180,7 @@ class HAProxyRouteTcpFrontend:
     )
 
     @classmethod
-    def from_backends(cls, backends: list[HAProxyRouteTcpEndpoint]) -> "Self":
+    def from_backends(cls, backends: list[HAProxyRouteTcpBackend]) -> "Self":
         """Instantiate a HAProxyRouteTcpFrontend class from a list of backends.
 
         Args:
@@ -204,11 +204,11 @@ class HAProxyRouteTcpFrontend:
 
         # At this point we have more than one backend, all of them need to set enforce_tls=True
         # and have an sni value for them to be routable and merged.
-        routable_backends: list[HAProxyRouteTcpEndpoint] = []
+        routable_backends: list[HAProxyRouteTcpBackend] = []
         # If there are backends that set tls_terminate=True amongst the routable backends
         # then only those will be merged.
-        routable_backends_with_tls_terminate: list[HAProxyRouteTcpEndpoint] = []
-        routable_backends_without_tls_terminate: list[HAProxyRouteTcpEndpoint] = []
+        routable_backends_with_tls_terminate: list[HAProxyRouteTcpBackend] = []
+        routable_backends_without_tls_terminate: list[HAProxyRouteTcpBackend] = []
 
         relation_ids_with_invalid_data: set[int] = set[int]()
         for backend in backends:
