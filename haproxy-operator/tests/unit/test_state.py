@@ -1285,3 +1285,101 @@ def test_haproxy_route_tcp_frontend_default_backend_multiple_backends(
     frontend = HAProxyRouteTcpFrontend.from_backends([backend1, backend2])
 
     assert frontend.default_backend is None
+
+def test_haproxy_route_tcp_frontend_from_backends_sni_and_plain_tcp(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Create TCP backends all with tls_terminate=False.
+    act: Call HAProxyRouteTcpFrontend.from_backends.
+    assert: All backends are kept since none have tls_terminate=True.
+    """
+    backend1 = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(
+            relation_id=0,
+            port=4000,
+            sni="api1.example.com",
+            enforce_tls=True,
+        )
+    )
+    backend2 = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(
+            relation_id=1,
+            port=4000,
+        )
+    )
+
+    frontend = HAProxyRouteTcpFrontend.from_backends([backend1, backend2])
+
+    assert frontend.port == 4000
+    assert len(frontend.backends) == 1
+    assert len(frontend.relation_ids_with_invalid_data) == 1
+
+
+def test_haproxy_route_tcp_frontend_from_backends_plain_tcp_multiple_backends(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Create TCP backends all with tls_terminate=False.
+    act: Call HAProxyRouteTcpFrontend.from_backends.
+    assert: All backends are kept since none have tls_terminate=True.
+    """
+    backend1 = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(
+            relation_id=0,
+            port=4000,
+        )
+    )
+    backend2 = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(
+            relation_id=1,
+            port=4000,
+        )
+    )
+
+    with pytest.raises(HAProxyRouteTcpFrontendValidationError):
+        HAProxyRouteTcpFrontend.from_backends([backend1, backend2])
+
+
+def test_haproxy_route_tcp_frontend_from_backends_terminate_and_not_terminate_tls(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Create TCP backends all with tls_terminate=False.
+    act: Call HAProxyRouteTcpFrontend.from_backends.
+    assert: All backends are kept since none have tls_terminate=True.
+    """
+    backend1 = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(
+            relation_id=0,
+            port=4000,
+            sni="api0.example.com",
+            enforce_tls=True,
+            tls_terminate=True,
+        )
+    )
+    backend2 = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(
+            relation_id=1,
+            port=4000,
+            sni="api1.example.com",
+            enforce_tls=True,
+            tls_terminate=True,
+        )
+    )
+
+    backend3 = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(
+            relation_id=2,
+            port=4000,
+            sni="api2.example.com",
+            enforce_tls=True,
+            tls_terminate=False,
+        )
+    )
+
+    frontend = HAProxyRouteTcpFrontend.from_backends([backend1, backend2, backend3])
+
+    assert frontend.port == 4000
+    assert len(frontend.backends) == 2
+    assert frontend.relation_ids_with_invalid_data == {2}
