@@ -196,7 +196,7 @@ Relevant links:
 
 ## Bug fixes
 
-* Added missing settings from haproxy-route-tcp relation template ([PR](['https://github.com/canonical/haproxy-operator/pull/325'])).
+* Added missing settings from haproxy-route-tcp relation template ([PR]([https://github.com/canonical/haproxy-operator/pull/325])).
 
 
 
