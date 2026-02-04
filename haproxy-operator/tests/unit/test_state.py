@@ -1286,6 +1286,7 @@ def test_haproxy_route_tcp_frontend_default_backend_multiple_backends(
 
     assert frontend.default_backend is None
 
+
 def test_haproxy_route_tcp_frontend_from_backends_sni_and_plain_tcp(
     haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
 ):
