@@ -1213,3 +1213,75 @@ def test_parse_haproxy_route_tcp_requirers_data_all_backends_invalid(
 
     frontends = parse_haproxy_route_tcp_requirers_data(requirers_data)
     assert len(frontends) == 0
+
+
+def test_haproxy_route_tcp_frontend_default_backend_single_no_sni(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Create a frontend with a single backend without SNI.
+    act: Get default_backend property.
+    assert: Returns the single backend since SNI routing is not enabled.
+    """
+    backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(
+            port=4000,
+            enforce_tls=True,
+            tls_terminate=True,
+        )
+    )
+    frontend = HAProxyRouteTcpFrontend.from_backends([backend])
+
+    assert frontend.default_backend == backend
+
+
+def test_haproxy_route_tcp_frontend_default_backend_single_with_sni(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Create a frontend with a single backend with SNI.
+    act: Get default_backend property.
+    assert: Returns None since SNI routing is enabled.
+    """
+    backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(
+            port=4000,
+            sni="api.example.com",
+            enforce_tls=True,
+            tls_terminate=True,
+        )
+    )
+    frontend = HAProxyRouteTcpFrontend.from_backends([backend])
+
+    assert frontend.default_backend is None
+
+
+def test_haproxy_route_tcp_frontend_default_backend_multiple_backends(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Create a frontend with multiple backends.
+    act: Get default_backend property.
+    assert: Returns None since there are multiple backends.
+    """
+    backend1 = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(
+            relation_id=0,
+            port=4000,
+            sni="api1.example.com",
+            enforce_tls=True,
+            tls_terminate=True,
+        )
+    )
+    backend2 = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(
+            relation_id=1,
+            port=4000,
+            sni="api2.example.com",
+            enforce_tls=True,
+            tls_terminate=True,
+        )
+    )
+    frontend = HAProxyRouteTcpFrontend.from_backends([backend1, backend2])
+
+    assert frontend.default_backend is None
