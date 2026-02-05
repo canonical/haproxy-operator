@@ -611,7 +611,9 @@ class HAProxyCharm(ops.CharmBase):
         """
         paths = backend.application_data.paths if backend.path_acl_required else [""]
         return [
-            f"https://{hostname}{path}" for hostname in iter(backend.hostname_acls) for path in paths
+            f"https://{hostname}{path}"
+            for hostname in iter(backend.hostname_acls)
+            for path in paths
         ]
 
     def _on_get_proxied_endpoints_action(self, event: ActionEvent) -> None:

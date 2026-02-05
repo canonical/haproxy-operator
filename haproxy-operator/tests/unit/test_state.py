@@ -998,6 +998,8 @@ def test_haproxy_route_requirers_information_with_wildcard_hostnames(
     assert backend2.hostname_acls == {"test.com", "*.test.com"}
     assert backend2.wildcard_hostname_acls == {"test.com"}
     assert backend2.standard_hostname_acls == {"*.test.com"}
+
+
 def test_haproxy_route_tcp_frontend_from_backends_single_backend(
     haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
 ):
