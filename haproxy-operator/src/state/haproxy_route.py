@@ -211,7 +211,7 @@ class HAProxyRouteBackend:
         Returns:
             set[str]: The hostname ACLs for this backend that are wildcard.
         """
-        return self.hostname_acls - self.wildcard_hostname_acls
+        return {hostname for hostname in self.hostname_acls if not hostname.startswith("*.")}
 
     @property
     def health_check_host_header(self) -> Optional[str]:
