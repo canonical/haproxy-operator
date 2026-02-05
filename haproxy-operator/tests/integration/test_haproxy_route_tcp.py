@@ -49,21 +49,7 @@ def test_haproxy_route_tcp(
         server_response = ssock.read()
         assert "pong" in str(server_response)
 
-
-@pytest.mark.abort_on_fail
-def test_haproxy_route_tcp_with_sticky_sessions(
-    configured_application_with_tls: str,
-    any_charm_haproxy_route_tcp_requirer: str,
-    juju: jubilant.Juju,
-):
-    """Deploy the charm with anycharm ingress per unit requirer.
-
-    Assert that the sticky session settings are properly added.
-    """
-    juju.integrate(
-        f"{configured_application_with_tls}:haproxy-route-tcp",
-        any_charm_haproxy_route_tcp_requirer,
-    )
+    # Test with sticky sessions
     juju.run(
         f"{any_charm_haproxy_route_tcp_requirer}/0",
         "rpc",

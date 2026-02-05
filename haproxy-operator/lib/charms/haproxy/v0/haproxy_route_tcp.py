@@ -910,8 +910,8 @@ class HaproxyRouteTcpEnpointsReadyEvent(EventBase):
     """HaproxyRouteTcpEnpointsReadyEvent custom event."""
 
 
-class HaproxyRouteTcpEndpointsRemovedEvent(EventBase):
-    """HaproxyRouteTcpEndpointsRemovedEvent custom event."""
+class HAProxyRouteTcpBackendsRemovedEvent(EventBase):
+    """HAProxyRouteTcpBackendsRemovedEvent custom event."""
 
 
 class HaproxyRouteTcpRequirerEvents(CharmEvents):
@@ -923,7 +923,7 @@ class HaproxyRouteTcpRequirerEvents(CharmEvents):
     """
 
     ready = EventSource(HaproxyRouteTcpEnpointsReadyEvent)
-    removed = EventSource(HaproxyRouteTcpEndpointsRemovedEvent)
+    removed = EventSource(HAProxyRouteTcpBackendsRemovedEvent)
 
 
 class HaproxyRouteTcpRequirer(Object):
