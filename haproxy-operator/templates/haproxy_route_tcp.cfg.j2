@@ -13,21 +13,13 @@ maxconn {{ server.maxconn }}
 {% endif %}
 {%- endmacro %}
 
-{% for endpoint in tcp_endpoints %}
-frontend {{ endpoint.name }}
+{% for frontend in tcp_frontends %}
+frontend haproxy_route_tcp_{{ frontend.port }}
     mode tcp
     option tcplog
-{% if endpoint.application_data.retry %}
-    retries {{ endpoint.application_data.retry.count }}
-{% if endpoint.application_data.retry.redispatch %}
-    option redispatch
-{% endif %}
-{% endif %}
-    bind [::]:{{ endpoint.application_data.port }} v4v6 {% if endpoint.application_data.tls_terminate %} ssl crt {{ haproxy_crt_dir }} {% endif +%}
-{% if endpoint.application_data.enforce_tls %}
-    tcp-request content accept if { req_ssl_hello_type 1 }
-{% endif %}
+    bind [::]:{{ frontend.port }} v4v6 {% if frontend.tls_terminate %} ssl crt {{ haproxy_crt_dir }} {% endif +%}
 
+{# DDOS protection configuration. #}
 {% if ddos_protection_config.client_timeout %}
     timeout client {{ ddos_protection_config.client_timeout }}
 {% endif %}
@@ -45,31 +37,75 @@ frontend {{ endpoint.name }}
     http-request allow if allowed_ips
 {% endif %}
 
-{% if endpoint.application_data.sni %}
-    acl sni_{{ endpoint.application_data.port }} {% if endpoint.application_data.tls_terminate %}ssl_fc_sni{% else %}req_ssl_sni{%endif%} -m str {{ endpoint.application_data.sni }}
-    tcp-request content reject if !sni_{{ endpoint.application_data.port }}
+{# This configuration block is only applicable when not terminating TLS. #}
+{% if not frontend.tls_terminate %}
+{% if frontend.content_inspect_delay_required %}
+    tcp-request inspect-delay 5s
+{% endif %}
+{% if frontend.is_sni_routing_enabled %}
+    tcp-request content accept if { req_ssl_hello_type 1 }
+{% endif %}
+{% if frontend.enforce_tls %}
+    {{ frontend.enforce_tls_configuration }}
+{% endif %}
 {% endif %}
 
-{% if endpoint.application_data.ip_deny_list %}
-    acl {{ endpoint.name }}ip_deny_list src {% for deny_address in endpoint.application_data.ip_deny_list %}{{deny_address}} {% endfor +%}
-    tcp-request content reject if {{ endpoint.name }}ip_deny_list
-{% endif %}
+{# Render SNI routing configurations for this frontend. #}
+{%for routing_configuration in frontend.backend_sni_routing_configurations %}
+    {{ routing_configuration.acl }}
+    {{ routing_configuration.use_backend }}
+{% endfor %}
 
-    default_backend {{ endpoint.name }}
+    default_backend {{ frontend.default_backend_name }}
 
-backend {{ endpoint.name }}
+{# Render the default backend for this frontend. #}
+{# If the list of backends only has one element and SNI is not used, the default backend will be that backend. #}
+{# Otherwise, the default backend will reject all TCP connections. #}
+backend {{ frontend.default_backend_name }}
     mode tcp
-{% if endpoint.application_data.load_balancing %}
-    balance {{ endpoint.application_data.load_balancing.algorithm.value }}
-{% if endpoint.application_data.load_balancing.consistent_hashing %}
+{% if frontend.default_backend is not none %}
+{% if frontend.default_backend.application_data.load_balancing %}
+    balance {{ frontend.default_backend.application_data.load_balancing.algorithm.value }}
+{% if frontend.default_backend.application_data.load_balancing.consistent_hashing %}
     hash-type consistent
 {% endif %}
 {% endif %}
-{% for option in endpoint.tcp_check_options %}
+{% if frontend.default_backend.application_data.retry %}
+    retries {{ frontend.default_backend.application_data.retry.count }}
+{% if frontend.default_backend.application_data.retry.redispatch %}
+    option redispatch
+{% endif %}
+{% endif %}
+{% for option in frontend.default_backend.tcp_check_options %}
     {{ option }}
 {% endfor %}
-
-{% for server in endpoint.servers %}
+{% for server in frontend.default_backend.servers %}
     {{ render_tcp_server(server) | replace("\n", " ") }}
+{% endfor %}
+{% endif %}
+
+{# Render each backend for the frontend. #}
+{% for backend in frontend.backends %}
+backend {{ backend.name }}
+    mode tcp
+{% if backend.application_data.load_balancing %}
+    balance {{ backend.application_data.load_balancing.algorithm.value }}
+{% if backend.application_data.load_balancing.consistent_hashing %}
+    hash-type consistent
+{% endif %}
+{% endif %}
+{% if backend.application_data.retry %}
+    retries {{ backend.application_data.retry.count }}
+{% if backend.application_data.retry.redispatch %}
+    option redispatch
+{% endif %}
+{% endif %}
+{% for option in backend.tcp_check_options %}
+    {{ option }}
+{% endfor %}
+{% for server in backend.servers %}
+    {{ render_tcp_server(server) | replace("\n", " ") }}
+{% endfor %}
+
 {% endfor %}
 {% endfor %}

@@ -186,7 +186,7 @@ class HAProxyService:
                 for backend in valid_backends
                 if not backend.application_data.external_grpc_port
             ],
-            "tcp_endpoints": haproxy_route_requirers_information.valid_tcp_endpoints(),
+            "tcp_frontends": haproxy_route_requirers_information.valid_tcp_frontends(),
             "grpc_backends": [
                 backend
                 for backend in valid_backends
