@@ -202,7 +202,7 @@ class HAProxyRouteBackend:
         Returns:
             set[str]: The hostname-based routing rules for this backend (non-wildcard).
         """
-        return {hostname for hostname in self.hostname_acls if hostname.startswith("*.")}
+        return {hostname[2:] for hostname in self.hostname_acls if hostname.startswith("*.")}
 
     @property
     def standard_hostname_acls(self) -> set[str]:
