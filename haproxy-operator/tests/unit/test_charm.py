@@ -218,6 +218,7 @@ class TestGetProxiedEndpointsAction:
         context.run(context.on.action("get-proxied-endpoints"), charm_state)
 
         out = context.action_results
+        assert out is not None
 
         assert set(json.loads(out["endpoints"])) == {
             "https://haproxy.internal/v1",
