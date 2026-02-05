@@ -4,6 +4,7 @@
 """HAproxy route charm state component."""
 
 import logging
+from collections import defaultdict
 from collections.abc import Collection
 from functools import cached_property
 from typing import Optional, cast
@@ -26,7 +27,11 @@ from pydantic.dataclasses import dataclass
 from typing_extensions import Self
 
 from .exception import CharmStateValidationBaseError
-from .haproxy_route_tcp import HAProxyRouteTcpEndpoint
+from .haproxy_route_tcp import (
+    HAProxyRouteTcpBackend,
+    HAProxyRouteTcpFrontend,
+    HAProxyRouteTcpFrontendValidationError,
+)
 
 HAPROXY_ROUTE_RELATION = "haproxy-route"
 HAPROXY_PEER_INTEGRATION = "haproxy-peers"
@@ -201,7 +206,8 @@ class HaproxyRouteRequirersInformation:
             that contains invalid data.
         relation_ids_with_invalid_data_tcp: Set of haproxy-route-tcp relation ids
             that contains invalid data.
-        tcp_endpoints: List of frontend/backend pairs in TCP mode.
+        ports_with_conflicts: Set of ports that have conflicts between HTTP, TCP, and gRPC backends.
+        tcp_frontends: List of frontend in TCP mode.
     """
 
     backends: list[HAProxyRouteBackend]
@@ -209,7 +215,8 @@ class HaproxyRouteRequirersInformation:
     peers: list[IPvAnyAddress]
     relation_ids_with_invalid_data: set[int]
     relation_ids_with_invalid_data_tcp: set[int]
-    tcp_endpoints: list[HAProxyRouteTcpEndpoint] = Field(strict=False)
+    ports_with_conflicts: set[int]
+    tcp_frontends: list[HAProxyRouteTcpFrontend] = Field(strict=False)
 
     @classmethod
     def from_provider(  # pylint: disable=too-many-arguments
@@ -276,14 +283,17 @@ class HaproxyRouteRequirersInformation:
 
                 backends.append(backend)
 
-            tcp_endpoints: list[HAProxyRouteTcpEndpoint] = []
+            tcp_frontends: list[HAProxyRouteTcpFrontend] = []
             tcp_requirers: HaproxyRouteTcpRequirersData = haproxy_route_tcp.get_data(
                 haproxy_route_tcp.relations
             )
-            relation_ids_with_invalid_data_tcp = tcp_requirers.relation_ids_with_invalid_data
-            tcp_endpoints.extend(
-                HAProxyRouteTcpEndpoint.from_haproxy_route_tcp_requirer_data(tcp_requirer)
-                for tcp_requirer in tcp_requirers.requirers_data
+            tcp_frontends = parse_haproxy_route_tcp_requirers_data(tcp_requirers)
+            # Calculate the invalid relation ids after parsing the relations data into
+            # HAProxyRouteTcpFrontend objects
+            relation_ids_with_invalid_data_tcp = (
+                tcp_requirers.relation_ids_with_invalid_data.union(
+                    *[frontend.relation_ids_with_invalid_data for frontend in tcp_frontends]
+                )
             )
 
             return HaproxyRouteRequirersInformation(
@@ -294,7 +304,8 @@ class HaproxyRouteRequirersInformation:
                 peers=[cast(IPvAnyAddress, peer_address) for peer_address in peers],
                 relation_ids_with_invalid_data=relation_ids_with_invalid_data,
                 relation_ids_with_invalid_data_tcp=relation_ids_with_invalid_data_tcp,
-                tcp_endpoints=tcp_endpoints,
+                tcp_frontends=tcp_frontends,
+                ports_with_conflicts=set[int](),
             )
         except DataValidationError as exc:
             # This exception is only raised if the provider has "raise_on_validation_error" set
@@ -347,10 +358,7 @@ class HaproxyRouteRequirersInformation:
             for backend in valid_backends
             if backend.application_data.external_grpc_port
         }
-        tcp_ports = {
-            tcp_endpoint.application_data.port: tcp_endpoint
-            for tcp_endpoint in self.valid_tcp_endpoints()
-        }
+        tcp_ports = {frontend.port: frontend for frontend in self.tcp_frontends}
 
         # Check for conflicts between standard HTTP and TCP/gRPC ports
         if has_http_backends:
@@ -359,20 +367,28 @@ class HaproxyRouteRequirersInformation:
                     logger.error(
                         f"TCP backend conflicts with HTTP backends on external port {standard_port}."
                     )
-                    self.relation_ids_with_invalid_data_tcp.add(
-                        tcp_ports[standard_port].relation_id
+                    self.relation_ids_with_invalid_data_tcp.update(
+                        {backend.relation_id for backend in tcp_ports[standard_port].backends}
                     )
+                    self.ports_with_conflicts.add(standard_port)
                 if standard_port in grpc_ports:
                     logger.error(
                         f"gRPC backend conflicts with HTTP backends on external port {standard_port}."
                     )
                     self.relation_ids_with_invalid_data.add(grpc_ports[standard_port].relation_id)
+                    self.ports_with_conflicts.add(standard_port)
 
         # Check for conflicts between gRPC and TCP ports
         for port in grpc_ports.keys() & tcp_ports.keys():
             logger.error(f"Conflicting TCP backend and gRPC backend on external port {port}.")
-            self.relation_ids_with_invalid_data_tcp.add(tcp_ports[port].relation_id)
+            self.relation_ids_with_invalid_data_tcp.update(
+                {backend.relation_id for backend in tcp_ports[port].backends}
+            )
             self.relation_ids_with_invalid_data.add(grpc_ports[port].relation_id)
+            self.ports_with_conflicts.add(port)
+
+        if self.ports_with_conflicts:
+            logger.warning(f"The following ports have conflicts: {self.ports_with_conflicts}")
 
         return self
 
@@ -388,16 +404,16 @@ class HaproxyRouteRequirersInformation:
             if backend.relation_id not in self.relation_ids_with_invalid_data
         ]
 
-    def valid_tcp_endpoints(self) -> list[HAProxyRouteTcpEndpoint]:
+    def valid_tcp_frontends(self) -> list[HAProxyRouteTcpFrontend]:
         """Get the list of valid TCP endpoints (not in the invalid list).
 
         Returns:
-            list[HAProxyRouteTcpEndpoint]: List of valid TCP endpoints.
+            list[HAProxyRouteTcpFrontend]: List of valid TCP endpoints.
         """
         return [
-            endpoint
-            for endpoint in self.tcp_endpoints
-            if endpoint.relation_id not in self.relation_ids_with_invalid_data_tcp
+            frontend
+            for frontend in self.tcp_frontends
+            if frontend.port not in self.ports_with_conflicts
         ]
 
     @property
@@ -486,3 +502,26 @@ def generate_hostname_acls(
 
         return [external_hostname]
     return [application_data.hostname, *application_data.additional_hostnames]
+
+
+def parse_haproxy_route_tcp_requirers_data(
+    tcp_requirers: HaproxyRouteTcpRequirersData,
+) -> list[HAProxyRouteTcpFrontend]:
+    """Parse HAProxyRouteTcpFrontend data from requirers into frontend objects.
+
+    Returns:
+        list[HAProxyRouteTcpFrontend]: The parsed frontend data.
+    """
+    port_to_backends_mapping: dict[int, list[HAProxyRouteTcpBackend]] = defaultdict(list)
+    for requirer in tcp_requirers.requirers_data:
+        endpoint = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(requirer)
+        port_to_backends_mapping[endpoint.application_data.port].append(endpoint)
+    tcp_frontends: list[HAProxyRouteTcpFrontend] = []
+    for backends in port_to_backends_mapping.values():
+        try:
+            frontend = HAProxyRouteTcpFrontend.from_backends(backends)
+            tcp_frontends.append(frontend)
+        except HAProxyRouteTcpFrontendValidationError as exc:
+            logger.error(f"Failed to parse TCP frontend: {exc}")
+            continue
+    return tcp_frontends
