@@ -727,7 +727,7 @@ def test_haproxy_route_backend_wildcard_hostname_acls(
     """
     arrange: Create HAProxyRouteBackend with mixed wildcard and standard hostnames.
     act: Get wildcard_hostname_acls property.
-    assert: Returns only hostnames that do NOT start with '*.'.
+    assert: Returns base domains (without *.) for wildcard hostnames.
     """
     from state.haproxy_route import HAProxyRouteBackend, HAProxyRouteServer
 
@@ -750,7 +750,8 @@ def test_haproxy_route_backend_wildcard_hostname_acls(
 
     wildcard_acls = backend.wildcard_hostname_acls
 
-    assert wildcard_acls == {"example.com", "test.example.com"}
+    # wildcard_hostname_acls returns the base domains (stripped of *.) from wildcard hostnames
+    assert wildcard_acls == {"example.com", "test.com"}
     assert "*.example.com" not in wildcard_acls
     assert "*.test.com" not in wildcard_acls
 
@@ -761,7 +762,7 @@ def test_haproxy_route_backend_standard_hostname_acls(
     """
     arrange: Create HAProxyRouteBackend with mixed wildcard and standard hostnames.
     act: Get standard_hostname_acls property.
-    assert: Returns only hostnames that start with '*.'.
+    assert: Returns only hostnames that do NOT start with '*.'.
     """
     from state.haproxy_route import HAProxyRouteBackend, HAProxyRouteServer
 
@@ -784,9 +785,10 @@ def test_haproxy_route_backend_standard_hostname_acls(
 
     standard_acls = backend.standard_hostname_acls
 
-    assert standard_acls == {"*.example.com", "*.test.com"}
-    assert "example.com" not in standard_acls
-    assert "test.example.com" not in standard_acls
+    # standard_hostname_acls returns hostnames that do NOT start with *.
+    assert standard_acls == {"example.com", "test.example.com"}
+    assert "*.example.com" not in standard_acls
+    assert "*.test.com" not in standard_acls
 
 
 def test_haproxy_route_backend_only_wildcard_hostnames(
@@ -795,7 +797,7 @@ def test_haproxy_route_backend_only_wildcard_hostnames(
     """
     arrange: Create HAProxyRouteBackend with only wildcard hostnames.
     act: Get wildcard_hostname_acls and standard_hostname_acls properties.
-    assert: wildcard_hostname_acls is empty, standard_hostname_acls contains all hostnames.
+    assert: wildcard_hostname_acls contains base domains, standard_hostname_acls is empty.
     """
     from state.haproxy_route import HAProxyRouteBackend, HAProxyRouteServer
 
@@ -816,8 +818,10 @@ def test_haproxy_route_backend_only_wildcard_hostnames(
         hostname_acls={"*.example.com", "*.test.com"},
     )
 
-    assert backend.wildcard_hostname_acls == set()
-    assert backend.standard_hostname_acls == {"*.example.com", "*.test.com"}
+    # wildcard_hostname_acls returns base domains (stripped of *.)
+    assert backend.wildcard_hostname_acls == {"example.com", "test.com"}
+    # standard_hostname_acls returns non-wildcard hostnames (empty in this case)
+    assert backend.standard_hostname_acls == set()
 
 
 def test_haproxy_route_backend_only_standard_hostnames(
@@ -826,7 +830,7 @@ def test_haproxy_route_backend_only_standard_hostnames(
     """
     arrange: Create HAProxyRouteBackend with only standard (non-wildcard) hostnames.
     act: Get wildcard_hostname_acls and standard_hostname_acls properties.
-    assert: wildcard_hostname_acls contains all hostnames, standard_hostname_acls is empty.
+    assert: wildcard_hostname_acls is empty, standard_hostname_acls contains the hostnames.
     """
     from state.haproxy_route import HAProxyRouteBackend, HAProxyRouteServer
 
@@ -847,8 +851,10 @@ def test_haproxy_route_backend_only_standard_hostnames(
         hostname_acls={"example.com", "test.example.com"},
     )
 
-    assert backend.wildcard_hostname_acls == {"example.com", "test.example.com"}
-    assert backend.standard_hostname_acls == set()
+    # No wildcard hostnames, so wildcard_hostname_acls is empty
+    assert backend.wildcard_hostname_acls == set()
+    # standard_hostname_acls returns the non-wildcard hostnames
+    assert backend.standard_hostname_acls == {"example.com", "test.example.com"}
 
 
 def test_haproxy_route_backend_no_hostnames(
@@ -990,14 +996,18 @@ def test_haproxy_route_requirers_information_with_wildcard_hostnames(
     # Check first backend has wildcard and standard hostname
     backend1 = haproxy_route_information.backends[0]
     assert backend1.hostname_acls == {"*.example.com", "api.example.com"}
-    assert backend1.wildcard_hostname_acls == {"api.example.com"}
-    assert backend1.standard_hostname_acls == {"*.example.com"}
+    # wildcard_hostname_acls returns base domain of *.example.com
+    assert backend1.wildcard_hostname_acls == {"example.com"}
+    # standard_hostname_acls returns the non-wildcard hostname
+    assert backend1.standard_hostname_acls == {"api.example.com"}
 
     # Check second backend has both wildcard and standard hostname
     backend2 = haproxy_route_information.backends[1]
     assert backend2.hostname_acls == {"test.com", "*.test.com"}
+    # wildcard_hostname_acls returns base domain of *.test.com
     assert backend2.wildcard_hostname_acls == {"test.com"}
-    assert backend2.standard_hostname_acls == {"*.test.com"}
+    # standard_hostname_acls returns the non-wildcard hostname
+    assert backend2.standard_hostname_acls == {"test.com"}
 
 
 def test_haproxy_route_tcp_frontend_from_backends_single_backend(

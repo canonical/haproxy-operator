@@ -234,7 +234,10 @@ class HAProxyCharm(ops.CharmBase):
         """
         TLSInformation.validate(self, self.certificates)
 
-        hostname = event.params["hostname"]
+        hostname = event.params.get("hostname", "")
+        wildcard = event.params.get("wildcard", False)
+        if wildcard:
+            hostname = f"*.{hostname}"
         if provider_cert := self._tls.get_provider_cert_with_hostname(hostname):
             event.set_results(
                 {
@@ -444,6 +447,12 @@ class HAProxyCharm(ops.CharmBase):
                 return [
                     CertificateRequestAttributes(
                         common_name=hostname_acl, sans_dns=frozenset([hostname_acl])
+                    )
+                    # Wildcard certificates should also cover the base domain
+                    if hostname_acl.startswith("*.")
+                    else CertificateRequestAttributes(
+                        common_name=hostname_acl,
+                        sans_dns=frozenset([hostname_acl, hostname_acl[2:]]),
                     )
                     for backend in haproxy_route_requirer_information.backends
                     for hostname_acl in backend.hostname_acls
