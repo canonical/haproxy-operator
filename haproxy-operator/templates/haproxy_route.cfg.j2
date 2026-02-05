@@ -32,7 +32,13 @@ frontend haproxy
 {% if backend.path_acl_required %}
     acl acl_path_{{ backend.backend_name }} path_beg -i {% for path in backend.application_data.paths %}{{ path }} {% endfor +%}
 {% endif %}
-    acl acl_host_{{ backend.backend_name }} req.hdr(host),field(1,:) -i {% for hostname in backend.hostname_acls%}{{hostname}} {% endfor +%}
+{% if backend.standard_hostname_acls %}
+    acl acl_host_{{ backend.backend_name }} req.hdr(host),field(1,:) -i {% for hostname in backend.standard_hostname_acls%}{{hostname}} {% endfor +%}
+{% endif %}
+{% if backend.wildcard_hostname_acls %}
+    acl acl_host_{{ backend.backend_name }} req.hdr(host),field(1,:) -m end {% for hostname in backend.wildcard_hostname_acls%}{{hostname}} {% endfor +%}
+{% endif %}
+
 {% if backend.deny_path_acl_required %}
     acl acl_deny_path_{{ backend.backend_name }} path_beg -i {% for path in backend.application_data.deny_paths %}{{ path }} {% endfor +%}
 {% endif %}
@@ -76,7 +82,9 @@ backend {{ backend.backend_name }}
 {% if backend.application_data.check.port %}
     http-check connect port {{ backend.application_data.check.port }}
 {% endif %}
-    http-check send hdr Host {{ backend.hostname_acls[0] }}
+{% if backend.health_check_host_header is not none %}
+    http-check send hdr Host {{ backend.health_check_host_header }}
+{% endif %}
 {% if backend.application_data.rate_limit %}
     http-request track-sc0 src table  haproxy_peers/{{ backend.backend_name }}_rate_limit
     http-request {{ backend.application_data.rate_limit.policy.value }} if { sc_conn_rate(0,haproxy_peers/{{ backend.backend_name }}_rate_limit) gt {{ backend.application_data.rate_limit.connections_per_minute }} }

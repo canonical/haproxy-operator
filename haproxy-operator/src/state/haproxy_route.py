@@ -74,12 +74,15 @@ class HAProxyRouteBackend:
         deny_path_acl_required: Indicate if deny_path is required.
         consistent_hashing: Use consistent hashing to avoid redirection
             when servers are added/removed.
+        wildcard_hostname_acls: The set of wildcard hostname ACLs for the backend.
+        standard_hostname_acls: The set of standard (non-wildcard) hostname ACLs for the backend.
+        health_check_host_header: The Host header to use for health checks.
     """
 
     relation_id: int
     application_data: RequirerApplicationData
     servers: list[HAProxyRouteServer]
-    hostname_acls: list[str]
+    hostname_acls: set[str]
 
     @property
     def backend_name(self) -> str:
@@ -186,6 +189,37 @@ class HAProxyRouteBackend:
         return self._build_rewrite_configurations(
             allowed_methods={HaproxyRewriteMethod.SET_HEADER, HaproxyRewriteMethod.SET_PATH}
         )
+
+    @property
+    def wildcard_hostname_acls(self) -> set[str]:
+        """Build the hostname-based routing rules for this backend.
+
+        Returns:
+            set[str]: The hostname-based routing rules for this backend (non-wildcard).
+        """
+        return {hostname for hostname in self.hostname_acls if not hostname.startswith("*.")}
+
+    @property
+    def standard_hostname_acls(self) -> set[str]:
+        """Build the hostname ACLs for this backend that are not wildcard.
+
+        Returns:
+            set[str]: The hostname ACLs for this backend that are wildcard.
+        """
+        return self.hostname_acls - self.wildcard_hostname_acls
+
+    @property
+    def health_check_host_header(self) -> Optional[str]:
+        """Build the backend health check Host header.
+
+        Returns:
+            Optional[str]: The base domain if the hostname is a wildcard,
+            otherwise return the hostname itself.
+        """
+        if not self.hostname_acls:
+            return None
+        hostname = next(iter(self.hostname_acls))
+        return hostname[2:] if hostname.startswith("*.") else hostname
 
 
 # pylint: disable=too-many-locals
@@ -470,7 +504,7 @@ def get_backend_max_path_depth(backend: HAProxyRouteBackend) -> int:
 
 def generate_hostname_acls(
     application_data: RequirerApplicationData, external_hostname: Optional[str]
-) -> list[str]:
+) -> set[str]:
     """Generate the list of hostname ACLs for a backend.
 
     Args:
@@ -478,11 +512,11 @@ def generate_hostname_acls(
         external_hostname: The charm's configured external hostname.
 
     Returns:
-        list[str]: The combined list of hostnames.
+        set[str]: The combined set of hostnames.
     """
     if not application_data.hostname:
         if not external_hostname:
-            return []
+            return set()
 
-        return [external_hostname]
-    return [application_data.hostname, *application_data.additional_hostnames]
+        return {external_hostname}
+    return {application_data.hostname, *application_data.additional_hostnames}

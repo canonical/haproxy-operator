@@ -219,17 +219,13 @@ class TestGetProxiedEndpointsAction:
 
         out = context.action_results
 
-        assert out == {
-            "endpoints": json.dumps(
-                [
-                    "https://haproxy.internal/v1",
-                    "https://haproxy.internal/v2",
-                    "https://ok2.haproxy.internal/v1",
-                    "https://ok2.haproxy.internal/v2",
-                    "https://ok3.haproxy.internal/v1",
-                    "https://ok3.haproxy.internal/v2",
-                ]
-            )
+        assert set(json.loads(out["endpoints"])) == {
+            "https://haproxy.internal/v1",
+            "https://haproxy.internal/v2",
+            "https://ok2.haproxy.internal/v1",
+            "https://ok2.haproxy.internal/v2",
+            "https://ok3.haproxy.internal/v1",
+            "https://ok3.haproxy.internal/v2",
         }
 
     def test_no_backend_filter_no_endpoints(self) -> None:

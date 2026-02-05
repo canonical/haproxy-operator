@@ -16,6 +16,7 @@ from charms.haproxy.v1.haproxy_route import (
     RequirerApplicationData,
     RequirerUnitData,
     RewriteConfiguration,
+    valid_domain_with_wildcard,
 )
 from pydantic import ValidationError
 
@@ -263,3 +264,154 @@ def test_check_external_grpc_port_unique(
     )
 
     assert data.relation_ids_with_invalid_data == {1, 2, 3, 4, 5}
+
+
+@pytest.mark.parametrize(
+    "domain,expected",
+    [
+        ("example.com", "example.com"),
+        ("api.example.com", "api.example.com"),
+        ("*.example.com", "*.example.com"),
+        ("*.api.example.com", "*.api.example.com"),
+    ],
+)
+def test_valid_domain_with_wildcard_valid_domains(domain, expected):
+    """
+    arrange: Provide valid domain inputs.
+    act: Call valid_domain_with_wildcard.
+    assert: Returns the domain without raising an error.
+    """
+    result = valid_domain_with_wildcard(domain)
+
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "invalid_domain",
+    [
+        "*.com",  # Wildcard at TLD level
+        "not..valid",  # Double dots
+        "",  # Empty string
+        "example",  # No TLD
+    ],
+)
+def test_valid_domain_with_wildcard_invalid_domains(invalid_domain):
+    """
+    arrange: Provide invalid domain inputs.
+    act: Call valid_domain_with_wildcard.
+    assert: Raises ValueError for invalid domains.
+    """
+    with pytest.raises(ValueError) as exc:
+        valid_domain_with_wildcard(invalid_domain)
+
+    assert "Invalid domain" in str(exc.value)
+
+
+def test_requirer_application_data_with_wildcard_hostname():
+    """
+    arrange: Create RequirerApplicationData with wildcard hostname.
+    act: Initialize RequirerApplicationData.
+    assert: Data is created successfully with wildcard hostname.
+    """
+    data = RequirerApplicationData(
+        service="test-service",
+        ports=[80],
+        hostname="*.example.com",
+    )
+
+    assert data.hostname == "*.example.com"
+
+
+def test_requirer_application_data_with_wildcard_additional_hostnames():
+    """
+    arrange: Create RequirerApplicationData with wildcard in additional_hostnames.
+    act: Initialize RequirerApplicationData.
+    assert: Data is created successfully with wildcard hostnames.
+    """
+    data = RequirerApplicationData(
+        service="test-service",
+        ports=[80],
+        hostname="example.com",
+        additional_hostnames=["*.api.example.com", "*.test.com"],
+    )
+
+    assert data.hostname == "example.com"
+    assert data.additional_hostnames == ["*.api.example.com", "*.test.com"]
+
+
+def test_requirer_application_data_with_mixed_wildcard_hostnames():
+    """
+    arrange: Create RequirerApplicationData with both wildcard and standard hostnames.
+    act: Initialize RequirerApplicationData.
+    assert: Data is created successfully with mixed hostname types.
+    """
+    data = RequirerApplicationData(
+        service="test-service",
+        ports=[80],
+        hostname="*.example.com",
+        additional_hostnames=["api.example.com", "*.test.example.com", "test.com"],
+    )
+
+    assert data.hostname == "*.example.com"
+    assert set(data.additional_hostnames) == {
+        "api.example.com",
+        "*.test.example.com",
+        "test.com",
+    }
+
+
+@pytest.mark.parametrize(
+    "invalid_hostname",
+    [
+        "*.com",  # Wildcard at TLD level
+        "not..valid",  # Double dots
+        "",  # Empty string
+        "example",  # No TLD
+        "example-.com",  # Trailing hyphen in label
+        "-example.com",  # Leading hyphen in label
+        "ex ample.com",  # Space in hostname
+        "example..com",  # Consecutive dots
+    ],
+)
+def test_requirer_application_data_invalid_hostname(invalid_hostname):
+    """
+    arrange: Provide an invalid hostname.
+    act: Try to create RequirerApplicationData with invalid hostname.
+    assert: ValidationError is raised.
+    """
+    with pytest.raises(ValidationError) as exc:
+        RequirerApplicationData(
+            service="test-service",
+            ports=[80],
+            hostname=invalid_hostname,
+        )
+
+    # Verify the error message contains information about the invalid domain
+    assert "Invalid domain" in str(exc.value) or "hostname" in str(exc.value).lower()
+
+
+@pytest.mark.parametrize(
+    "invalid_hostname",
+    [
+        "*.com",  # Wildcard at TLD level
+        "not..valid",  # Double dots
+        "",  # Empty string
+        "example",  # No TLD
+    ],
+)
+def test_requirer_application_data_invalid_additional_hostnames(invalid_hostname):
+    """
+    arrange: Provide an invalid hostname in additional_hostnames.
+    act: Try to create RequirerApplicationData with invalid additional_hostnames.
+    assert: ValidationError is raised.
+    """
+    with pytest.raises(ValidationError) as exc:
+        RequirerApplicationData(
+            service="test-service",
+            ports=[80],
+            hostname="example.com",
+            additional_hostnames=[invalid_hostname],
+        )
+
+    # Verify the error message contains information about the validation failure
+    assert "Invalid domain" in str(exc.value) or "additional_hostnames" in str(exc.value).lower()

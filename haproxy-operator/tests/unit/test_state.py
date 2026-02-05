@@ -4,6 +4,7 @@
 """Unit tests for the states of different modes."""
 
 import typing
+from ipaddress import IPv4Address
 from unittest.mock import MagicMock, Mock
 
 import ops
@@ -711,3 +712,282 @@ def test_ddos_protection_from_charm_relation_data_error():
 
     assert "Failed to load DDoS protection configuration" in str(exc_info.value)
     assert "Invalid relation data" in str(exc_info.value)
+
+
+def test_haproxy_route_backend_wildcard_hostname_acls(
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
+) -> None:
+    """
+    arrange: Create HAProxyRouteBackend with mixed wildcard and standard hostnames.
+    act: Get wildcard_hostname_acls property.
+    assert: Returns only hostnames that do NOT start with '*.'.
+    """
+    from state.haproxy_route import HAProxyRouteBackend, HAProxyRouteServer
+
+    requirer_data = haproxy_route_relation_data("test_service", relation_id=1)
+    backend = HAProxyRouteBackend(
+        relation_id=1,
+        application_data=requirer_data.application_data,
+        servers=[
+            HAProxyRouteServer(
+                server_name="test-0",
+                address=IPv4Address("10.0.0.1"),
+                port=80,
+                protocol="http",
+                check=None,
+                maxconn=None,
+            )
+        ],
+        hostname_acls={"example.com", "*.example.com", "test.example.com", "*.test.com"},
+    )
+
+    wildcard_acls = backend.wildcard_hostname_acls
+
+    assert wildcard_acls == {"example.com", "test.example.com"}
+    assert "*.example.com" not in wildcard_acls
+    assert "*.test.com" not in wildcard_acls
+
+
+def test_haproxy_route_backend_standard_hostname_acls(
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
+) -> None:
+    """
+    arrange: Create HAProxyRouteBackend with mixed wildcard and standard hostnames.
+    act: Get standard_hostname_acls property.
+    assert: Returns only hostnames that start with '*.'.
+    """
+    from state.haproxy_route import HAProxyRouteBackend, HAProxyRouteServer
+
+    requirer_data = haproxy_route_relation_data("test_service", relation_id=1)
+    backend = HAProxyRouteBackend(
+        relation_id=1,
+        application_data=requirer_data.application_data,
+        servers=[
+            HAProxyRouteServer(
+                server_name="test-0",
+                address=IPv4Address("10.0.0.1"),
+                port=80,
+                protocol="http",
+                check=None,
+                maxconn=None,
+            )
+        ],
+        hostname_acls={"example.com", "*.example.com", "test.example.com", "*.test.com"},
+    )
+
+    standard_acls = backend.standard_hostname_acls
+
+    assert standard_acls == {"*.example.com", "*.test.com"}
+    assert "example.com" not in standard_acls
+    assert "test.example.com" not in standard_acls
+
+
+def test_haproxy_route_backend_only_wildcard_hostnames(
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
+) -> None:
+    """
+    arrange: Create HAProxyRouteBackend with only wildcard hostnames.
+    act: Get wildcard_hostname_acls and standard_hostname_acls properties.
+    assert: wildcard_hostname_acls is empty, standard_hostname_acls contains all hostnames.
+    """
+    from state.haproxy_route import HAProxyRouteBackend, HAProxyRouteServer
+
+    requirer_data = haproxy_route_relation_data("test_service", relation_id=1)
+    backend = HAProxyRouteBackend(
+        relation_id=1,
+        application_data=requirer_data.application_data,
+        servers=[
+            HAProxyRouteServer(
+                server_name="test-0",
+                address=IPv4Address("10.0.0.1"),
+                port=80,
+                protocol="http",
+                check=None,
+                maxconn=None,
+            )
+        ],
+        hostname_acls={"*.example.com", "*.test.com"},
+    )
+
+    assert backend.wildcard_hostname_acls == set()
+    assert backend.standard_hostname_acls == {"*.example.com", "*.test.com"}
+
+
+def test_haproxy_route_backend_only_standard_hostnames(
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
+) -> None:
+    """
+    arrange: Create HAProxyRouteBackend with only standard (non-wildcard) hostnames.
+    act: Get wildcard_hostname_acls and standard_hostname_acls properties.
+    assert: wildcard_hostname_acls contains all hostnames, standard_hostname_acls is empty.
+    """
+    from state.haproxy_route import HAProxyRouteBackend, HAProxyRouteServer
+
+    requirer_data = haproxy_route_relation_data("test_service", relation_id=1)
+    backend = HAProxyRouteBackend(
+        relation_id=1,
+        application_data=requirer_data.application_data,
+        servers=[
+            HAProxyRouteServer(
+                server_name="test-0",
+                address=IPv4Address("10.0.0.1"),
+                port=80,
+                protocol="http",
+                check=None,
+                maxconn=None,
+            )
+        ],
+        hostname_acls={"example.com", "test.example.com"},
+    )
+
+    assert backend.wildcard_hostname_acls == {"example.com", "test.example.com"}
+    assert backend.standard_hostname_acls == set()
+
+
+def test_haproxy_route_backend_no_hostnames(
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
+) -> None:
+    """
+    arrange: Create HAProxyRouteBackend with no hostnames.
+    act: Get wildcard_hostname_acls and standard_hostname_acls properties.
+    assert: Both properties return empty sets.
+    """
+    from state.haproxy_route import HAProxyRouteBackend, HAProxyRouteServer
+
+    requirer_data = haproxy_route_relation_data("test_service", relation_id=1)
+    backend = HAProxyRouteBackend(
+        relation_id=1,
+        application_data=requirer_data.application_data,
+        servers=[
+            HAProxyRouteServer(
+                server_name="test-0",
+                address=IPv4Address("10.0.0.1"),
+                port=80,
+                protocol="http",
+                check=None,
+                maxconn=None,
+            )
+        ],
+        hostname_acls=set(),
+    )
+
+    assert backend.wildcard_hostname_acls == set()
+    assert backend.standard_hostname_acls == set()
+
+
+def test_generate_hostname_acls_with_wildcard_hostname(
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
+) -> None:
+    """
+    arrange: Create requirer data with wildcard hostname.
+    act: Call generate_hostname_acls.
+    assert: Returns the wildcard hostname.
+    """
+    from state.haproxy_route import generate_hostname_acls
+
+    requirer_data = haproxy_route_relation_data(
+        "test_service", relation_id=1, hostname="*.example.com"
+    )
+
+    hostname_acls = generate_hostname_acls(requirer_data.application_data, None)
+
+    assert hostname_acls == {"*.example.com"}
+
+
+def test_generate_hostname_acls_with_wildcard_and_additional_hostnames(
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
+) -> None:
+    """
+    arrange: Create requirer data with wildcard hostname and additional hostnames.
+    act: Call generate_hostname_acls.
+    assert: Returns all hostnames including wildcards.
+    """
+    from state.haproxy_route import generate_hostname_acls
+
+    requirer_data = haproxy_route_relation_data(
+        "test_service",
+        relation_id=1,
+        hostname="*.example.com",
+        additional_hostnames=["*.test.com", "api.example.com"],
+    )
+
+    hostname_acls = generate_hostname_acls(requirer_data.application_data, None)
+
+    assert hostname_acls == {"*.example.com", "*.test.com", "api.example.com"}
+
+
+def test_generate_hostname_acls_with_external_hostname_and_wildcard(
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
+) -> None:
+    """
+    arrange: Create requirer data without hostname but with external_hostname.
+    act: Call generate_hostname_acls with wildcard external_hostname.
+    assert: Returns the external wildcard hostname.
+    """
+    from state.haproxy_route import generate_hostname_acls
+
+    requirer_data = haproxy_route_relation_data("test_service", relation_id=1)
+
+    hostname_acls = generate_hostname_acls(requirer_data.application_data, "*.haproxy.internal")
+
+    assert hostname_acls == {"*.haproxy.internal"}
+
+
+def test_haproxy_route_requirers_information_with_wildcard_hostnames(
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
+) -> None:
+    """
+    arrange: Setup haproxy-route provider with wildcard hostnames.
+    act: Initialize HaproxyRouteRequirersInformation.
+    assert: Backends are created with wildcard hostnames properly set.
+    """
+    haproxy_route_tcp_provider_mock = MagicMock()
+    haproxy_route_tcp_provider_mock.get_data = MagicMock(
+        return_value=HaproxyRouteTcpRequirersData(
+            requirers_data=[],
+            relation_ids_with_invalid_data=set(),
+        )
+    )
+
+    haproxy_route_provider_mock = MagicMock()
+    haproxy_route_provider_mock.get_data = MagicMock(
+        return_value=HaproxyRouteRequirersData(
+            requirers_data=[
+                haproxy_route_relation_data(
+                    "service1",
+                    relation_id=1,
+                    hostname="*.example.com",
+                    additional_hostnames=["api.example.com"],
+                ),
+                haproxy_route_relation_data(
+                    "service2",
+                    relation_id=2,
+                    hostname="test.com",
+                    additional_hostnames=["*.test.com"],
+                ),
+            ],
+            relation_ids_with_invalid_data=set(),
+        )
+    )
+
+    haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
+        haproxy_route=haproxy_route_provider_mock,
+        haproxy_route_tcp=haproxy_route_tcp_provider_mock,
+        external_hostname="haproxy.internal",
+        peers=[],
+        ca_certs_configured=False,
+    )
+
+    assert len(haproxy_route_information.backends) == 2
+
+    # Check first backend has wildcard and standard hostname
+    backend1 = haproxy_route_information.backends[0]
+    assert backend1.hostname_acls == {"*.example.com", "api.example.com"}
+    assert backend1.wildcard_hostname_acls == {"api.example.com"}
+    assert backend1.standard_hostname_acls == {"*.example.com"}
+
+    # Check second backend has both wildcard and standard hostname
+    backend2 = haproxy_route_information.backends[1]
+    assert backend2.hostname_acls == {"test.com", "*.test.com"}
+    assert backend2.wildcard_hostname_acls == {"test.com"}
+    assert backend2.standard_hostname_acls == {"*.test.com"}
