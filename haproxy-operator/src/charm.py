@@ -365,11 +365,10 @@ class HAProxyCharm(ops.CharmBase):
         # 2. All requirers must enable TLS passthrough or disable TLS termination
         allow_no_certificates = bool(
             not haproxy_route_requirers_information.backends
-            and haproxy_route_requirers_information.tcp_endpoints
+            and haproxy_route_requirers_information.tcp_frontends
             and all(
-                not endpoint.application_data.enforce_tls
-                or not endpoint.application_data.tls_terminate
-                for endpoint in haproxy_route_requirers_information.tcp_endpoints
+                not frontend.enforce_tls or not frontend.tls_terminate
+                for frontend in haproxy_route_requirers_information.tcp_frontends
             )
         )
         tls_information = TLSInformation.from_charm(self, self.certificates, allow_no_certificates)
@@ -388,8 +387,8 @@ class HAProxyCharm(ops.CharmBase):
             80,
             443,
             *(
-                tcp_endpoint.application_data.port
-                for tcp_endpoint in haproxy_route_requirers_information.valid_tcp_endpoints()
+                frontend.port
+                for frontend in haproxy_route_requirers_information.valid_tcp_frontends()
             ),
             *(
                 backend.application_data.external_grpc_port
@@ -450,11 +449,12 @@ class HAProxyCharm(ops.CharmBase):
                     for hostname_acl in backend.hostname_acls
                 ] + [
                     CertificateRequestAttributes(
-                        common_name=endpoint.application_data.sni,
-                        sans_dns=frozenset([endpoint.application_data.sni]),
+                        common_name=backend.application_data.sni,
+                        sans_dns=frozenset([backend.application_data.sni]),
                     )
-                    for endpoint in haproxy_route_requirer_information.tcp_endpoints
-                    if endpoint.application_data.sni is not None
+                    for frontend in haproxy_route_requirer_information.tcp_frontends
+                    for backend in frontend.backends
+                    if backend.application_data.sni is not None
                 ]
         except (
             HaproxyRouteIntegrationDataValidationError,
@@ -486,7 +486,7 @@ class HAProxyCharm(ops.CharmBase):
     @validate_config_and_tls(defer=True)
     def _on_ca_certificates_removed(self, _: CertificatesRemovedEvent) -> None:
         """Handle the CA certificates removed event."""
-        self._tls.remove_cas_from_unit()
+        self._tls.update_trusted_cas()
         self._reconcile()
 
     @validate_config_and_tls(defer=False)
