@@ -96,7 +96,12 @@ class TLSRelationService:
 
     def update_trusted_cas(self) -> None:
         """Handle the change in the set of CAs to trust."""
-        self.write_cas_to_unit(self.recv_ca_cert.get_all_certificates())
+        ca_certificates = self.recv_ca_cert.get_all_certificates()
+        if not ca_certificates:
+            logger.info("No CA certificates found, removing existing CA bundle")
+            self.remove_cas_from_unit()
+            return
+        self.write_cas_to_unit(ca_certificates)
 
     def _certificate_matches_stored_content(
         self, certificate: Certificate, chain: list[Certificate], private_key: PrivateKey

@@ -225,28 +225,21 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
         logger.info("identity-platform is already deployed")
         return
     k8s_juju.deploy(
-        "self-signed-certificates", channel="latest/stable", revision=155, trust=True
+        "self-signed-certificates", channel="1/stable", revision=317, trust=True
     )
-    k8s_juju.deploy("hydra", channel="latest/stable", revision=362, trust=True)
-    k8s_juju.deploy("kratos", channel="latest/stable", revision=527, trust=True)
+    k8s_juju.deploy("hydra", channel="latest/edge", revision=399, trust=True)
+    k8s_juju.deploy("kratos", channel="latest/edge", revision=567, trust=True)
     k8s_juju.deploy(
         "identity-platform-login-ui-operator",
-        channel="latest/stable",
-        revision=166,
-        trust=True,
-    )
-    k8s_juju.deploy(
-        "traefik-k8s",
-        "traefik-admin",
-        channel="latest/stable",
-        revision=176,
+        channel="latest/edge",
+        revision=200,
         trust=True,
     )
     k8s_juju.deploy(
         "traefik-k8s",
         "traefik-public",
-        channel="latest/stable",
-        revision=176,
+        channel="latest/edge",
+        revision=270,
         trust=True,
     )
     k8s_juju.deploy(
@@ -279,17 +272,12 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
     k8s_juju.integrate("postgresql-k8s:database", "hydra:pg-database")
     k8s_juju.integrate("postgresql-k8s:database", "kratos:pg-database")
     k8s_juju.integrate(
-        "self-signed-certificates:certificates", "traefik-admin:certificates"
-    )
-    k8s_juju.integrate(
         "self-signed-certificates:certificates", "traefik-public:certificates"
     )
-    k8s_juju.integrate("traefik-admin:ingress", "hydra:admin-ingress")
-    k8s_juju.integrate("traefik-admin:ingress", "kratos:admin-ingress")
-    k8s_juju.integrate("traefik-public:ingress", "hydra:public-ingress")
-    k8s_juju.integrate("traefik-public:ingress", "kratos:public-ingress")
+    k8s_juju.integrate("traefik-public:traefik-route", "hydra:public-route")
+    k8s_juju.integrate("traefik-public:traefik-route", "kratos:public-route")
     k8s_juju.integrate(
-        "traefik-public:ingress", "identity-platform-login-ui-operator:ingress"
+        "traefik-public:traefik-route", "identity-platform-login-ui-operator:public-route"
     )
 
     k8s_juju.config("kratos", {"enforce_mfa": False})
