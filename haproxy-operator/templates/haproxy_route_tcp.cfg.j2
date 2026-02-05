@@ -63,7 +63,7 @@ frontend haproxy_route_tcp_{{ frontend.port }}
 {# Otherwise, the default backend will reject all TCP connections. #}
 backend {{ frontend.default_backend_name }}
     mode tcp
-{% if frontend.default_backend is not None %}
+{% if frontend.default_backend is not none %}
 {% if frontend.default_backend.application_data.load_balancing %}
     balance {{ frontend.default_backend.application_data.load_balancing.algorithm.value }}
 {% if frontend.default_backend.application_data.load_balancing.consistent_hashing %}
