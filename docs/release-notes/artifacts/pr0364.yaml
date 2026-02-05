@@ -1,0 +1,20 @@
+version_schema: 2
+
+changes:
+  - title: Add support for wildcard hostnames in haproxy-route relation
+    author: tphan025
+    type: minor
+    description: >
+      Added support for wildcard hostnames (e.g., *.example.com) in the haproxy-route relation.
+      Hostnames can now include a wildcard prefix, allowing a single backend to handle requests
+      for multiple subdomains. The wildcard character (*) cannot be used at the TLD level.
+      
+      HAProxy configuration now uses '-m end' matching for wildcard hostnames instead of exact
+      matching ('-i'), ensuring proper routing of requests to wildcard domains.
+      
+      Added the 'validators' library dependency to validate domain names with wildcard support.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/364
+    visibility: public
+    highlight: false
