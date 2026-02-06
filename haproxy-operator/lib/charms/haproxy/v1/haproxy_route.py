@@ -144,6 +144,7 @@ from pydantic import (
 )
 from pydantic.dataclasses import dataclass
 from typing_extensions import Self
+from validators import domain
 
 # The unique Charmhub library identifier, never change it
 LIBID = "08b6347482f6455486b5f5bb4dc4e6cf"
@@ -153,7 +154,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 11
+LIBPATCH = 12
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -181,6 +182,24 @@ def value_contains_invalid_characters(
 
     if [char for char in value if char in invalid_characters]:
         raise ValueError(f"Relation data contains invalid character(s) {value}")
+    return value
+
+
+def valid_domain_with_wildcard(value: str) -> str:
+    """Validate if value is a valid domain that can include a wildcard.
+
+    The wildcard character (*) can't be at the TLD level, for example *.com is not valid.
+    This is supported natively by the library ( e.g domain("com") will raise a ValidationError ).
+
+    Raises:
+        ValueError: When value is not a valid domain.
+
+    Args:
+        value: The value to validate.
+    """
+    fqdn = value[2:] if value.startswith("*.") else value
+    if not bool(domain(fqdn)):
+        raise ValueError(f"Invalid domain: {value}")
     return value
 
 
@@ -571,9 +590,11 @@ class RequirerApplicationData(_DatabagModel):
     paths: list[VALIDSTR] = Field(
         description="The list of paths to route to this service.", default=[]
     )
-    hostname: Optional[VALIDSTR] = Field(description="Hostname of this service.", default=None)
-    additional_hostnames: list[VALIDSTR] = Field(
-        description="The list of additional hostnames of this service.", default=[]
+    hostname: Optional[Annotated[str, BeforeValidator(valid_domain_with_wildcard)]] = Field(
+        description="Hostname of this service.", default=None
+    )
+    additional_hostnames: list[Annotated[str, BeforeValidator(valid_domain_with_wildcard)]] = (
+        Field(description="The list of additional hostnames of this service.", default=[])
     )
     rewrites: list[RewriteConfiguration] = Field(
         description="The list of path rewrite rules.", default=[]
