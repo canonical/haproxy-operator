@@ -448,12 +448,6 @@ class HAProxyCharm(ops.CharmBase):
                     CertificateRequestAttributes(
                         common_name=hostname_acl, sans_dns=frozenset([hostname_acl])
                     )
-                    # Wildcard certificates should also cover the base domain
-                    if hostname_acl.startswith("*.")
-                    else CertificateRequestAttributes(
-                        common_name=hostname_acl,
-                        sans_dns=frozenset([hostname_acl, hostname_acl[2:]]),
-                    )
                     for backend in haproxy_route_requirer_information.backends
                     for hostname_acl in backend.hostname_acls
                 ] + [

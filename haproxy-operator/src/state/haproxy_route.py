@@ -202,7 +202,9 @@ class HAProxyRouteBackend:
         Returns:
             set[str]: The hostname-based routing rules for this backend (non-wildcard).
         """
-        return {hostname[2:] for hostname in self.hostname_acls if hostname.startswith("*.")}
+        # We also take the leading '.' to ensure that requests to the base domain won't match.
+        # The ACL will be something like this: req.hdr(host),field(1,:) -m end .example.com
+        return {hostname[1:] for hostname in self.hostname_acls if hostname.startswith("*.")}
 
     @property
     def standard_hostname_acls(self) -> set[str]:
