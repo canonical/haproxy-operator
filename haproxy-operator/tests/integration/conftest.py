@@ -255,6 +255,7 @@ def any_charm_haproxy_route_requirer_base_fixture(
                         "cryptography==45.0.6",
                         "grpcio",
                         "grpcio-reflection",
+                        "validators",
                     ]
                 ),
             },
