@@ -1,4 +1,3 @@
-<!-- Remember to update this file for your charm!! -->
 (release_notes_release_notes_0001)=
 
 # HAProxy release notes – 2.8/stable

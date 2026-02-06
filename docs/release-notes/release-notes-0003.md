@@ -1,4 +1,4 @@
-<!-- Remember to update this file for your charm!! -->
+(release_notes_release_notes_0003)=
 
 # HAProxy release notes – 2.8/stable
 
@@ -117,7 +117,7 @@ Relevant links:
 
 ## Bug fixes
 
-* Added missing settings from haproxy-route-tcp relation template ([PR]([https://github.com/canonical/haproxy-operator/pull/325])).
+* Added missing settings from haproxy-route-tcp relation template ([PR](https://github.com/canonical/haproxy-operator/pull/325)).
 * Removed extra slash in `_get_backend_proxied_endpoints` function in `charm.py` ([PR](https://github.com/canonical/haproxy-operator/pull/299), [related issue](https://github.com/canonical/haproxy-operator/issues/285)).
 
 ## Known issues
