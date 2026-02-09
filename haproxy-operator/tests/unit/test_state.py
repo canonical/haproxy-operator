@@ -33,7 +33,10 @@ from charms.traefik_k8s.v2.ingress import DataValidationError as V2DataValidatio
 from state.charm_state import CharmState, ProxyMode
 from state.ddos_protection import DDosProtection, DDosProtectionValidationError
 from state.haproxy_route import (
+    HAProxyRouteBackend,
     HaproxyRouteRequirersInformation,
+    HAProxyRouteServer,
+    generate_hostname_acls,
     parse_haproxy_route_tcp_requirers_data,
 )
 from state.haproxy_route_tcp import (
@@ -729,8 +732,6 @@ def test_haproxy_route_backend_wildcard_hostname_acls(
     act: Get wildcard_hostname_acls property.
     assert: Returns base domains (without *.) for wildcard hostnames.
     """
-    from state.haproxy_route import HAProxyRouteBackend, HAProxyRouteServer
-
     requirer_data = haproxy_route_relation_data("test_service", relation_id=1)
     backend = HAProxyRouteBackend(
         relation_id=1,
@@ -750,8 +751,8 @@ def test_haproxy_route_backend_wildcard_hostname_acls(
 
     wildcard_acls = backend.wildcard_hostname_acls
 
-    # wildcard_hostname_acls returns the base domains (stripped of *.) from wildcard hostnames
-    assert wildcard_acls == {"example.com", "test.com"}
+    # wildcard_hostname_acls returns domains with leading dot (stripped of * only) from wildcard hostnames
+    assert wildcard_acls == {".example.com", ".test.com"}
     assert "*.example.com" not in wildcard_acls
     assert "*.test.com" not in wildcard_acls
 
@@ -764,8 +765,6 @@ def test_haproxy_route_backend_standard_hostname_acls(
     act: Get standard_hostname_acls property.
     assert: Returns only hostnames that do NOT start with '*.'.
     """
-    from state.haproxy_route import HAProxyRouteBackend, HAProxyRouteServer
-
     requirer_data = haproxy_route_relation_data("test_service", relation_id=1)
     backend = HAProxyRouteBackend(
         relation_id=1,
@@ -799,8 +798,6 @@ def test_haproxy_route_backend_only_wildcard_hostnames(
     act: Get wildcard_hostname_acls and standard_hostname_acls properties.
     assert: wildcard_hostname_acls contains base domains, standard_hostname_acls is empty.
     """
-    from state.haproxy_route import HAProxyRouteBackend, HAProxyRouteServer
-
     requirer_data = haproxy_route_relation_data("test_service", relation_id=1)
     backend = HAProxyRouteBackend(
         relation_id=1,
@@ -818,8 +815,8 @@ def test_haproxy_route_backend_only_wildcard_hostnames(
         hostname_acls={"*.example.com", "*.test.com"},
     )
 
-    # wildcard_hostname_acls returns base domains (stripped of *.)
-    assert backend.wildcard_hostname_acls == {"example.com", "test.com"}
+    # wildcard_hostname_acls returns domains with leading dot (stripped of * only)
+    assert backend.wildcard_hostname_acls == {".example.com", ".test.com"}
     # standard_hostname_acls returns non-wildcard hostnames (empty in this case)
     assert backend.standard_hostname_acls == set()
 
@@ -832,8 +829,6 @@ def test_haproxy_route_backend_only_standard_hostnames(
     act: Get wildcard_hostname_acls and standard_hostname_acls properties.
     assert: wildcard_hostname_acls is empty, standard_hostname_acls contains the hostnames.
     """
-    from state.haproxy_route import HAProxyRouteBackend, HAProxyRouteServer
-
     requirer_data = haproxy_route_relation_data("test_service", relation_id=1)
     backend = HAProxyRouteBackend(
         relation_id=1,
@@ -865,8 +860,6 @@ def test_haproxy_route_backend_no_hostnames(
     act: Get wildcard_hostname_acls and standard_hostname_acls properties.
     assert: Both properties return empty sets.
     """
-    from state.haproxy_route import HAProxyRouteBackend, HAProxyRouteServer
-
     requirer_data = haproxy_route_relation_data("test_service", relation_id=1)
     backend = HAProxyRouteBackend(
         relation_id=1,
@@ -896,8 +889,6 @@ def test_generate_hostname_acls_with_wildcard_hostname(
     act: Call generate_hostname_acls.
     assert: Returns the wildcard hostname.
     """
-    from state.haproxy_route import generate_hostname_acls
-
     requirer_data = haproxy_route_relation_data(
         "test_service", relation_id=1, hostname="*.example.com"
     )
@@ -915,8 +906,6 @@ def test_generate_hostname_acls_with_wildcard_and_additional_hostnames(
     act: Call generate_hostname_acls.
     assert: Returns all hostnames including wildcards.
     """
-    from state.haproxy_route import generate_hostname_acls
-
     requirer_data = haproxy_route_relation_data(
         "test_service",
         relation_id=1,
@@ -937,8 +926,6 @@ def test_generate_hostname_acls_with_external_hostname_and_wildcard(
     act: Call generate_hostname_acls with wildcard external_hostname.
     assert: Returns the external wildcard hostname.
     """
-    from state.haproxy_route import generate_hostname_acls
-
     requirer_data = haproxy_route_relation_data("test_service", relation_id=1)
 
     hostname_acls = generate_hostname_acls(requirer_data.application_data, "*.haproxy.internal")
@@ -996,16 +983,16 @@ def test_haproxy_route_requirers_information_with_wildcard_hostnames(
     # Check first backend has wildcard and standard hostname
     backend1 = haproxy_route_information.backends[0]
     assert backend1.hostname_acls == {"*.example.com", "api.example.com"}
-    # wildcard_hostname_acls returns base domain of *.example.com
-    assert backend1.wildcard_hostname_acls == {"example.com"}
+    # wildcard_hostname_acls returns domain with leading dot (stripped of * only) from *.example.com
+    assert backend1.wildcard_hostname_acls == {".example.com"}
     # standard_hostname_acls returns the non-wildcard hostname
     assert backend1.standard_hostname_acls == {"api.example.com"}
 
     # Check second backend has both wildcard and standard hostname
     backend2 = haproxy_route_information.backends[1]
     assert backend2.hostname_acls == {"test.com", "*.test.com"}
-    # wildcard_hostname_acls returns base domain of *.test.com
-    assert backend2.wildcard_hostname_acls == {"test.com"}
+    # wildcard_hostname_acls returns domain with leading dot (stripped of * only) from *.test.com
+    assert backend2.wildcard_hostname_acls == {".test.com"}
     # standard_hostname_acls returns the non-wildcard hostname
     assert backend2.standard_hostname_acls == {"test.com"}
 
