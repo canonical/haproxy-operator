@@ -1,7 +1,7 @@
 version_schema: 2
 
 changes:
-  - title: Add support for wildcard hostnames in haproxy-route relation
+  - title: Added support for wildcard hostnames in haproxy-route relation
     author: tphan025
     type: minor
     description: >
