@@ -419,7 +419,7 @@ async def haproxy_route_requirer_fixture(model: Model) -> typing.AsyncGenerator[
                     "apt.py": pathlib.Path(APT_LIB_SRC).read_text(encoding="utf-8"),
                 }
             ),
-            "python-packages": "pydantic",
+            "python-packages": "pydantic~=2.10\nvalidators",
         },
     )
     await model.wait_for_idle(apps=[application.name], status="active")

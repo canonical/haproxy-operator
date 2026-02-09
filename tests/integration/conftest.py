@@ -323,7 +323,7 @@ def deploy_any_charm_haproxy_route_requirer(
             channel="beta",
             config={
                 "src-overwrite": f"@{tf.name}",
-                "python-packages": "pydantic\ncryptography==45.0.6",
+                "python-packages": "pydantic\ncryptography==45.0.6\nvalidators",
             },
         )
     return app_name
