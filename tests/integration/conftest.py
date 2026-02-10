@@ -21,7 +21,7 @@ JUJU_WAIT_TIMEOUT = 10 * 60  # 10 minutes
 SELF_SIGNED_CERTIFICATES_APP_NAME = "self-signed-certificates"
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/haproxy_route_requirer.py"
-HAPROXY_ROUTE_LIB_SRC = "haproxy-operator/lib/charms/haproxy/v1/haproxy_route.py"
+HAPROXY_ROUTE_LIB_SRC = "haproxy-operator/lib/charms/haproxy/v2/haproxy_route.py"
 APT_LIB_SRC = "haproxy-operator/lib/charms/operator_libs_linux/v0/apt.py"
 
 
@@ -323,7 +323,7 @@ def deploy_any_charm_haproxy_route_requirer(
             channel="beta",
             config={
                 "src-overwrite": f"@{tf.name}",
-                "python-packages": "pydantic\ncryptography==45.0.6",
+                "python-packages": "pydantic\ncryptography==45.0.6\nvalidators",
             },
         )
     return app_name
