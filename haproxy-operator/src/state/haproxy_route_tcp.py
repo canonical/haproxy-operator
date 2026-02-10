@@ -159,6 +159,35 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
                 return [f"option {check.check_type!s}"]
         return []
 
+    @property
+    def wildcard_sni(self) -> Optional[str]:
+        """Get the wildcard SNI with the leading asterisk and dot removed.
+
+        Wildcard SNIs like *.example.com are converted to .example.com for
+        use with HAProxy's "-m end" (suffix) matching.
+
+        Returns:
+            Optional[str]: The wildcard SNI without the asterisk, or None if SNI
+                is not a wildcard or not set.
+        """
+        if sni := self.application_data.sni:
+            if sni.startswith("*."):
+                return sni[1:]  # Remove the "*" but keep the leading dot
+        return None
+
+    @property
+    def standard_sni(self) -> Optional[str]:
+        """Get the standard (non-wildcard) SNI.
+
+        Returns:
+            Optional[str]: The SNI if it's not a wildcard, or None if SNI
+                is a wildcard or not set.
+        """
+        if sni := self.application_data.sni:
+            if not sni.startswith("*."):
+                return sni
+        return None
+
 
 @dataclass
 class HAProxyRouteTcpFrontend:
@@ -249,13 +278,23 @@ class HAProxyRouteTcpFrontend:
         """
         acls: list[BackendRoutingConfiguration] = []
         for backend in self.backends:
-            if sni := backend.application_data.sni:
-                sni_fetch_method = (
-                    "ssl_fc_sni" if backend.application_data.tls_terminate else "req.ssl_sni"
-                )
+            sni_fetch_method = (
+                "ssl_fc_sni" if backend.application_data.tls_terminate else "req.ssl_sni"
+            )
+            acl_lines: list[str] = []
+            
+            # Add ACL for standard (non-wildcard) SNI
+            if standard_sni := backend.standard_sni:
+                acl_lines.append(f"acl is_{backend.name} {sni_fetch_method} -i {standard_sni}")
+            
+            # Add ACL for wildcard SNI
+            if wildcard_sni := backend.wildcard_sni:
+                acl_lines.append(f"acl is_{backend.name} {sni_fetch_method} -m end {wildcard_sni}")
+            
+            if acl_lines:
                 acls.append(
                     BackendRoutingConfiguration(
-                        acl=f"acl is_{backend.name} {sni_fetch_method} -i {sni}",
+                        acl="\n    ".join(acl_lines),
                         use_backend=f"use_backend {backend.name} if is_{backend.name}",
                     )
                 )

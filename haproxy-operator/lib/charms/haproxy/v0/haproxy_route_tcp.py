@@ -165,16 +165,17 @@ from pydantic import (
 )
 from pydantic.dataclasses import dataclass
 from typing_extensions import Self
+from validators import domain
 
 # The unique Charmhub library identifier, never change it
 LIBID = "b1b5c0a6f1b5481c9923efa042846681"
 
 # Increment this major API version when introducing breaking changes
-LIBAPI = 0
+LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 3
+LIBPATCH = 0
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_TCP_RELATION_NAME = "haproxy-route-tcp"
@@ -201,7 +202,33 @@ def value_contains_invalid_characters(value: Optional[str]) -> Optional[str]:
     return value
 
 
+def valid_domain_with_wildcard(value: str) -> str:
+    """Validate if value is a valid domain that can include a wildcard.
+
+    The wildcard character (*) can't be at the TLD level, for example *.com is not valid.
+    This is supported natively by the library ( e.g domain("com") will raise a ValidationError ).
+
+    Raises:
+        ValueError: When value is not a valid domain.
+
+    Args:
+        value: The value to validate.
+
+    Returns:
+        The validated value.
+    """
+    fqdn = value[2:] if value.startswith("*.") else value
+    if not bool(domain(fqdn)):
+        raise ValueError(f"Invalid domain: {value}")
+    return value
+
+
 VALIDSTR = Annotated[str, BeforeValidator(value_contains_invalid_characters)]
+VALIDSNI = Annotated[
+    str,
+    BeforeValidator(value_contains_invalid_characters),
+    BeforeValidator(valid_domain_with_wildcard),
+]
 
 
 class DataValidationError(Exception):
@@ -581,10 +608,10 @@ class TcpRequirerApplicationData(_DatabagModel):
         gt=0,
         le=65525,
     )
-    sni: Optional[VALIDSTR] = Field(
+    sni: Optional[VALIDSNI] = Field(
         description=(
             "Server name identification. Used to route traffic to the service. "
-            "Only available if TLS is enabled."
+            "Only available if TLS is enabled. Supports wildcard domains (e.g., *.example.com)."
         ),
         default=None,
     )
