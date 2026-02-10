@@ -474,3 +474,63 @@ def test_requirer_application_data_complete_configuration(mock_relation_data):
     assert data.tls_terminate is True
     assert len(data.ip_deny_list) == 1
     assert data.server_maxconn == 100
+
+
+@pytest.mark.parametrize(
+    "sni,expected",
+    [
+        ("example.com", "example.com"),
+        ("*.example.com", "*.example.com"),
+        ("api.example.com", "api.example.com"),
+        ("*.api.example.com", "*.api.example.com"),
+        ("test.api.example.com", "test.api.example.com"),
+    ],
+)
+def test_requirer_application_data_with_wildcard_sni_valid(sni, expected):
+    """
+    arrange: Create application data with various valid SNI formats including wildcards.
+    act: Create a TcpRequirerApplicationData model.
+    assert: SNI is accepted and stored correctly.
+    """
+    data = TcpRequirerApplicationData(
+        port=8080,
+        sni=sni,
+        enforce_tls=True,
+    )
+    assert data.sni == expected
+
+
+@pytest.mark.parametrize(
+    "invalid_sni",
+    [
+        "*.com",  # Wildcard at TLD level
+        "*invalid.com",  # Asterisk not at start
+        "test.*.com",  # Wildcard in the middle
+    ],
+)
+def test_requirer_application_data_with_invalid_wildcard_sni(invalid_sni):
+    """
+    arrange: Create application data with invalid wildcard SNI.
+    act: Attempt to create a TcpRequirerApplicationData model.
+    assert: ValidationError is raised.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(
+            port=8080,
+            sni=invalid_sni,
+            enforce_tls=True,
+        )
+
+
+def test_requirer_application_data_wildcard_sni_without_tls_fails():
+    """
+    arrange: Create application data with wildcard SNI but TLS disabled.
+    act: Attempt to create a TcpRequirerApplicationData model.
+    assert: ValidationError is raised because SNI requires TLS.
+    """
+    with pytest.raises(ValidationError, match="can't set SNI and disable TLS"):
+        TcpRequirerApplicationData(
+            port=8080,
+            sni="*.example.com",
+            enforce_tls=False,
+        )
