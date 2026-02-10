@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/haproxy_route_requirer.py"
-HAPROXY_ROUTE_LIB_SRC = "lib/charms/haproxy/v1/haproxy_route.py"
+HAPROXY_ROUTE_LIB_SRC = "lib/charms/haproxy/v2/haproxy_route.py"
 APT_LIB_SRC = "lib/charms/operator_libs_linux/v0/apt.py"
 ANY_CHARM_INGRESS_PER_UNIT_REQUIRER = "ingress-per-unit-requirer-any"
 ANY_CHARM_INGRESS_PER_UNIT_REQUIRER_SRC = "tests/integration/ingress_per_unit_requirer.py"
@@ -255,6 +255,7 @@ def any_charm_haproxy_route_requirer_base_fixture(
                         "cryptography==45.0.6",
                         "grpcio",
                         "grpcio-reflection",
+                        "validators",
                     ]
                 ),
             },

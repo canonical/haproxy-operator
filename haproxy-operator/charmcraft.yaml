@@ -120,6 +120,10 @@ actions:
       hostname:
         type: string
         description: Hostname to extract certs from.
+      wildcard:
+        type: boolean
+        description: Whether the certificate is a wildcard certificate.
+        default: false
     required:
     - hostname
   get-proxied-endpoints:
