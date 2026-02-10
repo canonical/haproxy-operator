@@ -18,7 +18,7 @@ from charms.haproxy.v0.haproxy_route_tcp import (
     HaproxyRouteTcpRequirerData,
     HaproxyRouteTcpRequirersData,
 )
-from charms.haproxy.v1.haproxy_route import (
+from charms.haproxy.v2.haproxy_route import (
     HaproxyRouteRequirerData,
     HaproxyRouteRequirersData,
 )

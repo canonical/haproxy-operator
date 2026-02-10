@@ -7,7 +7,7 @@ To get started using the library, you just need to fetch the library using `char
 
 ```shell
 cd some-charm
-charmcraft fetch-lib charms.haproxy.v1.haproxy_route_tcp
+charmcraft fetch-lib charms.haproxy.v2.haproxy_route_tcp
 ```
 
 In the `metadata.yaml` of the charm, add the following:

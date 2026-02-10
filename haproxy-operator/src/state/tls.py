@@ -7,7 +7,7 @@ import logging
 from dataclasses import dataclass
 
 import ops
-from charms.haproxy.v1.haproxy_route import valid_domain_with_wildcard
+from charms.haproxy.v2.haproxy_route import valid_domain_with_wildcard
 from charms.tls_certificates_interface.v4.tls_certificates import (
     Certificate,
     TLSCertificatesRequiresV4,

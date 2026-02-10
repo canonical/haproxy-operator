@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from charms.haproxy.v0.haproxy_route_tcp import HaproxyRouteTcpRequirersData
-from charms.haproxy.v1.haproxy_route import (
+from charms.haproxy.v2.haproxy_route import (
     HaproxyRewriteMethod,
     HaproxyRouteRequirerData,
     HaproxyRouteRequirersData,
