@@ -22,7 +22,7 @@ from charms.haproxy.v0.ddos_protection import (
     DDOS_PROTECTION_RELATION_NAME,
     DDoSProtectionRequirer,
 )
-from charms.haproxy.v0.haproxy_route_tcp import HaproxyRouteTcpProvider
+from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpProvider
 from charms.haproxy.v0.spoe_auth import SpoeAuthRequirer
 from charms.haproxy.v2.haproxy_route import HaproxyRouteProvider
 from charms.tls_certificates_interface.v4.tls_certificates import (

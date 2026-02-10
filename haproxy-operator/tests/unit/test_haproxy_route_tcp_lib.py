@@ -9,7 +9,7 @@ from ipaddress import ip_address
 from typing import Any, cast
 
 import pytest
-from charms.haproxy.v0.haproxy_route_tcp import (
+from charms.haproxy.v1.haproxy_route_tcp import (
     HaproxyRouteTcpProviderAppData,
     HaproxyRouteTcpRequirerData,
     HaproxyRouteTcpRequirersData,

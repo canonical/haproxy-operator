@@ -14,7 +14,7 @@ from charms.haproxy.v0.ddos_protection import (
     DDoSProtectionProviderAppData,
     DDoSProtectionRequirer,
 )
-from charms.haproxy.v0.haproxy_route_tcp import (
+from charms.haproxy.v1.haproxy_route_tcp import (
     HaproxyRouteTcpRequirerData,
     HaproxyRouteTcpRequirersData,
 )

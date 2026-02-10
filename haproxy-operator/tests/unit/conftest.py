@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import scenario
-from charms.haproxy.v0.haproxy_route_tcp import (
+from charms.haproxy.v1.haproxy_route_tcp import (
     HaproxyRouteTcpRequirerData,
     TcpRequirerApplicationData,
     TcpRequirerUnitData,
