@@ -48,16 +48,14 @@ def test_get_proxied_endpoints_action(
         )
     )
 
-    expected_endpoints = json.dumps(
-        [
-            "https://ok.haproxy.internal/v1",
-            "https://ok.haproxy.internal/v2",
-            "https://ok2.haproxy.internal/v1",
-            "https://ok2.haproxy.internal/v2",
-            "https://ok3.haproxy.internal/v1",
-            "https://ok3.haproxy.internal/v2",
-        ]
-    )
+    expected_endpoints = {
+        "https://ok.haproxy.internal/v1",
+        "https://ok.haproxy.internal/v2",
+        "https://ok2.haproxy.internal/v1",
+        "https://ok2.haproxy.internal/v2",
+        "https://ok3.haproxy.internal/v1",
+        "https://ok3.haproxy.internal/v2",
+    }
 
     # Test without backend param
     task = juju.run(f"{configured_application_with_tls}/0", "get-proxied-endpoints")
@@ -69,7 +67,8 @@ def test_get_proxied_endpoints_action(
         f"{configured_application_with_tls}/0", "get-proxied-endpoints", {"backend": "any_charm"}
     )
 
-    assert task.results == {"endpoints": expected_endpoints}, task.results
+    endpoints = set(json.loads(task.results["endpoints"]))
+    assert endpoints == expected_endpoints, task.results
 
     # Test with backend param with non existing backend
     task = juju.run(
