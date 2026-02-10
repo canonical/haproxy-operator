@@ -1527,8 +1527,7 @@ class HaproxyRouteTcpRequirer(Object):
             logger.exception("Invalid provider url.")
             return []
 
-    # The following methods allows for chaining which aims to improve the developper experience
-    # The following methods allows for chaining which aims to improve the developper experience
+    # The following methods allow for chaining which aims to improve the developer experience
     def configure_port(self, port: int) -> "Self":
         """Set the provider port.
 
@@ -1653,7 +1652,7 @@ class HaproxyRouteTcpRequirer(Object):
         if not upload_bytes_per_second and not download_bytes_per_second:
             logger.error(
                 "At least one of `upload_bytes_per_second` "
-                "or `upload_bytes_per_second` must be set."
+                "or `download_bytes_per_second` must be set."
             )
             return self
         self._application_data["bandwidth_limit"] = {
@@ -1752,5 +1751,5 @@ class HaproxyRouteTcpRequirer(Object):
         """
         if not ip_deny_list:
             ip_deny_list = []
-        self._application_data["ip_deny_list"] = False
+        self._application_data["ip_deny_list"] = ip_deny_list
         return self
