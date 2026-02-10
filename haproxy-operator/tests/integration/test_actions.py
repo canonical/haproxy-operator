@@ -60,7 +60,8 @@ def test_get_proxied_endpoints_action(
     # Test without backend param
     task = juju.run(f"{configured_application_with_tls}/0", "get-proxied-endpoints")
 
-    assert task.results == {"endpoints": expected_endpoints}, task.results
+    endpoints = set(json.loads(task.results["endpoints"]))
+    assert endpoints == expected_endpoints, task.results
 
     # Test with backend param
     task = juju.run(
