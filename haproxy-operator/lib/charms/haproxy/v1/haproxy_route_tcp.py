@@ -10,6 +10,18 @@ cd some-charm
 charmcraft fetch-lib charms.haproxy.v1.haproxy_route_tcp
 ```
 
+### Dependencies
+
+This library requires the `validators` Python package for domain validation.
+Add it to your charm's dependencies in `charmcraft.yaml`:
+
+```yaml
+parts:
+  charm:
+    charm-python-packages:
+      - validators
+```
+
 In the `metadata.yaml` of the charm, add the following:
 
 ```yaml
