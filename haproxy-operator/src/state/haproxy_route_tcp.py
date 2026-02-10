@@ -160,31 +160,30 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
         return []
 
     @property
-    def wildcard_sni(self) -> Optional[str]:
-        """Get the wildcard SNI with the leading asterisk and dot removed.
-
-        Wildcard SNIs like *.example.com are converted to .example.com for
-        use with HAProxy's "-m end" (suffix) matching.
+    def is_wildcard_sni(self) -> bool:
+        """Check if the SNI is a wildcard pattern.
 
         Returns:
-            Optional[str]: The wildcard SNI without the asterisk, or None if SNI
-                is not a wildcard or not set.
+            bool: True if SNI starts with "*.", False otherwise.
         """
-        if (sni := self.application_data.sni) and sni.startswith("*."):
-            return sni[1:]  # Remove the "*" but keep the leading dot
-        return None
+        return self.application_data.sni is not None and self.application_data.sni.startswith("*.")
 
     @property
-    def standard_sni(self) -> Optional[str]:
-        """Get the standard (non-wildcard) SNI.
+    def sni_match_rule(self) -> Optional[str]:
+        """Get the SNI match rule for HAProxy ACL.
+
+        Returns the appropriate match rule based on whether the SNI is a wildcard:
+        - For wildcard SNI (*.example.com): "-m end .example.com"
+        - For standard SNI (api.example.com): "-i api.example.com"
 
         Returns:
-            Optional[str]: The SNI if it's not a wildcard, or None if SNI
-                is a wildcard or not set.
+            Optional[str]: The match rule string, or None if SNI is not set.
         """
-        if (sni := self.application_data.sni) and not sni.startswith("*."):
-            return sni
-        return None
+        if self.application_data.sni is None:
+            return None
+        if self.is_wildcard_sni:
+            return f"-m end {self.application_data.sni[1:]}"
+        return f"-i {self.application_data.sni}"
 
 
 @dataclass
@@ -276,23 +275,13 @@ class HAProxyRouteTcpFrontend:
         """
         acls: list[BackendRoutingConfiguration] = []
         for backend in self.backends:
-            sni_fetch_method = (
-                "ssl_fc_sni" if backend.application_data.tls_terminate else "req.ssl_sni"
-            )
-            acl_lines: list[str] = []
-
-            # Add ACL for standard (non-wildcard) SNI
-            if standard_sni := backend.standard_sni:
-                acl_lines.append(f"acl is_{backend.name} {sni_fetch_method} -i {standard_sni}")
-
-            # Add ACL for wildcard SNI
-            if wildcard_sni := backend.wildcard_sni:
-                acl_lines.append(f"acl is_{backend.name} {sni_fetch_method} -m end {wildcard_sni}")
-
-            if acl_lines:
+            if sni_match_rule := backend.sni_match_rule:
+                sni_fetch_method = (
+                    "ssl_fc_sni" if backend.application_data.tls_terminate else "req.ssl_sni"
+                )
                 acls.append(
                     BackendRoutingConfiguration(
-                        acl="\n    ".join(acl_lines),
+                        acl=f"acl is_{backend.name} {sni_fetch_method} {sni_match_rule}",
                         use_backend=f"use_backend {backend.name} if is_{backend.name}",
                     )
                 )

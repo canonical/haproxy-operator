@@ -1343,8 +1343,8 @@ def test_haproxy_route_tcp_backend_wildcard_sni_property(
 ):
     """
     arrange: Create backends with wildcard and standard SNI.
-    act: Check wildcard_sni and standard_sni properties.
-    assert: Properties correctly identify and transform wildcard SNIs.
+    act: Check is_wildcard_sni and sni_match_rule properties.
+    assert: Properties correctly identify and generate match rules for wildcard and standard SNIs.
     """
     # Backend with wildcard SNI
     backend_wildcard = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
@@ -1352,8 +1352,8 @@ def test_haproxy_route_tcp_backend_wildcard_sni_property(
             port=4000, sni="*.example.com", enforce_tls=True, tls_terminate=True
         )
     )
-    assert backend_wildcard.wildcard_sni == ".example.com"  # Asterisk removed, dot kept
-    assert backend_wildcard.standard_sni is None
+    assert backend_wildcard.is_wildcard_sni is True
+    assert backend_wildcard.sni_match_rule == "-m end .example.com"
 
     # Backend with standard SNI
     backend_standard = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
@@ -1361,15 +1361,15 @@ def test_haproxy_route_tcp_backend_wildcard_sni_property(
             port=4000, sni="api.example.com", enforce_tls=True, tls_terminate=True
         )
     )
-    assert backend_standard.wildcard_sni is None
-    assert backend_standard.standard_sni == "api.example.com"
+    assert backend_standard.is_wildcard_sni is False
+    assert backend_standard.sni_match_rule == "-i api.example.com"
 
     # Backend with no SNI
     backend_no_sni = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
         haproxy_route_tcp_relation_data(port=4000, enforce_tls=True, tls_terminate=True)
     )
-    assert backend_no_sni.wildcard_sni is None
-    assert backend_no_sni.standard_sni is None
+    assert backend_no_sni.is_wildcard_sni is False
+    assert backend_no_sni.sni_match_rule is None
 
 
 def test_haproxy_route_tcp_frontend_wildcard_sni_routing_configurations(

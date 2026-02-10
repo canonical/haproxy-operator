@@ -224,11 +224,6 @@ def valid_domain_with_wildcard(value: str) -> str:
 
 
 VALIDSTR = Annotated[str, BeforeValidator(value_contains_invalid_characters)]
-VALIDSNI = Annotated[
-    str,
-    BeforeValidator(value_contains_invalid_characters),
-    BeforeValidator(valid_domain_with_wildcard),
-]
 
 
 class DataValidationError(Exception):
@@ -608,7 +603,7 @@ class TcpRequirerApplicationData(_DatabagModel):
         gt=0,
         le=65525,
     )
-    sni: Optional[VALIDSNI] = Field(
+    sni: Optional[Annotated[VALIDSTR, BeforeValidator(valid_domain_with_wildcard)]] = Field(
         description=(
             "Server name identification. Used to route traffic to the service. "
             "Only available if TLS is enabled. Supports wildcard domains (e.g., *.example.com)."
