@@ -322,7 +322,7 @@ def any_charm_haproxy_route_tcp_requirer_base_fixture(
                     ),
                 }
             ),
-            "python-packages": "pydantic~=2.10",
+            "python-packages": "pydantic~=2.10\nvalidators",
         },
     )
     juju.wait(
