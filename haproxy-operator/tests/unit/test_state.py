@@ -1346,7 +1346,6 @@ def test_haproxy_route_tcp_backend_wildcard_sni_property(
     act: Check is_wildcard_sni and sni_match_rule properties.
     assert: Properties correctly identify and generate match rules for wildcard and standard SNIs.
     """
-    # Backend with wildcard SNI
     backend_wildcard = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
         haproxy_route_tcp_relation_data(
             port=4000, sni="*.example.com", enforce_tls=True, tls_terminate=True
@@ -1355,7 +1354,6 @@ def test_haproxy_route_tcp_backend_wildcard_sni_property(
     assert backend_wildcard.is_wildcard_sni is True
     assert backend_wildcard.sni_match_rule == "-m end .example.com"
 
-    # Backend with standard SNI
     backend_standard = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
         haproxy_route_tcp_relation_data(
             port=4000, sni="api.example.com", enforce_tls=True, tls_terminate=True
@@ -1364,7 +1362,6 @@ def test_haproxy_route_tcp_backend_wildcard_sni_property(
     assert backend_standard.is_wildcard_sni is False
     assert backend_standard.sni_match_rule == "-i api.example.com"
 
-    # Backend with no SNI
     backend_no_sni = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
         haproxy_route_tcp_relation_data(port=4000, enforce_tls=True, tls_terminate=True)
     )
@@ -1380,7 +1377,6 @@ def test_haproxy_route_tcp_frontend_wildcard_sni_routing_configurations(
     act: Check backend_sni_routing_configurations for wildcard ACLs.
     assert: ACLs use -m end for wildcard SNIs.
     """
-    # Backend with wildcard SNI
     backend_wildcard = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
         haproxy_route_tcp_relation_data(
             relation_id=0,
@@ -1394,7 +1390,6 @@ def test_haproxy_route_tcp_frontend_wildcard_sni_routing_configurations(
     routing_configs = frontend.backend_sni_routing_configurations
 
     assert len(routing_configs) == 1
-    # Wildcard SNI should use -m end with the leading dot
     assert (
         routing_configs[0].acl
         == "acl is_tcp-route-requirer_4000 ssl_fc_sni -m end .api.example.com"
@@ -1436,9 +1431,7 @@ def test_haproxy_route_tcp_frontend_mixed_wildcard_and_standard_sni(
     routing_configs = frontend.backend_sni_routing_configurations
 
     assert len(routing_configs) == 2
-    # Standard SNI uses -i
     assert routing_configs[0].acl == "acl is_tcp-route-requirer_4000 ssl_fc_sni -i api.example.com"
-    # Wildcard SNI uses -m end
     assert routing_configs[1].acl == "acl is_tcp-route-requirer_4000 ssl_fc_sni -m end .test.com"
 
 
@@ -1463,7 +1456,6 @@ def test_haproxy_route_tcp_frontend_wildcard_sni_without_tls_terminate(
     routing_configs = frontend.backend_sni_routing_configurations
 
     assert len(routing_configs) == 1
-    # Should use req.ssl_sni when tls_terminate=False
     assert (
         routing_configs[0].acl == "acl is_tcp-route-requirer_4000 req.ssl_sni -m end .example.com"
     )
