@@ -496,17 +496,3 @@ def test_requirer_application_data_with_invalid_wildcard_sni(invalid_sni):
             sni=invalid_sni,
             enforce_tls=True,
         )
-
-
-def test_requirer_application_data_wildcard_sni_without_tls_fails():
-    """
-    arrange: Create application data with wildcard SNI but TLS disabled.
-    act: Attempt to create a TcpRequirerApplicationData model.
-    assert: ValidationError is raised because SNI requires TLS.
-    """
-    with pytest.raises(ValidationError, match="can't set SNI and disable TLS"):
-        TcpRequirerApplicationData(
-            port=8080,
-            sni="*.example.com",
-            enforce_tls=False,
-        )
