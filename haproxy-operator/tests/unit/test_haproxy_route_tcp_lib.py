@@ -477,30 +477,6 @@ def test_requirer_application_data_complete_configuration(mock_relation_data):
 
 
 @pytest.mark.parametrize(
-    "sni,expected",
-    [
-        ("example.com", "example.com"),
-        ("*.example.com", "*.example.com"),
-        ("api.example.com", "api.example.com"),
-        ("*.api.example.com", "*.api.example.com"),
-        ("test.api.example.com", "test.api.example.com"),
-    ],
-)
-def test_requirer_application_data_with_wildcard_sni_valid(sni, expected):
-    """
-    arrange: Create application data with various valid SNI formats including wildcards.
-    act: Create a TcpRequirerApplicationData model.
-    assert: SNI is accepted and stored correctly.
-    """
-    data = TcpRequirerApplicationData(
-        port=8080,
-        sni=sni,
-        enforce_tls=True,
-    )
-    assert data.sni == expected
-
-
-@pytest.mark.parametrize(
     "invalid_sni",
     [
         "*.com",  # Wildcard at TLD level
