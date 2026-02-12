@@ -9,7 +9,7 @@ from ipaddress import ip_address
 from typing import Any, cast
 
 import pytest
-from charms.haproxy.v0.haproxy_route_tcp import (
+from charms.haproxy.v1.haproxy_route_tcp import (
     HaproxyRouteTcpProviderAppData,
     HaproxyRouteTcpRequirerData,
     HaproxyRouteTcpRequirersData,
@@ -474,3 +474,25 @@ def test_requirer_application_data_complete_configuration(mock_relation_data):
     assert data.tls_terminate is True
     assert len(data.ip_deny_list) == 1
     assert data.server_maxconn == 100
+
+
+@pytest.mark.parametrize(
+    "invalid_sni",
+    [
+        "*.com",  # Wildcard at TLD level
+        "*invalid.com",  # Asterisk not at start
+        "test.*.com",  # Wildcard in the middle
+    ],
+)
+def test_requirer_application_data_with_invalid_wildcard_sni(invalid_sni):
+    """
+    arrange: Create application data with invalid wildcard SNI.
+    act: Attempt to create a TcpRequirerApplicationData model.
+    assert: ValidationError is raised.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(
+            port=8080,
+            sni=invalid_sni,
+            enforce_tls=True,
+        )

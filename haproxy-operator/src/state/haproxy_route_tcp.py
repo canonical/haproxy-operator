@@ -6,7 +6,7 @@
 from functools import cached_property
 from typing import Optional, Self, cast
 
-from charms.haproxy.v0.haproxy_route_tcp import (
+from charms.haproxy.v1.haproxy_route_tcp import (
     HaproxyRouteTcpRequirerData,
     TCPHealthCheckType,
     TCPServerHealthCheck,
@@ -159,6 +159,32 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
                 return [f"option {check.check_type!s}"]
         return []
 
+    @property
+    def is_wildcard_sni(self) -> bool:
+        """Check if the SNI is a wildcard pattern.
+
+        Returns:
+            bool: True if SNI starts with "*.", False otherwise.
+        """
+        return self.application_data.sni is not None and self.application_data.sni.startswith("*.")
+
+    @property
+    def sni_match_rule(self) -> Optional[str]:
+        """Get the SNI match rule for HAProxy ACL.
+
+        Returns the appropriate match rule based on whether the SNI is a wildcard:
+        - For wildcard SNI (*.example.com): "-m end .example.com"
+        - For standard SNI (api.example.com): "-i api.example.com"
+
+        Returns:
+            Optional[str]: The match rule string, or None if SNI is not set.
+        """
+        if self.application_data.sni is None:
+            return None
+        if self.is_wildcard_sni:
+            return f"-m end {self.application_data.sni[1:]}"
+        return f"-i {self.application_data.sni}"
+
 
 @dataclass
 class HAProxyRouteTcpFrontend:
@@ -249,13 +275,13 @@ class HAProxyRouteTcpFrontend:
         """
         acls: list[BackendRoutingConfiguration] = []
         for backend in self.backends:
-            if sni := backend.application_data.sni:
+            if sni_match_rule := backend.sni_match_rule:
                 sni_fetch_method = (
                     "ssl_fc_sni" if backend.application_data.tls_terminate else "req.ssl_sni"
                 )
                 acls.append(
                     BackendRoutingConfiguration(
-                        acl=f"acl is_{backend.name} {sni_fetch_method} -i {sni}",
+                        acl=f"acl is_{backend.name} {sni_fetch_method} {sni_match_rule}",
                         use_backend=f"use_backend {backend.name} if is_{backend.name}",
                     )
                 )
