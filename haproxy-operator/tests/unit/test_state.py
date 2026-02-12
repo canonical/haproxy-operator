@@ -14,7 +14,7 @@ from charms.haproxy.v0.ddos_protection import (
     DDoSProtectionProviderAppData,
     DDoSProtectionRequirer,
 )
-from charms.haproxy.v0.haproxy_route_tcp import (
+from charms.haproxy.v1.haproxy_route_tcp import (
     HaproxyRouteTcpRequirerData,
     HaproxyRouteTcpRequirersData,
 )
@@ -1335,6 +1335,129 @@ def test_haproxy_route_tcp_frontend_enforce_tls_configuration(
     assert (
         frontend_no_sni.enforce_tls_configuration
         == "tcp-request content reject unless { req_ssl_hello_type 1 }"
+    )
+
+
+def test_haproxy_route_tcp_backend_wildcard_sni_property(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Create backends with wildcard and standard SNI.
+    act: Check is_wildcard_sni and sni_match_rule properties.
+    assert: Properties correctly identify and generate match rules for wildcard and standard SNIs.
+    """
+    backend_wildcard = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(
+            port=4000, sni="*.example.com", enforce_tls=True, tls_terminate=True
+        )
+    )
+    assert backend_wildcard.is_wildcard_sni is True
+    assert backend_wildcard.sni_match_rule == "-m end .example.com"
+
+    backend_standard = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(
+            port=4000, sni="api.example.com", enforce_tls=True, tls_terminate=True
+        )
+    )
+    assert backend_standard.is_wildcard_sni is False
+    assert backend_standard.sni_match_rule == "-i api.example.com"
+
+    backend_no_sni = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(port=4000, enforce_tls=True, tls_terminate=True)
+    )
+    assert backend_no_sni.is_wildcard_sni is False
+    assert backend_no_sni.sni_match_rule is None
+
+
+def test_haproxy_route_tcp_frontend_wildcard_sni_routing_configurations(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Create frontends with wildcard SNI backends.
+    act: Check backend_sni_routing_configurations for wildcard ACLs.
+    assert: ACLs use -m end for wildcard SNIs.
+    """
+    backend_wildcard = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(
+            relation_id=0,
+            port=4000,
+            sni="*.api.example.com",
+            enforce_tls=True,
+            tls_terminate=True,
+        )
+    )
+    frontend = HAProxyRouteTcpFrontend.from_backends([backend_wildcard])
+    routing_configs = frontend.backend_sni_routing_configurations
+
+    assert len(routing_configs) == 1
+    assert (
+        routing_configs[0].acl
+        == "acl is_tcp-route-requirer_4000 ssl_fc_sni -m end .api.example.com"
+    )
+    assert (
+        routing_configs[0].use_backend
+        == "use_backend tcp-route-requirer_4000 if is_tcp-route-requirer_4000"
+    )
+
+
+def test_haproxy_route_tcp_frontend_mixed_wildcard_and_standard_sni(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Create frontend with both wildcard and standard SNI backends.
+    act: Check backend_sni_routing_configurations.
+    assert: ACLs correctly use -i for standard and -m end for wildcard SNIs.
+    """
+    backend_standard = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(
+            relation_id=0,
+            port=4000,
+            sni="api.example.com",
+            enforce_tls=True,
+            tls_terminate=True,
+        )
+    )
+    backend_wildcard = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(
+            relation_id=1,
+            port=4000,
+            sni="*.test.com",
+            enforce_tls=True,
+            tls_terminate=True,
+        )
+    )
+
+    frontend = HAProxyRouteTcpFrontend.from_backends([backend_standard, backend_wildcard])
+    routing_configs = frontend.backend_sni_routing_configurations
+
+    assert len(routing_configs) == 2
+    assert routing_configs[0].acl == "acl is_tcp-route-requirer_4000 ssl_fc_sni -i api.example.com"
+    assert routing_configs[1].acl == "acl is_tcp-route-requirer_4000 ssl_fc_sni -m end .test.com"
+
+
+def test_haproxy_route_tcp_frontend_wildcard_sni_without_tls_terminate(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Create frontend with wildcard SNI and tls_terminate=False.
+    act: Check backend_sni_routing_configurations.
+    assert: ACLs use req.ssl_sni instead of ssl_fc_sni.
+    """
+    backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(
+            relation_id=0,
+            port=4000,
+            sni="*.example.com",
+            enforce_tls=True,
+            tls_terminate=False,
+        )
+    )
+    frontend = HAProxyRouteTcpFrontend.from_backends([backend])
+    routing_configs = frontend.backend_sni_routing_configurations
+
+    assert len(routing_configs) == 1
+    assert (
+        routing_configs[0].acl == "acl is_tcp-route-requirer_4000 req.ssl_sni -m end .example.com"
     )
 
 

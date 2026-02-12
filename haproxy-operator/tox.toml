@@ -84,7 +84,7 @@ commands = [
   [
     "coverage",
     "run",
-    "--source={[vars]src_path},{toxinidir}/lib/charms/haproxy/v2/,{[vars]src_path},{toxinidir}/lib/charms/haproxy/v0/",
+    "--source={[vars]src_path},{toxinidir}/lib/charms/haproxy/v2/,{[vars]src_path},{toxinidir}/lib/charms/haproxy/v0/,{toxinidir}/lib/charms/haproxy/v1/",
     "-m",
     "pytest",
     "--ignore={[vars]tst_path}integration",
@@ -154,5 +154,6 @@ all_path = [
   "{toxinidir}/src/",
   "{toxinidir}/tests/",
   "{toxinidir}/lib/charms/haproxy/v2",
+  "{toxinidir}/lib/charms/haproxy/v1",
   "{toxinidir}/lib/charms/haproxy/v0",
 ]

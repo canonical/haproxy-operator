@@ -7,7 +7,19 @@ To get started using the library, you just need to fetch the library using `char
 
 ```shell
 cd some-charm
-charmcraft fetch-lib charms.haproxy.v2.haproxy_route_tcp
+charmcraft fetch-lib charms.haproxy.v1.haproxy_route_tcp
+```
+
+### Dependencies
+
+This library requires the `validators` Python package for domain validation.
+Add it to your charm's dependencies in `charmcraft.yaml`:
+
+```yaml
+parts:
+  charm:
+    charm-python-packages:
+      - validators
 ```
 
 In the `metadata.yaml` of the charm, add the following:
@@ -22,7 +34,7 @@ requires:
 Then, to initialise the library:
 
 ```python
-from charms.haproxy.v0.haproxy_route_tcp import HaproxyRouteTcpRequirer
+from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpRequirer
 
 class SomeCharm(CharmBase):
   def __init__(self, *args):
@@ -122,7 +134,7 @@ Note that this interface supports relating to multiple endpoints.
 
 Then, to initialise the library:
 ```python
-from charms.haproxy.v0.haproxy_route import HaproxyRouteTcpProvider
+from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpProvider
 
 class SomeCharm(CharmBase):
     self.haproxy_route_tcp_provider = HaproxyRouteTcpProvider(self)
@@ -165,16 +177,17 @@ from pydantic import (
 )
 from pydantic.dataclasses import dataclass
 from typing_extensions import Self
+from validators import domain
 
 # The unique Charmhub library identifier, never change it
 LIBID = "b1b5c0a6f1b5481c9923efa042846681"
 
 # Increment this major API version when introducing breaking changes
-LIBAPI = 0
+LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 3
+LIBPATCH = 0
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_TCP_RELATION_NAME = "haproxy-route-tcp"
@@ -198,6 +211,27 @@ def value_contains_invalid_characters(value: Optional[str]) -> Optional[str]:
 
     if [char for char in value if char in HAPROXY_CONFIG_INVALID_CHARACTERS]:
         raise ValueError(f"Relation data contains invalid character(s) {value}")
+    return value
+
+
+def valid_domain_with_wildcard(value: str) -> str:
+    """Validate if value is a valid domain that can include a wildcard.
+
+    The wildcard character (*) can't be at the TLD level, for example *.com is not valid.
+    This is supported natively by the library ( e.g domain("com") will raise a ValidationError ).
+
+    Raises:
+        ValueError: When value is not a valid domain.
+
+    Args:
+        value: The value to validate.
+
+    Returns:
+        The validated value.
+    """
+    fqdn = value[2:] if value.startswith("*.") else value
+    if not bool(domain(fqdn)):
+        raise ValueError(f"Invalid domain: {value}")
     return value
 
 
@@ -581,10 +615,10 @@ class TcpRequirerApplicationData(_DatabagModel):
         gt=0,
         le=65525,
     )
-    sni: Optional[VALIDSTR] = Field(
+    sni: Optional[Annotated[VALIDSTR, BeforeValidator(valid_domain_with_wildcard)]] = Field(
         description=(
             "Server name identification. Used to route traffic to the service. "
-            "Only available if TLS is enabled."
+            "Only available if TLS is enabled. Supports wildcard domains (e.g., *.example.com)."
         ),
         default=None,
     )
@@ -1500,8 +1534,7 @@ class HaproxyRouteTcpRequirer(Object):
             logger.exception("Invalid provider url.")
             return []
 
-    # The following methods allows for chaining which aims to improve the developper experience
-    # The following methods allows for chaining which aims to improve the developper experience
+    # The following methods allow for chaining which aims to improve the developer experience
     def configure_port(self, port: int) -> "Self":
         """Set the provider port.
 
@@ -1626,7 +1659,7 @@ class HaproxyRouteTcpRequirer(Object):
         if not upload_bytes_per_second and not download_bytes_per_second:
             logger.error(
                 "At least one of `upload_bytes_per_second` "
-                "or `upload_bytes_per_second` must be set."
+                "or `download_bytes_per_second` must be set."
             )
             return self
         self._application_data["bandwidth_limit"] = {
@@ -1725,5 +1758,5 @@ class HaproxyRouteTcpRequirer(Object):
         """
         if not ip_deny_list:
             ip_deny_list = []
-        self._application_data["ip_deny_list"] = False
+        self._application_data["ip_deny_list"] = ip_deny_list
         return self
