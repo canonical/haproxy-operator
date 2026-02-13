@@ -29,7 +29,7 @@ JUJU_WAIT_TIMEOUT = 10 * 60  # 10 minutes
 SELF_SIGNED_CERTIFICATES_APP_NAME = "self-signed-certificates"
 ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION = "any-charm-haproxy-route-requirer"
 HAPROXY_ROUTE_TCP_REQUIRER_SRC = "tests/integration/haproxy_route_tcp_requirer.py"
-HAPROXY_ROUTE_TCP_LIB_SRC = "lib/charms/haproxy/v0/haproxy_route_tcp.py"
+HAPROXY_ROUTE_TCP_LIB_SRC = "lib/charms/haproxy/v1/haproxy_route_tcp.py"
 ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION = "any-charm-haproxy-route-tcp-requirer"
 GRPC_SERVER_DIR = pathlib.Path("tests/integration/grpc_server")
 GRPC_SERVER_SRC = GRPC_SERVER_DIR / "__main__.py"
@@ -322,7 +322,7 @@ def any_charm_haproxy_route_tcp_requirer_base_fixture(
                     ),
                 }
             ),
-            "python-packages": "pydantic~=2.10",
+            "python-packages": "pydantic~=2.10\nvalidators",
         },
     )
     juju.wait(

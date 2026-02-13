@@ -1,0 +1,28 @@
+version_schema: 2
+
+changes:
+  - title: Added support for wildcard SNIs in haproxy-route-tcp relation
+    author: copilot
+    type: minor
+    description: >
+      Added support for wildcard Server Name Indication (SNI) patterns (e.g., *.example.com) 
+      in the haproxy-route-tcp relation. This is a major version bump of the haproxy-route-tcp 
+      library from v0 to v1.
+      
+      Backends can now use wildcard SNI prefixes to handle connections for multiple subdomains 
+      with a single relation, instead of requiring separate haproxy-route-tcp relations for 
+      each subdomain. The wildcard character (*) cannot be used at the TLD level.
+      
+      HAProxy configuration now uses '-m end' matching for wildcard SNIs instead of exact 
+      matching ('-i'), ensuring proper routing of TLS connections based on SNI.
+      
+      Requirer charms using this library must include the 'validators' Python package in their 
+      dependencies (charm-python-packages in charmcraft.yaml) for domain validation.
+      
+      This change follows the same pattern as PR #364 which added wildcard support for the 
+      haproxy-route relation.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/XXXX
+    visibility: public
+    highlight: false
