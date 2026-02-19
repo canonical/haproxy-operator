@@ -38,10 +38,9 @@ It is implemented by this [workflow](https://github.com/canonical/haproxy-operat
 
 To give the required approval, click on the three horizontal dots on the right of the screen.
 
-Once the charm has been published to `stable`:
+- Once the charm has been published to `stable`:
 
-- Create a PR to list the content for the [release note](https://github.com/canonical/haproxy-operator/tree/main/docs/release-notes/releases).
-
+  - Create a PR to list the content for the [release note](https://github.com/canonical/haproxy-operator/tree/main/docs/release-notes/releases).
   - Include all PR merged into the release published to stable and not listed in the previous release.
 
 - Once merged, a new [Add release notes](https://github.com/canonical/haproxy-operator/pulls) PR will be automatically created.
