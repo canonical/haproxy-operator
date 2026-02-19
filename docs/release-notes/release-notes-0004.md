@@ -6,8 +6,8 @@ These release notes cover new features and changes in HAProxy for revisions 315-
 
 Main features:
 
-- Added support for wildcard Server Name Indication (SNI) patterns (e.g., *.example.com) in the haproxy-route-tcp relation.
-- Added support for wildcard hostnames (e.g., *.example.com) in the haproxy-route relation.
+- Added support for wildcard Server Name Indication (SNI) patterns (e.g., `*.example.com`) in the haproxy-route-tcp relation.
+- Added support for wildcard hostnames (e.g., `*.example.com`) in the haproxy-route relation.
 
 Main breaking changes:
 
@@ -15,7 +15,7 @@ Main breaking changes:
 
 Main bug fixes:
 
-- Fix remove ca certificate relation where there are still ca certificates.
+- Fixed removal of CA certificate relation where there are still CA certificates.
 
 See our {ref}`Release policy and schedule <release_notes_index>`.
 
@@ -38,7 +38,7 @@ The following major and minor features were added in this release.
 
 ### Added support for wildcard hostnames in haproxy-route relation
 
-Added support for wildcard hostnames (e.g., *.example.com) in the haproxy-route relation. Hostnames can now include a wildcard prefix, allowing a single backend to handle requests for multiple subdomains. The wildcard character (*) cannot be used at the TLD level.
+Added support for wildcard hostnames (e.g., `*.example.com`) in the haproxy-route relation. Hostnames can now include a wildcard prefix, allowing a single backend to handle requests for multiple subdomains. The wildcard character (`*`) cannot be used at the TLD level.
 HAProxy configuration now uses '-m end' matching for wildcard hostnames instead of exact matching ('-i'), ensuring proper routing of requests to wildcard domains.
 Added the `validators` library dependency to validate domain names with wildcard support.
 
@@ -66,19 +66,20 @@ Relevant links:
 
 ### Added documentation for the HAProxy DDoS protection configurator charm
 
-Updated the security documentation to include information about the HAProxy DDoS protection configurator charm and added a "how to" guide for configuring DDoS protection using this charm.
+Updated the security documentation to include information about the HAProxy DDoS protection configurator charm and added a how-to guide for configuring DDoS protection using this charm.
 
 Relevant links:
 
 - [PR](https://github.com/canonical/haproxy-operator/pull/330)
+- {ref}`How-to guide <how_to_enable_ddos_protection>`
 
 ### Added support for wildcard SNI in haproxy-route-tcp relation
 
-Added support for wildcard Server Name Indication (SNI) patterns (e.g., *.example.com)  in the haproxy-route-tcp relation. This is a major version bump of the haproxy-route-tcp  library from v0 to v1.
-Backends can now use wildcard SNI prefixes to handle connections for multiple subdomains  with a single relation, instead of requiring separate haproxy-route-tcp relations for  each subdomain. The wildcard character (*) cannot be used at the TLD level.
+Added support for wildcard Server Name Indication (SNI) patterns (e.g., `*.example.com`)  in the haproxy-route-tcp relation. This is a major version bump of the haproxy-route-tcp  library from v0 to v1.
+Backends can now use wildcard SNI prefixes to handle connections for multiple subdomains  with a single relation, instead of requiring separate haproxy-route-tcp relations for  each subdomain. The wildcard character (`*`) cannot be used at the TLD level.
 HAProxy configuration now uses '-m end' matching for wildcard SNI instead of exact  matching ('-i'), ensuring proper routing of TLS connections based on SNI.
-Requirer charms using this library must include the `validators` Python package in their  dependencies (charm-python-packages in charmcraft.yaml) for domain validation.
-This change follows the same pattern as PR #364 which added wildcard support for the  haproxy-route relation.
+Requirer charms using this library must include the `validators` Python package in their  dependencies (`charm-python-packages` in `charmcraft.yaml`) for domain validation.
+This change follows the same pattern as [PR #364](https://github.com/canonical/haproxy-operator/pull/364) which added wildcard support for the  haproxy-route relation.
 
 Relevant links:
 
@@ -86,9 +87,9 @@ Relevant links:
 
 ## Bug fixes
 
-### Fix remove ca certificate relation where there are still ca certificates
+### Fixed removal of CA certificate relation where there are still CA certificates
 
-Instead of removing the cas.pem file when removing a CA relation, call the update_trusted_cas() method. Update the update_trusted_cas() method to check if all CA have been removed.
+Instead of removing the `cas.pem` file when removing a CA relation, call the `update_trusted_cas()` method. Now the `update_trusted_cas()` method checks if all CA have been removed.
 
 Relevant links:
 
