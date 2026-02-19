@@ -46,4 +46,5 @@ Revision 216 <release-notes-rev216>
 Revision 283 <release-notes-0001>
 Revision 290 <release-notes-0002>
 Revision 314 <release-notes-0003>
+Revision 339 <release-notes-0004>
 ```
