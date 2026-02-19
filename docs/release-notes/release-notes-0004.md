@@ -2,7 +2,7 @@
 
 # HAProxy release notes – 2.8/stable
 
-These release notes cover new features and changes in HAProxy for revisions 315-330.
+These release notes cover new features and changes in HAProxy for revisions 315-339.
 
 Main features:
 
