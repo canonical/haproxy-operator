@@ -1,7 +1,7 @@
 name: Auto-Update Copilot Instructions
 on:
   schedule:
-    - cron: '0 9 * * 1' # Run every Monday at 09:00 UTC
+    - cron: '3 3 * * 1'
   workflow_dispatch:
 
 jobs:
