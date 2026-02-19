@@ -5,6 +5,16 @@
     "config:recommended",
     "group:allNonMajor"
   ],
+  "ignorePaths": [],
+  "customDatasources": {
+    "charmhub": {
+      "defaultRegistryUrlTemplate": "https://api.charmhub.io/v2/charms/info/{{packageName}}?fields=channel-map",
+      "format": "json",
+      "transformTemplates": [
+        "{\"releases\": [{\"version\": $string($$.(`channel-map`[channel.risk = 'edge' and channel.track = 'latest' and channel.base.architecture = 'amd64' and channel.base.channel = '24.04'].revision.revision))}]}"
+      ]
+    }
+  },
   "packageRules": [
     {
       "enabled": true,
@@ -12,6 +22,13 @@
         "docker"
       ],
       "pinDigests": true
+    },
+    {
+      "matchDatasources": [
+        "custom.charmhub"
+      ],
+      "automerge": true,
+      "enabled": true
     },
     {
       "enabled": false,
@@ -22,6 +39,15 @@
         "major",
         "minor",
         "patch"
+      ]
+    },
+    {
+      "enabled": true,
+      "matchDatasources": [
+        "terraform-provider"
+      ],
+      "matchPackageNames": [
+        "juju/juju"
       ]
     }
   ],
@@ -39,6 +65,13 @@
       ],
       "matchStringsStrategy": "any",
       "versioningTemplate": "ubuntu"
+    },
+    {
+      "customType": "regex",
+      "fileMatch": ["\\.tftest\\.hcl$", "\\.tf$"],
+      "matchStrings": ["# renovate: depName=\"(?<packageName>[^\"]+)\"\\s*\\n\\s*(?<fieldName>[a-zA-Z0-9_]+)\\s*=\\s*(?<currentValue>\\d+)"],
+      "versioningTemplate": "semver-coerced",
+      "datasourceTemplate": "custom.charmhub"
     }
   ],
   "schedule": [
