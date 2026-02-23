@@ -37,4 +37,5 @@ header:
     - '**/*_pb2.py'
     - '.readthedocs.yaml'
     - 'docs/**'
+    - '.lycheeignore'
   comment: on-failure
