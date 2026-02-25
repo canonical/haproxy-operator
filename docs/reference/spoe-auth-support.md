@@ -1,6 +1,6 @@
-(reference_spoe-auth_support)=
-
 <!-- vale Canonical.007-Headings-sentence-case = NO -->
+
+(reference_spoe-auth_support)=
 
 # HAProxy forward authentication proxy using OpenID Connect
 

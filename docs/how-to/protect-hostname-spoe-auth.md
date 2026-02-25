@@ -1,6 +1,6 @@
-(how_to_protect_hostname_spoe_auth)=
-
 <!-- vale Canonical.007-Headings-sentence-case = NO -->
+
+(how_to_protect_hostname_spoe_auth)=
 
 # How to protect a hostname using OpenID Connect
 

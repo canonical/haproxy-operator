@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/legacy/haproxy_route_requirer.py"
-HAPROXY_ROUTE_LIB_SRC = "lib/charms/haproxy/v1/haproxy_route.py"
+HAPROXY_ROUTE_LIB_SRC = "lib/charms/haproxy/v2/haproxy_route.py"
 APT_LIB_SRC = "lib/charms/operator_libs_linux/v0/apt.py"
 
 
@@ -419,7 +419,7 @@ async def haproxy_route_requirer_fixture(model: Model) -> typing.AsyncGenerator[
                     "apt.py": pathlib.Path(APT_LIB_SRC).read_text(encoding="utf-8"),
                 }
             ),
-            "python-packages": "pydantic",
+            "python-packages": "pydantic~=2.10\nvalidators",
         },
     )
     await model.wait_for_idle(apps=[application.name], status="active")

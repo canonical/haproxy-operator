@@ -4,19 +4,13 @@
 """haproxy-operator charm tls information."""
 
 import logging
-import re
 from dataclasses import dataclass
 
 import ops
+from charms.haproxy.v2.haproxy_route import valid_domain_with_wildcard
 from charms.tls_certificates_interface.v4.tls_certificates import (
     Certificate,
     TLSCertificatesRequiresV4,
-)
-
-# RFC-1034 and RFC-2181 compliance REGEX for validating FQDNs
-HOSTNAME_REGEX = (
-    r"(?=.{1,253})(?!.*--.*)(?:(?!-)(?![0-9])[a-zA-Z0-9-]"
-    r"{1,63}(?<!-)\.){1,}(?:(?!-)[a-zA-Z0-9-]{1,63}(?<!-))"
 )
 
 logger = logging.getLogger()
@@ -128,12 +122,13 @@ class TLSInformation:
         if invalid_hostname := [
             certificate_request.common_name
             for certificate_request in certificates.certificate_requests
-            if not re.match(HOSTNAME_REGEX, certificate_request.common_name)
+            if not valid_domain_with_wildcard(certificate_request.common_name)
         ]:
             logger.error(
                 (
                     "Some requested hostname(s) (%s) are not valid."
-                    " Hostnames must be RFC-1034 and RFC-2181 compliant."
+                    " Hostnames must be RFC-1138 compliant and can include"
+                    " a wildcard."
                 ),
                 ",".join(invalid_hostname),
             )
