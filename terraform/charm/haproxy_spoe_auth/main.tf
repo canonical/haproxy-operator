@@ -8,7 +8,7 @@ terraform {
       version = "~> 1.0"
     }
   }
-  required_version = "~> 1.12"
+  required_version = "~> 1.6"
 }
 
 resource "juju_application" "haproxy_spoe_auth" {
