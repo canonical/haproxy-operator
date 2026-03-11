@@ -20,7 +20,7 @@ from charms.haproxy.v1.haproxy_route_tcp import (
     TcpRequirerUnitData,
     TCPServerHealthCheck,
 )
-from pydantic import AnyHttpUrl, ValidationError
+from pydantic import ValidationError
 
 logger = logging.getLogger()
 MOCK_RELATION_NAME = "haproxy-route-tcp"
@@ -52,9 +52,7 @@ def mock_unit_data_fixture():
 @pytest.fixture(name="mock_provider_app_data")
 def mock_provider_app_data_fixture():
     """Create mock provider app data."""
-    return HaproxyRouteTcpProviderAppData(
-        endpoints=[cast(AnyHttpUrl, "https://backend.haproxy.internal:8080")]
-    ).dump()
+    return HaproxyRouteTcpProviderAppData(endpoints=["backend.haproxy.internal:8080"]).dump()
 
 
 # pylint: disable=no-member
@@ -181,18 +179,6 @@ def test_requirer_unit_data_validation():
     assert str(data.address) == str(MOCK_ADDRESS)
 
 
-def test_provider_app_data_validation():
-    """
-    arrange: Create a HaproxyRouteTcpProviderAppData model with valid data.
-    act: Validate the model.
-    assert: Model validation passes.
-    """
-    data = HaproxyRouteTcpProviderAppData(endpoints=[cast(AnyHttpUrl, "https://example.com:8080")])
-    # Note: pydantic automatically adds a trailing slash '/'
-    # after validating the URL, this is intended behavior
-    assert [str(endpoint) for endpoint in data.endpoints] == ["https://example.com:8080/"]
-
-
 def test_tcp_requirers_data_duplicate_ports():
     """
     arrange: Create HaproxyRouteTcpRequirersData with duplicate port numbers.
@@ -316,16 +302,6 @@ def test_dump_requirer_unit_data():
     assert json.loads(databag["address"]) == str(MOCK_ADDRESS)
 
 
-def test_get_proxied_endpoints_with_valid_data(mock_provider_app_data):
-    """Test that endpoints can be loaded from valid provider data."""
-    provider_data = cast(
-        HaproxyRouteTcpProviderAppData, HaproxyRouteTcpProviderAppData.load(mock_provider_app_data)
-    )
-
-    assert len(provider_data.endpoints) == 1
-    assert str(provider_data.endpoints[0]) == "https://backend.haproxy.internal:8080/"
-
-
 def test_get_proxied_endpoints_empty_data():
     """Test that HaproxyRouteTcpProviderAppData handles empty endpoints."""
     provider_data = HaproxyRouteTcpProviderAppData(endpoints=[])
@@ -333,10 +309,10 @@ def test_get_proxied_endpoints_empty_data():
     assert provider_data.endpoints == []
 
 
-def test_get_proxied_endpoints_invalid_data():
-    """Test that HaproxyRouteTcpProviderAppData validation fails with invalid URLs."""
-    with pytest.raises(ValidationError):
-        HaproxyRouteTcpProviderAppData(endpoints=[cast(AnyHttpUrl, "invalid")])
+def test_get_proxied_endpoints_accepts_plain_strings():
+    """Test that HaproxyRouteTcpProviderAppData accepts plain string endpoints."""
+    data = HaproxyRouteTcpProviderAppData(endpoints=["10.0.0.1:8080", "api.example.com:443"])
+    assert data.endpoints == ["10.0.0.1:8080", "api.example.com:443"]
 
 
 def test_tcp_health_check_types():

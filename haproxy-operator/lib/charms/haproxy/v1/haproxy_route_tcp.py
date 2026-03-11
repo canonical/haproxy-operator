@@ -166,7 +166,6 @@ from ops.charm import CharmEvents
 from ops.framework import EventBase, EventSource, Object
 from ops.model import Relation
 from pydantic import (
-    AnyUrl,
     BaseModel,
     BeforeValidator,
     ConfigDict,
@@ -187,7 +186,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 0
+LIBPATCH = 1
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_TCP_RELATION_NAME = "haproxy-route-tcp"
@@ -690,7 +689,7 @@ class HaproxyRouteTcpProviderAppData(_DatabagModel):
         endpoints: The list of proxied endpoints that maps to the backend.
     """
 
-    endpoints: list[AnyUrl]
+    endpoints: list[str]
 
 
 class TcpRequirerUnitData(_DatabagModel):
@@ -935,9 +934,9 @@ class HaproxyRouteTcpProvider(Object):
             endpoints: The list of proxied endpoints to publish.
             relation: The relation with the requirer application.
         """
-        HaproxyRouteTcpProviderAppData(
-            endpoints=[cast(AnyUrl, endpoint) for endpoint in endpoints]
-        ).dump(relation.data[self.charm.app], clear=True)
+        HaproxyRouteTcpProviderAppData(endpoints=endpoints).dump(
+            relation.data[self.charm.app], clear=True
+        )
 
 
 class HaproxyRouteTcpEnpointsReadyEvent(EventBase):
@@ -1505,7 +1504,7 @@ class HaproxyRouteTcpRequirer(Object):
                 raise DataValidationError("No unit IP available.")
         return TcpRequirerUnitData(address=cast(IPvAnyAddress, address))
 
-    def get_proxied_endpoints(self) -> list[AnyUrl]:
+    def get_proxied_endpoints(self) -> list[str]:
         """The full ingress URL to reach the current unit.
 
         Returns:
