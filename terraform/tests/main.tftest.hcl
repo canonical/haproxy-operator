@@ -14,10 +14,27 @@ run "basic_deploy" {
 
   variables {
     model_uuid = run.setup_tests.model_uuid
+
+    haproxy = {
+      # renovate: depName="haproxy"
+      revision = 344
+    }
+
+    haproxy_ddos_protection_configurator = {
+      # renovate: depName="haproxy-ddos-protection-configurator"
+      revision = 45
+    }
+
     protected_hostnames_configuration = [
       {
         hostname = "one.example.com"
+        haproxy_spoe_auth = {
+          # renovate: depName="haproxy-spoe-auth"
+          revision = 63
+        }
         oauth_external_idp_integrator = {
+          # renovate: depName="oauth-external-idp-integrator"
+          revision = 6
           config = {
             issuer_url             = "https://login.example.com"
             authorization_endpoint = "https://login.example.com/oauth2/auth"
@@ -35,6 +52,8 @@ run "basic_deploy" {
         hostname = "two.example.com"
         haproxy_spoe_auth = {
           channel = "latest/edge"
+          # renovate: depName="haproxy-spoe-auth"
+          revision = 63
         }
       }
     ]
