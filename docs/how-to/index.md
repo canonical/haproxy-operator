@@ -43,7 +43,7 @@ Upgrade <upgrade.md>
 
 ## Development
 
-This section contains how-to guides for developing the `haproxy` charm.
+This section contains how-to guides for developing the charm.
 
 ```{toctree}
 :maxdepth: 1
