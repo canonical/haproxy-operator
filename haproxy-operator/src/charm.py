@@ -403,48 +403,10 @@ class HAProxyCharm(ops.CharmBase):
             ),
         )
         if self.unit.is_leader():
-            for backend in haproxy_route_requirers_information.backends:
-                relation = self.model.get_relation(HAPROXY_ROUTE_RELATION, backend.relation_id)
-                if not relation:
-                    logger.error(
-                        "The haproxy-route relation does not exist for this backend, skipping."
-                    )
-                    continue
-                self.haproxy_route_provider.publish_proxied_endpoints(
-                    self._get_backend_proxied_endpoints(backend),
-                    relation,
-                )
-            for relation_id in haproxy_route_requirers_information.relation_ids_with_invalid_data:
-                if relation := self.model.get_relation(HAPROXY_ROUTE_RELATION, relation_id):
-                    self.haproxy_route_provider.publish_proxied_endpoints([], relation)
-
-            for frontend in haproxy_route_requirers_information.valid_tcp_frontends():
-                for backend in frontend.backends:
-                    relation = self.model.get_relation(
-                        HAPROXY_ROUTE_TCP_RELATION, backend.relation_id
-                    )
-                    if not relation:
-                        logger.error(
-                            "The haproxy-route-tcp relation does not exist for this backend, skipping."
-                        )
-                        continue
-                    if frontend.is_sni_routing_enabled:
-                        self.haproxy_route_tcp_provider.publish_proxied_endpoints(
-                            [f"{backend.application_data.sni}:{frontend.port}"], relation
-                        )
-                        continue
-                    if ha_information.ha_integration_ready:
-                        self.haproxy_route_tcp_provider.publish_proxied_endpoints(
-                            [f"{ha_information.vip}:{frontend.port}"], relation
-                        )
-                        continue
-                    self.haproxy_route_tcp_provider.publish_proxied_endpoints(
-                        [
-                            f"{unit_address}:{frontend.port}"
-                            for unit_address in self._get_peer_units_address()
-                        ],
-                        relation,
-                    )
+            self._publish_haproxy_route_proxied_endpoints(haproxy_route_requirers_information)
+            self._publish_haproxy_route_tcp_proxied_endpoints(
+                haproxy_route_requirers_information, ha_information
+            )
 
     def _get_certificate_requests(self) -> typing.List[CertificateRequestAttributes]:
         """Get the certificate requests.
@@ -677,6 +639,57 @@ class HAProxyCharm(ops.CharmBase):
         ]
 
         event.set_results({"endpoints": json.dumps(proxied_endpoints)})
+
+    def _publish_haproxy_route_proxied_endpoints(
+        self, haproxy_route_requirers_information: HaproxyRouteRequirersInformation
+    ) -> None:
+        """Publish the proxied endpoints for HTTP frontends."""
+        for backend in haproxy_route_requirers_information.backends:
+            relation = self.model.get_relation(HAPROXY_ROUTE_RELATION, backend.relation_id)
+            if not relation:
+                logger.error(
+                    "The haproxy-route relation does not exist for this backend, skipping."
+                )
+                continue
+            self.haproxy_route_provider.publish_proxied_endpoints(
+                self._get_backend_proxied_endpoints(backend),
+                relation,
+            )
+        for relation_id in haproxy_route_requirers_information.relation_ids_with_invalid_data:
+            if relation := self.model.get_relation(HAPROXY_ROUTE_RELATION, relation_id):
+                self.haproxy_route_provider.publish_proxied_endpoints([], relation)
+
+    def _publish_haproxy_route_tcp_proxied_endpoints(
+        self,
+        haproxy_route_requirers_information: HaproxyRouteRequirersInformation,
+        ha_information: HAInformation,
+    ) -> None:
+        """Publish the proxied endpoints for TCP frontends."""
+        for frontend in haproxy_route_requirers_information.valid_tcp_frontends():
+            for backend in frontend.backends:
+                relation = self.model.get_relation(HAPROXY_ROUTE_TCP_RELATION, backend.relation_id)
+                if not relation:
+                    logger.error(
+                        "The haproxy-route-tcp relation does not exist for this backend, skipping."
+                    )
+                    continue
+                if frontend.is_sni_routing_enabled:
+                    self.haproxy_route_tcp_provider.publish_proxied_endpoints(
+                        [f"{backend.application_data.sni}:{frontend.port}"], relation
+                    )
+                    continue
+                if ha_information.ha_integration_ready:
+                    self.haproxy_route_tcp_provider.publish_proxied_endpoints(
+                        [f"{ha_information.vip}:{frontend.port}"], relation
+                    )
+                    continue
+                self.haproxy_route_tcp_provider.publish_proxied_endpoints(
+                    [
+                        f"{unit_address}:{frontend.port}"
+                        for unit_address in self._get_peer_units_address()
+                    ],
+                    relation,
+                )
 
 
 if __name__ == "__main__":  # pragma: nocover

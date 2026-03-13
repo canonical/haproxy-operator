@@ -110,9 +110,7 @@ def test_tcp_proxied_endpoints_ha_vip(tcp_reconcile_context, peer_relation) -> N
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
-def test_tcp_proxied_endpoints_peer_unit_addresses(
-    tcp_reconcile_context, peer_relation
-) -> None:
+def test_tcp_proxied_endpoints_peer_unit_addresses(tcp_reconcile_context, peer_relation) -> None:
     """
     arrange: Create a haproxy-route-tcp relation without SNI and without HA.
     act: Trigger config_changed as leader.
