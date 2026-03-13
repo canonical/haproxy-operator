@@ -13,6 +13,7 @@ The following guides cover key processes and common tasks for managing and using
 ## Common use-cases
 
 Once you've set up the HAProxy charm, you can take advantage of the built-in features and capabilities to customize the charm based on your specific needs and use case.
+
 ```{toctree}
 :maxdepth: 1
 Integrate with non-charm workloads <integrate-with-non-charm-workload.md>
