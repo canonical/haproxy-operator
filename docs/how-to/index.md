@@ -25,6 +25,7 @@ Configure high availability <configure-high-availability.md>
 ## Platform-specific workflows
 
 In some cases additional steps need to be performed on specific substrates to ensure that the charm is working as intended.
+
 ```{toctree}
 :maxdepth: 1
 Configure virtual IP on OpenStack <configure-virtual-ip-on-openstack.md>
@@ -33,6 +34,7 @@ Configure virtual IP on OpenStack <configure-virtual-ip-on-openstack.md>
 ## Maintenance
 
 This section contains how-to guides for maintenance actions that you might need to take while operating the charm.
+
 ```{toctree}
 :maxdepth: 1
 Upgrade <upgrade.md>
@@ -41,6 +43,7 @@ Upgrade <upgrade.md>
 ## Development
 
 This section contains how-to guides for developing the `haproxy` charm.
+
 ```{toctree}
 :maxdepth: 1
 Contribute <contribute.md>
