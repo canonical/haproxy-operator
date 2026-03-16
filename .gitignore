@@ -5,6 +5,7 @@
 **/.tox/
 **/.coverage
 __pycache__/
+db.sqlite3
 **/*.py[cod]
 **/.idea
 **/.vscode
