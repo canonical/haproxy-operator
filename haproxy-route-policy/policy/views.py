@@ -102,9 +102,7 @@ class GetDeleteRequestView(APIView):
 
     def delete(self, request, pk):
         """Delete a request by ID."""
-        try:
-            models.Request.objects.get(pk=pk)
-        except models.Request.DoesNotExist:
+        deleted_count, _ = models.Request.objects.filter(pk=pk).delete()
+        if not deleted_count:
             return HttpResponseNotFound()
-        models.Request.objects.filter(pk=pk).delete()
         return HttpResponse()
