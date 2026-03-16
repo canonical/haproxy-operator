@@ -433,6 +433,69 @@ def mock_out_validate_global_max_conn_check(monkeypatch):
     )
 
 
+@pytest.fixture(name="tcp_reconcile_context")
+def tcp_reconcile_context_fixture():
+    """Context fixture that mocks haproxy reconciliation but allows publish_proxied_endpoints.
+
+    Yields:
+        Tuple of (Context, get_unit_address_mock).
+    """
+    with (
+        patch("haproxy.HAProxyService.reconcile_haproxy_route"),
+        patch("tls_relation.TLSRelationService.write_certificate_to_unit"),
+        patch("charm.HAProxyCharm._get_unit_address") as get_unit_address_mock,
+        patch("haproxy.HAProxyService.install"),
+    ):
+        get_unit_address_mock.return_value = "10.0.0.1"
+        yield (
+            Context(
+                charm_type=HAProxyCharm,
+            ),
+            get_unit_address_mock,
+        )
+
+
+def build_haproxy_route_tcp_relation(
+    *,
+    port: int = 4000,
+    backend_port: int | None = None,
+    sni: str | None = None,
+    enforce_tls: bool = True,
+    tls_terminate: bool = False,
+    remote_app_name: str = "tcp-requirer",
+) -> scenario.Relation:
+    """Build a scenario Relation for haproxy-route-tcp.
+
+    Args:
+        port: Frontend port.
+        backend_port: Backend port (defaults to port).
+        sni: Server Name Indication value.
+        enforce_tls: Whether to enforce TLS.
+        tls_terminate: Whether to terminate TLS.
+        remote_app_name: Remote application name.
+
+    Returns:
+        A scenario Relation for haproxy-route-tcp.
+    """
+    app_data: dict[str, str | int | bool | None] = {
+        "port": port,
+        "enforce_tls": enforce_tls,
+        "tls_terminate": tls_terminate,
+    }
+    if backend_port is not None:
+        app_data["backend_port"] = backend_port
+    if sni is not None:
+        app_data["sni"] = sni
+
+    return scenario.Relation(
+        endpoint="haproxy-route-tcp",
+        interface="haproxy-route-tcp",
+        remote_app_name=remote_app_name,
+        remote_app_data=TcpRequirerApplicationData.from_dict(app_data).dump(),
+        remote_units_data={0: TcpRequirerUnitData.from_dict({"address": "10.0.0.1"}).dump()},
+    )
+
+
 @pytest.fixture(scope="module", name="haproxy_route_tcp_relation_data")
 def haproxy_route_tcp_relation_data_fixture() -> typing.Callable[..., HaproxyRouteTcpRequirerData]:
     """Get haproxy-route-tcp relation data generator."""

@@ -40,15 +40,6 @@
         "minor",
         "patch"
       ]
-    },
-    {
-      "enabled": true,
-      "matchDatasources": [
-        "terraform-provider"
-      ],
-      "matchPackageNames": [
-        "juju/juju"
-      ]
     }
   ],
   "customManagers": [
