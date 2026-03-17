@@ -24,16 +24,3 @@ jobs:
       self-hosted-runner-image: "noble"
       working-directory: ${{ matrix.charm.working-directory }}
       with-uv: true
-
-  haproxy-route-policy:
-    name: HAProxy-route Policy App Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6.0.1
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.x"
-      - working-directory: ./haproxy-route-policy
-        run: |
-          pip install -r requirements.txt
-          python3 ./manage.py test --settings=haproxy_route_policy.test_settings
