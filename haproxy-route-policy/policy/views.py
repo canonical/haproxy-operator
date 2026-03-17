@@ -132,22 +132,25 @@ class RuleDetailView(APIView):
                 {"error": "Expected a JSON object."}, status=HTTP_400_BAD_REQUEST
             )
         # Update fields if provided
-        if "kind" in data:
-            rule.kind = data["kind"]
-        if "value" in data:
-            rule.value = data["value"]
-        if "action" in data:
-            rule.action = data["action"]
-        if "priority" in data:
-            rule.priority = data["priority"]
-        if "comment" in data:
-            rule.comment = data["comment"]
-
+        if kind := data.get("kind"):
+            rule.kind = kind
+        if value := data.get("value"):
+            rule.value = value
+        if action := data.get("action"):
+            rule.action = action
+        if priority := data.get("priority"):
+            rule.priority = priority
+        if comment := data.get("comment"):
+            rule.comment = comment
         try:
             rule.full_clean()
             rule.save()
         except ValidationError as e:
             return Response({"error": str(e)}, status=HTTP_400_BAD_REQUEST)
+        except IntegrityError:
+            return Response(
+                {"error": "Invalid rule data."}, status=HTTP_400_BAD_REQUEST
+            )
 
         return Response(serializer.data)
 
