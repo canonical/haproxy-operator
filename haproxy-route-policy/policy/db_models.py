@@ -8,6 +8,9 @@ import typing
 from django.db import models
 from validators import domain
 from django.core.exceptions import ValidationError
+import logging
+
+logger = logging.getLogger(__name__)
 
 REQUEST_STATUS_PENDING = "pending"
 REQUEST_STATUS_ACCEPTED = "accepted"
@@ -24,6 +27,7 @@ REQUEST_STATUS_CHOICES = [(status, status) for status in REQUEST_STATUSES]
 
 def validate_hostname_acls(value: typing.Any):
     """Validate that the value is a list of valid hostnames."""
+    logger.info("Validating hostname_acls: %s", value)
     if not isinstance(value, list):
         raise ValidationError("hostname_acls must be a list.")
     if invalid_hostnames := [
@@ -41,7 +45,6 @@ class BackendRequest(models.Model):
         hostname_acls: Hostnames requested for routing.
         backend_name: The name of the backend in the HAProxy config.
         paths: URL paths requested for routing.
-        port: The port exposed on the frontend.
         status: Current approval status (pending, accepted, rejected).
         created_at: Timestamp when the request was created.
         updated_at: Timestamp when the request was last updated.
@@ -49,10 +52,11 @@ class BackendRequest(models.Model):
 
     id = models.BigAutoField(primary_key=True)
     relation_id = models.IntegerField()
-    hostname_acls = models.JSONField(default=list, validators=[validate_hostname_acls])
+    hostname_acls = models.JSONField(
+        default=list, validators=[validate_hostname_acls], blank=True
+    )
     backend_name = models.TextField()
-    paths = models.JSONField(default=list)
-    port = models.IntegerField(null=True)
+    paths = models.JSONField(default=list, blank=True)
     status = models.TextField(
         choices=REQUEST_STATUS_CHOICES,
         default=REQUEST_STATUS_PENDING,
@@ -69,7 +73,6 @@ class BackendRequest(models.Model):
             "hostname_acls": self.hostname_acls,
             "backend_name": self.backend_name,
             "paths": self.paths,
-            "port": self.port,
             "status": self.status,
             "created_at": typing.cast(datetime, self.created_at).isoformat()
             if self.created_at
