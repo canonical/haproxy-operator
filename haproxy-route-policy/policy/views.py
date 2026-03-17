@@ -51,9 +51,9 @@ class ListCreateRequestsView(APIView):
                 backend_request.save()
                 created.append(backend_request.to_dict())
         except ValidationError as e:
-            return HttpResponseBadRequest(str(e), status=400)
+            return HttpResponseBadRequest(bytes(str(e), encoding="utf-8"), status=400)
         except IntegrityError:
-            return HttpResponseBadRequest("Invalid request data.", status=400)
+            return HttpResponseBadRequest(b"Invalid request data.", status=400)
         return JsonResponse(created, safe=False, status=201)
 
 
