@@ -25,6 +25,7 @@ class Migration(migrations.Migration):
                 ("hostname_acls", models.JSONField(default=list)),
                 ("backend_name", models.TextField()),
                 ("paths", models.JSONField(default=list)),
+                ("port", models.IntegerField()),
                 (
                     "status",
                     models.TextField(

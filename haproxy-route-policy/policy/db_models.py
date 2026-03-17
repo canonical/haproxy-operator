@@ -45,6 +45,7 @@ class BackendRequest(models.Model):
         hostname_acls: Hostnames requested for routing.
         backend_name: The name of the backend in the HAProxy config.
         paths: URL paths requested for routing.
+        port: The frontend port that should be opened by HAProxy.
         status: Current approval status (pending, accepted, rejected).
         created_at: Timestamp when the request was created.
         updated_at: Timestamp when the request was last updated.
@@ -57,6 +58,7 @@ class BackendRequest(models.Model):
     )
     backend_name = models.TextField()
     paths = models.JSONField(default=list, blank=True)
+    port = models.IntegerField()
     status = models.TextField(
         choices=REQUEST_STATUS_CHOICES,
         default=REQUEST_STATUS_PENDING,
@@ -73,6 +75,7 @@ class BackendRequest(models.Model):
             "hostname_acls": self.hostname_acls,
             "backend_name": self.backend_name,
             "paths": self.paths,
+            "port": self.port,
             "status": self.status,
             "created_at": typing.cast(datetime, self.created_at).isoformat()
             if self.created_at
