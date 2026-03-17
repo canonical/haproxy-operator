@@ -44,7 +44,6 @@ class ListCreateRequestsView(APIView):
                     hostname_acls=item.get("hostname_acls", []),
                     backend_name=item.get("backend_name"),
                     paths=item.get("paths", []),
-                    port=item.get("port"),
                     status=REQUEST_STATUS_PENDING,
                 )
                 backend_request.full_clean()

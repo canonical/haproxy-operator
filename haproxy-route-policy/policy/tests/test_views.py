@@ -54,7 +54,6 @@ class TestListCreateRequestsView(TestCase):
                 "hostname_acls": ["example.com"],
                 "backend_name": "backend-1",
                 "paths": ["/api"],
-                "port": 80,
             },
             {
                 "relation_id": 2,
@@ -71,7 +70,6 @@ class TestListCreateRequestsView(TestCase):
         self.assertEqual(data[1]["backend_name"], "backend-2")
         self.assertEqual(data[1]["hostname_acls"], [])
         self.assertEqual(data[1]["paths"], [])
-        self.assertIsNone(data[1]["port"])
         self.assertEqual(db_models.BackendRequest.objects.count(), 2)
 
     def test_bulk_create_all_set_to_pending(self):
@@ -107,7 +105,6 @@ class TestRequestDetailView(TestCase):
             relation_id=10,
             hostname_acls=["host.test"],
             backend_name="detail-backend",
-            port=443,
         )
 
     def test_get_existing(self):
