@@ -5,6 +5,9 @@
 
 from haproxy_route_policy.settings import *  # noqa: F401, F403
 
+# Mock secret key for testing.
+SECRET_KEY = "test-secret-key"
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
