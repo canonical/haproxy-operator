@@ -8,9 +8,6 @@ import typing
 from django.db import models
 from validators import domain
 from django.core.exceptions import ValidationError
-import logging
-
-logger = logging.getLogger(__name__)
 
 REQUEST_STATUS_PENDING = "pending"
 REQUEST_STATUS_ACCEPTED = "accepted"
@@ -83,8 +80,3 @@ class BackendRequest(models.Model):
             if self.updated_at
             else None,
         }
-
-    @classmethod
-    def required_fields(cls):
-        """Return a list of fields required for creating a BackendRequest."""
-        return ["relation_id", "backend_name", "port"]
