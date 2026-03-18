@@ -1,7 +1,7 @@
 [project]
 name = "haproxy-route-policy"
 version = "0.1.0"
-description = "Add your description here"
+description = "Django REST API for managing HAProxy routing policies."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
