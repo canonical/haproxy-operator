@@ -11,9 +11,10 @@ from django.http import (
 )
 from rest_framework.views import APIView
 from django.core.exceptions import ValidationError
-from .db_models import BackendRequest, REQUEST_STATUS_PENDING
+from .db_models import BackendRequest
 from django.db.utils import IntegrityError
 from django.db import transaction
+from policy import serializers
 
 
 class ListCreateRequestsView(APIView):
@@ -40,18 +41,13 @@ class ListCreateRequestsView(APIView):
         created = []
         try:
             with transaction.atomic():
-                for item in request.data:
-                    backend_request = BackendRequest(
-                        relation_id=item.get("relation_id"),
-                        hostname_acls=item.get("hostname_acls", []),
-                        backend_name=item.get("backend_name"),
-                        paths=item.get("paths", []),
-                        port=item.get("port"),
-                        status=REQUEST_STATUS_PENDING,
+                for backend_request in request.data:
+                    serializer = serializers.BackendRequestSerializer(
+                        data=backend_request
                     )
-                    backend_request.full_clean()
-                    backend_request.save()
-                    created.append(backend_request.to_dict())
+                    if serializer.is_valid(raise_exception=True):
+                        serializer.save()
+                        created.append(serializer.data)
         except ValidationError as e:
             return HttpResponseBadRequest(bytes(str(e), encoding="utf-8"), status=400)
         except IntegrityError:
