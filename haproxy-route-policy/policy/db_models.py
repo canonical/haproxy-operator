@@ -32,6 +32,26 @@ def validate_hostname_acls(value: typing.Any):
         raise ValidationError(f"Invalid hostnames: {', '.join(invalid_hostnames)}")
 
 
+def validate_port(value: typing.Any):
+    """Validate that the value is a valid TCP port number."""
+    if not isinstance(value, int) or not (1 <= value <= 65535):
+        raise ValidationError("port must be an integer between 1 and 65535.")
+
+
+def validate_paths(value: typing.Any):
+    """Validate that the value is a list of valid URL paths."""
+    if not isinstance(value, list):
+        raise ValidationError("paths must be a list.")
+    if invalid_paths := [
+        path
+        for path in typing.cast(list, value)
+        if not isinstance(path, str) or not path.startswith("/")
+    ]:
+        raise ValidationError(
+            f"Invalid paths: {', '.join(str(path) for path in invalid_paths)}"
+        )
+
+
 class BackendRequest(models.Model):
     """A backend request submitted via the haproxy-route relation.
 
@@ -55,8 +75,10 @@ class BackendRequest(models.Model):
         default=list, validators=[validate_hostname_acls], blank=True
     )
     backend_name: models.TextField = models.TextField()
-    paths: models.JSONField = models.JSONField(default=list, blank=True)
-    port: models.IntegerField = models.IntegerField()
+    paths: models.JSONField = models.JSONField(
+        default=list, validators=[validate_paths], blank=True
+    )
+    port: models.IntegerField = models.IntegerField(validators=[validate_port])
     status: models.TextField = models.TextField(
         choices=REQUEST_STATUS_CHOICES,
         default=REQUEST_STATUS_PENDING,
