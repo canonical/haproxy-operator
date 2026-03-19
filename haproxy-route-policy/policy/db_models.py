@@ -8,6 +8,7 @@ import uuid
 from django.db import models
 from validators import domain
 from django.core.exceptions import ValidationError
+import uuid
 
 REQUEST_STATUS_PENDING = "pending"
 REQUEST_STATUS_ACCEPTED = "accepted"
@@ -54,7 +55,7 @@ class BackendRequest(models.Model):
     """A backend request submitted via the haproxy-route relation.
 
     Attrs:
-        id: Auto-incrementing primary key.
+        id: Request UUID.
         relation_id: The Juju relation ID this request originated from.
         hostname_acls: Hostnames requested for routing.
         backend_name: The name of the backend in the HAProxy config.
@@ -65,7 +66,9 @@ class BackendRequest(models.Model):
         updated_at: Timestamp when the request was last updated.
     """
 
-    id: models.BigAutoField = models.BigAutoField(primary_key=True)
+    id: models.UUIDField = models.UUIDField(
+        primary_key=True, default=uuid.uuid4, editable=False
+    )
     relation_id: models.IntegerField = models.IntegerField()
     hostname_acls: models.JSONField = models.JSONField(
         default=list, validators=[validate_hostname_acls], blank=True
