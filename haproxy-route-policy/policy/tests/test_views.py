@@ -79,7 +79,7 @@ class TestListCreateRequestsView(TestCase):
         self.assertEqual(data[0]["backend_name"], "backend-1")
         self.assertEqual(data[0]["status"], "pending")
         self.assertEqual(data[0]["hostname_acls"], ["example.com"])
-        self.assertEqual(data[0]["paths"], second=["/api"])
+        self.assertEqual(data[0]["paths"], ["/api"])
         self.assertEqual(data[0]["port"], 443)
         self.assertEqual(data[1]["backend_name"], "backend-2")
         self.assertEqual(data[1]["hostname_acls"], [])

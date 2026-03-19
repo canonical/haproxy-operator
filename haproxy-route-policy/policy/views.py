@@ -3,6 +3,9 @@
 
 """REST API views for backend requests."""
 
+import uuid
+from typing import Any
+from venv import logger
 from policy.db_models import BackendRequest
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -16,6 +19,7 @@ from django.core.exceptions import ValidationError
 from django.db.utils import IntegrityError
 from django.db import transaction
 from policy import serializers
+from .db_models import REQUEST_STATUSES
 
 
 class ListCreateRequestsView(APIView):
@@ -23,10 +27,13 @@ class ListCreateRequestsView(APIView):
 
     def get(self, request):
         """List all requests, optionally filtered by status."""
-        filter = (
-            {"status": request.GET.get("status")} if request.GET.get("status") else {}
-        )
-        queryset = BackendRequest.objects.all().filter(**filter)
+        status = request.GET.get("status")
+        if status and status not in REQUEST_STATUSES:
+            return Response(
+                {"error": "Invalid status filter."}, status=HTTP_400_BAD_REQUEST
+            )
+        filters = {"status": status} if status else {}
+        queryset = BackendRequest.objects.all().filter(**filters)
         serializer = serializers.BackendRequestSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -66,13 +73,28 @@ class RequestDetailView(APIView):
     def get(self, _request, pk):
         """Get a request by ID."""
         try:
-            backend_request = BackendRequest.objects.get(pk=pk)
+            backend_request = BackendRequest.objects.get(pk=uuid_primary_key(pk))
             serializer = serializers.BackendRequestSerializer(backend_request)
         except BackendRequest.DoesNotExist:
             return Response(status=HTTP_404_NOT_FOUND)
+        except (ValueError, AttributeError):
+            return Response(
+                {"error": "Invalid request ID."}, status=HTTP_400_BAD_REQUEST
+            )
         return Response(serializer.data)
 
-    def delete(self, request, pk):
+    def delete(self, _request, pk):
         """Delete a request by ID."""
-        BackendRequest.objects.filter(pk=pk).delete()
+        try:
+            BackendRequest.objects.filter(pk=uuid_primary_key(pk)).delete()
+        except (AttributeError, ValueError):
+            logger.warning(f"Attempted to delete request with invalid UUID: {pk}")
         return Response(status=HTTP_204_NO_CONTENT)
+
+
+def uuid_primary_key(pk: Any) -> str:
+    """Validate that the passed request parameter is a valid UUID string.
+
+    The calling methods are responsible for catching ValueError and AttributeError.
+    """
+    return str(uuid.UUID(str(pk), version=4))
