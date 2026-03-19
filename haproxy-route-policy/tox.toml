@@ -5,6 +5,7 @@ skipsdist = true
 skip_missing_interpreters = true
 requires = ["tox>=4.21"]
 no_package = true
+envlist = [ "lint", "unit"]
 
 [env_run_base]
 passenv = ["PYTHONPATH"]
