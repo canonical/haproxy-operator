@@ -3,7 +3,6 @@
 
 """Database models for the haproxy-route-policy application."""
 
-from datetime import datetime
 import typing
 from django.db import models
 from validators import domain
@@ -62,21 +61,3 @@ class BackendRequest(models.Model):
     )
     created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True)
     updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
-
-    def to_dict(self) -> dict:
-        """Serialize to a JSON-compatible dict."""
-        return {
-            "id": self.id,
-            "relation_id": self.relation_id,
-            "hostname_acls": self.hostname_acls,
-            "backend_name": self.backend_name,
-            "paths": self.paths,
-            "port": self.port,
-            "status": self.status,
-            "created_at": typing.cast(datetime, self.created_at).isoformat()
-            if self.created_at
-            else None,
-            "updated_at": typing.cast(datetime, self.updated_at).isoformat()
-            if self.updated_at
-            else None,
-        }
