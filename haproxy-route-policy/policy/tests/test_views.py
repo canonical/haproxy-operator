@@ -314,11 +314,14 @@ class TestRuleDetailView(TestCase):
         response = self.client.delete(f"/api/v1/rules/{fake_id}")
         self.assertEqual(response.status_code, 204)
 
+
 class TestStatusFilterSanitization(TestCase):
     """Tests for status query parameter validation on GET /api/v1/requests."""
+
     def setUp(self):
         """Set up the API client."""
         self.client = APIClient()
+
     def test_valid_status_filters(self):
         """Valid status values should return 200."""
         valid_statuses = ["pending", "accepted", "rejected"]
