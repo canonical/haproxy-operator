@@ -115,23 +115,6 @@ class Rule(models.Model):
     created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True)
     updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
 
-    def to_dict(self) -> dict:
-        """Serialize to a JSON-compatible dict."""
-        return {
-            "id": str(self.id),
-            "kind": self.kind,
-            "value": self.value,
-            "action": self.action,
-            "priority": self.priority,
-            "comment": self.comment,
-            "created_at": typing.cast(datetime, self.created_at).isoformat()
-            if self.created_at
-            else None,
-            "updated_at": typing.cast(datetime, self.updated_at).isoformat()
-            if self.updated_at
-            else None,
-        }
-
     def clean(self) -> None:
         """Custom validation logic for the Rule model."""
         if self.kind == RULE_KIND_HOSTNAME_AND_PATH_MATCH:
