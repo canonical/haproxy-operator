@@ -88,6 +88,99 @@ class TestListCreateRequestsView(TestCase):
         self.assertEqual(data[1]["port"], 443)
         self.assertEqual(db_models.BackendRequest.objects.count(), 2)
 
+    def test_bulk_create_evaluates_rules_on_creation(self):
+        """POST evaluates rules and sets status accordingly."""
+        # Create a deny rule for example.com
+        db_models.Rule(
+            kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
+            value={"hostnames": ["example.com"], "paths": []},
+            action=db_models.RULE_ACTION_DENY,
+        ).save()
+        payload = [
+            {
+                "relation_id": 1,
+                "hostname_acls": ["example.com"],
+                "backend_name": "backend-1",
+                "paths": ["/api"],
+                "port": 443,
+            },
+        ]
+        response = self.client.post("/api/v1/requests", data=payload, format="json")
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertEqual(data[0]["status"], db_models.REQUEST_STATUS_REJECTED)
+        # Verify DB is updated too
+        self.assertEqual(
+            db_models.BackendRequest.objects.get(pk=data[0]["id"]).status,
+            db_models.REQUEST_STATUS_REJECTED,
+        )
+
+    def test_bulk_create_accepted_by_allow_rule(self):
+        """POST sets status to accepted when an allow rule matches."""
+        db_models.Rule(
+            kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
+            value={"hostnames": ["example.com"], "paths": []},
+            action=db_models.RULE_ACTION_ALLOW,
+        ).save()
+        payload = [
+            {
+                "relation_id": 1,
+                "hostname_acls": ["example.com"],
+                "backend_name": "backend-1",
+                "port": 443,
+            },
+        ]
+        response = self.client.post("/api/v1/requests", data=payload, format="json")
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()[0]["status"], db_models.REQUEST_STATUS_ACCEPTED)
+
+    def test_bulk_create_pending_when_no_rules_match(self):
+        """POST leaves status as pending when no rules match."""
+        # Rule for other.com, request for example.com
+        db_models.Rule(
+            kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
+            value={"hostnames": ["other.com"], "paths": []},
+            action=db_models.RULE_ACTION_DENY,
+        ).save()
+        payload = [
+            {
+                "relation_id": 1,
+                "hostname_acls": ["example.com"],
+                "backend_name": "backend-1",
+                "port": 443,
+            },
+        ]
+        response = self.client.post("/api/v1/requests", data=payload, format="json")
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()[0]["status"], db_models.REQUEST_STATUS_PENDING)
+
+    def test_bulk_create_mixed_statuses(self):
+        """POST evaluates each request independently against rules."""
+        db_models.Rule(
+            kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
+            value={"hostnames": ["example.com"], "paths": []},
+            action=db_models.RULE_ACTION_DENY,
+        ).save()
+        payload = [
+            {
+                "relation_id": 1,
+                "hostname_acls": ["example.com"],
+                "backend_name": "backend-1",
+                "port": 443,
+            },
+            {
+                "relation_id": 2,
+                "hostname_acls": ["other.com"],
+                "backend_name": "backend-2",
+                "port": 443,
+            },
+        ]
+        response = self.client.post("/api/v1/requests", data=payload, format="json")
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertEqual(data[0]["status"], db_models.REQUEST_STATUS_REJECTED)
+        self.assertEqual(data[1]["status"], db_models.REQUEST_STATUS_PENDING)
+
     def test_bulk_create_rejects_non_list(self):
         """POST returns 400 when the body is not a list."""
         response = self.client.post(

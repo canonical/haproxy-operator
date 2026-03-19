@@ -19,6 +19,7 @@ from django.db.utils import IntegrityError
 from django.db import transaction
 from policy import serializers
 from .db_models import REQUEST_STATUSES
+from policy.rule_engine import evaluate_request
 
 
 class ListCreateRequestsView(APIView):
@@ -39,7 +40,9 @@ class ListCreateRequestsView(APIView):
     def post(self, request):
         """Bulk create backend requests.
 
-        All new requests are set to 'pending' (evaluation logic is deferred).
+        Each new request is evaluated against existing rules immediately.
+        If a matching rule is found, the request status is set accordingly.
+        If no rules match, the request stays as 'pending'.
         """
         if not isinstance(request.data, list):
             return Response(
@@ -55,8 +58,13 @@ class ListCreateRequestsView(APIView):
                         data=backend_request
                     )
                     if serializer.is_valid(raise_exception=True):
-                        serializer.save()
-                        created.append(serializer.data)
+                        instance = BackendRequest(**serializer.validated_data)
+                        # Evaluate rules and update status
+                        instance.status = evaluate_request(instance)
+                        instance.save()
+                        created.append(
+                            serializers.BackendRequestSerializer(instance).data
+                        )
         except ValidationError as e:
             return Response({"error": str(e)}, status=HTTP_400_BAD_REQUEST)
         except IntegrityError:
