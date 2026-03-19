@@ -5,7 +5,7 @@
 
 from django.test import TestCase
 from rest_framework.test import APIClient
-
+import uuid
 from policy import db_models
 
 
@@ -115,12 +115,12 @@ class TestRequestDetailView(TestCase):
         response = self.client.get(f"/api/v1/requests/{self.backend_request.pk}")
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertEqual(data["id"], self.backend_request.pk)
+        self.assertEqual(data["id"], str(self.backend_request.pk))
         self.assertEqual(data["backend_name"], "detail-backend")
 
     def test_get_not_found(self):
         """GET returns 404 for a non-existent ID."""
-        response = self.client.get("/api/v1/requests/99999")
+        response = self.client.get(f"/api/v1/requests/{uuid.uuid4()}")
         self.assertEqual(response.status_code, 404)
 
     def test_delete_existing(self):
@@ -132,5 +132,5 @@ class TestRequestDetailView(TestCase):
 
     def test_delete_nonexistent(self):
         """DELETE on a non-existent ID still returns 204 (idempotent)."""
-        response = self.client.delete("/api/v1/requests/99999")
+        response = self.client.delete(f"/api/v1/requests/{uuid.uuid4()}")
         self.assertEqual(response.status_code, 204)
