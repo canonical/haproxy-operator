@@ -15,14 +15,14 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import os
+import json
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 DEBUG = os.environ.get("DJANGO_DEBUG", "").lower() == "true"
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = json.loads(os.getenv("DJANGO_ALLOWED_HOSTS", "[]"))
 
 # Application definition
 
@@ -47,6 +47,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "policy.middleware.DatabaseErrorMiddleware",
 ]
 
 ROOT_URLCONF = "haproxy_route_policy.urls"
@@ -115,3 +117,36 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = Path(BASE_DIR, "static/")
+
+# Default primary key field type
+# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+env_log_level = os.getenv("DJANGO_LOG_LEVEL", "INFO").upper()
+if env_log_level not in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
+    env_log_level = "INFO"
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": env_log_level,
+            "propagate": False,
+        },
+    },
+}
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = 32 * 1024 * 1024
