@@ -13,6 +13,7 @@ REQUEST_STATUS_PENDING = "pending"
 REQUEST_STATUS_ACCEPTED = "accepted"
 REQUEST_STATUS_REJECTED = "rejected"
 
+# Note: changing these values will require a data migration to update the database schema.
 REQUEST_STATUSES = [
     REQUEST_STATUS_PENDING,
     REQUEST_STATUS_ACCEPTED,
