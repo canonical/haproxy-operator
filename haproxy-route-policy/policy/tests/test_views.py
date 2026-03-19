@@ -42,13 +42,13 @@ class TestListCreateRequestsView(TestCase):
         db_models.BackendRequest.objects.create(
             relation_id=1,
             backend_name="a",
-            status=db_models.REQUEST_STATUS_PENDING,
+            status=db_models.RequestStatus.PENDING,
             port=443,
         )
         db_models.BackendRequest.objects.create(
             relation_id=2,
             backend_name="b",
-            status=db_models.REQUEST_STATUS_ACCEPTED,
+            status=db_models.RequestStatus.ACCEPTED,
             port=443,
         )
         response = self.client.get("/api/v1/requests?status=accepted")

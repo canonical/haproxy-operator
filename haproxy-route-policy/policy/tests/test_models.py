@@ -20,7 +20,7 @@ class TestBackendRequestModel(TestCase):
         self.assertEqual(request.backend_name, "my-backend")
         self.assertEqual(request.hostname_acls, [])
         self.assertEqual(request.paths, [])
-        self.assertEqual(request.status, db_models.REQUEST_STATUS_PENDING)
+        self.assertEqual(request.status, db_models.RequestStatus.PENDING)
         self.assertEqual(request.port, 443)
         self.assertIsNotNone(request.created_at)
         self.assertIsNotNone(request.updated_at)
@@ -33,11 +33,11 @@ class TestBackendRequestModel(TestCase):
             backend_name="web-backend",
             paths=["/api", "/health"],
             port=443,
-            status=db_models.REQUEST_STATUS_ACCEPTED,
+            status=db_models.RequestStatus.ACCEPTED,
         )
         self.assertEqual(request.relation_id, 5)
         self.assertEqual(request.hostname_acls, ["example.com", "app.example.com"])
         self.assertEqual(request.backend_name, "web-backend")
         self.assertEqual(request.paths, ["/api", "/health"])
         self.assertEqual(request.port, 443)
-        self.assertEqual(request.status, db_models.REQUEST_STATUS_ACCEPTED)
+        self.assertEqual(request.status, db_models.RequestStatus.ACCEPTED)

@@ -30,9 +30,9 @@ class Migration(migrations.Migration):
                     "status",
                     models.TextField(
                         choices=[
-                            ("pending", "pending"),
-                            ("accepted", "accepted"),
-                            ("rejected", "rejected"),
+                            ("pending", "Pending"),
+                            ("accepted", "Accepted"),
+                            ("rejected", "Rejected"),
                         ],
                         db_index=True,
                         default="pending",

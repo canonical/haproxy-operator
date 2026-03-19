@@ -8,17 +8,16 @@ from django.db import models
 from validators import domain
 from django.core.exceptions import ValidationError
 
-REQUEST_STATUS_PENDING = "pending"
-REQUEST_STATUS_ACCEPTED = "accepted"
-REQUEST_STATUS_REJECTED = "rejected"
+class RequestStatus(models.TextChoices):
+    """Database values and human-readable labels for BackendRequest status.
 
-REQUEST_STATUSES = [
-    REQUEST_STATUS_PENDING,
-    REQUEST_STATUS_ACCEPTED,
-    REQUEST_STATUS_REJECTED,
-]
+    Each member's value is stored in the database; the label is the
+    capitalised form produced automatically by Django TextChoices.
+    """
 
-REQUEST_STATUS_CHOICES = [(status, status) for status in REQUEST_STATUSES]
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
 
 
 def validate_hostname_acls(value: typing.Any):
@@ -55,8 +54,8 @@ class BackendRequest(models.Model):
     paths: models.JSONField = models.JSONField(default=list, blank=True)
     port: models.IntegerField = models.IntegerField()
     status: models.TextField = models.TextField(
-        choices=REQUEST_STATUS_CHOICES,
-        default=REQUEST_STATUS_PENDING,
+        choices=RequestStatus.choices,
+        default=RequestStatus.PENDING,
         db_index=True,
     )
     created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True)
