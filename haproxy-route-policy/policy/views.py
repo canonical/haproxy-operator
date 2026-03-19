@@ -12,6 +12,7 @@ from rest_framework.status import (
     HTTP_404_NOT_FOUND,
     HTTP_204_NO_CONTENT,
 )
+from django.http import Http404
 from django.core.exceptions import ValidationError
 from django.db.utils import IntegrityError
 from django.db import transaction
@@ -89,73 +90,38 @@ class ListCreateRulesView(APIView):
 
     def post(self, request):
         """Create a new rule."""
-        data = request.data
-        if not isinstance(data, dict):
-            return Response(
-                {"error": "Expected a JSON object."}, status=HTTP_400_BAD_REQUEST
-            )
-
-        try:
-            serializer = serializers.RuleSerializer(data=data)
-            if serializer.is_valid(raise_exception=True):
-                serializer.save()
-        except IntegrityError:
-            return Response(
-                {"error": "Invalid rule data."}, status=HTTP_400_BAD_REQUEST
-            )
-
-        return Response(serializer.data, status=HTTP_201_CREATED)
+        serializer = serializers.RuleSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(serializer.data, status=HTTP_201_CREATED)
+        return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
 
 
 class RuleDetailView(APIView):
     """View for getting, updating, or deleting a single rule."""
 
+    def get_object(self, pk):
+        try:
+            return Rule.objects.get(pk=pk)
+        except Rule.DoesNotExist:
+            raise Http404
+
     def get(self, request, pk):
         """Get a rule by ID."""
-        try:
-            rule = Rule.objects.get(pk=pk)
-            serializer = serializers.RuleSerializer(rule)
-        except (Rule.DoesNotExist, ValueError):
-            return Response(status=HTTP_404_NOT_FOUND)
+        rule = self.get_object(pk)
+        serializer = serializers.RuleSerializer(rule)
         return Response(serializer.data)
 
     def put(self, request, pk):
         """Update a rule by ID."""
-        try:
-            rule = Rule.objects.get(pk=pk)
-            serializer = serializers.RuleSerializer(rule)
-        except (Rule.DoesNotExist, ValueError):
-            return Response(status=HTTP_404_NOT_FOUND)
-
-        data = request.data
-        if not isinstance(data, dict):
-            return Response(
-                {"error": "Expected a JSON object."}, status=HTTP_400_BAD_REQUEST
-            )
-        # Update fields if provided
-        if kind := data.get("kind"):
-            rule.kind = kind
-        if value := data.get("value"):
-            rule.value = value
-        if action := data.get("action"):
-            rule.action = action
-        if priority := data.get("priority"):
-            rule.priority = priority
-        if comment := data.get("comment"):
-            rule.comment = comment
-        try:
-            rule.full_clean()
-            rule.save()
-        except ValidationError as e:
-            return Response({"error": str(e)}, status=HTTP_400_BAD_REQUEST)
-        except IntegrityError:
-            return Response(
-                {"error": "Invalid rule data."}, status=HTTP_400_BAD_REQUEST
-            )
-
-        return Response(serializer.data)
+        rule = self.get_object(pk)
+        serializer = serializers.RuleSerializer(rule, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
         """Delete a rule by ID."""
-        Rule.objects.filter(pk=pk).delete()
+        Rule.objects.get(pk=pk).delete()
         return Response(status=HTTP_204_NO_CONTENT)
