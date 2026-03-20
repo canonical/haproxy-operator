@@ -21,3 +21,6 @@ lint = [
     "mypy>=1.19.1",
     "ruff>=0.15.6",
 ]
+static = [
+    "bandit[toml]>=1.9.4",
+]
