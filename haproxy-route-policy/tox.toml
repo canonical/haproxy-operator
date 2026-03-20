@@ -1,0 +1,71 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+skipsdist = true
+skip_missing_interpreters = true
+requires = ["tox>=4.21"]
+no_package = true
+envlist = [ "lint", "unit"]
+
+[env_run_base]
+passenv = ["PYTHONPATH"]
+runner = "uv-venv-lock-runner"
+
+[env_run_base.setenv]
+PYTHONPATH = "{toxinidir}:{[vars]src_path}"
+PYTHONBREAKPOINT = "ipdb.set_trace"
+PY_COLORS = "1"
+
+[env.unit]
+description = "Run unit tests"
+commands = [
+  [
+    "uv",
+    "run",
+    "manage.py",
+    "test",
+    "policy",
+    "--settings=haproxy_route_policy.test_settings",
+    "-v2",
+  ],
+]
+
+[env.lint]
+description = "Check code against coding style standards"
+commands = [
+  [
+    "codespell",
+    "{toxinidir}",
+  ],
+  [
+    "ruff",
+    "format",
+    "--check",
+    "--diff",
+    { replace = "ref", of = [
+      "vars",
+      "all_path",
+    ], extend = true },
+  ],
+  [
+    "ruff",
+    "check",
+    { replace = "ref", of = [
+      "vars",
+      "all_path",
+    ], extend = true },
+  ],
+  [
+    "mypy",
+    { replace = "ref", of = [
+      "vars",
+      "all_path",
+    ], extend = true },
+  ],
+]
+dependency_groups = ["lint"]
+
+[vars]
+src_path = "{toxinidir}/policy/"
+tst_path = "{toxinidir}/policy/tests"
+all_path = ["{toxinidir}/policy/"]

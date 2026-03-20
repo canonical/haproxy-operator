@@ -38,4 +38,5 @@ header:
     - '.readthedocs.yaml'
     - 'docs/**'
     - '.lycheeignore'
+    - 'haproxy-route-policy/policy/migrations/*.py'
   comment: on-failure
