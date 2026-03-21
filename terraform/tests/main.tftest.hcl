@@ -22,7 +22,7 @@ run "basic_deploy" {
 
     haproxy_ddos_protection_configurator = {
       # renovate: depName="haproxy-ddos-protection-configurator"
-      revision = 49
+      revision = 57
     }
 
     protected_hostnames_configuration = [
