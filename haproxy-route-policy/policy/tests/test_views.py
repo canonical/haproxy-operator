@@ -354,28 +354,34 @@ class TestPkValidation(TestCase):
         """Set up the API client."""
         self.client = APIClient()
 
-    def test_get_invalid_pk_returns_400(self):
-        """GET with an invalid UUID pk should return 400."""
+    def test_invalid_pk_returns_404(self):
+        """GET and DELETE with an invalid UUID pk should return 404."""
         invalid_pks = [
             "not-a-uuid",
             "12345",
             "' OR 1=1 --",
             " ",
         ]
+        # GET requests with invalid PKs
         for pk in invalid_pks:
             with self.subTest(pk=pk):
                 response = self.client.get(f"/api/v1/requests/{pk}")
-                self.assertEqual(response.status_code, 400)
-                self.assertIn("error", response.json())
+                self.assertEqual(response.status_code, 404)
 
-    def test_delete_invalid_pk_returns_204(self):
-        """DELETE with an invalid UUID pk should still return 204 (idempotent)."""
-        invalid_pks = [
-            "not-a-uuid",
-            "12345",
-            "' OR 1=1 --",
-        ]
+        # GET rules with invalid PKs
+        for pk in invalid_pks:
+            with self.subTest(pk=pk):
+                response = self.client.get(f"/api/v1/rules/{pk}")
+                self.assertEqual(response.status_code, 404)
+
+        # DELETE requests with invalid PKs
         for pk in invalid_pks:
             with self.subTest(pk=pk):
                 response = self.client.delete(f"/api/v1/requests/{pk}")
-                self.assertEqual(response.status_code, 204)
+                self.assertEqual(response.status_code, 404)
+
+        # DELETE rules with invalid PKs
+        for pk in invalid_pks:
+            with self.subTest(pk=pk):
+                response = self.client.delete(f"/api/v1/rules/{pk}")
+                self.assertEqual(response.status_code, 404)
