@@ -52,7 +52,7 @@ class TestRuleModel(TestCase):
         serializer = serializers.RuleSerializer(
             data={
                 "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-                "value": {"hostnames": ["test.com"], "paths": []},
+                "parameters": {"hostnames": ["test.com"], "paths": []},
                 "action": db_models.RULE_ACTION_ALLOW,
             }
         )
@@ -67,7 +67,7 @@ class TestRuleModel(TestCase):
         serializer = serializers.RuleSerializer(
             data={
                 "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-                "value": {"hostnames": ["example.com"], "paths": ["/api"]},
+                "parameters": {"hostnames": ["example.com"], "paths": ["/api"]},
                 "action": db_models.RULE_ACTION_DENY,
                 "priority": 1,
                 "comment": "Deny example.com/api",
@@ -78,7 +78,9 @@ class TestRuleModel(TestCase):
 
         self.assertIsNotNone(rule.id)
         self.assertEqual(rule.kind, db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH)
-        self.assertEqual(rule.value, {"hostnames": ["example.com"], "paths": ["/api"]})
+        self.assertEqual(
+            rule.parameters, {"hostnames": ["example.com"], "paths": ["/api"]}
+        )
         self.assertEqual(rule.action, db_models.RULE_ACTION_DENY)
         self.assertEqual(rule.priority, 1)
         self.assertEqual(rule.comment, "Deny example.com/api")
@@ -92,7 +94,7 @@ class TestRuleModel(TestCase):
                 "valid hostnames",
                 {
                     "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-                    "value": {
+                    "parameters": {
                         "hostnames": ["example.com", "sub.example.org"],
                         "paths": [],
                     },
@@ -103,7 +105,7 @@ class TestRuleModel(TestCase):
                 "empty hostnames",
                 {
                     "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-                    "value": {"hostnames": [], "paths": []},
+                    "parameters": {"hostnames": [], "paths": []},
                     "action": db_models.RULE_ACTION_ALLOW,
                 },
             ),
@@ -111,7 +113,7 @@ class TestRuleModel(TestCase):
                 "valid paths",
                 {
                     "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-                    "value": {
+                    "parameters": {
                         "hostnames": ["example.com"],
                         "paths": ["/api", "/health"],
                     },
@@ -122,7 +124,7 @@ class TestRuleModel(TestCase):
                 "empty paths",
                 {
                     "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-                    "value": {"hostnames": ["example.com"], "paths": []},
+                    "parameters": {"hostnames": ["example.com"], "paths": []},
                     "action": db_models.RULE_ACTION_ALLOW,
                 },
             ),
@@ -130,7 +132,7 @@ class TestRuleModel(TestCase):
                 "both valid hostnames and paths",
                 {
                     "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-                    "value": {
+                    "parameters": {
                         "hostnames": ["example.com", "app.example.com"],
                         "paths": ["/api", "/v1/health"],
                     },
@@ -152,7 +154,7 @@ class TestRuleModel(TestCase):
                 "invalid kind",
                 {
                     "kind": "invalid_kind",
-                    "value": 1,
+                    "parameters": 1,
                     "action": db_models.RULE_ACTION_ALLOW,
                 },
                 {"field": "kind"},
@@ -161,52 +163,55 @@ class TestRuleModel(TestCase):
                 "invalid action",
                 {
                     "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-                    "value": {"hostnames": ["example.com"], "paths": []},
+                    "parameters": {"hostnames": ["example.com"], "paths": []},
                     "action": "invalid_action",
                 },
                 {"field": "action"},
             ),
             (
-                "value must be dict — string given",
+                "parameters must be dict — string given",
                 {
                     "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-                    "value": "not-a-dict",
+                    "parameters": "not-a-dict",
                     "action": db_models.RULE_ACTION_DENY,
                 },
                 {
                     "field": "non_field_errors",
-                    "message": "value field must be a JSON object",
+                    "message": "parameters field must be a JSON object",
                 },
             ),
             (
-                "value must be dict — list given",
+                "parameters must be dict — list given",
                 {
                     "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-                    "value": ["not", "a", "dict"],
+                    "parameters": ["not", "a", "dict"],
                     "action": db_models.RULE_ACTION_DENY,
                 },
                 {
                     "field": "non_field_errors",
-                    "message": "value field must be a JSON object",
+                    "message": "parameters field must be a JSON object",
                 },
             ),
             (
-                "value must be dict — int given",
+                "parameters must be dict — int given",
                 {
                     "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-                    "value": 42,
+                    "parameters": 42,
                     "action": db_models.RULE_ACTION_DENY,
                 },
                 {
                     "field": "non_field_errors",
-                    "message": "value field must be a JSON object",
+                    "message": "parameters field must be a JSON object",
                 },
             ),
             (
                 "invalid hostname",
                 {
                     "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-                    "value": {"hostnames": ["not a valid hostname!!!"], "paths": []},
+                    "parameters": {
+                        "hostnames": ["not a valid hostname!!!"],
+                        "paths": [],
+                    },
                     "action": db_models.RULE_ACTION_DENY,
                 },
                 {"message": "Invalid hostname"},
@@ -215,7 +220,7 @@ class TestRuleModel(TestCase):
                 "multiple invalid hostnames",
                 {
                     "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-                    "value": {
+                    "parameters": {
                         "hostnames": ["valid.com", "bad host", "also bad!"],
                         "paths": [],
                     },
@@ -227,7 +232,7 @@ class TestRuleModel(TestCase):
                 "path without leading slash",
                 {
                     "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-                    "value": {"hostnames": ["example.com"], "paths": ["api/v1"]},
+                    "parameters": {"hostnames": ["example.com"], "paths": ["api/v1"]},
                     "action": db_models.RULE_ACTION_DENY,
                 },
                 {"message": "Invalid path"},
@@ -236,7 +241,7 @@ class TestRuleModel(TestCase):
                 "non-string path",
                 {
                     "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-                    "value": {"hostnames": ["example.com"], "paths": [123]},
+                    "parameters": {"hostnames": ["example.com"], "paths": [123]},
                     "action": db_models.RULE_ACTION_DENY,
                 },
                 {},
@@ -245,7 +250,7 @@ class TestRuleModel(TestCase):
                 "multiple invalid paths",
                 {
                     "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-                    "value": {"hostnames": [], "paths": ["no-slash", "also-bad"]},
+                    "parameters": {"hostnames": [], "paths": ["no-slash", "also-bad"]},
                     "action": db_models.RULE_ACTION_DENY,
                 },
                 {"message_contains": ["no-slash", "also-bad"]},

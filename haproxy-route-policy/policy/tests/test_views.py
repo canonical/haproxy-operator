@@ -154,7 +154,7 @@ class TestListCreateRulesView(TestCase):
         """GET returns all rules ordered by descending priority."""
         rule_low = db_models.Rule(
             kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-            value={"hostnames": ["example.com"], "paths": ["/api"]},
+            parameters={"hostnames": ["example.com"], "paths": ["/api"]},
             action=db_models.RULE_ACTION_ALLOW,
             priority=0,
         )
@@ -162,7 +162,7 @@ class TestListCreateRulesView(TestCase):
         rule_low.save()
         rule_high = db_models.Rule(
             kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-            value={"hostnames": ["example.org"], "paths": ["/admin"]},
+            parameters={"hostnames": ["example.org"], "paths": ["/admin"]},
             action=db_models.RULE_ACTION_DENY,
             priority=10,
         )
@@ -181,7 +181,7 @@ class TestListCreateRulesView(TestCase):
         """POST creates a hostname_and_path_match rule."""
         payload = {
             "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-            "value": {"hostnames": ["example.com"], "paths": ["/api"]},
+            "parameters": {"hostnames": ["example.com"], "paths": ["/api"]},
             "action": db_models.RULE_ACTION_DENY,
             "priority": 5,
             "comment": "Block example.com/api",
@@ -191,7 +191,7 @@ class TestListCreateRulesView(TestCase):
         data = response.json()
         self.assertEqual(data["kind"], db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH)
         self.assertEqual(
-            data["value"], {"hostnames": ["example.com"], "paths": ["/api"]}
+            data["parameters"], {"hostnames": ["example.com"], "paths": ["/api"]}
         )
         self.assertEqual(data["action"], db_models.RULE_ACTION_DENY)
         self.assertEqual(data["priority"], 5)
@@ -204,7 +204,7 @@ class TestListCreateRulesView(TestCase):
         """POST creates a rule with default priority and comment."""
         payload = {
             "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-            "value": {"hostnames": ["example.com"], "paths": ["/api"]},
+            "parameters": {"hostnames": ["example.com"], "paths": ["/api"]},
             "action": db_models.RULE_ACTION_DENY,
         }
         response = self.client.post("/api/v1/rules", data=payload, format="json")
@@ -220,15 +220,15 @@ class TestListCreateRulesView(TestCase):
                 "invalid kind",
                 {
                     "kind": "invalid_kind",
-                    "value": 1,
+                    "parameters": 1,
                     "action": db_models.RULE_ACTION_ALLOW,
                 },
             ),
             (
-                "value doesn't match kind",
+                "parameters doesn't match kind",
                 {
                     "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-                    "value": "not-a-dict",
+                    "parameters": "not-a-dict",
                     "action": db_models.RULE_ACTION_DENY,
                 },
             ),
@@ -253,7 +253,7 @@ class TestRuleDetailView(TestCase):
         self.client = APIClient()
         self.rule = db_models.Rule(
             kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-            value={"hostnames": ["example.com"], "paths": ["/api"]},
+            parameters={"hostnames": ["example.com"], "paths": ["/api"]},
             action=db_models.RULE_ACTION_DENY,
             priority=1,
             comment="Test rule",
@@ -293,7 +293,7 @@ class TestRuleDetailView(TestCase):
         # Unchanged fields remain the same
         self.assertEqual(data["kind"], db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH)
         self.assertEqual(
-            data["value"], {"hostnames": ["example.com"], "paths": ["/api"]}
+            data["parameters"], {"hostnames": ["example.com"], "paths": ["/api"]}
         )
 
     def test_update_nonexistent(self):

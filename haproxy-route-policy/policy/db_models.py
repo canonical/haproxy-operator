@@ -116,7 +116,7 @@ class Rule(models.Model):
     Attrs:
         id: UUID primary key.
         kind: The type of rule (e.g. hostname_and_path_match, match_request_id).
-        value: The rule value, structure depends on kind.
+        parameters: The rule parameters, structure depends on kind.
         action: Whether the rule allows or denies matching requests.
         priority: Rule priority (higher = evaluated first, deny wins on tie).
         comment: Optional human-readable comment.
@@ -128,7 +128,7 @@ class Rule(models.Model):
         primary_key=True, default=uuid.uuid4, editable=False
     )
     kind: models.TextField = models.TextField(choices=RULE_KIND_CHOICES)
-    value: models.JSONField = models.JSONField()
+    parameters: models.JSONField = models.JSONField()
     action: models.TextField = models.TextField(choices=RULE_ACTION_CHOICES)
     priority: models.IntegerField = models.IntegerField(default=0, blank=True)
     comment: models.TextField = models.TextField(default="", blank=True)

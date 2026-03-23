@@ -28,12 +28,12 @@ class RuleSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         """Custom validation logic for the Rule model."""
         if attrs.get("kind") == RULE_KIND_HOSTNAME_AND_PATH_MATCH:
-            if not isinstance(attrs.get("value"), dict):
+            if not isinstance(attrs.get("parameters"), dict):
                 raise serializers.ValidationError(
-                    "The value field must be a JSON object."
+                    "The parameters field must be a JSON object."
                 )
 
-            if hostnames := typing.cast(dict, attrs.get("value")).get("hostnames"):
+            if hostnames := typing.cast(dict, attrs.get("parameters")).get("hostnames"):
                 if invalid_hostnames := [
                     hostname for hostname in hostnames if not domain(hostname)
                 ]:
@@ -41,7 +41,7 @@ class RuleSerializer(serializers.ModelSerializer):
                         f"Invalid hostname(s) in rule: {', '.join(invalid_hostnames)}"
                     )
 
-            if paths := typing.cast(dict, attrs.get("value")).get("paths"):
+            if paths := typing.cast(dict, attrs.get("parameters")).get("paths"):
                 if invalid_paths := [path for path in paths if is_valid_path(path)]:
                     raise serializers.ValidationError(
                         f"Invalid path(s) in rule: {', '.join([str(path) for path in invalid_paths])}"
