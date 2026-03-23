@@ -277,7 +277,8 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
     k8s_juju.integrate("traefik-public:traefik-route", "hydra:public-route")
     k8s_juju.integrate("traefik-public:traefik-route", "kratos:public-route")
     k8s_juju.integrate(
-        "traefik-public:traefik-route", "identity-platform-login-ui-operator:public-route"
+        "traefik-public:traefik-route",
+        "identity-platform-login-ui-operator:public-route",
     )
 
     k8s_juju.config("kratos", {"enforce_mfa": False})
