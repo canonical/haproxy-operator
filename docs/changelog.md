@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-03-23
+
+- Fixed hosts validation in haproxy-route and haproxy-route-tcp relation libraries.
+
 ## 2026-01-19
 
 - Fixed issues with the DDoS protection configurator charm found in staging.
