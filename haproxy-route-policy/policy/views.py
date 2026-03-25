@@ -26,6 +26,13 @@ from .serializers import BackendRequestSerializer, RuleSerializer
 class ListCreateRequestsView(APIView):
     """View for listing and bulk-creating backend requests."""
 
+    def get_request_by_backend_name(self, backend_name: str) -> BackendRequest | None:
+        """Get a backend request by its backend name."""
+        try:
+            return BackendRequest.objects.get(backend_name=backend_name)
+        except BackendRequest.DoesNotExist:
+            return None
+
     def get(self, request):
         """List all requests, optionally filtered by status."""
         status = request.GET.get("status")
@@ -55,7 +62,11 @@ class ListCreateRequestsView(APIView):
         try:
             with transaction.atomic():
                 for backend_request in request.data:
-                    serializer = BackendRequestSerializer(data=backend_request)
+                    # Get the request with the same backend_name if it exists and update it, otherwise create a new one
+                    req = self.get_request_by_backend_name(
+                        backend_request.get("backend_name")
+                    )
+                    serializer = BackendRequestSerializer(req, data=backend_request)
                     if serializer.is_valid(raise_exception=True):
                         instance = BackendRequest(**serializer.validated_data)
                         # Evaluate rules and update status
@@ -64,9 +75,10 @@ class ListCreateRequestsView(APIView):
                         created.append(BackendRequestSerializer(instance).data)
         except ValidationError as e:
             return Response({"error": str(e)}, status=HTTP_400_BAD_REQUEST)
-        except IntegrityError:
+        except IntegrityError as e:
             return Response(
-                {"error": "Invalid request data."}, status=HTTP_400_BAD_REQUEST
+                {"error": f"Invalid request data: {str(e)}"},
+                status=HTTP_400_BAD_REQUEST,
             )
         return Response(created, status=HTTP_201_CREATED)
 

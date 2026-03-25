@@ -47,8 +47,8 @@ def _hostname_and_path_match(rule: Rule, request: BackendRequest) -> bool:
     rule_hostnames: list = rule.parameters.get("hostnames", [])
     rule_paths: list = rule.parameters.get("paths", [])
 
-    hostname_matched = set(request.hostname_acls).intersection(set(rule_hostnames))
-    path_matched = set(request.paths).intersection(set(rule_paths))
+    hostname_matched = set(request.hostname_acls).issubset(rule_hostnames)
+    path_matched = set(request.paths).issubset(rule_paths)
     if not rule_hostnames and not rule_paths:
         return False
     if not rule_hostnames:
