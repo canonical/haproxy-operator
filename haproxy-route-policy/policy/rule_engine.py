@@ -47,15 +47,23 @@ def _hostname_and_path_match(rule: Rule, request: BackendRequest) -> bool:
     rule_hostnames: list = rule.parameters.get("hostnames", [])
     rule_paths: list = rule.parameters.get("paths", [])
 
-    hostname_matched = set(request.hostname_acls).issubset(rule_hostnames)
-    path_matched = set(request.paths).issubset(rule_paths)
-    if not rule_hostnames and not rule_paths:
-        return False
+    # A rule with no hostnames can never match.
     if not rule_hostnames:
-        return bool(path_matched)
+        return False
+
+    # At least one rule hostname must appear in the request's hostname_acls.
+    hostname_matched = bool(
+        set(rule_hostnames).intersection(request.hostname_acls)
+    )
+    if not hostname_matched:
+        return False
+
+    # Empty rule paths means "match all paths" (wildcard).
     if not rule_paths:
-        return bool(hostname_matched)
-    return bool(hostname_matched) and bool(path_matched)
+        return True
+
+    # At least one rule path must appear in the request's paths.
+    return bool(set(rule_paths).intersection(request.paths))
 
 
 def evaluate_request(request: BackendRequest) -> str:
