@@ -20,7 +20,7 @@ PY_COLORS = "1"
 description = "Run unit tests"
 commands = [
   [
-    "uv",
+    "coverage",
     "run",
     "manage.py",
     "test",
@@ -29,6 +29,7 @@ commands = [
     "-v2",
   ],
 ]
+dependency_groups = ["unit"]
 
 [env.lint]
 description = "Check code against coding style standards"
@@ -75,3 +76,8 @@ dependency_groups = [ "static" ]
 src_path = "{toxinidir}/policy/"
 tst_path = "{toxinidir}/policy/tests"
 all_path = ["{toxinidir}/policy/"]
+
+[env.coverage-report]
+description = "Create test coverage report"
+commands = [ [ "coverage", "report" ] ]
+dependency_groups = [ "coverage-report" ]
