@@ -1,20 +1,19 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""REST API views for backend requests."""
+"""REST API views for backend requests and rules."""
 
-import uuid
-from typing import Any
+from policy.db_models import BackendRequest, Rule
+from typing import Type
 from venv import logger
-from policy.db_models import BackendRequest
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.status import (
     HTTP_201_CREATED,
     HTTP_400_BAD_REQUEST,
-    HTTP_404_NOT_FOUND,
     HTTP_204_NO_CONTENT,
 )
+from django.http import Http404
 from django.core.exceptions import ValidationError
 from django.db.utils import IntegrityError
 from django.db import transaction
@@ -72,29 +71,61 @@ class RequestDetailView(APIView):
 
     def get(self, _request, pk):
         """Get a request by ID."""
-        try:
-            backend_request = BackendRequest.objects.get(pk=uuid_primary_key(pk))
-            serializer = serializers.BackendRequestSerializer(backend_request)
-        except BackendRequest.DoesNotExist:
-            return Response(status=HTTP_404_NOT_FOUND)
-        except (ValueError, AttributeError):
-            return Response(
-                {"error": "Invalid request ID."}, status=HTTP_400_BAD_REQUEST
-            )
+        backend_request = get_object(BackendRequest, pk)
+        serializer = serializers.BackendRequestSerializer(backend_request)
         return Response(serializer.data)
 
     def delete(self, _request, pk):
         """Delete a request by ID."""
-        try:
-            BackendRequest.objects.filter(pk=uuid_primary_key(pk)).delete()
-        except (AttributeError, ValueError):
-            logger.warning(f"Attempted to delete request with invalid UUID: {pk}")
+        BackendRequest.objects.filter(pk=pk).delete()
         return Response(status=HTTP_204_NO_CONTENT)
 
 
-def uuid_primary_key(pk: Any) -> str:
-    """Validate that the passed request parameter is a valid UUID string.
+class ListCreateRulesView(APIView):
+    """View for listing and creating rules."""
 
-    The calling methods are responsible for catching ValueError and AttributeError.
-    """
-    return str(uuid.UUID(str(pk), version=4))
+    def get(self, request):
+        """List all rules."""
+        queryset = Rule.objects.all().order_by("-priority", "created_at")
+        serializer = serializers.RuleSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        """Create a new rule."""
+        serializer = serializers.RuleSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(serializer.data, status=HTTP_201_CREATED)
+        return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+
+
+class RuleDetailView(APIView):
+    """View for getting, updating, or deleting a single rule."""
+
+    def get(self, request, pk):
+        """Get a rule by ID."""
+        rule = get_object(Rule, pk)
+        serializer = serializers.RuleSerializer(rule)
+        return Response(data=serializer.data)
+
+    def put(self, request, pk):
+        """Update a rule by ID."""
+        rule = get_object(Rule, pk)
+        serializer = serializers.RuleSerializer(rule, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        """Delete a rule by ID."""
+        Rule.objects.filter(pk=pk).delete()
+        return Response(status=HTTP_204_NO_CONTENT)
+
+
+def get_object(object_class: Type[Rule] | Type[BackendRequest], pk: str):
+    try:
+        logger.info(f"Fetching object with ID: {pk}")
+        return object_class.objects.get(pk=pk)
+    except object_class.DoesNotExist:
+        raise Http404

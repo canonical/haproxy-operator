@@ -3,9 +3,10 @@
 
 """Integration tests for the policy REST API views."""
 
+import uuid
+
 from django.test import TestCase
 from rest_framework.test import APIClient
-import uuid
 from policy import db_models
 
 
@@ -136,6 +137,187 @@ class TestRequestDetailView(TestCase):
         self.assertEqual(response.status_code, 204)
 
 
+class TestListCreateRulesView(TestCase):
+    """Tests for GET /api/v1/rules and POST /api/v1/rules."""
+
+    def setUp(self):
+        """Set up the API client."""
+        self.client = APIClient()
+
+    def test_list_empty(self):
+        """GET returns an empty list when no rules exist."""
+        response = self.client.get("/api/v1/rules")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), [])
+
+    def test_list_returns_all_ordered_by_priority(self):
+        """GET returns all rules ordered by descending priority."""
+        rule_low = db_models.Rule(
+            kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
+            parameters={"hostnames": ["example.com"], "paths": ["/api"]},
+            action=db_models.RULE_ACTION_ALLOW,
+            priority=0,
+        )
+        rule_low.full_clean()
+        rule_low.save()
+        rule_high = db_models.Rule(
+            kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
+            parameters={"hostnames": ["example.org"], "paths": ["/admin"]},
+            action=db_models.RULE_ACTION_DENY,
+            priority=10,
+        )
+        rule_high.full_clean()
+        rule_high.save()
+
+        response = self.client.get("/api/v1/rules")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data), 2)
+        # Higher priority should come first
+        self.assertEqual(data[0]["priority"], 10)
+        self.assertEqual(data[1]["priority"], 0)
+
+    def test_create_hostname_and_path_match_rule(self):
+        """POST creates a hostname_and_path_match rule."""
+        payload = {
+            "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
+            "parameters": {"hostnames": ["example.com"], "paths": ["/api"]},
+            "action": db_models.RULE_ACTION_DENY,
+            "priority": 5,
+            "comment": "Block example.com/api",
+        }
+        response = self.client.post("/api/v1/rules", data=payload, format="json")
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertEqual(data["kind"], db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH)
+        self.assertEqual(
+            data["parameters"], {"hostnames": ["example.com"], "paths": ["/api"]}
+        )
+        self.assertEqual(data["action"], db_models.RULE_ACTION_DENY)
+        self.assertEqual(data["priority"], 5)
+        self.assertEqual(data["comment"], "Block example.com/api")
+        self.assertIn("id", data)
+        self.assertIn("created_at", data)
+        self.assertEqual(db_models.Rule.objects.count(), 1)
+
+    def test_create_rule_set_default_priority_and_comment(self):
+        """POST creates a rule with default priority and comment."""
+        payload = {
+            "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
+            "parameters": {"hostnames": ["example.com"], "paths": ["/api"]},
+            "action": db_models.RULE_ACTION_DENY,
+        }
+        response = self.client.post("/api/v1/rules", data=payload, format="json")
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertEqual(data["priority"], 0)
+        self.assertEqual(data["comment"], "")
+
+    def test_create_rule_invalid_payload(self):
+        """POST returns 400 for invalid rule payloads."""
+        invalid_payloads = [
+            (
+                "invalid kind",
+                {
+                    "kind": "invalid_kind",
+                    "parameters": 1,
+                    "action": db_models.RULE_ACTION_ALLOW,
+                },
+            ),
+            (
+                "parameters doesn't match kind",
+                {
+                    "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
+                    "parameters": "not-a-dict",
+                    "action": db_models.RULE_ACTION_DENY,
+                },
+            ),
+            (
+                "body is not a JSON object",
+                [{"kind": "test"}],
+            ),
+        ]
+        for label, payload in invalid_payloads:
+            with self.subTest(label=label):
+                response = self.client.post(
+                    "/api/v1/rules", data=payload, format="json"
+                )
+                self.assertEqual(response.status_code, 400)
+
+
+class TestRuleDetailView(TestCase):
+    """Tests for GET, PUT, DELETE /api/v1/rules/<id>."""
+
+    def setUp(self):
+        """Set up the API client and a sample rule."""
+        self.client = APIClient()
+        self.rule = db_models.Rule(
+            kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
+            parameters={"hostnames": ["example.com"], "paths": ["/api"]},
+            action=db_models.RULE_ACTION_DENY,
+            priority=1,
+            comment="Test rule",
+        )
+        self.rule.full_clean()
+        self.rule.save()
+
+    def test_get_existing(self):
+        """GET returns the rule matching the given ID."""
+        response = self.client.get(f"/api/v1/rules/{self.rule.pk}")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["id"], str(self.rule.pk))
+        self.assertEqual(data["kind"], db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH)
+
+    def test_get_not_found(self):
+        """GET returns 404 for a non-existent rule ID."""
+        fake_id = uuid.uuid4()
+        response = self.client.get(f"/api/v1/rules/{fake_id}")
+        self.assertEqual(response.status_code, 404)
+
+    def test_update_rule(self):
+        """PUT updates the rule fields."""
+        payload = {
+            "priority": 10,
+            "comment": "Updated comment",
+            "action": db_models.RULE_ACTION_ALLOW,
+        }
+        response = self.client.put(
+            f"/api/v1/rules/{self.rule.pk}", data=payload, format="json"
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["priority"], 10)
+        self.assertEqual(data["comment"], "Updated comment")
+        self.assertEqual(data["action"], db_models.RULE_ACTION_ALLOW)
+        # Unchanged fields remain the same
+        self.assertEqual(data["kind"], db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH)
+        self.assertEqual(
+            data["parameters"], {"hostnames": ["example.com"], "paths": ["/api"]}
+        )
+
+    def test_update_nonexistent(self):
+        """PUT returns 404 for a non-existent rule ID."""
+        fake_id = uuid.uuid4()
+        response = self.client.put(
+            f"/api/v1/rules/{fake_id}", data={"priority": 5}, format="json"
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_delete_existing(self):
+        """DELETE removes the rule and returns 204."""
+        pk = self.rule.pk
+        response = self.client.delete(f"/api/v1/rules/{pk}")
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(db_models.Rule.objects.filter(pk=pk).exists())
+
+    def test_delete_nonexistent(self):
+        """DELETE on a non-existent rule ID still returns 204 (idempotent)."""
+        fake_id = uuid.uuid4()
+        response = self.client.delete(f"/api/v1/rules/{fake_id}")
+        self.assertEqual(response.status_code, 204)
+
+
 class TestStatusFilterSanitization(TestCase):
     """Tests for status query parameter validation on GET /api/v1/requests."""
 
@@ -176,28 +358,34 @@ class TestPkValidation(TestCase):
         """Set up the API client."""
         self.client = APIClient()
 
-    def test_get_invalid_pk_returns_400(self):
-        """GET with an invalid UUID pk should return 400."""
+    def test_invalid_pk_returns_404(self):
+        """GET and DELETE with an invalid UUID pk should return 404."""
         invalid_pks = [
             "not-a-uuid",
             "12345",
             "' OR 1=1 --",
             " ",
         ]
+        # GET requests with invalid PKs
         for pk in invalid_pks:
             with self.subTest(pk=pk):
                 response = self.client.get(f"/api/v1/requests/{pk}")
-                self.assertEqual(response.status_code, 400)
-                self.assertIn("error", response.json())
+                self.assertEqual(response.status_code, 404)
 
-    def test_delete_invalid_pk_returns_204(self):
-        """DELETE with an invalid UUID pk should still return 204 (idempotent)."""
-        invalid_pks = [
-            "not-a-uuid",
-            "12345",
-            "' OR 1=1 --",
-        ]
+        # GET rules with invalid PKs
+        for pk in invalid_pks:
+            with self.subTest(pk=pk):
+                response = self.client.get(f"/api/v1/rules/{pk}")
+                self.assertEqual(response.status_code, 404)
+
+        # DELETE requests with invalid PKs
         for pk in invalid_pks:
             with self.subTest(pk=pk):
                 response = self.client.delete(f"/api/v1/requests/{pk}")
-                self.assertEqual(response.status_code, 204)
+                self.assertEqual(response.status_code, 404)
+
+        # DELETE rules with invalid PKs
+        for pk in invalid_pks:
+            with self.subTest(pk=pk):
+                response = self.client.delete(f"/api/v1/rules/{pk}")
+                self.assertEqual(response.status_code, 404)

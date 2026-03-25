@@ -5,7 +5,7 @@ skipsdist = true
 skip_missing_interpreters = true
 requires = ["tox>=4.21"]
 no_package = true
-envlist = [ "lint", "unit"]
+envlist = ["lint", "unit", "static", "coverage-report"]
 
 [env_run_base]
 passenv = ["PYTHONPATH"]
@@ -20,7 +20,7 @@ PY_COLORS = "1"
 description = "Run unit tests"
 commands = [
   [
-    "uv",
+    "coverage",
     "run",
     "manage.py",
     "test",
@@ -29,6 +29,7 @@ commands = [
     "-v2",
   ],
 ]
+dependency_groups = ["unit"]
 
 [env.lint]
 description = "Check code against coding style standards"
@@ -65,7 +66,27 @@ commands = [
 ]
 dependency_groups = ["lint"]
 
+
+[env.static]
+description = "Run static analysis tests"
+commands = [
+  [
+    "bandit",
+    "-c",
+    "{toxinidir}/pyproject.toml",
+    "-r",
+    "{[vars]src_path}",
+    "{[vars]tst_path}",
+  ],
+]
+dependency_groups = ["static"]
+
 [vars]
 src_path = "{toxinidir}/policy/"
 tst_path = "{toxinidir}/policy/tests"
 all_path = ["{toxinidir}/policy/"]
+
+[env.coverage-report]
+description = "Create test coverage report"
+commands = [["coverage", "report"]]
+dependency_groups = ["coverage-report"]

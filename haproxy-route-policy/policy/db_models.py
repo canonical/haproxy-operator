@@ -4,10 +4,10 @@
 """Database models for the haproxy-route-policy application."""
 
 import typing
+import uuid
 from django.db import models
 from validators import domain
 from django.core.exceptions import ValidationError
-import uuid
 
 REQUEST_STATUS_PENDING = "pending"
 REQUEST_STATUS_ACCEPTED = "accepted"
@@ -21,6 +21,24 @@ REQUEST_STATUSES = [
 ]
 
 REQUEST_STATUS_CHOICES = [(status, status) for status in REQUEST_STATUSES]
+
+RULE_ACTION_ALLOW = "allow"
+RULE_ACTION_DENY = "deny"
+
+RULE_ACTIONS = [
+    RULE_ACTION_ALLOW,
+    RULE_ACTION_DENY,
+]
+
+RULE_ACTION_CHOICES = [(action, action) for action in RULE_ACTIONS]
+
+RULE_KIND_HOSTNAME_AND_PATH_MATCH = "hostname_and_path_match"
+
+RULE_KINDS = [
+    RULE_KIND_HOSTNAME_AND_PATH_MATCH,
+]
+
+RULE_KIND_CHOICES = [(kind, kind) for kind in RULE_KINDS]
 
 
 def validate_hostname_acls(value: typing.Any):
@@ -85,5 +103,34 @@ class BackendRequest(models.Model):
         default=REQUEST_STATUS_PENDING,
         db_index=True,
     )
+    created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True)
+    updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
+
+
+class Rule(models.Model):
+    """A rule used to evaluate backend requests.
+
+    Rules are matched against incoming backend requests to automatically
+    accept or deny them. Rules have a priority and an action (allow/deny).
+
+    Attrs:
+        id: UUID primary key.
+        kind: The type of rule (e.g. hostname_and_path_match, match_request_id).
+        parameters: The rule parameters, structure depends on kind.
+        action: Whether the rule allows or denies matching requests.
+        priority: Rule priority (higher = evaluated first, deny wins on tie).
+        comment: Optional human-readable comment.
+        created_at: Timestamp when the rule was created.
+        updated_at: Timestamp when the rule was last updated.
+    """
+
+    id: models.UUIDField = models.UUIDField(
+        primary_key=True, default=uuid.uuid4, editable=False
+    )
+    kind: models.TextField = models.TextField(choices=RULE_KIND_CHOICES)
+    parameters: models.JSONField = models.JSONField()
+    action: models.TextField = models.TextField(choices=RULE_ACTION_CHOICES)
+    priority: models.IntegerField = models.IntegerField(default=0, blank=True)
+    comment: models.TextField = models.TextField(default="", blank=True)
     created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True)
     updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
