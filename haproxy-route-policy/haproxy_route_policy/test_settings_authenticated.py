@@ -1,7 +1,7 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Django settings for running tests with SQLite."""
+"""Django settings for running tests with SQLite in an authenticated setup."""
 
 from haproxy_route_policy.settings import *  # noqa: F401, F403
 
@@ -13,11 +13,4 @@ DATABASES = {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": ":memory:",
     }
-}
-
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.AllowAny",
-    ],
 }
