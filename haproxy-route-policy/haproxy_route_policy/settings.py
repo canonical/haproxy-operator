@@ -16,6 +16,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os
 import json
+import psycopg2.extensions
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -76,9 +77,16 @@ WSGI_APPLICATION = "haproxy_route_policy.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+        "ENGINE": "django.db.backends.postgresql",
+        "PASSWORD": os.getenv("DJANGO_DATABASE_PASSWORD", ""),
+        "HOST": os.getenv("DJANGO_DATABASE_HOST", "localhost"),
+        "PORT": os.getenv("DJANGO_DATABASE_PORT", 5432),
+        "USER": os.getenv("DJANGO_DATABASE_USER", "postgres"),
+        "NAME": os.getenv("DJANGO_DATABASE_NAME", "postgres"),
+        "OPTIONS": {
+            "isolation_level": psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE,
+        },
+    },
 }
 
 
