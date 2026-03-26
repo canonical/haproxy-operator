@@ -5,7 +5,6 @@
 
 from policy.db_models import BackendRequest, Rule
 from typing import Type
-from venv import logger
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.status import (
@@ -68,11 +67,13 @@ class ListCreateRequestsView(APIView):
                     )
                     serializer = BackendRequestSerializer(req, data=backend_request)
                     if serializer.is_valid(raise_exception=True):
-                        instance = BackendRequest(**serializer.validated_data)
                         # Evaluate rules and update status
-                        instance.status = evaluate_request(instance)
-                        instance.save()
-                        created.append(BackendRequestSerializer(instance).data)
+                        serializer.save(
+                            status=evaluate_request(
+                                BackendRequest(**serializer.validated_data)
+                            )
+                        )
+                        created.append(serializer.data)
         except ValidationError as e:
             return Response({"error": str(e)}, status=HTTP_400_BAD_REQUEST)
         except IntegrityError as e:
@@ -142,7 +143,6 @@ class RuleDetailView(APIView):
 
 def get_object(object_class: Type[Rule] | Type[BackendRequest], pk: str):
     try:
-        logger.info(f"Fetching object with ID: {pk}")
         return object_class.objects.get(pk=pk)
     except object_class.DoesNotExist:
         raise Http404
