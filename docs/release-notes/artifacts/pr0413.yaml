@@ -1,0 +1,17 @@
+version_schema: 2
+
+changes:
+  - title: Switched haproxy-route-policy database backend to PostgreSQL
+    author: tphan025
+    type: minor
+    description: >
+      Changed the default database backend from SQLite to PostgreSQL with
+      environment-variable-based configuration for host, port, user, password,
+      and database name. Added psycopg2-binary as a project dependency.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/413
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false
