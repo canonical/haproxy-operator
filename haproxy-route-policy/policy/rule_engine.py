@@ -52,9 +52,7 @@ def _hostname_and_path_match(rule: Rule, request: BackendRequest) -> bool:
         return False
 
     # At least one rule hostname must appear in the request's hostname_acls.
-    hostname_matched = bool(
-        set(rule_hostnames).intersection(request.hostname_acls)
-    )
+    hostname_matched = bool(set(rule_hostnames).intersection(request.hostname_acls))
     if not hostname_matched:
         return False
 
