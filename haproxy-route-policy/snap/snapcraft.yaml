@@ -1,0 +1,51 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: haproxy-route-policy
+base: core24
+version: "0.1"
+license: Apache-2.0
+summary: HAProxy Route Policy API
+description: |
+  This snap bundles the HAProxy Route Policy Django application to be included in the haproxy-route-policy-operator.
+confinement: strict
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+
+system-usernames:
+  _daemon_: shared
+
+parts:
+  haproxy-route-policy:
+    plugin: uv
+    source: .
+    build-snaps:
+      - astral-uv
+    stage-packages:
+      - gunicorn
+    stage-snaps:
+      - astral-uv
+
+  scripts:
+    plugin: dump
+    source: ./snap/scripts
+    override-prime: |
+      craftctl default
+      chmod -R +rx $CRAFT_PRIME/bin
+
+apps:
+  gunicorn:
+    command: bin/gunicorn-start
+    daemon: simple
+    restart-condition: always
+    plugs:
+      - network
+      - network-bind
+
+  manage:
+    command: bin/manage
+    plugs:
+      - network
+      - network-bind
