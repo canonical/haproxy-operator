@@ -31,6 +31,9 @@ jobs:
       - uses: actions/checkout@v6
         with:
           sparse-checkout: haproxy-route-policy
+      - run: |
+          pwd
+          ls -la
       - name: Build Snap
         id: snapcraft
         uses: snapcore/action-build@v1
