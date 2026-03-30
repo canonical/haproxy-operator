@@ -3,8 +3,10 @@ name: Automated spread testing
 on:
   workflow_dispatch:
   pull_request:
-    # paths:
-    # - 'docs/tutorial/getting-started.md'
+    paths:
+    - 'docs/tutorial/getting-started.md'
+  schedule:
+    - cron: 0 9 * * 1 # At 09:00 UTC on Monday, aligned with the weekly haproxy stable release.
 
 jobs:
   docs-checks:
