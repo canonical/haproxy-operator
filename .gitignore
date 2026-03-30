@@ -32,3 +32,5 @@ terraform/**/*.tfstate*
 haproxy-route-policy/db.sqlite3
 haproxy-route-policy/.python-version
 
+tests/spread/tutorial/
+**/.spread-reuse*
