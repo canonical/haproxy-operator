@@ -5,9 +5,14 @@
 
 set -e
 
+DJANGO_SECRET_KEY="$(snapctl get secret-key)"
+export DJANGO_SECRET_KEY
 DJANGO_DEBUG="$(snapctl get debug)"
 export DJANGO_DEBUG
 DJANGO_ALLOWED_HOSTS="$(snapctl get allowed-hosts)"
+if [ -z "$DJANGO_ALLOWED_HOSTS" ]; then
+  DJANGO_ALLOWED_HOSTS="[]"
+fi
 export DJANGO_ALLOWED_HOSTS
 DJANGO_LOG_LEVEL="$(snapctl get log-level)"
 export DJANGO_LOG_LEVEL
