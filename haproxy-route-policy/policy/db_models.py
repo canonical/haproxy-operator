@@ -93,7 +93,7 @@ class BackendRequest(models.Model):
     hostname_acls: models.JSONField = models.JSONField(
         default=list, validators=[validate_hostname_acls], blank=True
     )
-    backend_name: models.TextField = models.TextField()
+    backend_name: models.TextField = models.TextField(unique=True)
     paths: models.JSONField = models.JSONField(
         default=list, validators=[validate_paths], blank=True
     )
