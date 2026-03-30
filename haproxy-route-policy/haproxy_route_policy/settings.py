@@ -124,6 +124,18 @@ STATIC_ROOT = Path(BASE_DIR, "static/")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# django rest framework options
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework.authentication.BasicAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+}
+
 env_log_level = os.getenv("DJANGO_LOG_LEVEL", "INFO").upper()
 if env_log_level not in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
     env_log_level = "INFO"

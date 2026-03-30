@@ -5,7 +5,7 @@ skipsdist = true
 skip_missing_interpreters = true
 requires = ["tox>=4.21"]
 no_package = true
-envlist = ["lint", "unit", "static", "coverage-report"]
+envlist = ["lint", "unit", "unit-auth", "static", "coverage-report"]
 
 [env_run_base]
 passenv = ["PYTHONPATH"]
@@ -26,10 +26,28 @@ commands = [
     "test",
     "policy",
     "--settings=haproxy_route_policy.test_settings",
+    "--exclude-tag=auth",
     "-v2",
   ],
 ]
 dependency_groups = ["unit"]
+
+
+[env.unit_auth]
+description = "Run auth unit tests"
+commands = [
+  [
+    "coverage",
+    "run",
+    "manage.py",
+    "test",
+    "policy",
+    "--settings=haproxy_route_policy.test_settings_authenticated",
+    "--tag=auth",
+    "-v2",
+  ],
+]
+dependency_groups = ["unit", "auth"]
 
 [env.lint]
 description = "Check code against coding style standards"
