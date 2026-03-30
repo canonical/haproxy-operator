@@ -13,4 +13,4 @@ jobs:
     with:
       input-file: docs/tutorial/getting-started.md
       output-dir: tests/spread/tutorial
-      spread-job: github-ci:ubuntu-24.04:haproxy-operator/spread/
+      spread-job: github-ci:ubuntu-24.04:tests/spread/tutorial/
