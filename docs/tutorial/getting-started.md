@@ -70,6 +70,15 @@ juju integrate haproxy:certificates self-signed-certificates
 Once all the application has settled into an "Idle" state, we can verify by sending a request to the HAProxy's IP address:
 
 ```sh
+END_TIME=$((SECONDS + 600))
+UNIT_STATUS=""
+while [ "$UNIT_STATUS" != "idle" ] && [ "$SECONDS" -lt "$END_TIME" ]; do
+	sleep 5
+	UNIT_STATUS=$(juju status --format json | jq -r '.applications.haproxy.units."haproxy/0"."juju-status".current')
+    echo "Waiting for haproxy unit: $UNIT_STATUS"
+done
+
+
 HAPROXY_IP=$(juju status --format json | jq -r '.applications.haproxy.units."haproxy/0"."public-address"')
 curl $HAPROXY_IP
 ```
@@ -101,6 +110,14 @@ juju integrate pollen haproxy:haproxy-route
 Let's check that the request has been properly proxied to the backend service using the `pollinate` script:
 
 ```sh
+END_TIME=$((SECONDS + 600))
+APP_STATUS=""
+while [ "$APP_STATUS" != "active" ] && [ "$SECONDS" -lt "$END_TIME" ]; do
+	sleep 5
+	APP_STATUS=$(juju status --format json | jq -r '.applications.haproxy."application-status".current')
+    echo "Waiting for haproxy: $APP_STATUS"
+done
+
 HAPROXY_IP=$(juju status --format json | jq -r '.applications.haproxy.units."haproxy/0"."public-address"')
 echo "$HAPROXY_IP pollen.internal" | sudo tee /etc/hosts
 sudo pollinate -s https://pollen.internal -r -i
