@@ -1,14 +1,5 @@
 project: haproxy-operator-tests
 
-environment:
-  PROVIDER: lxd
-  JUJU_CHANNEL: 3/stable
-  LXD_CHANNEL: latest/stable
-
-  JUJU_BOOTSTRAP_OPTIONS: --model-default test-mode=true --model-default automatically-retry-hooks=false --model-default
-  JUJU_EXTRA_BOOTSTRAP_OPTIONS: ""
-  JUJU_BOOTSTRAP_CONSTRAINTS: ""
-
 backends:
   github-ci:
     type: adhoc
@@ -23,7 +14,11 @@ backends:
       ADDRESS localhost:22
     discard: |
       echo "Discarding ad-hoc $SPREAD_SYSTEM"
-    systems: [ubuntu-24.04]
+    systems:
+      - ubuntu-24.04:
+          username: ubuntu
+          password: ubuntu
+          workers: 1
 
 suites:
   tests/spread/:
