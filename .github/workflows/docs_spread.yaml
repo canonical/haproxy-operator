@@ -8,7 +8,7 @@ on:
 
 jobs:
   docs-checks:
-    uses: canonical/operator-workflows/.github/workflows/docs_spread.yaml@main
+    uses: canonical/operator-workflows/.github/workflows/docs_spread.yaml@update-spread-package-name
     secrets: inherit
     with:
       input-file: docs/tutorial/getting-started.md
