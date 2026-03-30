@@ -28,13 +28,14 @@ jobs:
     name: Build Snap
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
       - name: Build Snap
         id: snapcraft
         uses: snapcore/action-build@v1
         with:
           path: haproxy-route-policy
       - name: Upload Snap Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: snap
           path: ${{ steps.snapcraft.outputs.snap }}
