@@ -27,5 +27,5 @@ if [ "$DJANGO_DEBUG" = "true" ]; then
   LOG_LEVEL="debug"
 fi
 
-exec gunicorn --chdir "$SNAP_DATA/app" --bind 0.0.0.0:8080 haproxy_route_policy.wsgi \
+exec gunicorn --bind 0.0.0.0:8080 haproxy_route_policy.wsgi \
   --capture-output --log-level="$LOG_LEVEL"
