@@ -20,6 +20,7 @@ build-backend = "uv_build"
 
 [tool.uv.build-backend]
 module-root = ""
+module-name = ["haproxy_route_policy", "policy"]
 
 [dependency-groups]
 auth = [
