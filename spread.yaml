@@ -1,0 +1,72 @@
+project: haproxy-operator-tests
+
+
+environment:
+  PROVIDER: lxd
+  JUJU_CHANNEL: 3/stable
+  LXD_CHANNEL: latest/stable
+
+  JUJU_BOOTSTRAP_OPTIONS: --model-default test-mode=true --model-default automatically-retry-hooks=false --model-default
+  JUJU_EXTRA_BOOTSTRAP_OPTIONS: ""
+  JUJU_BOOTSTRAP_CONSTRAINTS: ""
+
+  LANG: "C.UTF-8"
+  LANGUAGE: "en"
+
+  PROJECT_PATH: /home/spread/proj
+  CRAFT_TEST_LIB_PATH: /home/spread/proj/charm/tests/spread/lib
+
+
+backends:
+  github-ci:
+    type: adhoc
+
+    allocate: |
+      echo "Allocating ad-hoc $SPREAD_SYSTEM"
+      if [ -z "${GITHUB_RUN_ID:-}" ]; then
+        FATAL "this back-end only works inside GitHub CI"
+        exit 1
+      fi
+      echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/99-spread-users
+      ADDRESS localhost:22
+    discard: |
+      echo "Discarding ad-hoc $SPREAD_SYSTEM"
+    systems:
+      - ubuntu-24.04:
+          username: ubuntu
+          password: ubuntu
+          workers: 1
+
+suites:
+  haproxy-operator/spread:
+    summary: Simple examples
+    systems:
+      - ubuntu-24.04
+    prepare: |
+      set -e
+      . "$CRAFT_TEST_LIB_PATH"/test-helpers.sh
+      DEBIAN_FRONTEND=noninteractive apt-get update -y
+      DEBIAN_FRONTEND=noninteractive apt-get install -y python3-pip
+
+      # Install LXD
+      snap install lxd --channel "$LXD_CHANNEL"
+      snap refresh lxd --channel "$LXD_CHANNEL"
+      lxd waitready
+      lxd init --auto
+      chmod a+wr /var/snap/lxd/common/lxd/unix.socket
+      lxc network set lxdbr0 ipv6.address none
+      usermod -a -G lxd "$USER"
+
+      # Install juju
+      snap install juju --classic --channel "$JUJU_CHANNEL"
+      snap refresh juju --classic --channel "$JUJU_CHANNEL"
+      mkdir -p "$HOME"/.local/share/juju
+      snap install juju-crashdump --classic
+
+      # Bootstrap juju controller
+      juju bootstrap --verbose "$PROVIDER" "$CONTROLLER_NAME" \
+        $JUJU_BOOTSTRAP_OPTIONS $JUJU_EXTRA_BOOTSTRAP_OPTIONS \
+        --bootstrap-constraints=$JUJU_BOOTSTRAP_CONSTRAINTS
+
+path: /home/spread/proj
+kill-timeout: 1h
