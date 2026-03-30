@@ -88,6 +88,96 @@ class TestListCreateRequestsView(TestCase):
         self.assertEqual(data[1]["port"], 443)
         self.assertEqual(db_models.BackendRequest.objects.count(), 2)
 
+    def test_evaluate_requests(self):
+        """POST evaluates rules and sets status accordingly for each request."""
+        cases = [
+            (
+                "denied by matching deny rule",
+                {"hostnames": ["example.com"], "paths": []},
+                db_models.RULE_ACTION_DENY,
+                [
+                    {
+                        "relation_id": 1,
+                        "hostname_acls": ["example.com"],
+                        "backend_name": "backend-1",
+                        "paths": ["/api"],
+                        "port": 443,
+                    },
+                ],
+                [db_models.REQUEST_STATUS_REJECTED],
+            ),
+            (
+                "accepted by matching allow rule",
+                {"hostnames": ["example.com"], "paths": []},
+                db_models.RULE_ACTION_ALLOW,
+                [
+                    {
+                        "relation_id": 1,
+                        "hostname_acls": ["example.com"],
+                        "backend_name": "backend-1",
+                        "port": 443,
+                    },
+                ],
+                [db_models.REQUEST_STATUS_ACCEPTED],
+            ),
+            (
+                "pending when no rules match",
+                {"hostnames": ["other.com"], "paths": []},
+                db_models.RULE_ACTION_DENY,
+                [
+                    {
+                        "relation_id": 1,
+                        "hostname_acls": ["example.com"],
+                        "backend_name": "backend-1",
+                        "port": 443,
+                    },
+                ],
+                [db_models.REQUEST_STATUS_PENDING],
+            ),
+            (
+                "mixed statuses per request",
+                {"hostnames": ["example.com"], "paths": []},
+                db_models.RULE_ACTION_DENY,
+                [
+                    {
+                        "relation_id": 1,
+                        "hostname_acls": ["example.com"],
+                        "backend_name": "backend-1",
+                        "port": 443,
+                    },
+                    {
+                        "relation_id": 2,
+                        "hostname_acls": ["other.com"],
+                        "backend_name": "backend-2",
+                        "port": 443,
+                    },
+                ],
+                [
+                    db_models.REQUEST_STATUS_REJECTED,
+                    db_models.REQUEST_STATUS_PENDING,
+                ],
+            ),
+        ]
+        for label, rule_params, rule_action, payload, expected_statuses in cases:
+            with self.subTest(label=label):
+                # Clean slate for each sub-test
+                db_models.Rule.objects.all().delete()
+                db_models.BackendRequest.objects.all().delete()
+
+                db_models.Rule(
+                    kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
+                    parameters=rule_params,
+                    action=rule_action,
+                ).save()
+
+                response = self.client.post(
+                    "/api/v1/requests", data=payload, format="json"
+                )
+                self.assertEqual(response.status_code, 201)
+                data = response.json()
+                actual_statuses = [r["status"] for r in data]
+                self.assertEqual(actual_statuses, expected_statuses)
+
     def test_bulk_create_rejects_non_list(self):
         """POST returns 400 when the body is not a list."""
         response = self.client.post(
