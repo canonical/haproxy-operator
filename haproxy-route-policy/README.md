@@ -17,7 +17,7 @@ sudo snap set haproxy-route-policy database-name=postgres
 ```
 
 ## Learn more
-* [Read more](https://charmhub.io/haproxy-operator/docs)
+* [Read more](https://documentation.ubuntu.com/haproxy-charm/latest/)
 
 ## Project and community
 * [Issues](https://github.com/canonical/haproxy-operator/issues)
