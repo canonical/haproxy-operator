@@ -9,12 +9,16 @@ In this tutorial we'll deploy the HAProxy charm to provide ingress to a backend 
 You will need a working station, e.g., a laptop, with AMD64 architecture. Your working station
 should have at least 4 CPU cores, 8 GB of RAM, and 50 GB of disk space.
 
+<!-- SPREAD SKIP -->
+
 ````{tip}
 You can use Multipass to create an isolated environment by running:
 ```
 multipass launch 24.04 --name charm-tutorial-vm --cpus 4 --memory 8G --disk 50G
 ```
 ````
+
+<!-- SPREAD SKIP END -->
 
 This tutorial requires the following software to be installed on your working station
 (either locally or in the Multipass VM):
@@ -69,16 +73,11 @@ juju integrate haproxy:certificates self-signed-certificates
  
 Once all the application has settled into an "Idle" state, we can verify by sending a request to the HAProxy's IP address:
 
+<!-- SPREAD
+juju wait-for application haproxy --query='status=="active"' --timeout 10m
+-->
+
 ```sh
-END_TIME=$((SECONDS + 600))
-UNIT_STATUS=""
-while [ "$UNIT_STATUS" != "idle" ] && [ "$SECONDS" -lt "$END_TIME" ]; do
-	sleep 5
-	UNIT_STATUS=$(juju status --format json | jq -r '.applications.haproxy.units."haproxy/0"."juju-status".current')
-    echo "Waiting for haproxy unit: $UNIT_STATUS"
-done
-
-
 HAPROXY_IP=$(juju status --format json | jq -r '.applications.haproxy.units."haproxy/0"."public-address"')
 curl $HAPROXY_IP
 ```
@@ -109,15 +108,11 @@ juju integrate pollen haproxy:haproxy-route
 
 Let's check that the request has been properly proxied to the backend service using the `pollinate` script:
 
-```sh
-END_TIME=$((SECONDS + 600))
-APP_STATUS=""
-while [ "$APP_STATUS" != "active" ] && [ "$SECONDS" -lt "$END_TIME" ]; do
-	sleep 5
-	APP_STATUS=$(juju status --format json | jq -r '.applications.haproxy."application-status".current')
-    echo "Waiting for haproxy: $APP_STATUS"
-done
+<!-- SPREAD
+juju wait-for application haproxy --query='status=="active"' --timeout 10m
+-->
 
+```sh
 HAPROXY_IP=$(juju status --format json | jq -r '.applications.haproxy.units."haproxy/0"."public-address"')
 echo "$HAPROXY_IP pollen.internal" | sudo tee /etc/hosts
 sudo pollinate -s https://pollen.internal -r -i
