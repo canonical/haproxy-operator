@@ -13,7 +13,7 @@ from charmlibs import snap
 SNAP_NAME = "haproxy-route-policy"
 
 
-def install_snap(channel: str) -> None:
+def install_snap(channel: str = "latest/edge") -> None:
     """Install or refresh the route-policy snap."""
     cache = snap.SnapCache()
     package = cache[SNAP_NAME]

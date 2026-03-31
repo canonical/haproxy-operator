@@ -5,11 +5,7 @@
 
 """haproxy-route-policy-operator charm."""
 
-from __future__ import annotations
-
-import json
 import logging
-import secrets
 import subprocess
 from typing import Any
 
@@ -21,17 +17,13 @@ import snap
 logger = logging.getLogger(__name__)
 
 POSTGRESQL_RELATION = "postgresql"
-VALID_LOG_LEVELS = {"debug", "info", "warning", "error", "critical"}
 
 
 class HaproxyRoutePolicyCharm(ops.CharmBase):
     """Charm for HAProxy Route Policy service."""
 
-    _stored = ops.StoredState()
-
     def __init__(self, *args: Any):
         super().__init__(*args)
-        self._stored.set_default(secret_key="")
 
         self.framework.observe(self.on.install, self._install)
         self.framework.observe(self.on.upgrade_charm, self._install)
@@ -45,10 +37,9 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
 
     def _install(self, _: ops.EventBase) -> None:
         """Install the route-policy snap."""
-        channel = str(self.model.config["snap-channel"])
         self.unit.status = ops.MaintenanceStatus("installing haproxy-route-policy snap")
         try:
-            snap.install_snap(channel=channel)
+            snap.install_snap()
         except snap_lib.SnapError as exc:
             logger.exception("Failed to install haproxy-route-policy snap")
             self.unit.status = ops.BlockedStatus(f"snap installation failed: {exc}")
@@ -63,50 +54,18 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
             return
 
         try:
-            snap_config = {
-                "secret-key": self._get_secret_key(),
-                "debug": bool(self.model.config["debug"]),
-                "allowed-hosts": self._validated_allowed_hosts(),
-                "log-level": self._validated_log_level(),
-                **credentials,
-            }
             self.unit.status = ops.MaintenanceStatus("configuring haproxy-route-policy")
-            snap.configure_snap(snap_config)
+            snap.configure_snap(credentials)
             self.unit.status = ops.MaintenanceStatus("running database migrations")
             snap.run_migrations()
             self.unit.status = ops.MaintenanceStatus("starting gunicorn service")
             snap.start_gunicorn_service()
-        except (ValueError, snap_lib.SnapError, subprocess.CalledProcessError) as exc:
+        except (snap_lib.SnapError, subprocess.CalledProcessError) as exc:
             logger.exception("Failed to reconcile haproxy-route-policy service")
             self.unit.status = ops.BlockedStatus(f"reconciliation failed: {exc}")
             return
 
         self.unit.status = ops.ActiveStatus()
-
-    def _get_secret_key(self) -> str:
-        """Get a stable secret key for Django."""
-        config_secret_key = str(self.model.config["secret-key"]).strip()
-        if config_secret_key:
-            return config_secret_key
-        if self._stored.secret_key:
-            return self._stored.secret_key
-        self._stored.secret_key = secrets.token_urlsafe(48)
-        return self._stored.secret_key
-
-    def _validated_allowed_hosts(self) -> str:
-        """Validate allowed-hosts config and return it in JSON string form."""
-        raw_value = str(self.model.config["allowed-hosts"])
-        parsed = json.loads(raw_value)
-        if not isinstance(parsed, list) or not all(isinstance(host, str) for host in parsed):
-            raise ValueError("allowed-hosts must be a JSON array of strings")
-        return raw_value
-
-    def _validated_log_level(self) -> str:
-        """Validate log-level config."""
-        log_level = str(self.model.config["log-level"]).lower()
-        if log_level not in VALID_LOG_LEVELS:
-            raise ValueError(f"log-level must be one of {', '.join(sorted(VALID_LOG_LEVELS))}")
-        return log_level
 
     def _get_postgresql_credentials(self) -> dict[str, str] | None:
         """Read PostgreSQL credentials from relation databag."""

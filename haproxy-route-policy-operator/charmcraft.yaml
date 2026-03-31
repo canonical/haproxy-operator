@@ -39,26 +39,3 @@ requires:
     description: PostgreSQL database used by the route policy service.
     limit: 1
     optional: false
-
-config:
-  options:
-    snap-channel:
-      type: string
-      default: latest/edge
-      description: Snap channel used to install haproxy-route-policy.
-    debug:
-      type: boolean
-      default: false
-      description: Enable Django debug mode for the route policy service.
-    log-level:
-      type: string
-      default: info
-      description: Log level for Django logs.
-    allowed-hosts:
-      type: string
-      default: '["*"]'
-      description: JSON array of allowed hosts for Django.
-    secret-key:
-      type: string
-      default: ""
-      description: Optional Django secret key. If empty, the charm generates one.
