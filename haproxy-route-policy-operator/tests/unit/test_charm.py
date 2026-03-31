@@ -18,7 +18,8 @@ def _database_relation() -> testing.Relation:
             "endpoints": "10.0.0.10:5432",
             "database": "haproxy_route_policy",
             "username": "policy",
-            "password": "secret",
+            # Ignore bandit warning as this is for testing.
+            "password": "secret",  # nosec
         },
     )
 

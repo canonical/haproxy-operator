@@ -5,12 +5,18 @@
 
 from __future__ import annotations
 
+import logging
 import subprocess  # nosec
 from typing import Any
 
 from charmlibs import snap
 
 SNAP_NAME = "haproxy-route-policy"
+logger = logging.getLogger(__name__)
+
+
+class HaproxyRoutePolicyDatabaseMigrationError(Exception):
+    """Raised when database migrations fail."""
 
 
 def install_snap(channel: str = "latest/edge") -> None:
@@ -28,13 +34,17 @@ def configure_snap(config: dict[str, Any]) -> None:
 
 def run_migrations() -> None:
     """Run first-time and subsequent database migrations."""
-    subprocess.run(  # nosec
-        [f"{SNAP_NAME}.manage", "migrate", "--noinput"],
-        check=True,
-        encoding="utf-8",
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-    )
+    try:
+        subprocess.run(  # nosec
+            [f"{SNAP_NAME}.manage", "migrate", "--noinput"],
+            check=True,
+            encoding="utf-8",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Error running migrations: {e.output}")
+        raise HaproxyRoutePolicyDatabaseMigrationError("Database migrations failed") from e
 
 
 def start_gunicorn_service() -> None:

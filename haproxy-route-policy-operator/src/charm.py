@@ -6,7 +6,6 @@
 """haproxy-route-policy-operator charm."""
 
 import logging
-import subprocess
 from typing import Any
 
 import ops
@@ -15,7 +14,13 @@ from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseRequires,
 )
 
-from policy import configure_snap, install_snap, run_migrations, start_gunicorn_service
+from policy import (
+    HaproxyRoutePolicyDatabaseMigrationError,
+    configure_snap,
+    install_snap,
+    run_migrations,
+    start_gunicorn_service,
+)
 from state.database import (
     DatabaseInformation,
     DatabaseRelationMissingError,
@@ -59,7 +64,7 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
             self.unit.status = ops.MaintenanceStatus("starting gunicorn service")
             start_gunicorn_service()
             self.unit.open_port("tcp", HAPROXY_ROUTE_POLICY_PORT)
-        except (SnapError, subprocess.CalledProcessError) as exc:
+        except (SnapError, HaproxyRoutePolicyDatabaseMigrationError) as exc:
             logger.exception("Failed to reconcile haproxy-route-policy service")
             self.unit.status = ops.BlockedStatus(f"reconciliation failed: {exc}")
             return

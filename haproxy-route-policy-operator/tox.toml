@@ -1,8 +1,9 @@
-# Copyright 2026 Canonical Ltd.
+# Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 skipsdist = true
 skip_missing_interpreters = true
+envlist = ["lint", "unit", "static", "coverage-report"]
 requires = ["tox>=4.21"]
 no_package = true
 
@@ -11,7 +12,7 @@ passenv = ["PYTHONPATH", "CHARM_BUILD_DIR", "MODEL_SETTINGS"]
 runner = "uv-venv-lock-runner"
 
 [env_run_base.setenv]
-PYTHONPATH = "{toxinidir}:{toxinidir}/lib:{[vars]src_path}"
+PYTHONPATH = "{toxinidir}/src:{toxinidir}/lib"
 PYTHONBREAKPOINT = "ipdb.set_trace"
 PY_COLORS = "1"
 
@@ -22,8 +23,7 @@ commands = [
     "ruff",
     "check",
     "--fix",
-    "--select",
-    "I",
+    "--fix-only",
     { replace = "ref", of = [
       "vars",
       "all_path",
@@ -77,10 +77,64 @@ dependency_groups = ["lint"]
 
 [env.unit]
 description = "Run unit tests"
-commands = [["pytest", "-v", "{[vars]tst_path}unit"]]
+commands = [
+  [
+    "coverage",
+    "run",
+    "--source={[vars]src_path}",
+    "-m",
+    "pytest",
+    "--ignore={[vars]tst_path}integration",
+    "-v",
+    "--tb",
+    "native",
+    "--log-cli-level=INFO",
+    "-s",
+    { replace = "posargs", extend = "true" },
+  ],
+  [
+    "coverage",
+    "report",
+  ],
+]
 dependency_groups = ["unit"]
+
+[env.coverage-report]
+description = "Create test coverage report"
+commands = [["coverage", "report"]]
+dependency_groups = ["coverage-report"]
+
+[env.static]
+description = "Run static analysis tests"
+commands = [
+  [
+    "bandit",
+    "-c",
+    "{toxinidir}/pyproject.toml",
+    "-r",
+    "{[vars]src_path}",
+    "{[vars]tst_path}",
+  ],
+]
+dependency_groups = ["static"]
+
+[env.integration]
+description = "Run integration tests"
+commands = [
+  [
+    "pytest",
+    "-v",
+    "--tb",
+    "native",
+    "--ignore={[vars]tst_path}unit",
+    "--log-cli-level=INFO",
+    "-s",
+    { replace = "posargs", extend = "true" },
+  ],
+]
+dependency_groups = ["integration"]
 
 [vars]
 src_path = "{toxinidir}/src/"
 tst_path = "{toxinidir}/tests/"
-all_path = ["{toxinidir}/src", "{toxinidir}/tests"]
+all_path = ["{toxinidir}/src/", "{toxinidir}/tests/"]
