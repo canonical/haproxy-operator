@@ -20,16 +20,10 @@ def install_snap(channel: str = "latest/edge") -> None:
     package.ensure(snap.SnapState.Latest, channel=channel)
 
 
-def configure_snap(config: dict[str, str | bool]) -> None:
+def configure_snap(config: dict[str, Any]) -> None:
     """Apply snap configuration if any value changed."""
     package = snap.SnapCache()[SNAP_NAME]
-    existing = package.get(None, typed=True)
-    to_set: dict[str, Any] = {}
-    for key, value in config.items():
-        if existing.get(key) != value:
-            to_set[key] = value
-    if to_set:
-        package.set(to_set, typed=True)
+    package.set(config, typed=True)
 
 
 def run_migrations() -> None:

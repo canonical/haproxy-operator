@@ -34,8 +34,12 @@ assumes:
   - juju >= 3.3
 
 requires:
-  postgresql:
+  database:
     interface: postgresql_client
-    description: PostgreSQL database used by the route policy service.
+    description: Database used by the haproxy-route-policy service.
     limit: 1
     optional: false
+
+charm-libs:
+  - lib: data_platform_libs.data_interfaces
+    version: "0"
