@@ -23,10 +23,9 @@ parts:
     source: .
     build-snaps:
       - astral-uv
-    stage-snaps:
-      - astral-uv
     override-build: |
       # Also copy the source code to the install directory for the manage.py script
+      UV_PROJECT_ENVIRONMENT=venv uv sync
       cp -r . $SNAPCRAFT_PART_INSTALL/app
       chown -R 584792:584792 $SNAPCRAFT_PART_INSTALL/app
       craftctl default
