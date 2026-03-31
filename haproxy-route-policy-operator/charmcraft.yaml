@@ -1,0 +1,64 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+type: charm
+base: ubuntu@24.04
+build-base: ubuntu@24.04
+
+platforms:
+  amd64:
+
+parts:
+  charm:
+    source: .
+    plugin: uv
+    build-snaps:
+      - astral-uv
+
+name: haproxy-route-policy
+title: HAProxy route policy charm
+summary: Policy service for HAProxy route requests.
+description: |
+  A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
+  deploying and managing the HAProxy Route Policy API on machines.
+
+  The charm installs the `haproxy-route-policy` snap, configures it with
+  PostgreSQL relation credentials, runs database migrations, and starts gunicorn.
+links:
+  documentation: https://documentation.ubuntu.com/haproxy-charm/
+  issues: https://github.com/canonical/haproxy-operator/issues
+  source: https://github.com/canonical/haproxy-operator
+  contact:
+    - https://launchpad.net/~canonical-is-devops
+
+assumes:
+  - juju >= 3.3
+
+requires:
+  postgresql:
+    interface: postgresql_client
+    description: PostgreSQL database used by the route policy service.
+    limit: 1
+    optional: false
+
+config:
+  options:
+    snap-channel:
+      type: string
+      default: latest/edge
+      description: Snap channel used to install haproxy-route-policy.
+    debug:
+      type: boolean
+      default: false
+      description: Enable Django debug mode for the route policy service.
+    log-level:
+      type: string
+      default: info
+      description: Log level for Django logs.
+    allowed-hosts:
+      type: string
+      default: '["*"]'
+      description: JSON array of allowed hosts for Django.
+    secret-key:
+      type: string
+      default: ""
+      description: Optional Django secret key. If empty, the charm generates one.
