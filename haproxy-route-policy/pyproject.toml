@@ -8,6 +8,7 @@ dependencies = [
     "django>=6.0.3",
     "djangorestframework>=3.16.1",
     "djangorestframework-simplejwt>=5.5.1",
+    "psycopg2-binary>=2.9.11",
     "validators>=0.35.0",
     "whitenoise>=6.12.0",
 ]
