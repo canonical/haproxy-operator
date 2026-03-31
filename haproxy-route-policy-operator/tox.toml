@@ -3,11 +3,11 @@
 
 skipsdist = true
 skip_missing_interpreters = true
-requires = [ "tox>=4.21" ]
+requires = ["tox>=4.21"]
 no_package = true
 
 [env_run_base]
-passenv = [ "PYTHONPATH", "CHARM_BUILD_DIR", "MODEL_SETTINGS" ]
+passenv = ["PYTHONPATH", "CHARM_BUILD_DIR", "MODEL_SETTINGS"]
 runner = "uv-venv-lock-runner"
 
 [env_run_base.setenv]
@@ -18,27 +18,69 @@ PY_COLORS = "1"
 [env.fmt]
 description = "Apply coding style standards to code"
 commands = [
-  [ "ruff", "check", "--fix", "--select", "I", { replace = "ref", of = [ "vars", "all_path" ], extend = true } ],
-  [ "ruff", "format", { replace = "ref", of = [ "vars", "all_path" ], extend = true } ],
+  [
+    "ruff",
+    "check",
+    "--fix",
+    "--select",
+    "I",
+    { replace = "ref", of = [
+      "vars",
+      "all_path",
+    ], extend = true },
+  ],
+  [
+    "ruff",
+    "format",
+    { replace = "ref", of = [
+      "vars",
+      "all_path",
+    ], extend = true },
+  ],
 ]
-dependency_groups = [ "fmt" ]
+dependency_groups = ["fmt"]
 
 [env.lint]
 description = "Check code against coding style standards"
 commands = [
-  [ "codespell", "{toxinidir}" ],
-  [ "ruff", "format", "--check", "--diff", { replace = "ref", of = [ "vars", "all_path" ], extend = true } ],
-  [ "ruff", "check", { replace = "ref", of = [ "vars", "all_path" ], extend = true } ],
-  [ "mypy", { replace = "ref", of = [ "vars", "all_path" ], extend = true } ],
+  [
+    "codespell",
+    "{toxinidir}",
+  ],
+  [
+    "ruff",
+    "format",
+    "--check",
+    "--diff",
+    { replace = "ref", of = [
+      "vars",
+      "all_path",
+    ], extend = true },
+  ],
+  [
+    "ruff",
+    "check",
+    { replace = "ref", of = [
+      "vars",
+      "all_path",
+    ], extend = true },
+  ],
+  [
+    "mypy",
+    { replace = "ref", of = [
+      "vars",
+      "all_path",
+    ], extend = true },
+  ],
 ]
-dependency_groups = [ "lint" ]
+dependency_groups = ["lint"]
 
 [env.unit]
 description = "Run unit tests"
-commands = [ [ "pytest", "-v", "{[vars]tst_path}unit" ] ]
-dependency_groups = [ "unit" ]
+commands = [["pytest", "-v", "{[vars]tst_path}unit"]]
+dependency_groups = ["unit"]
 
 [vars]
 src_path = "{toxinidir}/src/"
 tst_path = "{toxinidir}/tests/"
-all_path = [ "{toxinidir}/src", "{toxinidir}/tests" ]
+all_path = ["{toxinidir}/src", "{toxinidir}/tests"]
