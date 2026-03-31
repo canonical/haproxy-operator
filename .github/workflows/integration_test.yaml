@@ -32,6 +32,9 @@ jobs:
           - name: haproxy-ddos-protection-configurator
             working-directory: ./haproxy-ddos-protection-configurator
             modules: '["test_charm.py"]'
+          - name: haproxy-route-policy-operator
+            working-directory: ./haproxy-route-policy-operator
+            modules: '["test_charm.py"]'
     name: Integration tests for ${{ matrix.charm.name }}
     uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@main
     secrets: inherit
