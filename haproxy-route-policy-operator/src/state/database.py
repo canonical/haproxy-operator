@@ -43,11 +43,11 @@ class DatabaseInformation:
     def haproxy_route_policy_snap_configuration(self) -> dict[str, str]:
         """Return snap configuration keys and values."""
         return {
-            "db-host": self.host,
-            "db-port": str(self.port),
-            "db-user": self.username,
-            "db-password": self.password,
-            "db-name": self.database_name,
+            "database-host": self.host,
+            "database-port": str(self.port),
+            "database-user": self.username,
+            "database-password": self.password,
+            "database-name": self.database_name,
         }
 
     @classmethod
