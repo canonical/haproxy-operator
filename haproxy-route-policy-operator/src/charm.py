@@ -33,8 +33,9 @@ logger = logging.getLogger(__name__)
 
 DATABASE_RELATION = "database"
 HAPROXY_ROUTE_POLICY_PORT = 8080
-DJANGO_SECRET_KEY_SECRET_LABEL = "django-secret-key"
-DJANGO_ADMIN_CREDENTIALS_SECRET_LABEL = "django-admin-credentials"
+# Ignore bandit warnings here as these are labels
+DJANGO_SECRET_KEY_SECRET_LABEL = "django-secret-key"  # nosec
+DJANGO_ADMIN_CREDENTIALS_SECRET_LABEL = "django-admin-credentials"  # nosec
 
 
 class DjangoSecretKeyMissingError(Exception):

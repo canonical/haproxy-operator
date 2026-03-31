@@ -62,7 +62,8 @@ def test_config_changed_reconciles_snap_with_database_credentials():
             ),
             testing.Secret(
                 label=DJANGO_ADMIN_CREDENTIALS_SECRET_LABEL,
-                tracked_content={"username": "admin", "password": "admin"},
+                # Ignore bandit warning as this is for testing.
+                tracked_content={"username": "admin", "password": "admin"},  # nosec
             ),
         ],
     )
@@ -99,7 +100,8 @@ def test_config_changed_reconciles_snap_with_database_credentials():
             [
                 testing.Secret(
                     label=DJANGO_ADMIN_CREDENTIALS_SECRET_LABEL,
-                    tracked_content={"username": "admin", "password": "admin"},
+                    # Ignore bandit warning as this is for testing.
+                    tracked_content={"username": "admin", "password": "admin"},  # nosec
                 )
             ],
             id="missing-secret-key",
