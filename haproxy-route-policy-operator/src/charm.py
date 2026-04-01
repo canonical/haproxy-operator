@@ -56,6 +56,9 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
         self.framework.observe(self.on.upgrade_charm, self._reconcile)
         self.framework.observe(self.on.start, self._reconcile)
         self.framework.observe(self.on.config_changed, self._reconcile)
+        self.framework.observe(
+            self.on.get_admin_credentials_action, self._on_get_admin_credentials_action
+        )
 
         self.database = DatabaseRequires(
             self,
@@ -152,6 +155,22 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
             raise DjangoAdminCredentialsMissingError(
                 "Waiting for the leader unit to generate the Django admin credentials."
             )
+
+    def _on_get_admin_credentials_action(self, event: ops.ActionEvent) -> None:
+        """Handle the get-admin-credentials action."""
+        try:
+            secret = self.model.get_secret(
+                label=DJANGO_ADMIN_CREDENTIALS_SECRET_LABEL
+            ).get_content()
+            event.set_results(
+                {
+                    "username": secret["username"],
+                    "password": secret["password"],
+                }
+            )
+            return
+        except ops.SecretNotFoundError:
+            event.fail("Admin credentials not found.")
 
 
 if __name__ == "__main__":  # pragma: nocover

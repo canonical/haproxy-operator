@@ -40,6 +40,17 @@ requires:
     limit: 1
     optional: false
 
+actions:
+  get-admin-credentials:
+    description: Retrieve the admin credentials to call the HAProxy Route Policy API.
+    output:
+      username:
+        description: The admin username.
+        type: string
+      password:
+        description: The admin password.
+        type: string
+
 charm-libs:
   - lib: data_platform_libs.data_interfaces
     version: "0"

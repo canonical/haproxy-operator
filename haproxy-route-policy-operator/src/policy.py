@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import subprocess  # nosec
 from typing import Any
 
@@ -67,6 +68,7 @@ def create_or_update_user(username: str, password: str) -> None:
         subprocess.run(  # nosec
             [f"{SNAP_NAME}.manage", "upsertsuperuser"],
             env={
+                **os.environ,
                 "DJANGO_SUPERUSER_PASSWORD": password,
                 "DJANGO_SUPERUSER_USERNAME": username,
             },
