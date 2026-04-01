@@ -88,12 +88,14 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
                     **database_information.haproxy_route_policy_snap_configuration,
                 }
             )
-            self.unit.status = ops.MaintenanceStatus("running database migrations")
-            run_migrations()
 
-            self.unit.status = ops.MaintenanceStatus("Updating Django admin user.")
-            username, password = self._get_django_admin_credentials(peer_relation).values()
-            create_or_update_user(username, password)
+            if self.unit.is_leader():
+                self.unit.status = ops.MaintenanceStatus("[leader] running database migrations")
+                run_migrations()
+
+                self.unit.status = ops.MaintenanceStatus("[leader] updating Django admin user")
+                username, password = self._get_django_admin_credentials(peer_relation).values()
+                create_or_update_user(username, password)
 
             self.unit.status = ops.MaintenanceStatus("starting gunicorn service")
             start_gunicorn_service()

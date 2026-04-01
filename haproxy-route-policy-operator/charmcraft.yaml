@@ -54,3 +54,7 @@ actions:
 charm-libs:
   - lib: data_platform_libs.data_interfaces
     version: "0"
+
+peers:
+  haproxy-route-policy-peer:
+    interface: haproxy_route_policy_peer
