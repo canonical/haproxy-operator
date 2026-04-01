@@ -36,6 +36,7 @@ HAPROXY_ROUTE_POLICY_PORT = 8080
 # Ignore bandit warnings here as these are labels
 DJANGO_SECRET_KEY_SECRET_LABEL = "django-secret-key"  # nosec
 DJANGO_ADMIN_CREDENTIALS_SECRET_LABEL = "django-admin-credentials"  # nosec
+PEER_RELATION_NAME = "haproxy-route-policy-peer"
 
 
 class DjangoSecretKeyMissingError(Exception):
@@ -59,6 +60,8 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
         self.framework.observe(
             self.on.get_admin_credentials_action, self._on_get_admin_credentials_action
         )
+        self.framework.observe(self.on[PEER_RELATION_NAME].relation_joined, self._reconcile)
+        self.framework.observe(self.on[PEER_RELATION_NAME].relation_changed, self._reconcile)
 
         self.database = DatabaseRequires(
             self,
@@ -70,13 +73,18 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
 
     def _reconcile(self, _: ops.EventBase) -> None:
         """Reconcile snap configuration and service state."""
+        peer_relation = self.model.get_relation(PEER_RELATION_NAME)
+        if not peer_relation:
+            self.unit.status = ops.WaitingStatus("Waiting for peer relation.")
+            return
+
         try:
             install_snap()
             self.unit.status = ops.MaintenanceStatus("configuring haproxy-route-policy")
             database_information = DatabaseInformation.from_requirer(self, self.database)
             configure_snap(
                 {
-                    **self._get_django_secret_key(),
+                    **self._get_django_secret_key(peer_relation),
                     **database_information.haproxy_route_policy_snap_configuration,
                 }
             )
@@ -84,7 +92,7 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
             run_migrations()
 
             self.unit.status = ops.MaintenanceStatus("Updating Django admin user.")
-            username, password = self._get_django_admin_credentials().values()
+            username, password = self._get_django_admin_credentials(peer_relation).values()
             create_or_update_user(username, password)
 
             self.unit.status = ops.MaintenanceStatus("starting gunicorn service")
@@ -109,7 +117,7 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
 
         self.unit.status = ops.ActiveStatus()
 
-    def _get_django_secret_key(self) -> dict[str, str]:
+    def _get_django_secret_key(self, peer_relation: ops.Relation) -> dict[str, str]:
         """Get the Django secret key from the charm's config.
 
         Returns:
@@ -127,12 +135,15 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
                 secret = self.app.add_secret(
                     label=DJANGO_SECRET_KEY_SECRET_LABEL, content=django_secret_key_data
                 )
+                peer_relation.data[self.app]["django-secret-key"] = (
+                    secret.label or DJANGO_SECRET_KEY_SECRET_LABEL
+                )
                 return django_secret_key_data
             raise DjangoSecretKeyMissingError(
                 "Waiting for the leader unit to generate the Django secret key."
             )
 
-    def _get_django_admin_credentials(self) -> dict[str, str]:
+    def _get_django_admin_credentials(self, peer_relation: ops.Relation) -> dict[str, str]:
         """Get the Django admin user from the charm's config.
 
         Returns:
@@ -150,6 +161,9 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
                 secret = self.app.add_secret(
                     label=DJANGO_ADMIN_CREDENTIALS_SECRET_LABEL,
                     content=django_admin_credentials_data,
+                )
+                peer_relation.data[self.app]["django-admin-credentials"] = (
+                    secret.label or DJANGO_ADMIN_CREDENTIALS_SECRET_LABEL
                 )
                 return django_admin_credentials_data
             raise DjangoAdminCredentialsMissingError(
