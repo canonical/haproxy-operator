@@ -154,7 +154,7 @@ LIBAPI = 2
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 0
+LIBPATCH = 1
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -1005,7 +1005,7 @@ class HaproxyRouteRequirer(Object):
         service: Optional[str] = None,
         ports: Optional[list[int]] = None,
         protocol: Literal["http", "https"] = "http",
-        hosts: Optional[list[str]] = None,
+        hosts: Optional[list[IPvAnyAddress]] = None,
         paths: Optional[list[str]] = None,
         hostname: Optional[str] = None,
         additional_hostnames: Optional[list[str]] = None,
@@ -1144,7 +1144,7 @@ class HaproxyRouteRequirer(Object):
         service: str,
         ports: list[int],
         protocol: Literal["http", "https"] = "http",
-        hosts: Optional[list[str]] = None,
+        hosts: Optional[list[IPvAnyAddress]] = None,
         paths: Optional[list[str]] = None,
         hostname: Optional[str] = None,
         additional_hostnames: Optional[list[str]] = None,
@@ -1258,7 +1258,7 @@ class HaproxyRouteRequirer(Object):
         service: Optional[str] = None,
         ports: Optional[list[int]] = None,
         protocol: Literal["http", "https"] = "http",
-        hosts: Optional[list[str]] = None,
+        hosts: Optional[list[IPvAnyAddress]] = None,
         paths: Optional[list[str]] = None,
         hostname: Optional[str] = None,
         additional_hostnames: Optional[list[str]] = None,
