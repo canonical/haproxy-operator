@@ -1,0 +1,35 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+project: haproxy-operator-tests
+
+backends:
+  github-ci:
+    type: adhoc
+
+    allocate: |
+      echo "Allocating ad-hoc $SPREAD_SYSTEM"
+      if [ -z "${GITHUB_RUN_ID:-}" ]; then
+        FATAL "this back-end only works inside GitHub CI"
+        exit 1
+      fi
+      echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/99-spread-users
+      ADDRESS localhost:22
+    discard: |
+      echo "Discarding ad-hoc $SPREAD_SYSTEM"
+    systems:
+      # username and password are required because docs-spread.yaml creates a new user (ubuntu:ubuntu)
+      # Before tests are ran.
+      - ubuntu-24.04:
+          username: ubuntu
+          password: ubuntu
+          workers: 1
+
+suites:
+  tests/spread/:
+    summary: Automated spread testing
+    systems:
+      - ubuntu-24.04
+
+path: /home/spread/proj
+kill-timeout: 1h
