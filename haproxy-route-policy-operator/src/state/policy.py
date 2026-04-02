@@ -70,7 +70,7 @@ class HaproxyRoutePolicyInformation:
     def allowed_hosts_snap_configuration(self) -> dict[str, str]:
         """Return snap configuration keys and values."""
         return {
-            "allowed-hosts": json.dumps(self.allowed_hosts),
+            "allowed-hosts": json.dumps([str(host) for host in self.allowed_hosts]),
         }
 
     @classmethod
