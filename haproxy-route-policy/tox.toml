@@ -15,6 +15,20 @@ PYTHONPATH = "{toxinidir}:{[vars]src_path}"
 PYTHONBREAKPOINT = "ipdb.set_trace"
 PY_COLORS = "1"
 
+[env.unit]
+description = "Run unit tests"
+commands = [
+  [
+    "uv",
+    "run",
+    "manage.py",
+    "test",
+    "policy",
+    "--settings=haproxy_route_policy.test_settings",
+    "-v2",
+  ],
+]
+
 [env.lint]
 description = "Check code against coding style standards"
 commands = [
