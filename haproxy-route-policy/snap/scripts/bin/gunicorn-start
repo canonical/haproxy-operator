@@ -5,6 +5,8 @@
 
 set -xe
 
+DJANGO_SECRET_KEY="$(snapctl get secret-key)"
+export DJANGO_SECRET_KEY
 DJANGO_DEBUG="$(snapctl get debug)"
 export DJANGO_DEBUG
 DJANGO_ALLOWED_HOSTS="$(snapctl get allowed-hosts)"

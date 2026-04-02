@@ -5,9 +5,9 @@
 
 set -xe
 
-# Create some directories
-mkdir -p "$SNAP_DATA/app"
-
 # set default configuration values
 snapctl set debug='false'
 snapctl set log-level='INFO'
+snapctl set allowed-hosts='["localhost", "127.0.0.1", "0.0.0.0"]'
+SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_urlsafe(50))')
+snapctl set secret-key="$SECRET_KEY"
