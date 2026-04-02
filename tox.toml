@@ -87,6 +87,7 @@ commands = [
     "--ignore={toxinidir}/haproxy-ddos-protection-configurator",
     "--ignore={toxinidir}/haproxy-spoe-auth-operator",
     "--ignore={toxinidir}/haproxy-operator",
+    "--ignore={toxinidir}/haproxy-route-policy",
     "--log-cli-level=INFO",
     "-s",
     { replace = "posargs", extend = "true" },
