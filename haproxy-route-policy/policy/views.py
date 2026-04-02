@@ -115,7 +115,7 @@ class RuleDetailView(APIView):
     def put(self, request, pk):
         """Update a rule by ID."""
         rule = self.get_object(pk)
-        serializer = serializers.RuleSerializer(rule, data=request.data)
+        serializer = serializers.RuleSerializer(rule, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
