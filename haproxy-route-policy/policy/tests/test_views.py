@@ -200,7 +200,7 @@ class TestListCreateRulesView(TestCase):
         self.assertIn("created_at", data)
         self.assertEqual(db_models.Rule.objects.count(), 1)
 
-    def test_create_rule_with_defaults(self):
+    def test_create_rule_set_default_priority_and_comment(self):
         """POST creates a rule with default priority and comment."""
         payload = {
             "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
