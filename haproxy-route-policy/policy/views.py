@@ -66,11 +66,13 @@ class ListCreateRequestsView(APIView):
                     )
                     serializer = BackendRequestSerializer(req, data=backend_request)
                     if serializer.is_valid(raise_exception=True):
-                        instance = BackendRequest(**serializer.validated_data)
                         # Evaluate rules and update status
-                        instance.status = evaluate_request(instance)
-                        instance.save()
-                        created.append(BackendRequestSerializer(instance).data)
+                        serializer.save(
+                            status=evaluate_request(
+                                BackendRequest(**serializer.validated_data)
+                            )
+                        )
+                        created.append(serializer.data)
         except ValidationError as e:
             return Response({"error": str(e)}, status=HTTP_400_BAD_REQUEST)
         except IntegrityError as e:
