@@ -3,7 +3,7 @@
 Start a PostgreSQL database:
 
 ```
-docker run -d --name postgres -p 127.0.0.1:5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_USERNAME=postgres postgres:latest
+docker run -d --name postgres -p 127.0.0.1:5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_USER=postgres postgres:latest
 ```
 
 Basic snap configurations:
