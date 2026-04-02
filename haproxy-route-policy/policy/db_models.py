@@ -82,6 +82,11 @@ class BackendRequest(models.Model):
     updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
 
 
+def is_valid_path(value: typing.Any):
+    """Validate that the value is a list of valid URL paths."""
+    return not isinstance(value, str) or not value.startswith("/")
+
+
 class Rule(models.Model):
     """A rule used to evaluate backend requests.
 
@@ -126,3 +131,23 @@ class Rule(models.Model):
             if self.updated_at
             else None,
         }
+
+    def clean(self) -> None:
+        """Custom validation logic for the Rule model."""
+        if self.kind == RULE_KIND_HOSTNAME_AND_PATH_MATCH:
+            if not isinstance(self.value, dict):
+                raise ValidationError("The value field must be a JSON object.")
+
+            if hostnames := self.value.get("hostnames"):
+                if invalid_hostnames := [
+                    hostname for hostname in hostnames if not domain(hostname)
+                ]:
+                    raise ValidationError(
+                        f"Invalid hostname(s) in rule: {', '.join(invalid_hostnames)}"
+                    )
+
+            if paths := self.value.get("paths"):
+                if invalid_paths := [path for path in paths if is_valid_path(path)]:
+                    raise ValidationError(
+                        f"Invalid path(s) in rule: {', '.join([str(path) for path in invalid_paths])}"
+                    )
