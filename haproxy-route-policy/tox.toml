@@ -65,6 +65,12 @@ commands = [
 ]
 dependency_groups = ["lint"]
 
+
+[env.static]
+description = "Run static analysis tests"
+commands = [ [ "bandit", "-c", "{toxinidir}/pyproject.toml", "-r", "{[vars]src_path}", "{[vars]tst_path}" ] ]
+dependency_groups = [ "static" ]
+
 [vars]
 src_path = "{toxinidir}/policy/"
 tst_path = "{toxinidir}/policy/tests"
