@@ -9,7 +9,6 @@ from rest_framework.response import Response
 from rest_framework.status import (
     HTTP_201_CREATED,
     HTTP_400_BAD_REQUEST,
-    HTTP_404_NOT_FOUND,
     HTTP_204_NO_CONTENT,
 )
 from django.http import Http404
@@ -70,23 +69,13 @@ class RequestDetailView(APIView):
 
     def get(self, _request, pk):
         """Get a request by ID."""
-        try:
-            backend_request = BackendRequest.objects.get(pk=uuid_primary_key(pk))
-            serializer = serializers.BackendRequestSerializer(backend_request)
-        except BackendRequest.DoesNotExist:
-            return Response(status=HTTP_404_NOT_FOUND)
-        except (ValueError, AttributeError):
-            return Response(
-                {"error": "Invalid request ID."}, status=HTTP_400_BAD_REQUEST
-            )
+        backend_request = get_object(BackendRequest, pk)
+        serializer = serializers.BackendRequestSerializer(backend_request)
         return Response(serializer.data)
 
     def delete(self, _request, pk):
         """Delete a request by ID."""
-        try:
-            BackendRequest.objects.filter(pk=uuid_primary_key(pk)).delete()
-        except (AttributeError, ValueError):
-            logger.warning(f"Attempted to delete request with invalid UUID: {pk}")
+        BackendRequest.objects.filter(pk=pk).delete()
         return Response(status=HTTP_204_NO_CONTENT)
 
 
@@ -111,43 +100,22 @@ class ListCreateRulesView(APIView):
 class RuleDetailView(APIView):
     """View for getting, updating, or deleting a single rule."""
 
-    def get_object(self, pk: str):
-        try:
-            return Rule.objects.get(pk=pk)
-        except Rule.DoesNotExist:
-            raise Http404
-
     def get(self, request, pk):
         """Get a rule by ID."""
-        try:
-            rule = self.get_object(uuid_primary_key(pk))
-            serializer = serializers.RuleSerializer(rule)
-            return Response(data=serializer.data)
-        except (ValueError, AttributeError):
-            return Response(
-                {"error": "Invalid request ID."}, status=HTTP_400_BAD_REQUEST
-            )
+        rule = get_object(Rule, pk)
+        serializer = serializers.RuleSerializer(rule)
+        return Response(data=serializer.data)
 
     def put(self, request, pk):
         """Update a rule by ID."""
-        try:
-            rule = self.get_object(uuid_primary_key(pk))
-            serializer = serializers.RuleSerializer(
-                rule, data=request.data, partial=True
-            )
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data)
-        except (ValueError, AttributeError):
-            return Response(
-                {"error": "Invalid request ID."}, status=HTTP_400_BAD_REQUEST
-            )
+        rule = get_object(Rule, pk)
+        serializer = serializers.RuleSerializer(rule, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
         return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
         """Delete a rule by ID."""
-        try:
-            Rule.objects.filter(pk=uuid_primary_key(pk)).delete()
-        except (AttributeError, ValueError):
-            logger.warning(f"Attempted to delete request with invalid UUID: {pk}")
+        Rule.objects.filter(pk=pk).delete()
         return Response(status=HTTP_204_NO_CONTENT)

@@ -14,7 +14,7 @@ urlpatterns = [
         name="api-requests",
     ),
     path(
-        "api/v1/requests/<str:pk>",
+        "api/v1/requests/<uuid:pk>",
         views.RequestDetailView.as_view(),
         name="api-request-detail",
     ),
