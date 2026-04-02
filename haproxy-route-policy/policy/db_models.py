@@ -27,7 +27,6 @@ REQUEST_STATUS_CHOICES = [(status, status) for status in REQUEST_STATUSES]
 
 def validate_hostname_acls(value: typing.Any):
     """Validate that the value is a list of valid hostnames."""
-    logger.info("Validating hostname_acls: %s", value)
     if not isinstance(value, list):
         raise ValidationError("hostname_acls must be a list.")
     if invalid_hostnames := [
