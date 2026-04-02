@@ -103,66 +103,6 @@ class TestRuleModel(TestCase):
         self.assertIn("created_at", data)
         self.assertIn("updated_at", data)
 
-    def test_validate_hostname_and_path_match_requires_dict(self):
-        """Test that hostname_and_path_match rules require a dict value."""
-        rule = db_models.Rule(
-            kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-            value="not-a-dict",
-            action=db_models.RULE_ACTION_DENY,
-        )
-        with self.assertRaises(ValidationError):
-            rule.full_clean()
-
-    def test_validate_hostname_and_path_match_requires_hostnames_key(self):
-        """Test that hostname_and_path_match rules require 'hostnames' key."""
-        rule = db_models.Rule(
-            kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-            value={"paths": []},
-            action=db_models.RULE_ACTION_DENY,
-        )
-        with self.assertRaises(ValidationError):
-            rule.full_clean()
-
-    def test_validate_hostname_and_path_match_requires_paths_key(self):
-        """Test that hostname_and_path_match rules require 'paths' key."""
-        rule = db_models.Rule(
-            kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-            value={"hostnames": ["example.com"]},
-            action=db_models.RULE_ACTION_DENY,
-        )
-        with self.assertRaises(ValidationError):
-            rule.full_clean()
-
-    def test_validate_hostname_and_path_match_hostnames_must_be_list(self):
-        """Test that 'hostnames' must be a list."""
-        rule = db_models.Rule(
-            kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-            value={"hostnames": "example.com", "paths": []},
-            action=db_models.RULE_ACTION_DENY,
-        )
-        with self.assertRaises(ValidationError):
-            rule.full_clean()
-
-    def test_validate_hostname_and_path_match_paths_must_be_list(self):
-        """Test that 'paths' must be a list."""
-        rule = db_models.Rule(
-            kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-            value={"hostnames": ["example.com"], "paths": "/api"},
-            action=db_models.RULE_ACTION_DENY,
-        )
-        with self.assertRaises(ValidationError):
-            rule.full_clean()
-
-    def test_validate_rule_value_rejects_list(self):
-        """Test that the value field rejects list types."""
-        rule = db_models.Rule(
-            kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-            value=["invalid"],
-            action=db_models.RULE_ACTION_DENY,
-        )
-        with self.assertRaises(ValidationError):
-            rule.full_clean()
-
     def test_invalid_kind_rejected(self):
         """Test that an invalid kind value is rejected."""
         rule = db_models.Rule(

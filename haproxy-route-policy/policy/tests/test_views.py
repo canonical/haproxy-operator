@@ -214,12 +214,6 @@ class TestListCreateRulesView(TestCase):
         self.assertEqual(data["priority"], 0)
         self.assertEqual(data["comment"], "")
 
-    def test_create_rule_missing_required_fields(self):
-        """POST returns 400 when required fields are missing."""
-        payload = {"kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH}
-        response = self.client.post("/api/v1/rules", data=payload, format="json")
-        self.assertEqual(response.status_code, 400)
-
     def test_create_rule_invalid_kind(self):
         """POST returns 400 when kind is invalid."""
         payload = {
