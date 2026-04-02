@@ -41,23 +41,3 @@ class TestBackendRequestModel(TestCase):
         self.assertEqual(request.paths, ["/api", "/health"])
         self.assertEqual(request.port, 443)
         self.assertEqual(request.status, db_models.REQUEST_STATUS_ACCEPTED)
-
-    def test_to_jsonable(self):
-        """Test serialisation to a JSON-compatible dict."""
-        request = db_models.BackendRequest.objects.create(
-            relation_id=2,
-            hostname_acls=["host.example.com"],
-            backend_name="backend-a",
-            paths=["/v1"],
-            port=443,
-        )
-        data = request.to_dict()
-        self.assertEqual(data["id"], request.pk)
-        self.assertEqual(data["relation_id"], 2)
-        self.assertEqual(data["hostname_acls"], ["host.example.com"])
-        self.assertEqual(data["backend_name"], "backend-a")
-        self.assertEqual(data["paths"], ["/v1"])
-        self.assertEqual(data["port"], 443)
-        self.assertEqual(data["status"], db_models.REQUEST_STATUS_PENDING)
-        self.assertIn("created_at", data)
-        self.assertIn("updated_at", data)

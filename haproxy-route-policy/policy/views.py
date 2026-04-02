@@ -3,15 +3,16 @@
 
 """REST API views for backend requests."""
 
-from django.http import (
-    HttpResponse,
-    HttpResponseNotFound,
-    HttpResponseBadRequest,
-    JsonResponse,
-)
+from policy.db_models import BackendRequest
 from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.status import (
+    HTTP_201_CREATED,
+    HTTP_400_BAD_REQUEST,
+    HTTP_404_NOT_FOUND,
+    HTTP_204_NO_CONTENT,
+)
 from django.core.exceptions import ValidationError
-from .db_models import BackendRequest
 from django.db.utils import IntegrityError
 from django.db import transaction
 from policy import serializers
@@ -22,11 +23,12 @@ class ListCreateRequestsView(APIView):
 
     def get(self, request):
         """List all requests, optionally filtered by status."""
-        status = request.GET.get("status")
-        queryset = BackendRequest.objects.all()
-        if status:
-            queryset = queryset.filter(status=status)
-        return JsonResponse([r.to_dict() for r in queryset.order_by("id")], safe=False)
+        filter = (
+            {"status": request.GET.get("status")} if request.GET.get("status") else {}
+        )
+        queryset = BackendRequest.objects.all().filter(**filter)
+        serializer = serializers.BackendRequestSerializer(queryset, many=True)
+        return Response(serializer.data)
 
     def post(self, request):
         """Bulk create backend requests.
@@ -34,8 +36,9 @@ class ListCreateRequestsView(APIView):
         All new requests are set to 'pending' (evaluation logic is deferred).
         """
         if not isinstance(request.data, list):
-            return JsonResponse(
-                {"error": "Expected a list of request objects."}, status=400
+            return Response(
+                {"error": "Expected a list of request objects."},
+                status=HTTP_400_BAD_REQUEST,
             )
 
         created = []
@@ -49,24 +52,27 @@ class ListCreateRequestsView(APIView):
                         serializer.save()
                         created.append(serializer.data)
         except ValidationError as e:
-            return HttpResponseBadRequest(bytes(str(e), encoding="utf-8"), status=400)
+            return Response({"error": str(e)}, status=HTTP_400_BAD_REQUEST)
         except IntegrityError:
-            return HttpResponseBadRequest(b"Invalid request data.", status=400)
-        return JsonResponse(created, safe=False, status=201)
+            return Response(
+                {"error": "Invalid request data."}, status=HTTP_400_BAD_REQUEST
+            )
+        return Response(created, status=HTTP_201_CREATED)
 
 
 class RequestDetailView(APIView):
     """View for getting or deleting a single backend request."""
 
-    def get(self, request, pk):
+    def get(self, _request, pk):
         """Get a request by ID."""
         try:
             backend_request = BackendRequest.objects.get(pk=pk)
+            serializer = serializers.BackendRequestSerializer(backend_request)
         except BackendRequest.DoesNotExist:
-            return HttpResponseNotFound()
-        return JsonResponse(backend_request.to_dict())
+            return Response(status=HTTP_404_NOT_FOUND)
+        return Response(serializer.data)
 
     def delete(self, request, pk):
         """Delete a request by ID."""
         BackendRequest.objects.filter(pk=pk).delete()
-        return HttpResponse(status=204)
+        return Response(status=HTTP_204_NO_CONTENT)
