@@ -32,9 +32,19 @@ class Migration(migrations.Migration):
                         validators=[policy.db_models.validate_hostname_acls],
                     ),
                 ),
-                ("backend_name", models.TextField()),
-                ("paths", models.JSONField(blank=True, default=list)),
-                ("port", models.IntegerField()),
+                ("backend_name", models.TextField(unique=True)),
+                (
+                    "paths",
+                    models.JSONField(
+                        blank=True,
+                        default=list,
+                        validators=[policy.db_models.validate_paths],
+                    ),
+                ),
+                (
+                    "port",
+                    models.IntegerField(validators=[policy.db_models.validate_port]),
+                ),
                 (
                     "status",
                     models.TextField(
