@@ -8,7 +8,6 @@ import uuid
 from django.db import models
 from validators import domain
 from django.core.exceptions import ValidationError
-import uuid
 
 REQUEST_STATUS_PENDING = "pending"
 REQUEST_STATUS_ACCEPTED = "accepted"
