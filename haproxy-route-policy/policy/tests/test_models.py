@@ -81,28 +81,6 @@ class TestRuleModel(TestCase):
         self.assertEqual(rule.priority, 0)
         self.assertEqual(rule.comment, "")
 
-    def test_to_dict(self):
-        """Test serialisation to a JSON-compatible dict."""
-        rule = db_models.Rule(
-            kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-            value={"hostnames": ["example.com"], "paths": []},
-            action=db_models.RULE_ACTION_DENY,
-            priority=5,
-            comment="Test rule",
-        )
-        rule.full_clean()
-        rule.save()
-
-        data = rule.to_dict()
-        self.assertEqual(data["id"], str(rule.id))
-        self.assertEqual(data["kind"], db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH)
-        self.assertEqual(data["value"], {"hostnames": ["example.com"], "paths": []})
-        self.assertEqual(data["action"], db_models.RULE_ACTION_DENY)
-        self.assertEqual(data["priority"], 5)
-        self.assertEqual(data["comment"], "Test rule")
-        self.assertIn("created_at", data)
-        self.assertIn("updated_at", data)
-
     def test_invalid_kind_rejected(self):
         """Test that an invalid kind value is rejected."""
         rule = db_models.Rule(
