@@ -102,9 +102,7 @@ class TestHostnameAndPathMatch(TestCase):
     def test_hostname_match_but_path_mismatch(self):
         """Rule doesn't match when hostnames match but paths don't."""
         rule = self._make_rule(hostnames=["example.com"], paths=["/admin"])
-        request = self._make_request(
-            hostname_acls=["example.com"], paths=["/api"]
-        )
+        request = self._make_request(hostname_acls=["example.com"], paths=["/api"])
         self.assertFalse(_hostname_and_path_match(rule, request))
 
     def test_multiple_hostnames_and_paths(self):
@@ -156,17 +154,13 @@ class TestEvaluateRequest(TestCase):
 
     def test_single_allow_rule_accepts(self):
         """Request is accepted when a single allow rule matches."""
-        self._make_rule(
-            hostnames=["example.com"], action=db_models.RULE_ACTION_ALLOW
-        )
+        self._make_rule(hostnames=["example.com"], action=db_models.RULE_ACTION_ALLOW)
         request = self._make_request(hostname_acls=["example.com"])
         self.assertEqual(evaluate_request(request), db_models.REQUEST_STATUS_ACCEPTED)
 
     def test_single_deny_rule_rejects(self):
         """Request is rejected when a single deny rule matches."""
-        self._make_rule(
-            hostnames=["example.com"], action=db_models.RULE_ACTION_DENY
-        )
+        self._make_rule(hostnames=["example.com"], action=db_models.RULE_ACTION_DENY)
         request = self._make_request(hostname_acls=["example.com"])
         self.assertEqual(evaluate_request(request), db_models.REQUEST_STATUS_REJECTED)
 
@@ -200,9 +194,7 @@ class TestEvaluateRequest(TestCase):
             action=db_models.RULE_ACTION_DENY,
             priority=0,
         )
-        request = self._make_request(
-            hostname_acls=["example.com"], paths=["/client"]
-        )
+        request = self._make_request(hostname_acls=["example.com"], paths=["/client"])
         self.assertEqual(evaluate_request(request), db_models.REQUEST_STATUS_ACCEPTED)
 
     def test_spec_example_client_allowed(self):
@@ -234,9 +226,7 @@ class TestEvaluateRequest(TestCase):
             action=db_models.RULE_ACTION_ALLOW,
             priority=1,
         )
-        request = self._make_request(
-            hostname_acls=["example.com"], paths=["/client"]
-        )
+        request = self._make_request(hostname_acls=["example.com"], paths=["/client"])
         self.assertEqual(evaluate_request(request), db_models.REQUEST_STATUS_ACCEPTED)
 
     def test_spec_example_api_denied(self):
@@ -268,9 +258,7 @@ class TestEvaluateRequest(TestCase):
             action=db_models.RULE_ACTION_ALLOW,
             priority=1,
         )
-        request = self._make_request(
-            hostname_acls=["example.com"], paths=["/api"]
-        )
+        request = self._make_request(hostname_acls=["example.com"], paths=["/api"])
         self.assertEqual(evaluate_request(request), db_models.REQUEST_STATUS_REJECTED)
 
     def test_lower_priority_not_reached_if_higher_matches(self):

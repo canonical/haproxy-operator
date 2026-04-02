@@ -5,23 +5,38 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('policy', '0001_initial'),
+        ("policy", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Rule',
+            name="Rule",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('kind', models.TextField(choices=[('hostname_and_path_match', 'hostname_and_path_match')])),
-                ('parameters', models.JSONField()),
-                ('action', models.TextField(choices=[('allow', 'allow'), ('deny', 'deny')])),
-                ('priority', models.IntegerField(blank=True, default=0)),
-                ('comment', models.TextField(blank=True, default='')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                (
+                    "kind",
+                    models.TextField(
+                        choices=[("hostname_and_path_match", "hostname_and_path_match")]
+                    ),
+                ),
+                ("parameters", models.JSONField()),
+                (
+                    "action",
+                    models.TextField(choices=[("allow", "allow"), ("deny", "deny")]),
+                ),
+                ("priority", models.IntegerField(blank=True, default=0)),
+                ("comment", models.TextField(blank=True, default="")),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
         ),
     ]
