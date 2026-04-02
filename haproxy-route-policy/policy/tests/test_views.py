@@ -24,8 +24,12 @@ class TestListCreateRequestsView(TestCase):
 
     def test_list_returns_all(self):
         """GET returns all requests."""
-        db_models.BackendRequest.objects.create(relation_id=1, backend_name="a")
-        db_models.BackendRequest.objects.create(relation_id=2, backend_name="b")
+        db_models.BackendRequest.objects.create(
+            relation_id=1, backend_name="a", port=443
+        )
+        db_models.BackendRequest.objects.create(
+            relation_id=2, backend_name="b", port=443
+        )
         response = self.client.get("/api/v1/requests")
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -36,10 +40,16 @@ class TestListCreateRequestsView(TestCase):
     def test_list_filter_by_status(self):
         """GET with ?status= filters results."""
         db_models.BackendRequest.objects.create(
-            relation_id=1, backend_name="a", status=db_models.REQUEST_STATUS_PENDING
+            relation_id=1,
+            backend_name="a",
+            status=db_models.REQUEST_STATUS_PENDING,
+            port=443,
         )
         db_models.BackendRequest.objects.create(
-            relation_id=2, backend_name="b", status=db_models.REQUEST_STATUS_ACCEPTED
+            relation_id=2,
+            backend_name="b",
+            status=db_models.REQUEST_STATUS_ACCEPTED,
+            port=443,
         )
         response = self.client.get("/api/v1/requests?status=accepted")
         data = response.json()
@@ -54,10 +64,12 @@ class TestListCreateRequestsView(TestCase):
                 "hostname_acls": ["example.com"],
                 "backend_name": "backend-1",
                 "paths": ["/api"],
+                "port": 443,
             },
             {
                 "relation_id": 2,
                 "backend_name": "backend-2",
+                "port": 443,
             },
         ]
         response = self.client.post("/api/v1/requests", data=payload, format="json")
@@ -67,9 +79,12 @@ class TestListCreateRequestsView(TestCase):
         self.assertEqual(data[0]["backend_name"], "backend-1")
         self.assertEqual(data[0]["status"], "pending")
         self.assertEqual(data[0]["hostname_acls"], ["example.com"])
+        self.assertEqual(data[0]["paths"], second=["/api"])
+        self.assertEqual(data[0]["port"], 443)
         self.assertEqual(data[1]["backend_name"], "backend-2")
         self.assertEqual(data[1]["hostname_acls"], [])
         self.assertEqual(data[1]["paths"], [])
+        self.assertEqual(data[1]["port"], 443)
         self.assertEqual(db_models.BackendRequest.objects.count(), 2)
 
     def test_bulk_create_all_set_to_pending(self):
@@ -79,17 +94,19 @@ class TestListCreateRequestsView(TestCase):
                 "relation_id": 1,
                 "backend_name": "test",
                 "status": "accepted",
+                "port": 443,
             },
         ]
         response = self.client.post("/api/v1/requests", data=payload, format="json")
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()[0]["status"], "pending")
+        self.assertEqual(response.json()[0]["port"], 443)
 
     def test_bulk_create_rejects_non_list(self):
         """POST returns 400 when the body is not a list."""
         response = self.client.post(
             "/api/v1/requests",
-            data={"relation_id": 1, "backend_name": "x"},
+            data={"relation_id": 1, "backend_name": "x", "port": 443},
             format="json",
         )
         self.assertEqual(response.status_code, 400)
@@ -105,6 +122,7 @@ class TestRequestDetailView(TestCase):
             relation_id=10,
             hostname_acls=["host.test"],
             backend_name="detail-backend",
+            port=443,
         )
 
     def test_get_existing(self):

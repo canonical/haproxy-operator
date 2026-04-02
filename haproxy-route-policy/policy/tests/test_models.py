@@ -14,14 +14,14 @@ class TestBackendRequestModel(TestCase):
     def test_create_with_defaults(self):
         """Test creating a request with minimal required fields."""
         request = db_models.BackendRequest.objects.create(
-            relation_id=1,
-            backend_name="my-backend",
+            relation_id=1, backend_name="my-backend", port=443
         )
         self.assertEqual(request.relation_id, 1)
         self.assertEqual(request.backend_name, "my-backend")
         self.assertEqual(request.hostname_acls, [])
         self.assertEqual(request.paths, [])
         self.assertEqual(request.status, db_models.REQUEST_STATUS_PENDING)
+        self.assertEqual(request.port, 443)
         self.assertIsNotNone(request.created_at)
         self.assertIsNotNone(request.updated_at)
 
@@ -32,12 +32,14 @@ class TestBackendRequestModel(TestCase):
             hostname_acls=["example.com", "app.example.com"],
             backend_name="web-backend",
             paths=["/api", "/health"],
+            port=443,
             status=db_models.REQUEST_STATUS_ACCEPTED,
         )
         self.assertEqual(request.relation_id, 5)
         self.assertEqual(request.hostname_acls, ["example.com", "app.example.com"])
         self.assertEqual(request.backend_name, "web-backend")
         self.assertEqual(request.paths, ["/api", "/health"])
+        self.assertEqual(request.port, 443)
         self.assertEqual(request.status, db_models.REQUEST_STATUS_ACCEPTED)
 
     def test_to_jsonable(self):
@@ -47,6 +49,7 @@ class TestBackendRequestModel(TestCase):
             hostname_acls=["host.example.com"],
             backend_name="backend-a",
             paths=["/v1"],
+            port=443,
         )
         data = request.to_dict()
         self.assertEqual(data["id"], request.pk)
@@ -54,6 +57,7 @@ class TestBackendRequestModel(TestCase):
         self.assertEqual(data["hostname_acls"], ["host.example.com"])
         self.assertEqual(data["backend_name"], "backend-a")
         self.assertEqual(data["paths"], ["/v1"])
+        self.assertEqual(data["port"], 443)
         self.assertEqual(data["status"], db_models.REQUEST_STATUS_PENDING)
         self.assertIn("created_at", data)
         self.assertIn("updated_at", data)
