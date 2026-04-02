@@ -25,19 +25,4 @@ class Migration(migrations.Migration):
                 ('updated_at', models.DateTimeField(auto_now=True)),
             ],
         ),
-        migrations.AlterField(
-            model_name='backendrequest',
-            name='hostname_acls',
-            field=models.JSONField(blank=True, default=list, validators=[policy.db_models.validate_hostname_acls]),
-        ),
-        migrations.AlterField(
-            model_name='backendrequest',
-            name='id',
-            field=models.BigAutoField(primary_key=True, serialize=False),
-        ),
-        migrations.AlterField(
-            model_name='backendrequest',
-            name='paths',
-            field=models.JSONField(blank=True, default=list),
-        ),
     ]
