@@ -213,32 +213,36 @@ class TestListCreateRulesView(TestCase):
         self.assertEqual(data["priority"], 0)
         self.assertEqual(data["comment"], "")
 
-    def test_create_rule_invalid_kind(self):
-        """POST returns 400 when kind is invalid."""
-        payload = {
-            "kind": "invalid_kind",
-            "value": 1,
-            "action": db_models.RULE_ACTION_ALLOW,
-        }
-        response = self.client.post("/api/v1/rules", data=payload, format="json")
-        self.assertEqual(response.status_code, 400)
-
-    def test_create_rule_invalid_value_for_kind(self):
-        """POST returns 400 when value doesn't match kind requirements."""
-        payload = {
-            "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-            "value": "not-a-dict",
-            "action": db_models.RULE_ACTION_DENY,
-        }
-        response = self.client.post("/api/v1/rules", data=payload, format="json")
-        self.assertEqual(response.status_code, 400)
-
-    def test_create_rule_rejects_non_dict(self):
-        """POST returns 400 when the body is not a JSON object."""
-        response = self.client.post(
-            "/api/v1/rules", data=[{"kind": "test"}], format="json"
-        )
-        self.assertEqual(response.status_code, 400)
+    def test_create_rule_invalid_payload(self):
+        """POST returns 400 for invalid rule payloads."""
+        invalid_payloads = [
+            (
+                "invalid kind",
+                {
+                    "kind": "invalid_kind",
+                    "value": 1,
+                    "action": db_models.RULE_ACTION_ALLOW,
+                },
+            ),
+            (
+                "value doesn't match kind",
+                {
+                    "kind": db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
+                    "value": "not-a-dict",
+                    "action": db_models.RULE_ACTION_DENY,
+                },
+            ),
+            (
+                "body is not a JSON object",
+                [{"kind": "test"}],
+            ),
+        ]
+        for label, payload in invalid_payloads:
+            with self.subTest(label=label):
+                response = self.client.post(
+                    "/api/v1/rules", data=payload, format="json"
+                )
+                self.assertEqual(response.status_code, 400)
 
 
 class TestRuleDetailView(TestCase):
