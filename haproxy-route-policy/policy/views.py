@@ -111,7 +111,7 @@ class ListCreateRulesView(APIView):
 class RuleDetailView(APIView):
     """View for getting, updating, or deleting a single rule."""
 
-    def get_object(self, pk):
+    def get_object(self, pk: str):
         try:
             return Rule.objects.get(pk=pk)
         except Rule.DoesNotExist:
@@ -119,20 +119,35 @@ class RuleDetailView(APIView):
 
     def get(self, request, pk):
         """Get a rule by ID."""
-        rule = self.get_object(pk)
-        serializer = serializers.RuleSerializer(rule)
-        return Response(serializer.data)
+        try:
+            rule = self.get_object(uuid_primary_key(pk))
+            serializer = serializers.RuleSerializer(rule)
+            return Response(data=serializer.data)
+        except (ValueError, AttributeError):
+            return Response(
+                {"error": "Invalid request ID."}, status=HTTP_400_BAD_REQUEST
+            )
 
     def put(self, request, pk):
         """Update a rule by ID."""
-        rule = self.get_object(pk)
-        serializer = serializers.RuleSerializer(rule, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
+        try:
+            rule = self.get_object(uuid_primary_key(pk))
+            serializer = serializers.RuleSerializer(
+                rule, data=request.data, partial=True
+            )
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+        except (ValueError, AttributeError):
+            return Response(
+                {"error": "Invalid request ID."}, status=HTTP_400_BAD_REQUEST
+            )
         return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
         """Delete a rule by ID."""
-        Rule.objects.filter(pk=pk).delete()
+        try:
+            Rule.objects.filter(pk=uuid_primary_key(pk)).delete()
+        except (AttributeError, ValueError):
+            logger.warning(f"Attempted to delete request with invalid UUID: {pk}")
         return Response(status=HTTP_204_NO_CONTENT)
