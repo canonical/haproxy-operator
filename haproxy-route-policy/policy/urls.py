@@ -18,4 +18,14 @@ urlpatterns = [
         views.RequestDetailView.as_view(),
         name="api-request-detail",
     ),
+    path(
+        "api/v1/rules",
+        views.ListCreateRulesView.as_view(),
+        name="api-rules",
+    ),
+    path(
+        "api/v1/rules/<uuid:pk>",
+        views.RuleDetailView.as_view(),
+        name="api-rule-detail",
+    ),
 ]
