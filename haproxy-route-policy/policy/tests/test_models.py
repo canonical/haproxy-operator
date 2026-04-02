@@ -47,7 +47,7 @@ class TestBackendRequestModel(TestCase):
 class TestRuleModel(TestCase):
     """Tests for Rule model creation, serialisation, and validation."""
 
-    def test_create_rule_defaults(self):
+    def test_create_rule_set_default_priority_and_comment(self):
         """Test that default values are set correctly."""
         serializer = serializers.RuleSerializer(
             data={
