@@ -22,4 +22,4 @@ export DJANGO_DATABASE_USER
 DJANGO_DATABASE_NAME="$(snapctl get database-name)"
 export DJANGO_DATABASE_NAME
 
-exec uv run "$SNAP_DATA/app/manage.py" "$@"
+exec python3 -m django "$@" --settings=haproxy_route_policy.settings

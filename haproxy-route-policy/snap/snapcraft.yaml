@@ -23,8 +23,6 @@ parts:
     source: .
     build-snaps:
       - astral-uv
-    stage-packages:
-      - gunicorn
     stage-snaps:
       - astral-uv
 

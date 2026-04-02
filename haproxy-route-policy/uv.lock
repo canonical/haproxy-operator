@@ -246,7 +246,7 @@ wheels = [
 [[package]]
 name = "haproxy-route-policy"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "django" },
     { name = "djangorestframework" },
