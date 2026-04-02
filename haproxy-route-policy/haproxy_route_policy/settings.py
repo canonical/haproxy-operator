@@ -78,7 +78,7 @@ WSGI_APPLICATION = "haproxy_route_policy.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "PASSWORD": os.getenv("DJANGO_DATABASE_PASSWORD", ""),
+        "PASSWORD": os.getenv("DJANGO_DATABASE_PASSWORD", "postgres"),
         "HOST": os.getenv("DJANGO_DATABASE_HOST", "localhost"),
         "PORT": os.getenv("DJANGO_DATABASE_PORT", 5432),
         "USER": os.getenv("DJANGO_DATABASE_USER", "postgres"),

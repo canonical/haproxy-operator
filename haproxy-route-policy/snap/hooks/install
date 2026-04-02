@@ -3,7 +3,7 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-set -xe
+set -e
 
 # set default configuration values
 snapctl set debug='false'
