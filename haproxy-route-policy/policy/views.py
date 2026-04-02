@@ -114,9 +114,10 @@ class RuleDetailView(APIView):
         """Get a rule by ID."""
         try:
             rule = Rule.objects.get(pk=pk)
+            serializer = serializers.RuleSerializer(rule)
         except (Rule.DoesNotExist, ValueError):
             return Response(status=HTTP_404_NOT_FOUND)
-        return Response(rule.to_dict())
+        return Response(serializer.data)
 
     def put(self, request, pk):
         """Update a rule by ID."""
