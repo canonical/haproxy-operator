@@ -1,0 +1,27 @@
+#!/bin/sh
+
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+# The goal of this script is to prepare the snap environment
+# for the Django application.
+
+set -xe
+
+# ----
+# API (django and gunicorn)
+# The only thing that should be kept between refreshes is the database
+
+# Create the static directory for django
+cp -r "$SNAP/app" "$SNAP_DATA/"
+chmod -R 755 "$SNAP_DATA/app"
+
+# Prepare the django app
+DJANGO_SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(50))')"
+export DJANGO_SECRET_KEY
+printf "%s" "$DJANGO_SECRET_KEY" > "$SNAP_DATA/app/.secret"
+python3 "$SNAP_DATA/app/manage.py" collectstatic --noinput
+
+# Change ownership of some snap directories to allow snap_daemon to read/write
+# https://snapcraft.io/docs/system-usernames
+chown -R 584788:root "$SNAP_DATA/app"

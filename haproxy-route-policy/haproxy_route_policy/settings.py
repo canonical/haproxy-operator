@@ -20,7 +20,15 @@ import psycopg2.extensions
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
+if SECRET_KEY == "":
+    # Read the secret key from a file to have it persist between
+    # the manage.py script calls and the gunicorn process
+    # (it needs to be the same for the JWT tokens).
+    secret_path = Path(BASE_DIR, ".secret")
+    if secret_path.exists():
+        with open(secret_path, "r", encoding="utf-8") as secretfile:
+            SECRET_KEY = secretfile.read().strip()
 DEBUG = os.environ.get("DJANGO_DEBUG", "").lower() == "true"
 
 ALLOWED_HOSTS = json.loads(os.getenv("DJANGO_ALLOWED_HOSTS", "[]"))

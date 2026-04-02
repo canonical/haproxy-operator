@@ -1,0 +1,25 @@
+#!/bin/sh
+
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+set -e
+
+DJANGO_DEBUG="$(snapctl get debug)"
+export DJANGO_DEBUG
+DJANGO_ALLOWED_HOSTS="$(snapctl get allowed-hosts)"
+export DJANGO_ALLOWED_HOSTS
+DJANGO_LOG_LEVEL="$(snapctl get log-level)"
+export DJANGO_LOG_LEVEL
+DJANGO_DATABASE_PASSWORD="$(snapctl get database-password)"
+export DJANGO_DATABASE_PASSWORD
+DJANGO_DATABASE_HOST="$(snapctl get database-host)"
+export DJANGO_DATABASE_HOST
+DJANGO_DATABASE_PORT="$(snapctl get database-port)"
+export DJANGO_DATABASE_PORT
+DJANGO_DATABASE_USER="$(snapctl get database-user)"
+export DJANGO_DATABASE_USER
+DJANGO_DATABASE_NAME="$(snapctl get database-name)"
+export DJANGO_DATABASE_NAME
+
+exec uv run "$SNAP_DATA/app/manage.py" "$@"
