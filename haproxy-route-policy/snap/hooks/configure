@@ -48,10 +48,5 @@ export DJANGO_DATABASE_USER
 DJANGO_DATABASE_NAME="$(snapctl get database-name)"
 export DJANGO_DATABASE_NAME
 
-if [ -z "$DJANGO_DATABASE_HOST" ] || [ -z "$DJANGO_DATABASE_PORT" ] || [ -z "$DJANGO_DATABASE_USER" ] || [ -z "$DJANGO_DATABASE_PASSWORD" ] || [ -z "$DJANGO_DATABASE_NAME" ]; then
-  >&2 echo "One or more database configuration values are missing. Please ensure database-host, database-port, database-user, database-password, and database-name are all set."
-  return 1
-fi
-
 snapctl stop "$SNAP_INSTANCE_NAME"
 snapctl start "$SNAP_INSTANCE_NAME"

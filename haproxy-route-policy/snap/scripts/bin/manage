@@ -32,4 +32,4 @@ if [ -z "$DJANGO_DATABASE_HOST" ] || [ -z "$DJANGO_DATABASE_PORT" ] || [ -z "$DJ
   return 1
 fi
 
-exec $SNAP/bin/uv run $SNAP/app/manage.py "$@" --settings=haproxy_route_policy.settings
+exec $SNAP/app/venv/bin/python3 $SNAP/app/manage.py "$@"
