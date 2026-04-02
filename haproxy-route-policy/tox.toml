@@ -5,7 +5,7 @@ skipsdist = true
 skip_missing_interpreters = true
 requires = ["tox>=4.21"]
 no_package = true
-envlist = [ "lint", "unit"]
+envlist = ["lint", "unit", "static", "coverage-report"]
 
 [env_run_base]
 passenv = ["PYTHONPATH"]
@@ -69,8 +69,17 @@ dependency_groups = ["lint"]
 
 [env.static]
 description = "Run static analysis tests"
-commands = [ [ "bandit", "-c", "{toxinidir}/pyproject.toml", "-r", "{[vars]src_path}", "{[vars]tst_path}" ] ]
-dependency_groups = [ "static" ]
+commands = [
+  [
+    "bandit",
+    "-c",
+    "{toxinidir}/pyproject.toml",
+    "-r",
+    "{[vars]src_path}",
+    "{[vars]tst_path}",
+  ],
+]
+dependency_groups = ["static"]
 
 [vars]
 src_path = "{toxinidir}/policy/"
@@ -79,5 +88,5 @@ all_path = ["{toxinidir}/policy/"]
 
 [env.coverage-report]
 description = "Create test coverage report"
-commands = [ [ "coverage", "report" ] ]
-dependency_groups = [ "coverage-report" ]
+commands = [["coverage", "report"]]
+dependency_groups = ["coverage-report"]
