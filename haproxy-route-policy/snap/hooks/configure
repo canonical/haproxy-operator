@@ -30,7 +30,7 @@ case "$DJANGO_LOG_LEVEL" in
   "ERROR") ;;
   "CRITICAL") ;;
   *)
-    >&2 echo "'$DJANGO_LOG_LEVEL is not a supported value for debug. Possible values are debug, info, warning, error, critical"
+    >&2 echo "'$DJANGO_LOG_LEVEL is not a supported value for log-level. Possible values are debug, info, warning, error, critical"
     return 1
     ;;
 esac
