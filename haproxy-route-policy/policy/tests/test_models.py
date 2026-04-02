@@ -3,6 +3,7 @@
 
 """Unit tests for the BackendRequest and Rule models."""
 
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from policy import db_models, serializers
