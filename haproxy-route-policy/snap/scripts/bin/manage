@@ -32,4 +32,4 @@ if [ -z "$DJANGO_DATABASE_HOST" ] || [ -z "$DJANGO_DATABASE_PORT" ] || [ -z "$DJ
   return 1
 fi
 
-exec "$SNAP/app/venv/bin/python3" "$SNAP/app/manage.py" "$@"
+exec "$SNAP/app/venv/bin/python3" $SNAP/app/manage.py "$@"
