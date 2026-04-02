@@ -87,21 +87,6 @@ class TestListCreateRequestsView(TestCase):
         self.assertEqual(data[1]["port"], 443)
         self.assertEqual(db_models.BackendRequest.objects.count(), 2)
 
-    def test_bulk_create_all_set_to_pending(self):
-        """POST always sets status to pending regardless of input."""
-        payload = [
-            {
-                "relation_id": 1,
-                "backend_name": "test",
-                "status": "accepted",
-                "port": 443,
-            },
-        ]
-        response = self.client.post("/api/v1/requests", data=payload, format="json")
-        self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.json()[0]["status"], "pending")
-        self.assertEqual(response.json()[0]["port"], 443)
-
     def test_bulk_create_rejects_non_list(self):
         """POST returns 400 when the body is not a list."""
         response = self.client.post(

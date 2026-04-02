@@ -5,25 +5,41 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='BackendRequest',
+            name="BackendRequest",
             fields=[
-                ('id', models.BigAutoField(primary_key=True, serialize=False)),
-                ('relation_id', models.IntegerField()),
-                ('hostname_acls', models.JSONField(blank=True, default=list, validators=[policy.db_models.validate_hostname_acls])),
-                ('backend_name', models.TextField()),
-                ('paths', models.JSONField(blank=True, default=list)),
-                ('port', models.IntegerField()),
-                ('status', models.TextField(choices=[('pending', 'pending'), ('accepted', 'accepted'), ('rejected', 'rejected')], db_index=True, default='pending')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                ("id", models.BigAutoField(primary_key=True, serialize=False)),
+                ("relation_id", models.IntegerField()),
+                (
+                    "hostname_acls",
+                    models.JSONField(
+                        blank=True,
+                        default=list,
+                        validators=[policy.db_models.validate_hostname_acls],
+                    ),
+                ),
+                ("backend_name", models.TextField()),
+                ("paths", models.JSONField(blank=True, default=list)),
+                ("port", models.IntegerField()),
+                (
+                    "status",
+                    models.TextField(
+                        choices=[
+                            ("pending", "pending"),
+                            ("accepted", "accepted"),
+                            ("rejected", "rejected"),
+                        ],
+                        db_index=True,
+                        default="pending",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
         ),
     ]
