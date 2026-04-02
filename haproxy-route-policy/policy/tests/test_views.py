@@ -93,7 +93,7 @@ class TestListCreateRequestsView(TestCase):
         # Create a deny rule for example.com
         db_models.Rule(
             kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-            value={"hostnames": ["example.com"], "paths": []},
+            parameters={"hostnames": ["example.com"], "paths": []},
             action=db_models.RULE_ACTION_DENY,
         ).save()
         payload = [
@@ -119,7 +119,7 @@ class TestListCreateRequestsView(TestCase):
         """POST sets status to accepted when an allow rule matches."""
         db_models.Rule(
             kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-            value={"hostnames": ["example.com"], "paths": []},
+            parameters={"hostnames": ["example.com"], "paths": []},
             action=db_models.RULE_ACTION_ALLOW,
         ).save()
         payload = [
@@ -139,7 +139,7 @@ class TestListCreateRequestsView(TestCase):
         # Rule for other.com, request for example.com
         db_models.Rule(
             kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-            value={"hostnames": ["other.com"], "paths": []},
+            parameters={"hostnames": ["other.com"], "paths": []},
             action=db_models.RULE_ACTION_DENY,
         ).save()
         payload = [
@@ -158,7 +158,7 @@ class TestListCreateRequestsView(TestCase):
         """POST evaluates each request independently against rules."""
         db_models.Rule(
             kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-            value={"hostnames": ["example.com"], "paths": []},
+            parameters={"hostnames": ["example.com"], "paths": []},
             action=db_models.RULE_ACTION_DENY,
         ).save()
         payload = [

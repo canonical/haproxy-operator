@@ -26,7 +26,7 @@ class TestHostnameAndPathMatch(TestCase):
         """Create and save a Rule with hostname_and_path_match kind."""
         rule = db_models.Rule(
             kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-            value={"hostnames": hostnames or [], "paths": paths or []},
+            parameters={"hostnames": hostnames or [], "paths": paths or []},
             action=action,
             priority=priority,
         )
@@ -136,7 +136,7 @@ class TestEvaluateRequest(TestCase):
         """Create and save a hostname_and_path_match Rule."""
         rule = db_models.Rule(
             kind=db_models.RULE_KIND_HOSTNAME_AND_PATH_MATCH,
-            value={"hostnames": hostnames or [], "paths": paths or []},
+            parameters={"hostnames": hostnames or [], "paths": paths or []},
             action=action,
             priority=priority,
         )
