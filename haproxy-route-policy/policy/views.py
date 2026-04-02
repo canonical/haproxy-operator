@@ -123,5 +123,5 @@ class RuleDetailView(APIView):
 
     def delete(self, request, pk):
         """Delete a rule by ID."""
-        Rule.objects.get(pk=pk).delete()
+        Rule.objects.filter(pk=pk).delete()
         return Response(status=HTTP_204_NO_CONTENT)
