@@ -3,10 +3,16 @@
 
 """REST API views for backend requests."""
 
-from django.http import HttpResponse, HttpResponseNotFound, HttpResponseBadRequest, JsonResponse
+from django.http import (
+    HttpResponse,
+    HttpResponseNotFound,
+    HttpResponseBadRequest,
+    JsonResponse,
+)
 from rest_framework.views import APIView
 from django.core.exceptions import ValidationError
 from .db_models import BackendRequest, REQUEST_STATUS_PENDING
+from django.db.utils import IntegrityError
 
 
 class ListCreateRequestsView(APIView):
@@ -33,7 +39,7 @@ class ListCreateRequestsView(APIView):
         created = []
         try:
             for item in request.data:
-                backend_request = BackendRequest.objects.create(
+                backend_request = BackendRequest(
                     relation_id=item.get("relation_id"),
                     hostname_acls=item.get("hostname_acls", []),
                     backend_name=item.get("backend_name"),
@@ -41,9 +47,13 @@ class ListCreateRequestsView(APIView):
                     port=item.get("port"),
                     status=REQUEST_STATUS_PENDING,
                 )
+                backend_request.full_clean()
+                backend_request.save()
                 created.append(backend_request.to_dict())
         except ValidationError as e:
-            return HttpResponseBadRequest({"error": str(e)}, status=400)
+            return HttpResponseBadRequest(str(e), status=400)
+        except IntegrityError:
+            return HttpResponseBadRequest("Invalid request data.", status=400)
         return JsonResponse(created, safe=False, status=201)
 
 
