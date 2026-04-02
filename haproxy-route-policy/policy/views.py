@@ -18,6 +18,7 @@ from django.db import transaction
 from policy import serializers
 from .db_models import REQUEST_STATUSES
 from policy.rule_engine import evaluate_request
+from .serializers import BackendRequestSerializer, RuleSerializer
 
 
 class ListCreateRequestsView(APIView):
@@ -52,17 +53,13 @@ class ListCreateRequestsView(APIView):
         try:
             with transaction.atomic():
                 for backend_request in request.data:
-                    serializer = serializers.BackendRequestSerializer(
-                        data=backend_request
-                    )
+                    serializer = BackendRequestSerializer(data=backend_request)
                     if serializer.is_valid(raise_exception=True):
                         instance = BackendRequest(**serializer.validated_data)
                         # Evaluate rules and update status
                         instance.status = evaluate_request(instance)
                         instance.save()
-                        created.append(
-                            serializers.BackendRequestSerializer(instance).data
-                        )
+                        created.append(BackendRequestSerializer(instance).data)
         except ValidationError as e:
             return Response({"error": str(e)}, status=HTTP_400_BAD_REQUEST)
         except IntegrityError:
@@ -93,12 +90,12 @@ class ListCreateRulesView(APIView):
     def get(self, request):
         """List all rules."""
         queryset = Rule.objects.all().order_by("-priority", "created_at")
-        serializer = serializers.RuleSerializer(queryset, many=True)
+        serializer = RuleSerializer(queryset, many=True)
         return Response(serializer.data)
 
     def post(self, request):
         """Create a new rule."""
-        serializer = serializers.RuleSerializer(data=request.data)
+        serializer = RuleSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response(serializer.data, status=HTTP_201_CREATED)
