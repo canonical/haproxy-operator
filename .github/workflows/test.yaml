@@ -36,6 +36,15 @@ jobs:
         uses: snapcore/action-build@v1
         with:
           path: haproxy-route-policy
+      - run: |
+          sudo snap install --dangerous ${{ steps.snapcraft.outputs.snap }}
+          snap_services_output="$(sudo snap services haproxy-route-policy.gunicorn)"
+          echo "$snap_services_output"
+          current_status="$(echo "$snap_services_output" | awk '$1=="haproxy-route-policy.gunicorn" {print $3}')"
+          if [ "$current_status" != "active" ]; then
+            echo "Expected haproxy-route-policy.gunicorn to be active, got: ${current_status:-<missing>}"
+            exit 1
+          fi
       - name: Upload Snap Artifact
         uses: actions/upload-artifact@v5
         with:
