@@ -51,21 +51,21 @@ class BackendRequest(models.Model):
         updated_at: Timestamp when the request was last updated.
     """
 
-    id = models.BigAutoField(primary_key=True)
-    relation_id = models.IntegerField()
-    hostname_acls = models.JSONField(
+    id: models.BigAutoField = models.BigAutoField(primary_key=True)
+    relation_id: models.IntegerField = models.IntegerField()
+    hostname_acls: models.JSONField = models.JSONField(
         default=list, validators=[validate_hostname_acls], blank=True
     )
-    backend_name = models.TextField()
-    paths = models.JSONField(default=list, blank=True)
-    port = models.IntegerField()
-    status = models.TextField(
+    backend_name: models.TextField = models.TextField()
+    paths: models.JSONField = models.JSONField(default=list, blank=True)
+    port: models.IntegerField = models.IntegerField()
+    status: models.TextField = models.TextField(
         choices=REQUEST_STATUS_CHOICES,
         default=REQUEST_STATUS_PENDING,
         db_index=True,
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True)
+    updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
 
     def to_dict(self) -> dict:
         """Serialize to a JSON-compatible dict."""

@@ -14,6 +14,8 @@ jobs:
             working-directory: ./haproxy-spoe-auth-operator
           - name: haproxy-ddos-protection-configurator
             working-directory: ./haproxy-ddos-protection-configurator
+          - name: haproxy-route-policy
+            working-directory: ./haproxy-route-policy
     name: Unit tests for ${{ matrix.charm.name }}
     uses: canonical/operator-workflows/.github/workflows/test.yaml@main
     secrets: inherit
@@ -27,11 +29,11 @@ jobs:
     name: HAProxy-route Policy App Tests
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6.0.1
-    - uses: actions/setup-python@v6
-      with:
-        python-version: '3.x'
-    - working-directory: ./haproxy-route-policy
-      run: |
-        pip install -r requirements.txt
-        python3 ./manage.py test --settings=haproxy_route_policy.test_settings
+      - uses: actions/checkout@v6.0.1
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+      - working-directory: ./haproxy-route-policy
+        run: |
+          pip install -r requirements.txt
+          python3 ./manage.py test --settings=haproxy_route_policy.test_settings
