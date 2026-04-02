@@ -44,8 +44,8 @@ def _hostname_and_path_match(rule: Rule, request: BackendRequest) -> bool:
     Returns:
         True if the rule matches the request, False otherwise.
     """
-    rule_hostnames: list = rule.value.get("hostnames", [])
-    rule_paths: list = rule.value.get("paths", [])
+    rule_hostnames: list = rule.parameters.get("hostnames", [])
+    rule_paths: list = rule.parameters.get("paths", [])
 
     hostname_matched = set(request.hostname_acls).intersection(set(rule_hostnames))
     path_matched = set(request.paths).intersection(set(rule_paths))
