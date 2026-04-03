@@ -406,3 +406,76 @@ class TestRuleDetailView(TestCase):
         fake_id = uuid.uuid4()
         response = self.client.delete(f"/api/v1/rules/{fake_id}")
         self.assertEqual(response.status_code, 204)
+
+
+class TestStatusFilterSanitization(TestCase):
+    """Tests for status query parameter validation on GET /api/v1/requests."""
+
+    def setUp(self):
+        """Set up the API client."""
+        self.client = APIClient()
+
+    def test_valid_status_filters(self):
+        """Valid status values should return 200."""
+        valid_statuses = ["pending", "accepted", "rejected"]
+        for status in valid_statuses:
+            with self.subTest(status=status):
+                response = self.client.get(f"/api/v1/requests?status={status}")
+                self.assertEqual(response.status_code, 200)
+
+    def test_invalid_status_filters(self):
+        """Invalid status values should return 400."""
+        invalid_statuses = [
+            "invalid",
+            "PENDING",
+            "Accepted",
+            "unknown",
+            "' OR 1=1 --",
+            "<script>alert(1)</script>",
+            "pending; DROP TABLE",
+        ]
+        for status in invalid_statuses:
+            with self.subTest(status=status):
+                response = self.client.get(f"/api/v1/requests?status={status}")
+                self.assertEqual(response.status_code, 400)
+                self.assertIn("error", response.json())
+
+
+class TestPkValidation(TestCase):
+    """Tests for pk (UUID) validation on GET/DELETE /api/v1/requests/<pk>."""
+
+    def setUp(self):
+        """Set up the API client."""
+        self.client = APIClient()
+
+    def test_invalid_pk_returns_404(self):
+        """GET and DELETE with an invalid UUID pk should return 404."""
+        invalid_pks = [
+            "not-a-uuid",
+            "12345",
+            "' OR 1=1 --",
+            " ",
+        ]
+        # GET requests with invalid PKs
+        for pk in invalid_pks:
+            with self.subTest(pk=pk):
+                response = self.client.get(f"/api/v1/requests/{pk}")
+                self.assertEqual(response.status_code, 404)
+
+        # GET rules with invalid PKs
+        for pk in invalid_pks:
+            with self.subTest(pk=pk):
+                response = self.client.get(f"/api/v1/rules/{pk}")
+                self.assertEqual(response.status_code, 404)
+
+        # DELETE requests with invalid PKs
+        for pk in invalid_pks:
+            with self.subTest(pk=pk):
+                response = self.client.delete(f"/api/v1/requests/{pk}")
+                self.assertEqual(response.status_code, 404)
+
+        # DELETE rules with invalid PKs
+        for pk in invalid_pks:
+            with self.subTest(pk=pk):
+                response = self.client.delete(f"/api/v1/rules/{pk}")
+                self.assertEqual(response.status_code, 404)

@@ -4,6 +4,7 @@
 """REST API views for backend requests and rules."""
 
 from policy.db_models import BackendRequest, Rule
+from typing import Type
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.status import (
@@ -138,3 +139,10 @@ class RuleDetailView(APIView):
         """Delete a rule by ID."""
         Rule.objects.filter(pk=pk).delete()
         return Response(status=HTTP_204_NO_CONTENT)
+
+
+def get_object(object_class: Type[Rule] | Type[BackendRequest], pk: str):
+    try:
+        return object_class.objects.get(pk=pk)
+    except object_class.DoesNotExist:
+        raise Http404
