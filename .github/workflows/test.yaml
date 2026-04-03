@@ -38,6 +38,7 @@ jobs:
           path: haproxy-route-policy
       - run: |
           sudo snap install --dangerous ${{ steps.snapcraft.outputs.snap }}
+          sleep 10
           snap_services_output="$(sudo snap services haproxy-route-policy.gunicorn)"
           echo "$snap_services_output"
           current_status="$(echo "$snap_services_output" | awk '$1=="haproxy-route-policy.gunicorn" {print $3}')"
