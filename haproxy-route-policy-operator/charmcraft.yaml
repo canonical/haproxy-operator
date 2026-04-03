@@ -1,0 +1,45 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+type: charm
+base: ubuntu@24.04
+build-base: ubuntu@24.04
+
+platforms:
+  amd64:
+
+parts:
+  charm:
+    source: .
+    plugin: uv
+    build-snaps:
+      - astral-uv
+
+name: haproxy-route-policy
+title: HAProxy route policy charm
+summary: Policy service for HAProxy route requests.
+description: |
+  A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
+  deploying and managing the HAProxy Route Policy API on machines.
+
+  The charm installs the `haproxy-route-policy` snap, configures it with
+  PostgreSQL relation credentials, runs database migrations, and starts gunicorn.
+links:
+  documentation: https://documentation.ubuntu.com/haproxy-charm/
+  issues: https://github.com/canonical/haproxy-operator/issues
+  source: https://github.com/canonical/haproxy-operator
+  contact:
+    - https://launchpad.net/~canonical-is-devops
+
+assumes:
+  - juju >= 3.6
+
+requires:
+  database:
+    interface: postgresql_client
+    description: Database used by the haproxy-route-policy service.
+    limit: 1
+    optional: false
+
+charm-libs:
+  - lib: data_platform_libs.data_interfaces
+    version: "0"
