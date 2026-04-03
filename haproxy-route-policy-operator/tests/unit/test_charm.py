@@ -3,15 +3,17 @@
 
 """Unit tests for haproxy-route-policy-operator charm."""
 
+import secrets
 from unittest.mock import patch
 
 import pytest
 from ops import testing
 
-from charm import (
+from charm import HaproxyRoutePolicyCharm
+from state.policy import (
     DJANGO_ADMIN_CREDENTIALS_SECRET_LABEL,
     DJANGO_SECRET_KEY_SECRET_LABEL,
-    HaproxyRoutePolicyCharm,
+    SECRET_LENGTH,
 )
 
 
@@ -27,6 +29,11 @@ def _database_relation() -> testing.Relation:
             "password": "secret",  # nosec
         },
     )
+
+
+def _peer_relation() -> testing.PeerRelation:
+    """Build a peer relation."""
+    return testing.PeerRelation("haproxy-route-policy-peer")
 
 
 def test_install_without_relation_sets_waiting_status():
@@ -47,7 +54,14 @@ def test_install_without_relation_sets_waiting_status():
     assert isinstance(out.unit_status, testing.BlockedStatus)
 
 
-def test_config_changed_reconciles_snap_with_database_credentials():
+@pytest.mark.parametrize(
+    "is_leader",
+    [
+        pytest.param(True, id="leader-unit"),
+        pytest.param(False, id="non-leader-unit"),
+    ],
+)
+def test_config_changed_reconciles_snap_with_database_credentials(is_leader):
     """
     arrange: create charm context with valid database relation credentials.
     act: run config-changed event.
@@ -55,17 +69,22 @@ def test_config_changed_reconciles_snap_with_database_credentials():
     """
     ctx = testing.Context(HaproxyRoutePolicyCharm)
     state = testing.State(
-        relations=[_database_relation()],
+        relations=[_database_relation(), _peer_relation()],
         secrets=[
             testing.Secret(
-                label=DJANGO_SECRET_KEY_SECRET_LABEL, tracked_content={"secret-key": "test"}
+                label=DJANGO_SECRET_KEY_SECRET_LABEL,
+                tracked_content={"secret-key": secrets.token_urlsafe(SECRET_LENGTH)},
             ),
             testing.Secret(
                 label=DJANGO_ADMIN_CREDENTIALS_SECRET_LABEL,
                 # Ignore bandit warning as this is for testing.
-                tracked_content={"username": "admin", "password": "admin"},  # nosec
+                tracked_content={
+                    "username": "admin",
+                    "password": secrets.token_urlsafe(SECRET_LENGTH),
+                },  # nosec
             ),
         ],
+        leader=is_leader,
     )
 
     with (
@@ -80,9 +99,10 @@ def test_config_changed_reconciles_snap_with_database_credentials():
     assert out.unit_status == testing.ActiveStatus()
     install_snap_mock.assert_called_once()
     configure_mock.assert_called_once()
-    migrate_mock.assert_called_once()
     start_mock.assert_called_once()
-    create_or_update_user_mock.assert_called_once()
+    if is_leader:
+        migrate_mock.assert_called_once()
+        create_or_update_user_mock.assert_called_once()
 
 
 @pytest.mark.parametrize(
@@ -115,7 +135,7 @@ def test_config_changed_missing_secrets(secrets):
     assert: snap is configured, migrations run, and service is started.
     """
     ctx = testing.Context(HaproxyRoutePolicyCharm)
-    state = testing.State(relations=[_database_relation()], secrets=secrets)
+    state = testing.State(relations=[_database_relation(), _peer_relation()], secrets=secrets)
 
     with (
         patch("charm.install_snap"),
@@ -136,7 +156,9 @@ def test_config_changed_leader_create_secrets():
     assert: snap is configured, migrations run, and service is started.
     """
     ctx = testing.Context(HaproxyRoutePolicyCharm)
-    state = testing.State(relations=[_database_relation()], secrets=[], leader=True)
+    state = testing.State(
+        relations=[_database_relation(), _peer_relation()], secrets=[], leader=True
+    )
 
     with (
         patch("charm.install_snap"),
