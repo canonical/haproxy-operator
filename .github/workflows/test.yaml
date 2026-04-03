@@ -38,7 +38,12 @@ jobs:
           path: haproxy-route-policy
       - run: |
           sudo snap install --dangerous ${{ steps.snapcraft.outputs.snap }}
-          sleep 10
+          sudo snap set haproxy-route-policy \
+            database-host=localhost \
+            database-port=5432 \
+            database-user=postgres \
+            database-password=postgres \
+            database-name=postgres
           snap_services_output="$(sudo snap services haproxy-route-policy.gunicorn)"
           echo "$snap_services_output"
           current_status="$(echo "$snap_services_output" | awk '$1=="haproxy-route-policy.gunicorn" {print $3}')"
