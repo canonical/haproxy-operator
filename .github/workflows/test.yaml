@@ -24,3 +24,35 @@ jobs:
       self-hosted-runner-image: "noble"
       working-directory: ${{ matrix.charm.working-directory }}
       with-uv: true
+  build-snap-haproxy-route-policy:
+    name: Build Snap
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: haproxy-route-policy
+      - name: Build Snap
+        id: snapcraft
+        uses: snapcore/action-build@v1
+        with:
+          path: haproxy-route-policy
+      - run: |
+          sudo snap install --dangerous ${{ steps.snapcraft.outputs.snap }}
+          sudo snap set haproxy-route-policy \
+            database-host=localhost \
+            database-port=5432 \
+            database-user=postgres \
+            database-password=postgres \
+            database-name=postgres
+          snap_services_output="$(sudo snap services haproxy-route-policy.gunicorn)"
+          echo "$snap_services_output"
+          current_status="$(echo "$snap_services_output" | awk '$1=="haproxy-route-policy.gunicorn" {print $3}')"
+          if [ "$current_status" != "active" ]; then
+            echo "Expected haproxy-route-policy.gunicorn to be active, got: ${current_status:-<missing>}"
+            exit 1
+          fi
+      - name: Upload Snap Artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: snap
+          path: ${{ steps.snapcraft.outputs.snap }}
