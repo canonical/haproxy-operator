@@ -31,7 +31,7 @@ links:
     - https://launchpad.net/~canonical-is-devops
 
 assumes:
-  - juju >= 3.3
+  - juju >= 3.6
 
 requires:
   database:
