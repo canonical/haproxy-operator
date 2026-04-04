@@ -54,7 +54,7 @@ jobs:
             exit 1
           fi
       - name: Upload Snap Artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: snap
           path: ${{ steps.snapcraft.outputs.snap }}
