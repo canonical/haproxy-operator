@@ -30,7 +30,7 @@ run "basic_deploy" {
         hostname = "one.example.com"
         haproxy_spoe_auth = {
           # renovate: depName="haproxy-spoe-auth"
-          revision = 103
+          revision = 104
         }
         oauth_external_idp_integrator = {
           # renovate: depName="oauth-external-idp-integrator"
@@ -53,7 +53,7 @@ run "basic_deploy" {
         haproxy_spoe_auth = {
           channel = "latest/edge"
           # renovate: depName="haproxy-spoe-auth"
-          revision = 103
+          revision = 104
         }
       }
     ]
