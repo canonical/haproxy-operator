@@ -42,7 +42,7 @@ requires:
 
 provides:
   haproxy-route-policy:
-    interface: haproxy_route_policy
+    interface: haproxy-route-policy
     description: Interface between haproxy and the policy charm to approve/deny backend requests.
 
 actions:
@@ -62,7 +62,7 @@ charm-libs:
 
 peers:
   haproxy-route-policy-peer:
-    interface: haproxy_route_policy_peer
+    interface: haproxy-route-policy-peer
 
 config:
   options:
