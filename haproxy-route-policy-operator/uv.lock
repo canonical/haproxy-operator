@@ -504,6 +504,7 @@ requires-dist = [
     { name = "ops", specifier = "==3.7.0" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "requests", specifier = "==2.33.1" },
+    { name = "validators", specifier = ">=0.35.0" },
 ]
 
 [package.metadata.requires-dev]

@@ -40,6 +40,11 @@ requires:
     limit: 1
     optional: false
 
+provides:
+  haproxy-route-policy:
+    interface: haproxy_route_policy
+    description: Interface between haproxy and the policy charm to approve/deny backend requests.
+
 actions:
   get-admin-credentials:
     description: Retrieve the admin credentials to call the HAProxy Route Policy API.

@@ -145,7 +145,7 @@ def test_config_changed_missing_secrets(secrets):
         out = ctx.run(ctx.on.config_changed(), state)
 
     assert out.unit_status == testing.WaitingStatus(
-        "Waiting for leader to set shared configuration."
+        "Waiting for complete shared configuration from leader."
     )
 
 

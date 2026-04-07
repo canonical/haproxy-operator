@@ -3,12 +3,8 @@
 
 """Unit tests for haproxy-route-policy interface library models."""
 
-import json
-from typing import cast
-
 import pytest
 from charms.haproxy_route_policy.v0.haproxy_route_policy import (
-    DataValidationError,
     HaproxyRoutePolicyBackendRequest,
     HaproxyRoutePolicyProviderAppData,
     HaproxyRoutePolicyRequirerAppData,
@@ -97,72 +93,51 @@ def test_backend_request_model_validation_rejects_invalid_payload(field: str, va
         HaproxyRoutePolicyBackendRequest(**payload)
 
 
-def test_requirer_app_data_dump_and_load_roundtrip():
+def test_requirer_app_data_model_accepts_valid_payload():
     """
     arrange: build valid requirer app data.
-    act: dump to databag and load back.
-    assert: loaded payload matches the original values.
+    act: initialize HaproxyRoutePolicyRequirerAppData.
+    assert: payload is validated and fields are preserved.
     """
     request = HaproxyRoutePolicyBackendRequest(**VALID_BACKEND_REQUEST)
-    original = HaproxyRoutePolicyRequirerAppData(backend_requests=[request])
+    app_data = HaproxyRoutePolicyRequirerAppData(backend_requests=[request])
 
-    databag = cast(dict[str, str], original.dump())
-    loaded = cast(
-        HaproxyRoutePolicyRequirerAppData, HaproxyRoutePolicyRequirerAppData.load(databag)
-    )
-
-    assert len(loaded.backend_requests) == 1
-    assert loaded.backend_requests[0].backend_name == "backend-a"
-    assert loaded.backend_requests[0].port == 8080
+    assert len(app_data.backend_requests) == 1
+    assert app_data.backend_requests[0].backend_name == "backend-a"
+    assert app_data.backend_requests[0].port == 8080
 
 
-def test_provider_app_data_dump_and_load_roundtrip():
+def test_provider_app_data_model_accepts_valid_payload():
     """
     arrange: build valid provider app data.
-    act: dump to databag and load back.
-    assert: loaded payload matches the original values.
+    act: initialize HaproxyRoutePolicyProviderAppData.
+    assert: payload is validated and fields are preserved.
     """
     request = HaproxyRoutePolicyBackendRequest(**VALID_BACKEND_REQUEST)
-    original = HaproxyRoutePolicyProviderAppData(approved_requests=[request])
+    app_data = HaproxyRoutePolicyProviderAppData(approved_requests=[request])
 
-    databag = cast(dict[str, str], original.dump())
-    loaded = cast(
-        HaproxyRoutePolicyProviderAppData, HaproxyRoutePolicyProviderAppData.load(databag)
-    )
-
-    assert len(loaded.approved_requests) == 1
-    assert loaded.approved_requests[0].backend_name == "backend-a"
-    assert loaded.approved_requests[0].relation_id == 10
+    assert len(app_data.approved_requests) == 1
+    assert app_data.approved_requests[0].backend_name == "backend-a"
+    assert app_data.approved_requests[0].relation_id == 10
 
 
-def test_requirer_app_data_load_rejects_duplicate_backend_names():
+def test_requirer_app_data_rejects_duplicate_backend_names():
     """
-    arrange: build databag payload with duplicate backend names.
-    act: load HaproxyRoutePolicyRequirerAppData.
-    assert: raises DataValidationError.
+    arrange: build app data payload with duplicate backend names.
+    act: initialize HaproxyRoutePolicyRequirerAppData.
+    assert: raises ValidationError.
     """
     duplicated_requests = [
-        VALID_BACKEND_REQUEST,
-        {
-            **VALID_BACKEND_REQUEST,
-            "relation_id": 11,
-            "port": 9090,
-            "hostname_acls": ["api.example.com"],
-        },
+        HaproxyRoutePolicyBackendRequest(**VALID_BACKEND_REQUEST),
+        HaproxyRoutePolicyBackendRequest(
+            **{
+                **VALID_BACKEND_REQUEST,
+                "relation_id": 11,
+                "port": 9090,
+                "hostname_acls": ["api.example.com"],
+            }
+        ),
     ]
-    databag = {"backend_requests": json.dumps(duplicated_requests)}
 
-    with pytest.raises(DataValidationError):
-        HaproxyRoutePolicyRequirerAppData.load(databag)
-
-
-def test_requirer_app_data_load_rejects_invalid_json():
-    """
-    arrange: build databag payload with non-json value.
-    act: load HaproxyRoutePolicyRequirerAppData.
-    assert: raises DataValidationError.
-    """
-    databag = {"backend_requests": "not-json"}
-
-    with pytest.raises(DataValidationError):
-        HaproxyRoutePolicyRequirerAppData.load(databag)
+    with pytest.raises(ValidationError):
+        HaproxyRoutePolicyRequirerAppData(backend_requests=duplicated_requests)

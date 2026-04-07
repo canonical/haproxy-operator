@@ -12,22 +12,24 @@ HAProxy backend objects. The provider publishes approved entries under
 provider unit addresses for policy web UI routing.
 """
 
-import json
 import logging
-from typing import Annotated, MutableMapping, Optional, cast
+from typing import Annotated
 
 from ops import CharmBase
-from ops.charm import CharmEvents
-from ops.framework import EventBase, EventSource, Object
-from ops.model import Relation
+from ops.framework import Object
+from ops.model import (
+    Relation,
+    RelationDataAccessError,
+    RelationDataTypeError,
+    RelationNotFoundError,
+)
 from pydantic import (
-    BaseModel,
     BeforeValidator,
-    ConfigDict,
     Field,
     ValidationError,
     model_validator,
 )
+from pydantic.dataclasses import dataclass
 from validators import domain
 
 # The unique Charmhub library identifier, never change it
@@ -38,7 +40,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 1
 
 
 def valid_domain_with_wildcard(value: str) -> str:
@@ -63,100 +65,12 @@ logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_POLICY_RELATION_NAME = "haproxy-route-policy"
 
 
-class DataValidationError(Exception):
-    """Raised when data validation fails."""
-
-
-class _DatabagModel(BaseModel):
-    """Base databag model.
-
-    Attrs:
-        model_config: pydantic model configuration.
-    """
-
-    model_config = ConfigDict(
-        # tolerate additional keys in databag
-        extra="ignore",
-        # Allow instantiating this class by field name (instead of forcing alias).
-        populate_by_name=True,
-        # Custom config key: whether to nest the whole datastructure (as json)
-        # under a field or spread it out at the toplevel.
-        _NEST_UNDER=None,
-    )  # type: ignore
-    """Pydantic config."""
-
-    @classmethod
-    def load(cls, databag: MutableMapping) -> "_DatabagModel":
-        """Load this model from a Juju json databag.
-
-        Args:
-            databag: Databag content.
-
-        Raises:
-            DataValidationError: When model validation failed.
-
-        Returns:
-            _DatabagModel: The validated model.
-        """
-        nest_under = cls.model_config.get("_NEST_UNDER")
-        if nest_under:
-            return cls.model_validate(json.loads(databag[nest_under]))
-
-        try:
-            data = {
-                k: json.loads(v)
-                for k, v in databag.items()
-                # Don't attempt to parse model-external values
-                if k in {(f.alias or n) for n, f in cls.model_fields.items()}
-            }
-        except json.JSONDecodeError as e:
-            msg = f"invalid databag contents: expecting json. {databag}"
-            logger.error(msg)
-            raise DataValidationError(msg) from e
-
-        try:
-            return cls.model_validate_json(json.dumps(data))
-        except ValidationError as e:
-            msg = f"failed to validate databag: {databag}"
-            logger.error(str(e), exc_info=True)
-            raise DataValidationError(msg) from e
-
-    def dump(
-        self, databag: Optional[MutableMapping] = None, clear: bool = True
-    ) -> Optional[MutableMapping]:
-        """Write the contents of this model to Juju databag.
-
-        Args:
-            databag: The databag to write to.
-            clear: Whether to clear the databag before writing.
-
-        Returns:
-            MutableMapping: The databag.
-        """
-        if clear and databag:
-            databag.clear()
-
-        if databag is None:
-            databag = {}
-        nest_under = self.model_config.get("_NEST_UNDER")
-        if nest_under:
-            databag[nest_under] = self.model_dump_json(
-                by_alias=True,
-                # skip keys whose values are default
-                exclude_defaults=True,
-            )
-            return databag
-
-        dct = self.model_dump(mode="json", by_alias=True, exclude_defaults=True)
-        databag.update({k: json.dumps(v) for k, v in dct.items()})
-        return databag
-
-
 class HaproxyRoutePolicyInvalidRelationDataError(Exception):
     """Raised when relation data validation for haproxy-route-policy fails."""
 
 
-class HaproxyRoutePolicyBackendRequest(_DatabagModel):
+@dataclass
+class HaproxyRoutePolicyBackendRequest:
     """Data model representing a single backend request from the requirer.
 
     Attributes:
@@ -176,7 +90,8 @@ class HaproxyRoutePolicyBackendRequest(_DatabagModel):
     port: int = Field(gt=0, le=65535, description="Port number for the backend.")
 
 
-class HaproxyRoutePolicyRequirerAppData(_DatabagModel):
+@dataclass
+class HaproxyRoutePolicyRequirerAppData:
     """Data model representing the requirer application data for haproxy-route-policy.
 
     Attributes:
@@ -196,7 +111,8 @@ class HaproxyRoutePolicyRequirerAppData(_DatabagModel):
         return self
 
 
-class HaproxyRoutePolicyProviderAppData(_DatabagModel):
+@dataclass
+class HaproxyRoutePolicyProviderAppData:
     """haproxy-route-policy provider app databag schema."""
 
     approved_requests: list[HaproxyRoutePolicyBackendRequest] = Field(
@@ -204,25 +120,8 @@ class HaproxyRoutePolicyProviderAppData(_DatabagModel):
     )
 
 
-class HaproxyRoutePolicyDataAvailableEvent(EventBase):
-    """Emitted when requirer policy request data becomes available."""
-
-
-class HaproxyRoutePolicyDataRemovedEvent(EventBase):
-    """Emitted when one of the relations is removed."""
-
-
-class HaproxyRoutePolicyProviderEvents(CharmEvents):
-    """Events emitted by the policy provider helper."""
-
-    data_available = EventSource(HaproxyRoutePolicyDataAvailableEvent)
-    data_removed = EventSource(HaproxyRoutePolicyDataRemovedEvent)
-
-
 class HaproxyRoutePolicyProvider(Object):
     """haproxy-route-policy provider implementation."""
-
-    on = HaproxyRoutePolicyProviderEvents()  # pyright: ignore
 
     def __init__(
         self,
@@ -234,80 +133,41 @@ class HaproxyRoutePolicyProvider(Object):
         Args:
             charm: The charm instance using this helper.
             relation_name: Name of the relation endpoint.
-            raise_on_validation_error: Raise on invalid remote data when True.
         """
         super().__init__(charm, relation_name)
         self.charm = charm
-        self._relation_name = relation_name
-        on = self.charm.on
-        self.framework.observe(on[self._relation_name].relation_changed, self._configure)
-        self.framework.observe(on[self._relation_name].relation_created, self._configure)
-        self.framework.observe(on[self._relation_name].relation_broken, self._on_data_removed)
-        self.framework.observe(on[self._relation_name].relation_departed, self._on_data_removed)
+        self.relation_name = relation_name
 
     @property
     def relation(self) -> Relation | None:
         """Return the first relation for this endpoint, if any."""
-        return self.charm.model.get_relation(self._relation_name)
+        return self.charm.model.get_relation(self.relation_name)
 
-    def _configure(self, _event: EventBase) -> None:
-        """Handle relation lifecycle and emit data availability events."""
-        if self.relation is not None:
-            _ = self.get_data(self.relation)
-            self.on.data_available.emit()
+    def set_approved_backend_requests(
+        self, approved_requests: list[HaproxyRoutePolicyBackendRequest]
+    ) -> None:
+        """Set and publish approved backend requests."""
+        relation = self.relation
+        if not relation or not self.charm.unit.is_leader():
+            return
 
-    def _on_data_removed(self, _event: EventBase) -> None:
-        """Handle relation removal events."""
-        self.on.data_removed.emit()
-
-    def get_data(self, relation: Relation) -> HaproxyRoutePolicyRequirerAppData:
-        """Fetch and validate requirer data.
-
-        Args:
-            relation: Relation to parse.
-
-        Raises:
-            HaproxyRoutePolicyInvalidRelationDataError: When validation fails and
-                ``raise_on_validation_error`` is set.
-
-        Returns:
-            Parsed relation payloads and relation IDs that failed validation.
-        """
         try:
-            return cast(
-                HaproxyRoutePolicyRequirerAppData,
-                HaproxyRoutePolicyRequirerAppData.load(relation.data[relation.app]),
-            )
-        except DataValidationError as exc:
-            logger.error(
-                "haproxy-route-policy data validation failed for relation %s: %s",
-                relation,
-                str(exc),
-            )
+            app_data = HaproxyRoutePolicyProviderAppData(approved_requests=approved_requests)
+            relation.save(app_data, relation.app)
+        except (
+            ValidationError,
+            RelationDataTypeError,
+            RelationDataAccessError,
+            RelationNotFoundError,
+        ) as exc:
+            logger.error("Validation error when preparing provider relation data.")
             raise HaproxyRoutePolicyInvalidRelationDataError(
-                f"haproxy-route-policy data validation failed for relation: {relation}"
+                "Validation error when preparing provider relation data."
             ) from exc
-
-
-class HaproxyRoutePolicyReadyEvent(EventBase):
-    """Emitted when provider data is available to the requirer."""
-
-
-class HaproxyRoutePolicyRemovedEvent(EventBase):
-    """Emitted when the relation is removed from the requirer side."""
-
-
-class HaproxyRoutePolicyRequirerEvents(CharmEvents):
-    """Events emitted by the policy requirer helper."""
-
-    ready = EventSource(HaproxyRoutePolicyReadyEvent)
-    removed = EventSource(HaproxyRoutePolicyRemovedEvent)
 
 
 class HaproxyRoutePolicyRequirer(Object):
     """haproxy-route-policy requirer implementation."""
-
-    on = HaproxyRoutePolicyRequirerEvents()  # pyright: ignore
 
     def __init__(
         self,
@@ -340,10 +200,14 @@ class HaproxyRoutePolicyRequirer(Object):
 
         try:
             app_data = HaproxyRoutePolicyRequirerAppData(backend_requests=backend_requests)
-        except ValidationError as exc:
+            relation.save(app_data, relation.app)
+        except (
+            ValidationError,
+            RelationDataTypeError,
+            RelationDataAccessError,
+            RelationNotFoundError,
+        ) as exc:
             logger.error("Validation error when preparing requirer relation data.")
-            raise DataValidationError(
+            raise HaproxyRoutePolicyInvalidRelationDataError(
                 "Validation error when preparing requirer relation data."
             ) from exc
-
-        app_data.dump(relation.data[self.charm.app], clear=True)
