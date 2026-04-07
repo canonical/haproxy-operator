@@ -61,14 +61,15 @@ def test_protocol_https(
     haproxy_conf_contents = render_file_mock.call_args_list[0].args[1]
     assert (
         "server haproxy-tutorial-ingress-configurator_443_0 10.12.97.153:443"
-        " ssl ca-file /var/lib/haproxy/cas/cas.pem alpn h2,http/1.1\n" in haproxy_conf_contents
+        " ssl ca-file /var/lib/haproxy/cas/cas.pem alpn h2,http/1.1 check-alpn h2,http/1.1\n"
+        in haproxy_conf_contents
     )
     assert (
         "server haproxy-tutorial-ingress-configurator_443_1 10.12.97.154:443"
-        " ssl ca-file /var/lib/haproxy/cas/cas.pem alpn h2,http/1.1\n" in haproxy_conf_contents
+        " ssl ca-file /var/lib/haproxy/cas/cas.pem alpn h2,http/1.1 check-alpn h2,http/1.1\n"
+        in haproxy_conf_contents
     )
     assert out.app_status == ActiveStatus("")
-    assert "check-alpn" not in haproxy_conf_contents
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")

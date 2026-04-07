@@ -7,6 +7,7 @@ import logging
 from collections import defaultdict
 from collections.abc import Collection
 from functools import cached_property
+from pathlib import Path
 from typing import Optional, cast
 
 from charms.haproxy.v1.haproxy_route_tcp import (
@@ -35,6 +36,13 @@ from .haproxy_route_tcp import (
 
 HAPROXY_ROUTE_RELATION = "haproxy-route"
 HAPROXY_PEER_INTEGRATION = "haproxy-peers"
+HAPROXY_CAS_DIR = Path("/var/lib/haproxy/cas")
+HAPROXY_CAS_FILE = Path(HAPROXY_CAS_DIR / "cas.pem")
+# We put a leading space in front of computed properties to make the
+# rendered haproxy config consistent regardless of what property is None/rendered.
+# This is made to be a constant to explicitly indicate the intention and avoid
+# having properties like f" {}" which will be harder to maintain and understand.
+LEADING_SPACE = " "
 logger = logging.getLogger()
 
 
@@ -61,6 +69,18 @@ class HAProxyRouteServer:
     protocol: str
     check: Optional[ServerHealthCheck]
     maxconn: Optional[int]
+
+    @property
+    def server_health_check_configuration(self) -> str:
+        """Build the backend server health check configuration for HTTPS protocol.
+
+        Returns:
+            str: The backend server health check configuration for HTTPS protocol,
+            or an empty string if protocol is not HTTPS.
+        """
+        if self.check is None:
+            return ""
+        return f"{LEADING_SPACE}check inter {self.check.interval}s rise {self.check.rise} fall {self.check.fall}"
 
 
 @dataclass(frozen=True)
@@ -227,6 +247,18 @@ class HAProxyRouteBackend:
             return None
         hostname = next(iter(self.hostname_acls))
         return hostname[2:] if hostname.startswith("*.") else hostname
+
+    @property
+    def https_backend_server_configuration(self) -> str:
+        """Build the backend server configuration for HTTPS protocol.
+
+        Returns:
+            str: The backend server configuration for HTTPS protocol,
+            or an empty string if protocol is not HTTPS.
+        """
+        if self.application_data.protocol != "https":
+            return ""
+        return f"{LEADING_SPACE}ssl ca-file {HAPROXY_CAS_FILE!s} alpn h2,http/1.1 check-alpn h2,http/1.1"
 
 
 # pylint: disable=too-many-locals
