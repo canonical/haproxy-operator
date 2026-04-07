@@ -30,6 +30,7 @@ from state.database import (
 from state.policy import (
     DJANGO_ADMIN_CREDENTIALS_SECRET_LABEL,
     PEER_RELATION_NAME,
+    DjangoAdminCredentialsInvalidError,
     DjangoAdminCredentialsMissingError,
     DjangoSecretKeyMissingError,
     HaproxyRoutePolicyInformation,
@@ -85,11 +86,10 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
                 run_migrations()
 
                 self.unit.status = ops.MaintenanceStatus("[leader] updating Django admin user")
-                credentials = self._get_django_admin_credentials(peer_relation)
-                if (username := credentials.get("username")) and (
-                    password := credentials.get("password")
-                ):
-                    create_or_update_user(username, password)
+                create_or_update_user(
+                    haproxy_route_policy_information.admin_username,
+                    haproxy_route_policy_information.admin_password,
+                )
 
             self.unit.status = ops.MaintenanceStatus("starting gunicorn service")
             start_gunicorn_service()
@@ -106,9 +106,15 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
             logger.exception("Peer relation missing")
             self.unit.status = ops.WaitingStatus("Waiting for peer relation.")
             return
-        except (DjangoSecretKeyMissingError, DjangoAdminCredentialsMissingError):
+        except (
+            DjangoSecretKeyMissingError,
+            DjangoAdminCredentialsMissingError,
+            DjangoAdminCredentialsInvalidError,
+        ):
             logger.exception("Django shared configuration not ready")
-            self.unit.status = ops.WaitingStatus("Waiting for leader to set shared configuration.")
+            self.unit.status = ops.WaitingStatus(
+                "Waiting for complete shared configuration from leader."
+            )
             return
         except (SnapError, HaproxyRoutePolicyDatabaseMigrationError) as exc:
             logger.exception("Failed to reconcile haproxy-route-policy service")
