@@ -36,6 +36,8 @@ class AnyCharm(AnyCharmBase):
             HaproxyRoutePolicyBackendRequest(
                 relation_id=1,
                 port=4444,
+                backend_name="test-backend",
+                paths=["/"],
                 hostname_acls=["example.com"],
             )
         ]
