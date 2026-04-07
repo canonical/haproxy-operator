@@ -22,7 +22,7 @@ run "basic_deploy" {
 
     haproxy_ddos_protection_configurator = {
       # renovate: depName="haproxy-ddos-protection-configurator"
-      revision = 49
+      revision = 86
     }
 
     protected_hostnames_configuration = [
@@ -30,7 +30,7 @@ run "basic_deploy" {
         hostname = "one.example.com"
         haproxy_spoe_auth = {
           # renovate: depName="haproxy-spoe-auth"
-          revision = 77
+          revision = 105
         }
         oauth_external_idp_integrator = {
           # renovate: depName="oauth-external-idp-integrator"
@@ -53,7 +53,7 @@ run "basic_deploy" {
         haproxy_spoe_auth = {
           channel = "latest/edge"
           # renovate: depName="haproxy-spoe-auth"
-          revision = 77
+          revision = 105
         }
       }
     ]
