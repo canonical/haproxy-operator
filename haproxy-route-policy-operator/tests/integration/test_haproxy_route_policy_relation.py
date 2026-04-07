@@ -32,7 +32,6 @@ def test_haproxy_route_policy_relation(
         f"{any_charm_haproxy_route_policy_requirer}:require-haproxy-route-policy",
         f"{application}:haproxy-route-policy",
     )
-    juju.wait(lambda status: jubilant.all_active(status, application, postgresql))
     juju.run(
         f"{any_charm_haproxy_route_policy_requirer}/0",
         action="rpc",
