@@ -1,30 +1,36 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""TODO: Add a proper docstring here.
+"""haproxy-route-policy interface library.
 
-This is a placeholder docstring for this charm library. Docstrings are
-presented on Charmhub and updated whenever you push a new version of the
-library.
+This interface is used between the HAProxy charm (requirer) and the
+haproxy-route-policy charm (provider).
 
-Complete documentation about creating and documenting libraries can be found
-in the SDK docs at https://juju.is/docs/sdk/libraries.
-
-See `charmcraft publish-lib` and `charmcraft fetch-lib` for details of how to
-share and consume charm libraries. They serve to enhance collaboration
-between charmers. Use a charmer's libraries for classes that handle
-integration with their charm.
-
-Bear in mind that new revisions of the different major API versions (v0, v1,
-v2 etc) are maintained independently.  You can continue to update v0 and v1
-after you have pushed v3.
-
-Markdown is supported, following the CommonMark specification.
+The requirer publishes route policy requests under ``requests`` as a list of
+HAProxy backend objects. The provider publishes approved entries under
+``approved_backends`` and additionally exposes ``policy_backend_port`` and
+provider unit addresses for policy web UI routing.
 """
 
-from charms.haproxy.v2.haproxy_route import RequirerApplicationData
-from pydantic import Field, IPvAnyAddress
+import logging
+from typing import Annotated
+
+from ops import CharmBase
+from ops.framework import Object
+from ops.model import (
+    Relation,
+    RelationDataAccessError,
+    RelationDataTypeError,
+    RelationNotFoundError,
+)
+from pydantic import (
+    BeforeValidator,
+    Field,
+    ValidationError,
+    model_validator,
+)
 from pydantic.dataclasses import dataclass
+from validators import domain
 
 # The unique Charmhub library identifier, never change it
 LIBID = "24c99d77895e481d8661288f95884ee4"
@@ -37,25 +43,171 @@ LIBAPI = 0
 LIBPATCH = 1
 
 
+def valid_domain_with_wildcard(value: str) -> str:
+    """Validate if value is a valid domain that can include a wildcard.
+
+    The wildcard character (*) can't be at the TLD level, for example *.com is not valid.
+    This is supported natively by the library ( e.g domain("com") will raise a ValidationError ).
+
+    Raises:
+        ValueError: When value is not a valid domain.
+
+    Args:
+        value: The value to validate.
+    """
+    fqdn = value[2:] if value.startswith("*.") else value
+    if not bool(domain(fqdn)):
+        raise ValueError(f"Invalid domain: {value}")
+    return value
+
+
+logger = logging.getLogger(__name__)
+HAPROXY_ROUTE_POLICY_RELATION_NAME = "haproxy-route-policy"
+
+
+class HaproxyRoutePolicyInvalidRelationDataError(Exception):
+    """Raised when relation data validation for haproxy-route-policy fails."""
+
+
 @dataclass
-class HaproxyRoutePolicyData:
-    """Dataclass to store the data for the haproxy-route-policy interface."""
-
-    requests: list[RequirerApplicationData]
-
-
-class RequirerUnitData(_DatabagModel):
-    """haproxy-route requirer unit data.
+class HaproxyRoutePolicyBackendRequest:
+    """Data model representing a single backend request from the requirer.
 
     Attributes:
-        address: IP address of the unit.
+        relation_id: The relation ID of the request.
+        backend_name: The name of the HAProxy backend.
+        hostname_acls: List of hostname ACLs for the backend.
+        paths: List of paths for the backend.
+        port: Port number for the backend.
     """
 
-    address: IPvAnyAddress = Field(description="IP address of the unit.")
+    relation_id: int = Field(description="Relation ID of the backend request.")
+    backend_name: str = Field(description="Name of the HAProxy backend.")
+    hostname_acls: list[Annotated[str, BeforeValidator(valid_domain_with_wildcard)]] = Field(
+        description="List of hostname ACLs for the backend."
+    )
+    paths: list[str] = Field(description="List of paths for the backend.")
+    port: int = Field(gt=0, le=65535, description="Port number for the backend.")
 
 
 @dataclass
-class HaproxyRoutePolicyProviderData(HaproxyRoutePolicyData):
-    """Dataclass to store the data for the haproxy-route-policy provider interface."""
+class HaproxyRoutePolicyRequirerAppData:
+    """Data model representing the requirer application data for haproxy-route-policy.
 
-    units_data: list[RequirerUnitData]
+    Attributes:
+        backend_requests: List of backend requests to be evaluated by the policy service.
+    """
+
+    backend_requests: list[HaproxyRoutePolicyBackendRequest] = Field(
+        description="List of backends to be evaluated by the policy service."
+    )
+
+    @model_validator(mode="after")
+    def validate_unique_backend_names(self):
+        """Ensure that backend names are unique across all requests."""
+        backend_names = [request.backend_name for request in self.backend_requests]
+        if len(backend_names) != len(set(backend_names)):
+            raise ValueError("Backend names must be unique across all requests.")
+        return self
+
+
+@dataclass
+class HaproxyRoutePolicyProviderAppData:
+    """haproxy-route-policy provider app databag schema."""
+
+    approved_requests: list[HaproxyRoutePolicyBackendRequest] = Field(
+        description="List of approved backend requests."
+    )
+
+
+class HaproxyRoutePolicyProvider(Object):
+    """haproxy-route-policy provider implementation."""
+
+    def __init__(
+        self,
+        charm: CharmBase,
+        relation_name: str = HAPROXY_ROUTE_POLICY_RELATION_NAME,
+    ) -> None:
+        """Initialize provider helper.
+
+        Args:
+            charm: The charm instance using this helper.
+            relation_name: Name of the relation endpoint.
+        """
+        super().__init__(charm, relation_name)
+        self.charm = charm
+        self.relation_name = relation_name
+
+    @property
+    def relation(self) -> Relation | None:
+        """Return the first relation for this endpoint, if any."""
+        return self.charm.model.get_relation(self.relation_name)
+
+    def set_approved_backend_requests(
+        self, approved_requests: list[HaproxyRoutePolicyBackendRequest]
+    ) -> None:
+        """Set and publish approved backend requests."""
+        relation = self.relation
+        if not relation or not self.charm.unit.is_leader():
+            return
+
+        try:
+            app_data = HaproxyRoutePolicyProviderAppData(approved_requests=approved_requests)
+            relation.save(app_data, relation.app)
+        except (
+            ValidationError,
+            RelationDataTypeError,
+            RelationDataAccessError,
+            RelationNotFoundError,
+        ) as exc:
+            logger.error("Validation error when preparing provider relation data.")
+            raise HaproxyRoutePolicyInvalidRelationDataError(
+                "Validation error when preparing provider relation data."
+            ) from exc
+
+
+class HaproxyRoutePolicyRequirer(Object):
+    """haproxy-route-policy requirer implementation."""
+
+    def __init__(
+        self,
+        charm: CharmBase,
+        relation_name: str = HAPROXY_ROUTE_POLICY_RELATION_NAME,
+    ) -> None:
+        """Initialize requirer helper.
+
+        Args:
+            charm: The charm instance using this helper.
+            relation_name: Name of the relation endpoint.
+            requests: Optional initial request backend list to publish.
+        """
+        super().__init__(charm, relation_name)
+        self.charm = charm
+        self._relation_name = relation_name
+
+    @property
+    def relation(self) -> Relation | None:
+        """Return the first relation for this endpoint, if any."""
+        return self.charm.model.get_relation(self._relation_name)
+
+    def provide_haproxy_route_policy_requests(
+        self, backend_requests: list[HaproxyRoutePolicyBackendRequest]
+    ) -> None:
+        """Set and publish route policy requests."""
+        relation = self.relation
+        if not relation or not self.charm.unit.is_leader():
+            return
+
+        try:
+            app_data = HaproxyRoutePolicyRequirerAppData(backend_requests=backend_requests)
+            relation.save(app_data, relation.app)
+        except (
+            ValidationError,
+            RelationDataTypeError,
+            RelationDataAccessError,
+            RelationNotFoundError,
+        ) as exc:
+            logger.error("Validation error when preparing requirer relation data.")
+            raise HaproxyRoutePolicyInvalidRelationDataError(
+                "Validation error when preparing requirer relation data."
+            ) from exc
