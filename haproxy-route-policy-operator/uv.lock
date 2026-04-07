@@ -503,7 +503,7 @@ requires-dist = [
     { name = "charmlibs-snap", specifier = "==1.0.1" },
     { name = "ops", specifier = "==3.7.0" },
     { name = "pydantic", specifier = ">=2.12.5" },
-    { name = "requests", specifier = "==2.32.5" },
+    { name = "requests", specifier = "==2.33.1" },
     { name = "validators", specifier = ">=0.35.0" },
 ]
 
