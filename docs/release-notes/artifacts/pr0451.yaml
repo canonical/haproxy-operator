@@ -7,12 +7,7 @@ changes:
     description: >
       Added a new `haproxy-route-policy` provided relation on
       `haproxy-route-policy-operator`, including a new charm library for
-      requirer/provider databag schemas and validation of backend request data.
-      Updated the charm to handle relation lifecycle events, read incoming backend
-      requests from requirers, and publish approved backend requests back through
-      the relation (currently auto-approving received requests). Added unit tests
-      for the relation library models and integration tests/fixtures using
-      any-charm as a requirer to validate end-to-end relation behavior.
+      requirer/provider data schemas and validation. Added basic logic and tests.
     urls:
       pr:
         - https://github.com/canonical/haproxy-operator/pull/451
