@@ -110,9 +110,9 @@ def test_config_changed_reconciles_snap_with_database_credentials():
 )
 def test_config_changed_missing_secrets(secrets):
     """
-    arrange: create charm context with valid database relation credentials.
+    arrange: create charm context with missing secrets from leader unit.
     act: run config-changed event.
-    assert: snap is configured, migrations run, and service is started.
+    assert: unit in waiting status.
     """
     ctx = testing.Context(HaproxyRoutePolicyCharm)
     state = testing.State(relations=[_database_relation()], secrets=secrets)
@@ -131,9 +131,9 @@ def test_config_changed_missing_secrets(secrets):
 
 def test_config_changed_leader_create_secrets():
     """
-    arrange: create charm context with valid database relation credentials.
+    arrange: create charm context with missing secrets as the leader unit.
     act: run config-changed event.
-    assert: snap is configured, migrations run, and service is started.
+    assert: secrets are created.
     """
     ctx = testing.Context(HaproxyRoutePolicyCharm)
     state = testing.State(relations=[_database_relation()], secrets=[], leader=True)
@@ -148,3 +148,4 @@ def test_config_changed_leader_create_secrets():
         out = ctx.run(ctx.on.config_changed(), state)
 
     assert len(list(out.secrets)) == 2
+    assert out.unit_status == testing.ActiveStatus()

@@ -94,8 +94,11 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
                 run_migrations()
 
                 self.unit.status = ops.MaintenanceStatus("[leader] updating Django admin user")
-                username, password = self._get_django_admin_credentials(peer_relation).values()
-                create_or_update_user(username, password)
+                credentials = self._get_django_admin_credentials(peer_relation)
+                if (username := credentials.get("username")) and (
+                    password := credentials.get("password")
+                ):
+                    create_or_update_user(username, password)
 
             self.unit.status = ops.MaintenanceStatus("starting gunicorn service")
             start_gunicorn_service()
