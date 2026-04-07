@@ -143,9 +143,7 @@ def _get_django_admin_credentials(
         )
 
 
-def _get_django_secret_key(
-    charm: ops.CharmBase, peer_relation: ops.Relation
-) -> dict[str, str]:
+def _get_django_secret_key(charm: ops.CharmBase, peer_relation: ops.Relation) -> dict[str, str]:
     """Get the Django secret key from the charm's config.
 
     Returns:
@@ -159,9 +157,7 @@ def _get_django_secret_key(
         return secret.get_content()
     except ops.SecretNotFoundError:
         if charm.unit.is_leader():
-            django_secret_key_data = {
-                "secret-key": secrets.token_urlsafe(SECRET_LENGTH)
-            }
+            django_secret_key_data = {"secret-key": secrets.token_urlsafe(SECRET_LENGTH)}
             secret = charm.app.add_secret(
                 label=DJANGO_SECRET_KEY_SECRET_LABEL, content=django_secret_key_data
             )
