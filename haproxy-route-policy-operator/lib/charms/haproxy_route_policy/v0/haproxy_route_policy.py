@@ -153,7 +153,7 @@ class HaproxyRoutePolicyProvider(Object):
 
         try:
             app_data = HaproxyRoutePolicyProviderAppData(approved_requests=approved_requests)
-            relation.save(app_data, relation.app)
+            relation.save(app_data, self.charm.app)
         except (
             ValidationError,
             RelationDataTypeError,
@@ -200,7 +200,7 @@ class HaproxyRoutePolicyRequirer(Object):
 
         try:
             app_data = HaproxyRoutePolicyRequirerAppData(backend_requests=backend_requests)
-            relation.save(app_data, relation.app)
+            relation.save(app_data, self.charm.app)
         except (
             ValidationError,
             RelationDataTypeError,

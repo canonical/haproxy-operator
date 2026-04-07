@@ -33,7 +33,7 @@ def test_haproxy_route_policy_relation(
         f"{application}:haproxy-route-policy",
     )
     juju.run(
-        f"{any_charm_haproxy_route_policy_requirer}/0",
+        f"{any_charm_haproxy_route_policy_requirer}/leader",
         action="rpc",
         params={"method": "update_relation"},
     )
