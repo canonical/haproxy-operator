@@ -78,12 +78,14 @@ backend {{ backend.backend_name }}
     option http-server-close
 {% endif %}
 
+{% if backend.enable_http_check %}
     option httpchk {% if backend.application_data.check.path %}GET {{ backend.application_data.check.path }}{% endif +%}
 {% if backend.application_data.check.port %}
     http-check connect port {{ backend.application_data.check.port }}
 {% endif %}
 {% if backend.health_check_host_header is not none %}
     http-check send hdr Host {{ backend.health_check_host_header }}
+{% endif %}
 {% endif %}
 {% if backend.application_data.rate_limit %}
     http-request track-sc0 src table  haproxy_peers/{{ backend.backend_name }}_rate_limit

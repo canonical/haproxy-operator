@@ -260,6 +260,14 @@ class HAProxyRouteBackend:
             return ""
         return f"{LEADING_SPACE}ssl ca-file {HAPROXY_CAS_FILE!s} alpn h2,http/1.1 check-alpn h2,http/1.1"
 
+    @property
+    def enable_http_check(self) -> bool:
+        """Return the configuration to enable HTTP health checks.
+
+        Returns:
+            bool: The configuration to enable HTTP health checks.
+        """
+        return self.application_data.protocol == "http"
 
 # pylint: disable=too-many-locals
 @dataclass(frozen=True)
