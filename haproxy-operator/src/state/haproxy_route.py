@@ -262,10 +262,10 @@ class HAProxyRouteBackend:
 
     @property
     def enable_http_check(self) -> bool:
-        """Return the configuration to enable HTTP health checks.
+        """Return whether to enable HTTP health checks.
 
         Returns:
-            bool: The configuration to enable HTTP health checks.
+            bool: True if backend protocol is HTTP, False otherwise.
         """
         return self.application_data.protocol == "http"
 
