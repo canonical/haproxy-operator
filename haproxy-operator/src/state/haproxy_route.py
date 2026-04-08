@@ -269,6 +269,7 @@ class HAProxyRouteBackend:
         """
         return self.application_data.protocol == "http"
 
+
 # pylint: disable=too-many-locals
 @dataclass(frozen=True)
 class HaproxyRouteRequirersInformation:
