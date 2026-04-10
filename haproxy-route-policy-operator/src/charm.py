@@ -13,6 +13,11 @@ from charmlibs.snap import SnapError
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseRequires,
 )
+from charms.haproxy_route_policy.v0.haproxy_route_policy import (
+    HaproxyRoutePolicyProvider,
+    HaproxyRoutePolicyRequirerAppData,
+)
+from pydantic import ValidationError
 
 from policy import (
     HaproxyRoutePolicyDatabaseMigrationError,
@@ -41,6 +46,7 @@ logger = logging.getLogger(__name__)
 
 DATABASE_RELATION = "database"
 HAPROXY_ROUTE_POLICY_PORT = 8080
+HAPROXY_ROUTE_POLICY_RELATION_NAME = "haproxy-route-policy"
 
 
 class HaproxyRoutePolicyCharm(ops.CharmBase):
@@ -66,6 +72,22 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
             extra_user_roles="SUPERUSER",
         )
         self.framework.observe(self.database.on.database_created, self._reconcile)
+
+        self.haproxy_route_policy = HaproxyRoutePolicyProvider(
+            self, HAPROXY_ROUTE_POLICY_RELATION_NAME
+        )
+        self.framework.observe(
+            self.on[self.haproxy_route_policy.relation_name].relation_created, self._reconcile
+        )
+        self.framework.observe(
+            self.on[self.haproxy_route_policy.relation_name].relation_changed, self._reconcile
+        )
+        self.framework.observe(
+            self.on[self.haproxy_route_policy.relation_name].relation_broken, self._reconcile
+        )
+        self.framework.observe(
+            self.on[self.haproxy_route_policy.relation_name].relation_departed, self._reconcile
+        )
 
     def _reconcile(self, _: ops.EventBase) -> None:
         """Reconcile snap configuration and service state."""
@@ -95,6 +117,14 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
             start_gunicorn_service()
 
             self.unit.open_port("tcp", HAPROXY_ROUTE_POLICY_PORT)
+
+            if relation := self.haproxy_route_policy.relation:
+                requests = relation.load(
+                    HaproxyRoutePolicyRequirerAppData, relation.app
+                ).backend_requests
+                logger.info(f"backend requests {requests}, auto approved.")
+                self.haproxy_route_policy.set_approved_backend_requests(requests)
+
         except DatabaseRelationMissingError:
             self.unit.status = ops.BlockedStatus("Missing database relation.")
             return
@@ -119,6 +149,12 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
         except (SnapError, HaproxyRoutePolicyDatabaseMigrationError) as exc:
             logger.exception("Failed to reconcile haproxy-route-policy service")
             self.unit.status = ops.BlockedStatus(f"reconciliation failed: {exc}")
+            return
+        except ValidationError:
+            logger.exception("Invalid haproxy-route-policy relation data")
+            self.unit.status = ops.WaitingStatus(
+                "Waiting for valid haproxy-route-policy relation data"
+            )
             return
 
         self.unit.status = ops.ActiveStatus()
