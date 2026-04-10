@@ -89,12 +89,12 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
                 }
             )
 
+            credentials = self._get_django_admin_credentials(peer_relation)
             if self.unit.is_leader():
                 self.unit.status = ops.MaintenanceStatus("[leader] running database migrations")
                 run_migrations()
 
                 self.unit.status = ops.MaintenanceStatus("[leader] updating Django admin user")
-                credentials = self._get_django_admin_credentials(peer_relation)
                 if (username := credentials.get("username")) and (
                     password := credentials.get("password")
                 ):

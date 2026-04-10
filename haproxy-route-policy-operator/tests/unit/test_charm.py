@@ -29,6 +29,11 @@ def _database_relation() -> testing.Relation:
     )
 
 
+def _peer_relation() -> testing.PeerRelation:
+    """Build a peer relation."""
+    return testing.PeerRelation("haproxy-route-policy-peer")
+
+
 def test_install_without_relation_sets_waiting_status():
     """
     arrange: create charm context without database relation.
@@ -36,7 +41,7 @@ def test_install_without_relation_sets_waiting_status():
     assert: snap install is invoked and unit waits for database relation data.
     """
     ctx = testing.Context(HaproxyRoutePolicyCharm)
-    state = testing.State()
+    state = testing.State(relations=[_peer_relation()])
 
     with (
         patch("charm.install_snap") as install_snap_mock,
@@ -55,7 +60,8 @@ def test_config_changed_reconciles_snap_with_database_credentials():
     """
     ctx = testing.Context(HaproxyRoutePolicyCharm)
     state = testing.State(
-        relations=[_database_relation()],
+        leader=True,
+        relations=[_database_relation(), _peer_relation()],
         secrets=[
             testing.Secret(
                 label=DJANGO_SECRET_KEY_SECRET_LABEL, tracked_content={"secret-key": "test"}
@@ -115,7 +121,7 @@ def test_config_changed_missing_secrets(secrets):
     assert: unit in waiting status.
     """
     ctx = testing.Context(HaproxyRoutePolicyCharm)
-    state = testing.State(relations=[_database_relation()], secrets=secrets)
+    state = testing.State(relations=[_database_relation(), _peer_relation()], secrets=secrets)
 
     with (
         patch("charm.install_snap"),
@@ -136,7 +142,9 @@ def test_config_changed_leader_create_secrets():
     assert: secrets are created.
     """
     ctx = testing.Context(HaproxyRoutePolicyCharm)
-    state = testing.State(relations=[_database_relation()], secrets=[], leader=True)
+    state = testing.State(
+        relations=[_database_relation(), _peer_relation()], secrets=[], leader=True
+    )
 
     with (
         patch("charm.install_snap"),
