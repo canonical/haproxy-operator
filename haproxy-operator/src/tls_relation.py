@@ -19,7 +19,8 @@ from charms.tls_certificates_interface.v4.tls_certificates import (
 )
 from ops.model import Model
 
-from haproxy import HAPROXY_CAS_DIR, HAPROXY_CAS_FILE, file_exists, read_file, render_file
+from haproxy import file_exists, read_file, render_file
+from state.haproxy_route import HAPROXY_CAS_DIR, HAPROXY_CAS_FILE
 from state.tls import TLSInformation
 
 TLS_CERT = "certificates"

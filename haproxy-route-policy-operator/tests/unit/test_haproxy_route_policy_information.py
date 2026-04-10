@@ -83,7 +83,7 @@ def test_haproxy_route_policy_information_init_rejects_none_string_fields(
     act: initialize HaproxyRoutePolicyInformation.
     assert: pydantic validation error is raised.
     """
-    payload = {
+    payload: dict[str, Any] = {
         "allowed_hosts": ["example.com"],
         "admin_username": "admin",
         # Ignore bandit warning as this is for testing.
