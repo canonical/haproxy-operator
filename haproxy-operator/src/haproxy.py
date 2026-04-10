@@ -54,8 +54,6 @@ SPOE_AUTH_CONFIG_TEMPLATE = "spoe_auth.conf.j2"
 
 HAPROXY_DEFAULT_CONFIG_TEMPLATE = "haproxy.cfg.j2"
 HAPROXY_CERTS_DIR = Path("/var/lib/haproxy/certs")
-HAPROXY_CAS_DIR = Path("/var/lib/haproxy/cas")
-HAPROXY_CAS_FILE = Path(HAPROXY_CAS_DIR / "cas.pem")
 IP_ALLOW_LIST_FILE = Path("/var/lib/haproxy/ip_allow_list.lst")
 DENY_PATHS_FILE = Path("/var/lib/haproxy/deny_paths.lst")
 
@@ -195,7 +193,6 @@ class HAProxyService:
             "stick_table_entries": haproxy_route_requirers_information.stick_table_entries,
             "peer_units_address": haproxy_route_requirers_information.peers,
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
-            "haproxy_cas_file": HAPROXY_CAS_FILE,
             "acls_for_allow_http": haproxy_route_requirers_information.acls_for_allow_http,
             "spoe_auth_info_list": spoe_oauth_info_list,
             "ip_allow_list_file": IP_ALLOW_LIST_FILE,
