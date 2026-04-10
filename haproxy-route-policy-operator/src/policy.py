@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import subprocess  # nosec
 from typing import Any
 
@@ -51,3 +52,30 @@ def start_gunicorn_service() -> None:
     """Ensure the snap gunicorn app is running."""
     package = snap.SnapCache()[SNAP_NAME]
     package.start()
+
+
+def create_or_update_user(username: str, password: str) -> None:
+    """Create or update the HTTP proxy policy superuser.
+
+    Args:
+        username: The username.
+        password: The password.
+
+    Raises:
+        RuntimeError: If the action failed.
+    """
+    try:
+        subprocess.run(  # nosec
+            [f"{SNAP_NAME}.manage", "upsertsuperuser"],
+            env={
+                **os.environ,
+                "DJANGO_SUPERUSER_PASSWORD": password,
+                "DJANGO_SUPERUSER_USERNAME": username,
+            },
+            check=True,
+            encoding="utf-8",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"failed to create/update Django user: {e.stdout}") from e

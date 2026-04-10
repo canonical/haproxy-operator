@@ -27,3 +27,7 @@ def test_charm_becomes_active_after_relation_with_postgresql(
 
     juju.integrate(f"{application}:database", f"{postgresql_app}:database")
     juju.wait(lambda status: jubilant.all_active(status, application, postgresql_app))
+
+    result = juju.run(f"{application}/0", "get-admin-credentials")
+    assert result.results["username"] == "admin"
+    assert len(result.results["password"]) == 16
