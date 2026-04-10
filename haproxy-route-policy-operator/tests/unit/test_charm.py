@@ -43,7 +43,7 @@ def test_install_without_relation_sets_waiting_status():
     assert: snap install is invoked and unit waits for database relation data.
     """
     ctx = testing.Context(HaproxyRoutePolicyCharm)
-    state = testing.State(relations=[_peer_relation()])
+    state = testing.State()
 
     with (
         patch("charm.install_snap") as install_snap_mock,
@@ -145,7 +145,7 @@ def test_config_changed_missing_secrets(secrets):
         out = ctx.run(ctx.on.config_changed(), state)
 
     assert out.unit_status == testing.WaitingStatus(
-        "Waiting for leader to set shared configuration."
+        "Waiting for complete shared configuration from leader."
     )
 
 
