@@ -61,11 +61,74 @@ def test_protocol_https(
     haproxy_conf_contents = render_file_mock.call_args_list[0].args[1]
     assert (
         "server haproxy-tutorial-ingress-configurator_443_0 10.12.97.153:443"
-        " ssl ca-file /var/lib/haproxy/cas/cas.pem alpn h2,http/1.1\n" in haproxy_conf_contents
+        " ssl ca-file /var/lib/haproxy/cas/cas.pem alpn h2,http/1.1 check-alpn h2,http/1.1\n"
+        in haproxy_conf_contents
     )
     assert (
         "server haproxy-tutorial-ingress-configurator_443_1 10.12.97.154:443"
-        " ssl ca-file /var/lib/haproxy/cas/cas.pem alpn h2,http/1.1\n" in haproxy_conf_contents
+        " ssl ca-file /var/lib/haproxy/cas/cas.pem alpn h2,http/1.1 check-alpn h2,http/1.1\n"
+        in haproxy_conf_contents
+    )
+    assert out.app_status == ActiveStatus("")
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_protocol_https_with_health_check(
+    monkeypatch: pytest.MonkeyPatch, certificates_integration, receive_ca_certs_relation
+):
+    """
+    arrange: prepare the state with the haproxy-route relation, protocol https, and health checks
+    act: run relation_changed for the haproxy-route relation
+    assert: the server line contains check-alpn h2,http/1.1 alongside alpn h2,http/1.1
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    haproxy_route_relation = Relation(
+        endpoint="haproxy-route",
+        local_app_data={"endpoints": json.dumps([f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}/"])},
+        remote_app_data={
+            "hostname": f'"{TEST_EXTERNAL_HOSTNAME_CONFIG}"',
+            "hosts": '["10.12.97.153","10.12.97.154"]',
+            "ports": "[443]",
+            "protocol": '"https"',
+            "service": '"haproxy-tutorial-ingress-configurator"',
+            "check": '{"interval": 60, "rise": 2, "fall": 1, "path": "/sys/health"}',
+        },
+        remote_units_data={0: {"address": '"10.75.1.129"'}},
+    )
+    state = State(
+        relations=frozenset(
+            {
+                receive_ca_certs_relation,
+                haproxy_route_relation,
+                certificates_integration,
+            }
+        ),
+        leader=True,
+        model=Model(name="haproxy-tutorial"),
+        app_status=ActiveStatus(""),
+        unit_status=ActiveStatus(""),
+    )
+
+    ctx = Context(HAProxyCharm, juju_version="3.6.8")
+    out = ctx.run(
+        ctx.on.relation_changed(haproxy_route_relation),
+        state,
+    )
+
+    render_file_mock.assert_called_once()
+    haproxy_conf_contents = render_file_mock.call_args_list[0].args[1]
+    assert (
+        "server haproxy-tutorial-ingress-configurator_443_0 10.12.97.153:443"
+        " check inter 60s rise 2 fall 1"
+        " ssl ca-file /var/lib/haproxy/cas/cas.pem alpn h2,http/1.1 check-alpn h2,http/1.1\n"
+        in haproxy_conf_contents
+    )
+    assert (
+        "server haproxy-tutorial-ingress-configurator_443_1 10.12.97.154:443"
+        " check inter 60s rise 2 fall 1"
+        " ssl ca-file /var/lib/haproxy/cas/cas.pem alpn h2,http/1.1 check-alpn h2,http/1.1\n"
+        in haproxy_conf_contents
     )
     assert out.app_status == ActiveStatus("")
 
