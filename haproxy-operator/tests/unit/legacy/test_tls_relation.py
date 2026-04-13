@@ -133,3 +133,105 @@ def test_write_certificate_to_unit(
     pem_file_content = f"{mock_certificate!s}\n{chain_string}\n{mock_private_key!s}"
 
     write_text_mock.assert_called_once_with(pem_file_content, encoding="utf-8")
+
+
+def test_share_certificates_via_peer_relation(
+    harness: Harness,
+    mock_certificate_and_key: typing.Tuple[Certificate, PrivateKey],
+):
+    """arrange: Given a TLSRelationService and TLS information.
+    act: Run share_certificates_via_peer_relation.
+    assert: Peer relation app databag contains serialized certificate data.
+    """
+    mock_certificate, mock_private_key = mock_certificate_and_key
+    harness.begin()
+    harness.set_leader(True)
+    tls_relation_service = TLSRelationService(
+        harness.model, harness.charm.certificates, harness.charm.recv_ca_certs
+    )
+    hostname = "haproxy.internal"
+    tls_information = TLSInformation(
+        hostnames=[hostname],
+        tls_cert_and_ca_chain={hostname: (mock_certificate, [mock_certificate])},
+        private_key=str(mock_private_key),
+    )
+
+    peer_relation_id = harness.add_relation("haproxy-peers", "haproxy")
+    peer_relation = harness.model.get_relation("haproxy-peers", peer_relation_id)
+
+    tls_relation_service.share_certificates_via_peer_relation(peer_relation, tls_information)
+
+    import json
+
+    from tls_relation import PEER_TLS_KEY
+
+    raw_data = peer_relation.data[harness.model.app].get(PEER_TLS_KEY)
+    assert raw_data is not None
+    data = json.loads(raw_data)
+    assert data["hostnames"] == [hostname]
+    assert hostname in data["certificates"]
+    assert data["certificates"][hostname]["certificate"] == str(mock_certificate)
+    assert data["private_key"] == str(mock_private_key)
+
+
+def test_get_tls_information_from_peer_relation(
+    harness: Harness,
+    mock_certificate_and_key: typing.Tuple[Certificate, PrivateKey],
+):
+    """arrange: Given a peer relation with certificate data in app databag.
+    act: Run get_tls_information_from_peer_relation.
+    assert: TLSInformation is correctly deserialized.
+    """
+    import json
+
+    from tls_relation import PEER_TLS_KEY
+
+    mock_certificate, mock_private_key = mock_certificate_and_key
+    harness.begin()
+    harness.set_leader(True)
+    hostname = "haproxy.internal"
+    peer_data = json.dumps(
+        {
+            "hostnames": [hostname],
+            "certificates": {
+                hostname: {
+                    "certificate": str(mock_certificate),
+                    "chain": [str(mock_certificate)],
+                }
+            },
+            "private_key": str(mock_private_key),
+        }
+    )
+
+    peer_relation_id = harness.add_relation("haproxy-peers", "haproxy")
+    harness.update_relation_data(peer_relation_id, harness.model.app.name, {PEER_TLS_KEY: peer_data})
+    peer_relation = harness.model.get_relation("haproxy-peers", peer_relation_id)
+
+    result = TLSRelationService.get_tls_information_from_peer_relation(
+        peer_relation, harness.model.app
+    )
+
+    assert result is not None
+    assert result.hostnames == [hostname]
+    assert hostname in result.tls_cert_and_ca_chain
+    certificate, chain = result.tls_cert_and_ca_chain[hostname]
+    assert str(certificate) == str(mock_certificate)
+    assert len(chain) == 1
+    assert result.private_key == str(mock_private_key)
+
+
+def test_get_tls_information_from_peer_relation_empty(
+    harness: Harness,
+):
+    """arrange: Given a peer relation with no certificate data.
+    act: Run get_tls_information_from_peer_relation.
+    assert: None is returned.
+    """
+    harness.begin()
+    peer_relation_id = harness.add_relation("haproxy-peers", "haproxy")
+    peer_relation = harness.model.get_relation("haproxy-peers", peer_relation_id)
+
+    result = TLSRelationService.get_tls_information_from_peer_relation(
+        peer_relation, harness.model.app
+    )
+    assert result is None

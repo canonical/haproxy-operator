@@ -453,3 +453,170 @@ def test_spoe_auth_invalid_data(monkeypatch: pytest.MonkeyPatch, certificates_in
     assert render_file_mock.call_count == 0
     assert out.unit_status.name == ops.testing.BlockedStatus.name
     assert spoe_auth_relation.remote_app_name in out.unit_status.message
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+class TestCertificateSharingViaPeerRelation:
+    """Tests for sharing certificates between units via peer relation in APP mode."""
+
+    def test_leader_shares_certificates_to_peer_relation(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_certificate_and_key,
+        certificates_integration,
+        peer_relation,
+    ):
+        """
+        arrange: Prepare a leader unit with haproxy-route and certificates.
+        act: Trigger config_changed.
+        assert: Certificate data is written to the peer relation app databag.
+        """
+        mock_certificate, mock_private_key = mock_certificate_and_key
+        monkeypatch.setattr("haproxy.render_file", MagicMock())
+        monkeypatch.setattr("haproxy.HAProxyService.reconcile_haproxy_route", MagicMock())
+        monkeypatch.setattr(
+            "tls_relation.TLSRelationService.write_certificate_to_unit", MagicMock()
+        )
+        monkeypatch.setattr(
+            "charm.HAProxyCharm._get_unit_address", MagicMock(return_value="10.0.0.1")
+        )
+
+        haproxy_route_relation = build_haproxy_route_relation()
+
+        ctx = ops.testing.Context(HAProxyCharm)
+        state = ops.testing.State(
+            leader=True,
+            relations=[peer_relation, certificates_integration, haproxy_route_relation],
+            config={"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG},
+        )
+        out = ctx.run(ctx.on.config_changed(), state)
+
+        out_peer_relation = [r for r in out.relations if r.endpoint == "haproxy-peers"][0]
+        peer_app_data = out_peer_relation.local_app_data
+        assert tls_relation.PEER_TLS_KEY in peer_app_data
+
+        shared_data = json.loads(peer_app_data[tls_relation.PEER_TLS_KEY])
+        assert "hostnames" in shared_data
+        assert "certificates" in shared_data
+        assert "private_key" in shared_data
+        assert shared_data["private_key"] == str(mock_private_key)
+
+    def test_non_leader_reads_certificates_from_peer_relation(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        csr_certificate_and_key,
+    ):
+        """
+        arrange: Prepare a non-leader unit with certificate data in the peer relation.
+        act: Trigger config_changed event.
+        assert: Unit reaches active status with TLS data from peer relation.
+        """
+        _, certificate, private_key = csr_certificate_and_key
+        hostname = TEST_EXTERNAL_HOSTNAME_CONFIG
+
+        write_cert_mock = MagicMock()
+        monkeypatch.setattr(
+            "tls_relation.TLSRelationService.write_certificate_to_unit", write_cert_mock
+        )
+        monkeypatch.setattr("haproxy.render_file", MagicMock())
+
+        peer_tls_data = json.dumps(
+            {
+                "hostnames": [hostname],
+                "certificates": {
+                    hostname: {
+                        "certificate": str(certificate),
+                        "chain": [str(certificate)],
+                    }
+                },
+                "private_key": str(private_key),
+            }
+        )
+        peer_relation_with_tls = scenario.PeerRelation(
+            endpoint="haproxy-peers",
+            local_app_data={tls_relation.PEER_TLS_KEY: peer_tls_data},
+        )
+
+        ctx = ops.testing.Context(HAProxyCharm)
+        state = ops.testing.State(
+            leader=False,
+            relations=[peer_relation_with_tls],
+        )
+        out = ctx.run(ctx.on.config_changed(), state)
+        assert out.unit_status == ops.testing.ActiveStatus("")
+
+    def test_non_leader_without_peer_data_skips_tls(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        peer_relation,
+    ):
+        """
+        arrange: Prepare a non-leader unit with no TLS data in the peer relation.
+        act: Trigger config_changed.
+        assert: Unit reaches active status without error (default mode, no TLS needed).
+        """
+        monkeypatch.setattr("haproxy.render_file", MagicMock())
+
+        ctx = ops.testing.Context(HAProxyCharm)
+        state = ops.testing.State(
+            leader=False,
+            relations=[peer_relation],
+        )
+        out = ctx.run(ctx.on.config_changed(), state)
+        assert out.unit_status == ops.testing.ActiveStatus("")
+
+    def test_non_leader_haproxy_route_reads_from_peer_relation(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        csr_certificate_and_key,
+        certificates_integration,
+    ):
+        """
+        arrange: Prepare a non-leader unit with haproxy-route and certificate data in peer.
+        act: Trigger config_changed.
+        assert: The haproxy config is rendered with data from peer relation certificates.
+        """
+        _, certificate, private_key = csr_certificate_and_key
+        hostname = TEST_EXTERNAL_HOSTNAME_CONFIG
+        reconcile_mock = MagicMock()
+        monkeypatch.setattr("haproxy.HAProxyService.reconcile_haproxy_route", reconcile_mock)
+        monkeypatch.setattr(
+            "tls_relation.TLSRelationService.write_certificate_to_unit", MagicMock()
+        )
+        monkeypatch.setattr("haproxy.HAProxyService.install", MagicMock())
+        monkeypatch.setattr(
+            "charm.HAProxyCharm._get_unit_address", MagicMock(return_value="10.0.0.2")
+        )
+
+        peer_tls_data = json.dumps(
+            {
+                "hostnames": [hostname],
+                "certificates": {
+                    hostname: {
+                        "certificate": str(certificate),
+                        "chain": [str(certificate)],
+                    }
+                },
+                "private_key": str(private_key),
+            }
+        )
+        peer_relation_with_tls = scenario.PeerRelation(
+            endpoint="haproxy-peers",
+            local_app_data={tls_relation.PEER_TLS_KEY: peer_tls_data},
+        )
+
+        haproxy_route_relation = build_haproxy_route_relation()
+
+        ctx = ops.testing.Context(HAProxyCharm)
+        state = ops.testing.State(
+            leader=False,
+            relations=[
+                peer_relation_with_tls,
+                certificates_integration,
+                haproxy_route_relation,
+            ],
+            config={"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG},
+        )
+        out = ctx.run(ctx.on.config_changed(), state)
+        reconcile_mock.assert_called_once()
+        assert out.unit_status == ops.testing.ActiveStatus("")
