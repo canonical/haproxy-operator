@@ -20,6 +20,8 @@ from charms.haproxy_route_policy.v0.haproxy_route_policy import (
 from pydantic import ValidationError
 
 from policy import (
+    HaproxyRoutePolicyAPIError,
+    HaproxyRoutePolicyClient,
     HaproxyRoutePolicyDatabaseMigrationError,
     configure_snap,
     create_or_update_user,
@@ -119,11 +121,31 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
             self.unit.open_port("tcp", HAPROXY_ROUTE_POLICY_PORT)
 
             if relation := self.haproxy_route_policy.relation:
-                requests = relation.load(
+                backend_requests = relation.load(
                     HaproxyRoutePolicyRequirerAppData, relation.app
                 ).backend_requests
-                logger.info(f"backend requests {requests}, auto approved.")
-                self.haproxy_route_policy.set_approved_backend_requests(requests)
+
+                client = HaproxyRoutePolicyClient(
+                    username=haproxy_route_policy_information.admin_username,
+                    password=haproxy_route_policy_information.admin_password,
+                )
+
+                self.unit.status = ops.MaintenanceStatus(
+                    "evaluating backend requests via policy service"
+                )
+                evaluated = client.refresh(backend_requests)
+
+                approved = [
+                    req
+                    for req, ev in zip(backend_requests, evaluated, strict=True)
+                    if ev.status == "accepted"
+                ]
+                logger.info(
+                    "backend requests evaluated: %d total, %d approved",
+                    len(evaluated),
+                    len(approved),
+                )
+                self.haproxy_route_policy.set_approved_backend_requests(approved)
 
         except DatabaseRelationMissingError:
             self.unit.status = ops.BlockedStatus("Missing database relation.")
@@ -149,6 +171,10 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
         except (SnapError, HaproxyRoutePolicyDatabaseMigrationError) as exc:
             logger.exception("Failed to reconcile haproxy-route-policy service")
             self.unit.status = ops.BlockedStatus(f"reconciliation failed: {exc}")
+            return
+        except HaproxyRoutePolicyAPIError as exc:
+            logger.exception("Policy service API error")
+            self.unit.status = ops.BlockedStatus(f"policy service error: {exc.message}")
             return
         except ValidationError:
             logger.exception("Invalid haproxy-route-policy relation data")
