@@ -18,7 +18,7 @@ from charms.tls_certificates_interface.v4.tls_certificates import (
     ProviderCertificate,
     TLSCertificatesRequiresV4,
 )
-from ops.model import Model, Relation
+from ops.model import Application, Model, Relation
 
 from haproxy import file_exists, read_file, render_file
 from state.haproxy_route import HAPROXY_CAS_DIR, HAPROXY_CAS_FILE
@@ -122,7 +122,7 @@ class TLSRelationService:
     @staticmethod
     def get_tls_information_from_peer_relation(
         peer_relation: Relation,
-        app: typing.Any,
+        app: Application,
     ) -> typing.Optional[TLSInformation]:
         """Read TLS certificate data from the peer relation app databag.
 

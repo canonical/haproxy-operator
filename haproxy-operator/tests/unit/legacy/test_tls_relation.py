@@ -158,6 +158,7 @@ def test_share_certificates_via_peer_relation(
 
     peer_relation_id = harness.add_relation("haproxy-peers", "haproxy")
     peer_relation = harness.model.get_relation("haproxy-peers", peer_relation_id)
+    assert peer_relation is not None
 
     tls_relation_service.share_certificates_via_peer_relation(peer_relation, tls_information)
 
@@ -204,7 +205,9 @@ def test_get_tls_information_from_peer_relation(
     )
 
     peer_relation_id = harness.add_relation("haproxy-peers", "haproxy")
-    harness.update_relation_data(peer_relation_id, harness.model.app.name, {PEER_TLS_KEY: peer_data})
+    harness.update_relation_data(
+        peer_relation_id, harness.model.app.name, {PEER_TLS_KEY: peer_data}
+    )
     peer_relation = harness.model.get_relation("haproxy-peers", peer_relation_id)
 
     result = TLSRelationService.get_tls_information_from_peer_relation(

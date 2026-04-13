@@ -471,7 +471,7 @@ class TestCertificateSharingViaPeerRelation:
         act: Trigger config_changed.
         assert: Certificate data is written to the peer relation app databag.
         """
-        mock_certificate, mock_private_key = mock_certificate_and_key
+        _mock_certificate, mock_private_key = mock_certificate_and_key
         monkeypatch.setattr("haproxy.render_file", MagicMock())
         monkeypatch.setattr("haproxy.HAProxyService.reconcile_haproxy_route", MagicMock())
         monkeypatch.setattr(
@@ -491,8 +491,9 @@ class TestCertificateSharingViaPeerRelation:
         )
         out = ctx.run(ctx.on.config_changed(), state)
 
-        out_peer_relation = [r for r in out.relations if r.endpoint == "haproxy-peers"][0]
+        out_peer_relation = next(r for r in out.relations if r.endpoint == "haproxy-peers")
         peer_app_data = out_peer_relation.local_app_data
+        assert peer_app_data is not None
         assert tls_relation.PEER_TLS_KEY in peer_app_data
 
         shared_data = json.loads(peer_app_data[tls_relation.PEER_TLS_KEY])

@@ -320,9 +320,7 @@ class HAProxyCharm(ops.CharmBase):
         peer_relation = self.model.get_relation(HAPROXY_PEER_INTEGRATION)
         if not peer_relation:
             return None
-        return TLSRelationService.get_tls_information_from_peer_relation(
-            peer_relation, self.app
-        )
+        return TLSRelationService.get_tls_information_from_peer_relation(peer_relation, self.app)
 
     def _reconcile_certificates(self, tls_information: TLSInformation) -> None:
         """Reconcile certificates: write to disk and share via peer relation if leader.
@@ -334,9 +332,7 @@ class HAProxyCharm(ops.CharmBase):
         if self.unit.is_leader():
             peer_relation = self.model.get_relation(HAPROXY_PEER_INTEGRATION)
             if peer_relation:
-                self._tls.share_certificates_via_peer_relation(
-                    peer_relation, tls_information
-                )
+                self._tls.share_certificates_via_peer_relation(peer_relation, tls_information)
 
     def _configure_ingress(
         self,
@@ -420,9 +416,7 @@ class HAProxyCharm(ops.CharmBase):
         )
         tls_information = self._get_tls_information(allow_no_certificates)
         if not tls_information and not allow_no_certificates:
-            logger.info(
-                "TLS information not available yet, skipping haproxy-route configuration."
-            )
+            logger.info("TLS information not available yet, skipping haproxy-route configuration.")
             return
         if tls_information:
             self._reconcile_certificates(tls_information)
