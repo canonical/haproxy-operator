@@ -40,6 +40,29 @@ requires:
     limit: 1
     optional: false
 
+actions:
+  get-admin-credentials:
+    description: Retrieve the admin credentials to call the HAProxy Route Policy API.
+    output:
+      username:
+        description: The admin username.
+        type: string
+      password:
+        description: The admin password.
+        type: string
+
 charm-libs:
   - lib: data_platform_libs.data_interfaces
     version: "0"
+
+peers:
+  haproxy-route-policy-peer:
+    interface: haproxy_route_policy_peer
+
+config:
+  options:
+    extra-allowed-hosts:
+      type: string
+      description: A comma-separated list of host/domain names that the dns-policy-app API
+        can serve. This configuration will set the DJANGO_ALLOWED_HOSTS environment
+        variable with its content being a JSON encoded list.
