@@ -61,6 +61,9 @@ requires:
   ddos-protection:
     interface: ddos_protection
     limit: 1
+  haproxy-route-policy:
+    interface: haproxy-route-policy
+    limit: 1
 
 
 provides:
