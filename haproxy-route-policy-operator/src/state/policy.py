@@ -19,6 +19,7 @@ DJANGO_SECRET_KEY_SECRET_LABEL = "django-secret-key"  # nosec
 DJANGO_ADMIN_CREDENTIALS_SECRET_LABEL = "django-admin-credentials"  # nosec
 PEER_RELATION_NAME = "haproxy-route-policy-peer"
 SECRET_LENGTH = 32
+DEFAULT_ALLOWED_HOSTS = ["localhost"]
 
 
 class DjangoSecretKeyMissingError(Exception):
@@ -74,7 +75,9 @@ class HaproxyRoutePolicyInformation:
     def allowed_hosts_snap_configuration(self) -> dict[str, str]:
         """Return snap configuration keys and values."""
         return {
-            "allowed-hosts": json.dumps([str(host) for host in self.allowed_hosts]),
+            "allowed-hosts": json.dumps(
+                DEFAULT_ALLOWED_HOSTS + [str(host) for host in self.allowed_hosts]
+            ),
         }
 
     @classmethod
@@ -96,7 +99,7 @@ class HaproxyRoutePolicyInformation:
                 cast(IPvAnyAddress | FQDN, address)
                 for address in cast(str, charm.config.get("allowed-hosts")).split(",")
             ]
-            if charm.config.get("allowed-hosts")
+            if charm.config.get("extra-allowed-hosts")
             else []
         )
         credentials = _get_django_admin_credentials(charm, peer_relation)
