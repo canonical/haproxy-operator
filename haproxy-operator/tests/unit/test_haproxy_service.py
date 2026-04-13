@@ -3,6 +3,7 @@
 
 """Unit tests for charm file."""
 
+from ipaddress import IPv4Address, IPv6Address
 from typing import cast
 from unittest.mock import MagicMock
 
@@ -44,13 +45,33 @@ def test_format_peer_entries_ipv4():
     act: Call _format_peer_entries.
     assert: Each entry has the format '<name> <address>:<port>'.
     """
-    peers = [cast(IPvAnyAddress, "10.68.79.144"), cast(IPvAnyAddress, "192.168.1.10")]
+    peers: list[IPvAnyAddress] = [
+        cast(IPvAnyAddress, IPv4Address("10.68.79.144")),
+        cast(IPvAnyAddress, IPv4Address("192.168.1.10")),
+    ]
 
     result = _format_peer_entries(peers)
 
     assert result == [
         f"10-68-79-144 10.68.79.144:{HAPROXY_PEER_PORT}",
         f"192-168-1-10 192.168.1.10:{HAPROXY_PEER_PORT}",
+    ]
+
+
+def test_format_peer_entries_ipv6():
+    """
+    arrange: A list of IPv6 peer addresses.
+    act: Call _format_peer_entries.
+    assert: Each entry has colons replaced by hyphens in the name.
+    """
+    peers: list[IPvAnyAddress] = [
+        cast(IPvAnyAddress, IPv6Address("fd42:bc01:a5e3:f4e2::1")),
+    ]
+
+    result = _format_peer_entries(peers)
+
+    assert result == [
+        f"fd42-bc01-a5e3-f4e2--1 fd42:bc01:a5e3:f4e2::1:{HAPROXY_PEER_PORT}",
     ]
 
 
