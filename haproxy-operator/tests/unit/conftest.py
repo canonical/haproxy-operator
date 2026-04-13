@@ -251,7 +251,7 @@ def certificates_integration_fixture(certificates_relation_data, csr_certificate
     return scenario.Relation(
         endpoint="certificates",
         remote_app_data=certificates_relation_data,
-        local_unit_data={
+        local_app_data={
             "certificate_signing_requests": json.dumps(
                 [
                     {
@@ -312,6 +312,7 @@ def base_state_with_ingress_fixture(peer_relation, ingress_integration, certific
     Yield: The modeled haproxy-peers relation.
     """
     input_state = {
+        "leader": True,
         "relations": [peer_relation, ingress_integration, certificates_integration],
         "config": {
             "external-hostname": "ingress.local",
@@ -345,6 +346,7 @@ def base_state_haproxy_route_fixture(
     Yield: The modeled haproxy-peers relation.
     """
     input_state = {
+        "leader": True,
         "relations": [
             peer_relation,
             certificates_integration,
@@ -413,6 +415,7 @@ def base_state_with_ingress_per_unit_fixture(
     Yield: The modeled haproxy-peers relation.
     """
     input_state = {
+        "leader": True,
         "relations": [peer_relation, ingress_per_unit_integration, certificates_integration],
         "config": {
             "external-hostname": "ingress.local",

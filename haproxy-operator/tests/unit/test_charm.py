@@ -338,7 +338,8 @@ def test_spoe_auth(monkeypatch: pytest.MonkeyPatch, certificates_integration):
 
     ctx = ops.testing.Context(HAProxyCharm)
     state = ops.testing.State(
-        relations=[certificates_integration, spoe_auth_relation, haproxy_route_relation]
+        leader=True,
+        relations=[certificates_integration, spoe_auth_relation, haproxy_route_relation],
     )
     out = ctx.run(
         ctx.on.relation_changed(spoe_auth_relation),
@@ -387,13 +388,14 @@ def test_two_spoe_auth(monkeypatch: pytest.MonkeyPatch, certificates_integration
 
     ctx = ops.testing.Context(HAProxyCharm)
     state = ops.testing.State(
+        leader=True,
         relations=[
             certificates_integration,
             spoe_auth_relation_1,
             spoe_auth_relation_2,
             haproxy_route_relation_1,
             haproxy_route_relation_2,
-        ]
+        ],
     )
     out = ctx.run(
         ctx.on.relation_changed(spoe_auth_relation_1),
@@ -441,7 +443,8 @@ def test_spoe_auth_invalid_data(monkeypatch: pytest.MonkeyPatch, certificates_in
 
     ctx = ops.testing.Context(HAProxyCharm)
     state = ops.testing.State(
-        relations=[certificates_integration, spoe_auth_relation, haproxy_route_relation]
+        leader=True,
+        relations=[certificates_integration, spoe_auth_relation, haproxy_route_relation],
     )
     out = ctx.run(
         ctx.on.relation_changed(spoe_auth_relation),

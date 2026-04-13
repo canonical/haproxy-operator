@@ -29,6 +29,7 @@ def test_hsts_disabled(monkeypatch: pytest.MonkeyPatch, certificates_integration
 
     ctx = ops.testing.Context(HAProxyCharm)
     state = ops.testing.State(
+        leader=True,
         relations=[certificates_integration, haproxy_route_relation],
     )
     out = ctx.run(
@@ -56,6 +57,7 @@ def test_hsts_enabled(monkeypatch: pytest.MonkeyPatch, certificates_integration)
 
     ctx = ops.testing.Context(HAProxyCharm)
     state = ops.testing.State(
+        leader=True,
         relations=[certificates_integration, haproxy_route_relation],
         config={"enable-hsts": True},
     )
@@ -88,6 +90,7 @@ def test_hsts_disabled_allow_http(monkeypatch: pytest.MonkeyPatch, certificates_
 
     ctx = ops.testing.Context(HAProxyCharm)
     state = ops.testing.State(
+        leader=True,
         relations=[certificates_integration, haproxy_route_relation],
         config={"enable-hsts": True},
     )
