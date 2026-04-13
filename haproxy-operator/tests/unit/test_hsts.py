@@ -114,7 +114,9 @@ def test_hsts_disabled_allow_http(monkeypatch: pytest.MonkeyPatch, certificates_
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
-def test_redirect_uses_named_acl(monkeypatch: pytest.MonkeyPatch, certificates_integration):
+def test_redirect_without_allow_http_uses_named_acl(
+    monkeypatch: pytest.MonkeyPatch, certificates_integration
+):
     """
     arrange: Prepare a haproxy with haproxy_route without allow_http.
     act: trigger relation changed.
