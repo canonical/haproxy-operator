@@ -28,7 +28,7 @@ from charms.haproxy_route_policy.v0.haproxy_route_policy import (
     HaproxyRoutePolicyProviderAppData,
     HaproxyRoutePolicyRequirer,
 )
-from pydantic import Field, IPvAnyAddress, model_validator
+from pydantic import Field, IPvAnyAddress, ValidationError, model_validator
 from pydantic.dataclasses import dataclass
 from typing_extensions import Self
 
@@ -311,15 +311,24 @@ class HaproxyRouteRequirersInformation:
         """
         backend_requests: list[HaproxyRoutePolicyBackendRequest] = []
         for backend in self.backends:
-            backend_requests.append(
-                HaproxyRoutePolicyBackendRequest(
-                    relation_id=backend.relation_id,
-                    backend_name=backend.backend_name,
-                    hostname_acls=list(backend.hostname_acls),
-                    paths=backend.application_data.paths,
-                    port=80 if backend.application_data.allow_http else 443,
+            try:
+                port = backend.application_data.external_grpc_port or (
+                    80 if backend.application_data.allow_http else 443
                 )
-            )
+                backend_requests.append(
+                    HaproxyRoutePolicyBackendRequest(
+                        relation_id=backend.relation_id,
+                        backend_name=backend.backend_name,
+                        hostname_acls=list(backend.hostname_acls),
+                        paths=backend.application_data.paths,
+                        port=port,
+                    )
+                )
+            except ValidationError as exc:
+                logger.error(
+                    "Validation error for backend %s, skipping: %s", backend.backend_name, exc
+                )
+                continue
         return backend_requests
 
     @classmethod

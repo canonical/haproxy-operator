@@ -408,6 +408,9 @@ class HAProxyCharm(ops.CharmBase):
             ),
         )
         if self.unit.is_leader():
+            self.haproxy_route_policy.provide_haproxy_route_policy_requests(
+                haproxy_route_requirers_information.backend_requests_for_policy
+            )
             self._publish_haproxy_route_proxied_endpoints(haproxy_route_requirers_information)
             self._publish_haproxy_route_tcp_proxied_endpoints(
                 haproxy_route_requirers_information, ha_information
@@ -437,6 +440,7 @@ class HAProxyCharm(ops.CharmBase):
                     HaproxyRouteRequirersInformation.from_provider(
                         haproxy_route=self.haproxy_route_provider,
                         haproxy_route_tcp=self.haproxy_route_tcp_provider,
+                        haproxy_route_policy=self.haproxy_route_policy,
                         external_hostname=external_hostname,
                         peers=self._get_peer_units_address(),
                         ca_certs_configured=bool(self.recv_ca_certs.get_all_certificates()),
@@ -627,6 +631,7 @@ class HAProxyCharm(ops.CharmBase):
         haproxy_route_requirers_information = HaproxyRouteRequirersInformation.from_provider(
             haproxy_route=self.haproxy_route_provider,
             haproxy_route_tcp=self.haproxy_route_tcp_provider,
+            haproxy_route_policy=self.haproxy_route_policy,
             external_hostname=typing.cast("str | None", self.config.get("external-hostname")),
             peers=self._get_peer_units_address(),
             ca_certs_configured=bool(self.recv_ca_certs.get_all_certificates()),
