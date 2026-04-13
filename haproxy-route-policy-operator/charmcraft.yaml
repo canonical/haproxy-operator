@@ -66,9 +66,8 @@ peers:
 
 config:
   options:
-    allowed-hosts:
+    extra-allowed-hosts:
       type: string
       description: A comma-separated list of host/domain names that the dns-policy-app API
         can serve. This configuration will set the DJANGO_ALLOWED_HOSTS environment
         variable with its content being a JSON encoded list.
-      default: "0.0.0.0"

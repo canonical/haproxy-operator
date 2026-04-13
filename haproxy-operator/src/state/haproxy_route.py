@@ -258,7 +258,19 @@ class HAProxyRouteBackend:
         """
         if self.application_data.protocol != "https":
             return ""
-        return f"{LEADING_SPACE}ssl ca-file {HAPROXY_CAS_FILE!s} alpn h2,http/1.1 check-alpn h2,http/1.1"
+        return f"{LEADING_SPACE}ssl ca-file {HAPROXY_CAS_FILE} alpn h2,http/1.1 check-alpn h2,http/1.1"
+
+    @property
+    def grpc_backend_server_configuration(self) -> str:
+        """Build the backend server configuration for gRPC protocol.
+
+        Returns:
+            str: The backend server configuration for gRPC protocol,
+            or an empty string if external_grpc_port is not set.
+        """
+        if not self.application_data.external_grpc_port:
+            return ""
+        return f"{LEADING_SPACE}ssl ca-file {HAPROXY_CAS_FILE} alpn h2 check-alpn h2"
 
     @property
     def enable_http_check(self) -> bool:
