@@ -23,6 +23,11 @@ from charms.haproxy.v2.haproxy_route import (
     RequirerApplicationData,
     ServerHealthCheck,
 )
+from charms.haproxy_route_policy.v0.haproxy_route_policy import (
+    HaproxyRoutePolicyBackendRequest,
+    HaproxyRoutePolicyProviderAppData,
+    HaproxyRoutePolicyRequirer,
+)
 from pydantic import Field, IPvAnyAddress, model_validator
 from pydantic.dataclasses import dataclass
 from typing_extensions import Self
@@ -294,6 +299,28 @@ class HaproxyRouteRequirersInformation:
     relation_ids_with_invalid_data_tcp: set[int]
     ports_with_conflicts: set[int]
     tcp_frontends: list[HAProxyRouteTcpFrontend] = Field(strict=False)
+    # This is used to transform haproxy-route requirers to backend requests for the policy charm.
+    valid_haproxy_route_requirers: list[HaproxyRouteRequirerData]
+
+    @property
+    def backend_requests_for_policy(self) -> list[HaproxyRoutePolicyBackendRequest]:
+        """Transform the requirer data into backend requests for the policy charm.
+
+        Returns:
+            list[HaproxyRoutePolicyBackendRequest]: The backend requests for the policy charm.
+        """
+        backend_requests: list[HaproxyRoutePolicyBackendRequest] = []
+        for backend in self.backends:
+            backend_requests.append(
+                HaproxyRoutePolicyBackendRequest(
+                    relation_id=backend.relation_id,
+                    backend_name=backend.backend_name,
+                    hostname_acls=list(backend.hostname_acls),
+                    paths=backend.application_data.paths,
+                    port=80 if backend.application_data.allow_http else 443,
+                )
+            )
+        return backend_requests
 
     @classmethod
     def from_provider(  # pylint: disable=too-many-arguments
@@ -301,6 +328,7 @@ class HaproxyRouteRequirersInformation:
         *,
         haproxy_route: HaproxyRouteProvider,
         haproxy_route_tcp: HaproxyRouteTcpProvider,
+        haproxy_route_policy: HaproxyRoutePolicyRequirer,
         external_hostname: Optional[str],
         peers: list[str],
         ca_certs_configured: bool,
@@ -310,6 +338,7 @@ class HaproxyRouteRequirersInformation:
         Args:
             haproxy_route: The haproxy-route provider class.
             haproxy_route_tcp: The haproxy-route-tcp provider class.
+            haproxy_route_policy: The haproxy-route-policy requirer class.
             external_hostname: The charm's configured hostname.
             peers: List of IP address of haproxy peer units.
             ca_certs_configured: If ca certificates are configured for haproxy backends.
@@ -322,15 +351,35 @@ class HaproxyRouteRequirersInformation:
                 for the haproxy-route interface.
         """
         try:
+            # Fetch approved requests from the policy charm and cross-reference with requirers data from haproxy-route
+            approved_requirers = []
+            requirers = haproxy_route.get_data(haproxy_route.relations)
+            if relation := haproxy_route_policy.relation:
+                approved_requests = relation.load(
+                    HaproxyRoutePolicyProviderAppData, relation.app
+                ).approved_requests
+                approved_backend_names = {request.backend_name for request in approved_requests}
+                approved_requirers = [
+                    requirer
+                    for requirer in requirers.requirers_data
+                    if requirer.application_data.service in approved_backend_names
+                ]
+
             # This is used to check that requirers don't ask for the same backend name.
             backend_names: set[str] = set()
             # Control stick tables for rate_limiting and
             # eventually any shared values between haproxy units.
             stick_table_entries: list[str] = []
-            requirers = haproxy_route.get_data(haproxy_route.relations)
             backends: list[HAProxyRouteBackend] = []
             relation_ids_with_invalid_data = requirers.relation_ids_with_invalid_data
-            for requirer in requirers.requirers_data:
+
+            # If there is a policy relation, only process the approved requirers. Otherwise, process all requirers.
+            requirers_to_process = (
+                approved_requirers
+                if haproxy_route_policy.relation is not None
+                else requirers.requirers_data
+            )
+            for requirer in requirers_to_process:
                 # Duplicate backend names check is done in the library's `get_data` method
                 backend_names.add(requirer.application_data.service)
 
@@ -383,6 +432,7 @@ class HaproxyRouteRequirersInformation:
                 relation_ids_with_invalid_data_tcp=relation_ids_with_invalid_data_tcp,
                 tcp_frontends=tcp_frontends,
                 ports_with_conflicts=set[int](),
+                valid_haproxy_route_requirers=requirers.requirers_data,
             )
         except DataValidationError as exc:
             # This exception is only raised if the provider has "raise_on_validation_error" set

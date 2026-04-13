@@ -25,6 +25,7 @@ from charms.haproxy.v0.ddos_protection import (
 from charms.haproxy.v0.spoe_auth import SpoeAuthRequirer
 from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpProvider
 from charms.haproxy.v2.haproxy_route import HaproxyRouteProvider
+from charms.haproxy_route_policy.v0.haproxy_route_policy import HaproxyRoutePolicyRequirer
 from charms.tls_certificates_interface.v4.tls_certificates import (
     CertificateAvailableEvent,
     CertificateRequestAttributes,
@@ -78,6 +79,7 @@ WEBSITE_RELATION = "website"
 RECV_CA_CERTS_RELATION = "receive-ca-certs"
 SPOE_AUTH_RELATION = "spoe-auth"
 HAPROXY_ROUTE_TCP_RELATION = "haproxy-route-tcp"
+HAPROXY_ROUTE_POLICY_RELATION_NAME = "haproxy-route-policy"
 
 
 class HaproxyUnitAddressNotAvailableError(CharmStateValidationBaseError):
@@ -124,7 +126,9 @@ class HAProxyCharm(ops.CharmBase):
         self.haproxy_route_tcp_provider = HaproxyRouteTcpProvider(self)
         self.spoe_auth_requirer = SpoeAuthRequirer(self, SPOE_AUTH_RELATION)
         self.ddos_requirer = DDoSProtectionRequirer(self)
-
+        self.haproxy_route_policy = HaproxyRoutePolicyRequirer(
+            self, HAPROXY_ROUTE_POLICY_RELATION_NAME
+        )
         self.recv_ca_certs = CertificateTransferRequires(self, RECV_CA_CERTS_RELATION)
         self.certificates = TLSCertificatesRequiresV4(
             charm=self,
@@ -359,6 +363,7 @@ class HAProxyCharm(ops.CharmBase):
         haproxy_route_requirers_information = HaproxyRouteRequirersInformation.from_provider(
             haproxy_route=self.haproxy_route_provider,
             haproxy_route_tcp=self.haproxy_route_tcp_provider,
+            haproxy_route_policy=self.haproxy_route_policy,
             external_hostname=typing.cast(
                 typing.Optional[str], self.model.config.get("external-hostname")
             ),
