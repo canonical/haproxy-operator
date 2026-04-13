@@ -30,4 +30,5 @@ def test_charm_becomes_active_after_relation_with_postgresql(
 
     result = juju.run(f"{application}/0", "get-admin-credentials")
     assert result.results["username"] == "admin"
-    assert len(result.results["password"]) == 16
+    # secrets.token_urlsafe(32) generates a string of length 43.
+    assert len(result.results["password"]) == 43
