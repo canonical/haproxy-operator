@@ -43,7 +43,7 @@ def test_install_without_relation_sets_waiting_status():
     assert: snap install is invoked and unit waits for database relation data.
     """
     ctx = testing.Context(HaproxyRoutePolicyCharm)
-    state = testing.State()
+    state = testing.State(relations=[_peer_relation()])
 
     with (
         patch("charm.install_snap") as install_snap_mock,

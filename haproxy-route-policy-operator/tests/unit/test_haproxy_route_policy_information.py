@@ -99,10 +99,10 @@ def test_haproxy_route_policy_information_init_rejects_none_string_fields(
 @pytest.mark.parametrize(
     "allowed_hosts, expected",
     [
-        pytest.param([], {"allowed-hosts": "[]"}, id="empty"),
+        pytest.param([], {"allowed-hosts": '["localhost"]'}, id="empty"),
         pytest.param(
             ["example.com", "api.example.com"],
-            {"allowed-hosts": '["example.com", "api.example.com"]'},
+            {"allowed-hosts": '["localhost", "example.com", "api.example.com"]'},
             id="multiple-fqdn",
         ),
     ],

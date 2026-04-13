@@ -93,6 +93,11 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
 
     def _reconcile(self, _: ops.EventBase) -> None:
         """Reconcile snap configuration and service state."""
+        peer_relation = self.model.get_relation(PEER_RELATION_NAME)
+        if not peer_relation:
+            self.unit.status = ops.WaitingStatus("Waiting for peer relation.")
+            return
+
         try:
             install_snap()
             self.unit.status = ops.MaintenanceStatus("configuring haproxy-route-policy")
