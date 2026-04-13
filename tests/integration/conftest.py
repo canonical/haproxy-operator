@@ -415,3 +415,26 @@ def browser_context_manager():
         [driver_executable, driver_cli, "install", "chromium"], env=get_driver_env()
     )
     logger.info("install chromium %s", completed_process)
+
+
+@pytest.fixture(scope="module", name="haproxy_route_policy")
+def haproxy_route_policy_fixture(
+    pytestconfig: pytest.Config, lxd_juju: jubilant.Juju, app_name, host_name
+) -> str:
+    """Deploy the haproxy-route-policy charm."""
+    charm_name = "haproxy-route-policy"
+    if pytestconfig.getoption("--no-deploy") and app_name in lxd_juju.status().apps:
+        return app_name
+
+    charm_file = next(
+        (f for f in pytestconfig.getoption("--charm-file") if f"{charm_name}_" in f),
+        None,
+    )
+    assert charm_file, f"--charm-file with  {charm_name} charm should be set"
+
+    lxd_juju.deploy(
+        charm=charm_file,
+        app=app_name,
+        config={"hostname": host_name},
+    )
+    return app_name
