@@ -22,7 +22,7 @@ jobs:
     uses: canonical/operator-workflows/.github/workflows/test.yaml@parametrize-runs-on-for-unit-tests
     secrets: inherit
     with:
-      runs-on-base: ubuntu@24.04
+      runs-on-base: ubuntu-24.04
       python-version: "3.12"
       self-hosted-runner: false
       working-directory: ${{ matrix.charm.working-directory }}
