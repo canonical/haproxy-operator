@@ -87,26 +87,14 @@ def create_or_update_user(username: str, password: str) -> None:
         raise RuntimeError(f"failed to create/update Django user: {e.stdout}") from e
 
 
-@dataclass(frozen=True)
-class EvaluatedBackendRequest:
+@dataclass
+class EvaluatedBackendRequest(HaproxyRoutePolicyBackendRequest):
     """A backend request returned by the policy service with its evaluation status.
 
     Attributes:
-        id: UUID of the request assigned by the policy service.
-        relation_id: Juju relation ID the request originated from.
-        backend_name: HAProxy backend name.
-        hostname_acls: Hostnames requested for routing.
-        paths: URL paths requested for routing.
-        port: Frontend port for HAProxy.
         status: Evaluation status (pending, accepted, rejected).
     """
 
-    id: str
-    relation_id: int
-    backend_name: str
-    hostname_acls: list[str]
-    paths: list[str]
-    port: int
     status: str
 
 
@@ -146,10 +134,6 @@ class HaproxyRoutePolicyClient:
         """
         self._endpoint = endpoint.rstrip("/")
         self._auth = (username, password)
-
-    # ------------------------------------------------------------------
-    # Backend requests
-    # ------------------------------------------------------------------
 
     def refresh(
         self,
@@ -206,40 +190,6 @@ class HaproxyRoutePolicyClient:
         )
         self._raise_for_error(response)
         return [EvaluatedBackendRequest(**item) for item in response.json()]
-
-    def get_request(self, request_id: str) -> EvaluatedBackendRequest:
-        """Get a single backend request by ID.
-
-        Args:
-            request_id: UUID of the request.
-
-        Returns:
-            The evaluated backend request.
-        """
-        response = http_requests.get(
-            f"{self._endpoint}/api/v1/requests/{request_id}",
-            auth=self._auth,
-            timeout=10,
-        )
-        self._raise_for_error(response)
-        return EvaluatedBackendRequest(**response.json())
-
-    def delete_request(self, request_id: str) -> None:
-        """Delete a backend request.
-
-        Args:
-            request_id: UUID of the request to delete.
-        """
-        response = http_requests.delete(
-            f"{self._endpoint}/api/v1/requests/{request_id}",
-            auth=self._auth,
-            timeout=10,
-        )
-        self._raise_for_error(response)
-
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
 
     def _raise_for_error(self, response: http_requests.Response) -> None:
         """Raise :class:`HaproxyRoutePolicyAPIError` on non-2xx responses.
