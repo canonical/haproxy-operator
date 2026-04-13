@@ -20,6 +20,6 @@ backend {{ backend.backend_name }}
     http-request {{ rewrite_configuration }}
     {% endfor %}
     {% for server in backend.servers %}
-    server {{ server.server_name }} {{ server.address }}:{{ server.port }} ssl ca-file {{ haproxy_cas_file }} alpn h2
+    server {{ server.server_name }} {{ server.address }}:{{ server.port }}{{ backend.grpc_backend_server_configuration }}
     {% endfor %}
 {% endfor %}
