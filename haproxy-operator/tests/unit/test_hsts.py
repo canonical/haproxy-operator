@@ -120,7 +120,7 @@ def test_redirect_without_allow_http_uses_named_acl(
     """
     arrange: Prepare a haproxy with haproxy_route without allow_http.
     act: trigger relation changed.
-    assert: haproxy.conf uses the do_not_redirect named ACL for the redirect rule.
+    assert: haproxy.conf uses inline ssl_fc for the redirect rule without is_allow_http ACL.
     """
     render_file_mock = MagicMock()
     monkeypatch.setattr("haproxy.render_file", render_file_mock)
@@ -136,8 +136,8 @@ def test_redirect_without_allow_http_uses_named_acl(
     )
     assert render_file_mock.call_count == 1
     haproxy_conf_contents = render_file_mock.call_args.args[1]
-    assert "acl do_not_redirect ssl_fc" in haproxy_conf_contents
-    assert "http-request redirect scheme https unless do_not_redirect" in haproxy_conf_contents
+    assert "acl is_allow_http" not in haproxy_conf_contents
+    assert "http-request redirect scheme https unless { ssl_fc }" in haproxy_conf_contents
     assert out.unit_status.name == ops.testing.ActiveStatus.name
 
 
@@ -148,7 +148,7 @@ def test_redirect_allow_http_uses_named_acl(
     """
     arrange: Prepare a haproxy with haproxy_route with allow_http enabled.
     act: trigger relation changed.
-    assert: haproxy.conf uses do_not_redirect named ACL with the allow_http condition.
+    assert: haproxy.conf uses is_allow_http named ACL for both redirect and HSTS rules.
     """
     render_file_mock = MagicMock()
     monkeypatch.setattr("haproxy.render_file", render_file_mock)
@@ -165,10 +165,12 @@ def test_redirect_allow_http_uses_named_acl(
     )
     assert render_file_mock.call_count == 1
     haproxy_conf_contents = render_file_mock.call_args.args[1]
-    assert "acl do_not_redirect ssl_fc" in haproxy_conf_contents
     assert (
-        "acl do_not_redirect { req.hdr(host),field(1,:) -i haproxy.internal }"
+        "acl is_allow_http { req.hdr(host),field(1,:) -i haproxy.internal }"
         in haproxy_conf_contents
     )
-    assert "http-request redirect scheme https unless do_not_redirect" in haproxy_conf_contents
+    assert (
+        "http-request redirect scheme https unless { ssl_fc } || is_allow_http"
+        in haproxy_conf_contents
+    )
     assert out.unit_status.name == ops.testing.ActiveStatus.name

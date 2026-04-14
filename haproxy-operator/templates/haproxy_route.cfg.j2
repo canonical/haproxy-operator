@@ -9,17 +9,13 @@ frontend haproxy
 {{ ddos_protection_rules() }}
 
     # Redirect HTTP to HTTPS
-    acl do_not_redirect ssl_fc
-{% for acl in acls_for_allow_http %}
-    acl do_not_redirect {{ acl }}
-{% endfor %}
-    http-request redirect scheme https unless do_not_redirect
-
-{% if enable_hsts %}
-    # Add HSTS header for HTTPS connections (only when HTTP is not allowed)
 {% for acl in acls_for_allow_http %}
     acl is_allow_http {{ acl }}
 {% endfor %}
+    http-request redirect scheme https unless { ssl_fc } {% if acls_for_allow_http %}|| is_allow_http{% endif %}
+
+{% if enable_hsts %}
+    # Add HSTS header for HTTPS connections (only when HTTP is not allowed)
     http-response set-header Strict-Transport-Security "max-age=2592000" if { ssl_fc } {% if acls_for_allow_http %}!is_allow_http{% endif %}
 
 {% endif %}
