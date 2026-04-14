@@ -16,7 +16,6 @@ from subprocess import CalledProcessError, run  # nosec
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from pydantic import IPvAnyAddress
 
 from state.charm_state import CharmState
 from state.ddos_protection import DDosProtection
@@ -26,7 +25,6 @@ from state.ingress_per_unit import IngressPerUnitRequirersInformation
 from state.spoe_auth import SpoeAuthInformation
 
 APT_PACKAGE_NAME = "haproxy"
-HAPROXY_PEER_PORT = 10000
 HAPROXY_CONFIG_DIR = Path("/etc/haproxy")
 HAPROXY_CONFIG = Path(HAPROXY_CONFIG_DIR / "haproxy.cfg")
 SPOE_AUTH_CONFIG = Path(HAPROXY_CONFIG_DIR / "spoe_auth.conf")
@@ -143,8 +141,8 @@ class HAProxyService:
             "config_external_hostname": external_hostname,
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
             "ddos_protection_config": ddos_protection_config,
-            "peer_units_address": _format_peer_entries(ingress_requirers_information.peers),
-            "peer_tcp_port": HAPROXY_PEER_PORT,
+            "peer_units_address": ingress_requirers_information.formatted_peer_entries,
+            "peer_tcp_port": ingress_requirers_information.peer_tcp_port,
             "ip_allow_list_file": IP_ALLOW_LIST_FILE,
             "deny_paths_file": DENY_PATHS_FILE,
         }
@@ -194,8 +192,8 @@ class HAProxyService:
                 if backend.application_data.external_grpc_port
             ],
             "stick_table_entries": haproxy_route_requirers_information.stick_table_entries,
-            "peer_units_address": _format_peer_entries(haproxy_route_requirers_information.peers),
-            "peer_tcp_port": HAPROXY_PEER_PORT,
+            "peer_units_address": haproxy_route_requirers_information.formatted_peer_entries,
+            "peer_tcp_port": haproxy_route_requirers_information.peer_tcp_port,
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
             "acls_for_allow_http": haproxy_route_requirers_information.acls_for_allow_http,
             "spoe_auth_info_list": spoe_oauth_info_list,
@@ -285,26 +283,6 @@ class HAProxyService:
         except subprocess.CalledProcessError as exc:
             logger.error("Failed validating the HAProxy config")
             raise HaproxyValidateConfigError("Failed validating the HAProxy config.") from exc
-
-
-def _format_peer_entries(peers: list[IPvAnyAddress]) -> list[str]:
-    """Format peer IP addresses into HAProxy peer entry strings.
-
-    Each entry is formatted as ``<name> <address>:<port>`` where ``<name>``
-    is derived from the IP address with non-alphanumeric characters replaced
-    by hyphens.
-
-    Args:
-        peers: List of peer IP addresses.
-
-    Returns:
-        list[str]: Formatted peer entry strings.
-    """
-    entries: list[str] = []
-    for addr in peers:
-        name = str(addr).replace(".", "-").replace(":", "-")
-        entries.append(f"{name} {addr}:{HAPROXY_PEER_PORT}")
-    return entries
 
 
 def render_file(path: Path, content: str, mode: int) -> None:
