@@ -3,8 +3,6 @@
 
 """Helpers for managing the haproxy-route-policy snap."""
 
-from __future__ import annotations
-
 import logging
 import os
 import subprocess  # nosec
@@ -15,6 +13,7 @@ from charmlibs import snap
 from charms.haproxy_route_policy.v0.haproxy_route_policy import (
     HaproxyRoutePolicyBackendRequest,
 )
+from pydantic import Field
 from pydantic.dataclasses import dataclass
 
 SNAP_NAME = "haproxy-route-policy"
@@ -95,7 +94,7 @@ class EvaluatedBackendRequest(HaproxyRoutePolicyBackendRequest):
         status: Evaluation status (pending, accepted, rejected).
     """
 
-    status: str
+    status: str = Field(description="Evaluation status (pending, accepted, rejected)")
 
 
 class HaproxyRoutePolicyAPIError(Exception):
