@@ -106,13 +106,16 @@ class TLSInformation:
             charm: The haproxy charm.
 
         Returns:
-            TLSInformation if available, None otherwise.
+            TLSInformation if available, None if the peer relation does not exist
+            or the certificate data has not yet been shared by the leader.
         """
         peer_relation = charm.model.get_relation(HAPROXY_PEER_INTEGRATION)
         if not peer_relation:
+            logger.info("Peer relation not available, cannot read TLS data.")
             return None
         raw = peer_relation.data[charm.app].get(PEER_TLS_KEY)
         if not raw:
+            logger.info("No TLS certificate data in peer relation yet.")
             return None
         data = json.loads(raw)
         hostnames = data["hostnames"]
