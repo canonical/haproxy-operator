@@ -18,14 +18,13 @@ from charms.tls_certificates_interface.v4.tls_certificates import (
     ProviderCertificate,
     TLSCertificatesRequiresV4,
 )
-from ops.model import Application, Model, Relation
+from ops.model import Model, Relation
 
 from haproxy import file_exists, read_file, render_file
 from state.haproxy_route import HAPROXY_CAS_DIR, HAPROXY_CAS_FILE
-from state.tls import TLSInformation
+from state.tls import PEER_TLS_KEY, TLSInformation
 
 TLS_CERT = "certificates"
-PEER_TLS_KEY = "tls_certificate_data"
 HAPROXY_CERTS_DIR = Path("/var/lib/haproxy/certs")
 
 logger = logging.getLogger()
@@ -118,37 +117,6 @@ class TLSRelationService:
         }
         peer_relation.data[self.application][PEER_TLS_KEY] = json.dumps(data)
         logger.info("Shared TLS certificate data via peer relation.")
-
-    @staticmethod
-    def get_tls_information_from_peer_relation(
-        peer_relation: Relation,
-        app: Application,
-    ) -> typing.Optional[TLSInformation]:
-        """Read TLS certificate data from the peer relation app databag.
-
-        Args:
-            peer_relation: The haproxy-peers relation.
-            app: The application object to read from the relation databag.
-
-        Returns:
-            TLSInformation if available, None otherwise.
-        """
-        raw = peer_relation.data[app].get(PEER_TLS_KEY)
-        if not raw:
-            return None
-        data = json.loads(raw)
-        hostnames = data["hostnames"]
-        private_key = data["private_key"]
-        tls_cert_and_ca_chain: dict[str, tuple[Certificate, list[Certificate]]] = {}
-        for hostname, cert_data in data["certificates"].items():
-            certificate = Certificate.from_string(cert_data["certificate"])
-            chain = [Certificate.from_string(c) for c in cert_data["chain"]]
-            tls_cert_and_ca_chain[hostname] = (certificate, chain)
-        return TLSInformation(
-            hostnames=hostnames,
-            tls_cert_and_ca_chain=tls_cert_and_ca_chain,
-            private_key=private_key,
-        )
 
     def update_trusted_cas(self) -> None:
         """Handle the change in the set of CAs to trust."""

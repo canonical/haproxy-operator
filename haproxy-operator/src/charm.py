@@ -295,32 +295,13 @@ class HAProxyCharm(ops.CharmBase):
                 self._configure_haproxy_route(charm_state, ha_information)
             case _:
                 if self.model.get_relation(TLS_CERT_RELATION):
-                    tls_information = self._get_tls_information()
+                    tls_information = TLSInformation.from_charm(self, self.certificates)
                     if tls_information:
                         self._reconcile_certificates(tls_information)
 
                 self.unit.set_ports(80)
                 self.haproxy_service.reconcile_default(charm_state)
         self.unit.status = ops.ActiveStatus()
-
-    def _get_tls_information(
-        self, allow_no_certificates: bool = False
-    ) -> typing.Optional[TLSInformation]:
-        """Get TLS information from the TLS library (leader) or peer relation (non-leader).
-
-        Args:
-            allow_no_certificates: If the charm can proceed without requesting any certificates.
-
-        Returns:
-            TLSInformation if available, None otherwise.
-        """
-        if self.unit.is_leader():
-            return TLSInformation.from_charm(self, self.certificates, allow_no_certificates)
-
-        peer_relation = self.model.get_relation(HAPROXY_PEER_INTEGRATION)
-        if not peer_relation:
-            return None
-        return TLSRelationService.get_tls_information_from_peer_relation(peer_relation, self.app)
 
     def _reconcile_certificates(self, tls_information: TLSInformation) -> None:
         """Reconcile certificates: write to disk and share via peer relation if leader.
@@ -340,7 +321,7 @@ class HAProxyCharm(ops.CharmBase):
         requirer_class: type[IngressRequirersInformation | IngressPerUnitRequirersInformation],
     ) -> None:
         """Configure the ingress or ingress-per-unit relation."""
-        tls_information = self._get_tls_information()
+        tls_information = TLSInformation.from_charm(self, self.certificates)
         if not tls_information:
             logger.info("TLS information not available yet, skipping ingress configuration.")
             return
@@ -366,7 +347,7 @@ class HAProxyCharm(ops.CharmBase):
     def _configure_legacy(self, charm_state: CharmState) -> None:
         """Configure the legacy mode."""
         if self.model.get_relation(TLS_CERT_RELATION):
-            tls_information = self._get_tls_information()
+            tls_information = TLSInformation.from_charm(self, self.certificates)
             if tls_information:
                 self._reconcile_certificates(tls_information)
 
@@ -414,7 +395,7 @@ class HAProxyCharm(ops.CharmBase):
                 for frontend in haproxy_route_requirers_information.tcp_frontends
             )
         )
-        tls_information = self._get_tls_information(allow_no_certificates)
+        tls_information = TLSInformation.from_charm(self, self.certificates, allow_no_certificates)
         if not tls_information and not allow_no_certificates:
             logger.info("TLS information not available yet, skipping haproxy-route configuration.")
             return
@@ -531,7 +512,7 @@ class HAProxyCharm(ops.CharmBase):
         """Handle the data-provided event for ingress-per-unit."""
         self._reconcile()
         if self.unit.is_leader():
-            tls_information = self._get_tls_information()
+            tls_information = TLSInformation.from_charm(self, self.certificates)
             if not tls_information:
                 return
             for relation in self._ingress_per_unit_provider.relations:
@@ -559,7 +540,7 @@ class HAProxyCharm(ops.CharmBase):
         """
         self._reconcile()
         if self.unit.is_leader():
-            tls_information = self._get_tls_information()
+            tls_information = TLSInformation.from_charm(self, self.certificates)
             if not tls_information:
                 return
             integration_data = self._ingress_provider.get_data(event.relation)

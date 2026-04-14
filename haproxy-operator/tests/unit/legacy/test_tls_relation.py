@@ -21,11 +21,12 @@ TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 
 
 def test_tls_information_integration_missing(harness: Harness):
-    """arrange: Given a charm with tls integration missing.
+    """arrange: Given a leader charm with tls integration missing.
     act: Initialize TLSInformation state component.
     assert: TLSNotReadyError is raised.
     """
     harness.begin()
+    harness.set_leader(True)
     with pytest.raises(TLSNotReadyError):
         TLSInformation.from_charm(harness.charm, harness.charm.certificates)
 
@@ -175,21 +176,20 @@ def test_share_certificates_via_peer_relation(
     assert data["private_key"] == str(mock_private_key)
 
 
-def test_get_tls_information_from_peer_relation(
+def test_non_leader_from_charm_reads_peer_relation(
     harness: Harness,
     mock_certificate_and_key: typing.Tuple[Certificate, PrivateKey],
 ):
-    """arrange: Given a peer relation with certificate data in app databag.
-    act: Run get_tls_information_from_peer_relation.
-    assert: TLSInformation is correctly deserialized.
+    """arrange: Given a non-leader unit with certificate data in the peer relation app databag.
+    act: Run TLSInformation.from_charm.
+    assert: TLSInformation is correctly deserialized from the peer relation.
     """
     import json
 
-    from tls_relation import PEER_TLS_KEY
+    from state.tls import PEER_TLS_KEY
 
     mock_certificate, mock_private_key = mock_certificate_and_key
-    harness.begin()
-    harness.set_leader(True)
+    harness.set_leader(False)
     hostname = "haproxy.internal"
     peer_data = json.dumps(
         {
@@ -203,16 +203,13 @@ def test_get_tls_information_from_peer_relation(
             "private_key": str(mock_private_key),
         }
     )
-
     peer_relation_id = harness.add_relation("haproxy-peers", "haproxy")
     harness.update_relation_data(
         peer_relation_id, harness.model.app.name, {PEER_TLS_KEY: peer_data}
     )
-    peer_relation = harness.model.get_relation("haproxy-peers", peer_relation_id)
+    harness.begin()
 
-    result = TLSRelationService.get_tls_information_from_peer_relation(
-        peer_relation, harness.model.app
-    )
+    result = TLSInformation.from_charm(harness.charm, harness.charm.certificates)
 
     assert result is not None
     assert result.hostnames == [hostname]
@@ -223,18 +220,16 @@ def test_get_tls_information_from_peer_relation(
     assert result.private_key == str(mock_private_key)
 
 
-def test_get_tls_information_from_peer_relation_empty(
+def test_non_leader_from_charm_returns_none_without_peer_data(
     harness: Harness,
 ):
-    """arrange: Given a peer relation with no certificate data.
-    act: Run get_tls_information_from_peer_relation.
+    """arrange: Given a non-leader unit with no certificate data in the peer relation.
+    act: Run TLSInformation.from_charm.
     assert: None is returned.
     """
+    harness.set_leader(False)
+    harness.add_relation("haproxy-peers", "haproxy")
     harness.begin()
-    peer_relation_id = harness.add_relation("haproxy-peers", "haproxy")
-    peer_relation = harness.model.get_relation("haproxy-peers", peer_relation_id)
 
-    result = TLSRelationService.get_tls_information_from_peer_relation(
-        peer_relation, harness.model.app
-    )
+    result = TLSInformation.from_charm(harness.charm, harness.charm.certificates)
     assert result is None
