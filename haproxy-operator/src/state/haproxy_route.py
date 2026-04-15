@@ -28,7 +28,7 @@ from charms.haproxy_route_policy.v0.haproxy_route_policy import (
     HaproxyRoutePolicyProviderAppData,
     HaproxyRoutePolicyRequirer,
 )
-from pydantic import Field, IPvAnyAddress, ValidationError, model_validator
+from pydantic import IPvAnyAddress, ValidationError, model_validator
 from pydantic.dataclasses import dataclass
 from typing_extensions import Self
 

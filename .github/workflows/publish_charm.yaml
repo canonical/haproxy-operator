@@ -27,6 +27,11 @@ jobs:
               channel: "latest/edge",
               tag-prefix: "haproxy-ddos-protection-configurator",
             },
+            {
+              working-directory: "./haproxy-route-policy-operator",
+              channel: "latest/edge",
+              tag-prefix: "haproxy-route-policy",
+            },
           ]
     uses: canonical/operator-workflows/.github/workflows/publish_charm.yaml@main
     secrets: inherit
