@@ -150,14 +150,13 @@ class RequestRefreshView(APIView):
         processed_requests = []
         with transaction.atomic():
             for backend_request in queryset:
-                serializer = BackendRequestSerializer(backend_request)
-                if serializer.is_valid():
-                    serializer.save(
-                        status=evaluate_request(
-                            BackendRequest(**serializer.validated_data)
-                        )
-                    )
-                    processed_requests.append(serializer.data)
+                new_status = evaluate_request(backend_request)
+                if backend_request.status != new_status:
+                    backend_request.status = new_status
+                    backend_request.save()
+                processed_requests.append(
+                    BackendRequestSerializer(backend_request).data
+                )
         return Response(processed_requests)
 
 
