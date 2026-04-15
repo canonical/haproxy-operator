@@ -3,7 +3,9 @@
 
 """haproxy-operator charm tls information."""
 
+import json
 import logging
+import typing
 from dataclasses import dataclass
 
 import ops
@@ -12,6 +14,10 @@ from charms.tls_certificates_interface.v4.tls_certificates import (
     Certificate,
     TLSCertificatesRequiresV4,
 )
+
+from .ha import HAPROXY_PEER_INTEGRATION
+
+PEER_TLS_KEY = "tls_certificate_data"
 
 logger = logging.getLogger()
 
@@ -47,8 +53,11 @@ class TLSInformation:
         charm: ops.CharmBase,
         certificates: TLSCertificatesRequiresV4,
         allow_no_certificates: bool = False,
-    ) -> "TLSInformation":
+    ) -> typing.Optional["TLSInformation"]:
         """Get TLS information from a charm instance.
+
+        On leader units, reads certificates from the TLS library.
+        On non-leader units, reads certificates shared via the peer relation.
 
         Args:
             charm: The haproxy charm.
@@ -59,8 +68,11 @@ class TLSInformation:
             PrivateKeyNotGeneratedError: When waiting for the private key to be generated.
 
         Returns:
-            TLSInformation: Information about configured TLS certs.
+            TLSInformation if available, None if non-leader and peer data not yet available.
         """
+        if not charm.unit.is_leader():
+            return cls._from_peer_relation(charm)
+
         cls.validate(charm, certificates, allow_no_certificates)
 
         hostnames = [
@@ -84,6 +96,39 @@ class TLSInformation:
             hostnames=hostnames,
             tls_cert_and_ca_chain=tls_cert_and_ca_chain,
             private_key=str(private_key),
+        )
+
+    @classmethod
+    def _from_peer_relation(cls, charm: ops.CharmBase) -> typing.Optional["TLSInformation"]:
+        """Read TLS certificate data from the peer relation app databag.
+
+        Args:
+            charm: The haproxy charm.
+
+        Returns:
+            TLSInformation if available, None if the peer relation does not exist
+            or the certificate data has not yet been shared by the leader.
+        """
+        peer_relation = charm.model.get_relation(HAPROXY_PEER_INTEGRATION)
+        if not peer_relation:
+            logger.info("Peer relation not available, cannot read TLS data.")
+            return None
+        raw = peer_relation.data[charm.app].get(PEER_TLS_KEY)
+        if not raw:
+            logger.info("No TLS certificate data in peer relation yet.")
+            return None
+        data = json.loads(raw)
+        hostnames = data["hostnames"]
+        private_key = data["private_key"]
+        tls_cert_and_ca_chain: dict[str, tuple[Certificate, list[Certificate]]] = {}
+        for hostname, cert_data in data["certificates"].items():
+            certificate = Certificate.from_string(cert_data["certificate"])
+            chain = [Certificate.from_string(c) for c in cert_data["chain"]]
+            tls_cert_and_ca_chain[hostname] = (certificate, chain)
+        return cls(
+            hostnames=hostnames,
+            tls_cert_and_ca_chain=tls_cert_and_ca_chain,
+            private_key=private_key,
         )
 
     # Validation is done in this method instead of using a pydantic model because

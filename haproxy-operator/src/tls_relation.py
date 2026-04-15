@@ -4,6 +4,7 @@
 # mypy guesses the relations might be None about all of them.
 """Haproxy TLS relation business logic."""
 
+import json
 import logging
 import typing
 from pathlib import Path
@@ -17,11 +18,11 @@ from charms.tls_certificates_interface.v4.tls_certificates import (
     ProviderCertificate,
     TLSCertificatesRequiresV4,
 )
-from ops.model import Model
+from ops.model import Model, Relation
 
 from haproxy import file_exists, read_file, render_file
 from state.haproxy_route import HAPROXY_CAS_DIR, HAPROXY_CAS_FILE
-from state.tls import TLSInformation
+from state.tls import PEER_TLS_KEY, TLSInformation
 
 TLS_CERT = "certificates"
 HAPROXY_CERTS_DIR = Path("/var/lib/haproxy/certs")
@@ -80,9 +81,6 @@ class TLSRelationService:
         Args:
             tls_information: TLSInformation charm state component.
         """
-        if len(self.certificates.certificate_requests) == 0:
-            logger.warning("No certificate was requested")
-            return
         for certificate, chain in tls_information.tls_cert_and_ca_chain.values():
             if not self._certificate_matches_stored_content(
                 certificate=certificate,
@@ -94,6 +92,31 @@ class TLSRelationService:
                     chain=chain,
                     private_key=tls_information.private_key,
                 )
+
+    def share_certificates_via_peer_relation(
+        self,
+        peer_relation: Relation,
+        tls_information: TLSInformation,
+    ) -> None:
+        """Share TLS certificate data with peer units via the peer relation app databag.
+
+        Args:
+            peer_relation: The haproxy-peers relation.
+            tls_information: TLSInformation charm state component.
+        """
+        certificates_data: dict[str, dict[str, typing.Any]] = {}
+        for hostname, (certificate, chain) in tls_information.tls_cert_and_ca_chain.items():
+            certificates_data[hostname] = {
+                "certificate": str(certificate),
+                "chain": [str(cert) for cert in chain],
+            }
+        data = {
+            "hostnames": tls_information.hostnames,
+            "certificates": certificates_data,
+            "private_key": str(tls_information.private_key),
+        }
+        peer_relation.data[self.application][PEER_TLS_KEY] = json.dumps(data)
+        logger.info("Shared TLS certificate data via peer relation.")
 
     def update_trusted_cas(self) -> None:
         """Handle the change in the set of CAs to trust."""

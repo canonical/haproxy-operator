@@ -26,6 +26,7 @@ def test_ddos_protection_enabled(monkeypatch: pytest.MonkeyPatch, certificates_i
 
     ctx = ops.testing.Context(HAProxyCharm)
     state = ops.testing.State(
+        leader=True,
         relations=[certificates_integration, haproxy_route_relation],
     )
     out = ctx.run(
@@ -64,6 +65,7 @@ def test_ddos_protection_disabled(monkeypatch: pytest.MonkeyPatch, certificates_
 
     ctx = ops.testing.Context(HAProxyCharm)
     state = ops.testing.State(
+        leader=True,
         relations=[certificates_integration, haproxy_route_relation],
         config={"ddos-protection": False},
     )
