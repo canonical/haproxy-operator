@@ -141,6 +141,26 @@ class RuleDetailView(APIView):
         return Response(status=HTTP_204_NO_CONTENT)
 
 
+class RequestRefreshView(APIView):
+    """View for re-evaluating a backend request against all rules."""
+
+    def get(self, request):
+        """Re-evaluate all requests."""
+        queryset = BackendRequest.objects.all()
+        processed_requests = []
+        with transaction.atomic():
+            for backend_request in queryset:
+                serializer = BackendRequestSerializer(backend_request)
+                if serializer.is_valid():
+                    serializer.save(
+                        status=evaluate_request(
+                            BackendRequest(**serializer.validated_data)
+                        )
+                    )
+                    processed_requests.append(serializer.data)
+        return Response(processed_requests)
+
+
 def get_object(object_class: Type[Rule] | Type[BackendRequest], pk: str):
     try:
         return object_class.objects.get(pk=pk)

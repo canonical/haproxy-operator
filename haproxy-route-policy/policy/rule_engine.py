@@ -20,6 +20,7 @@ from policy.db_models import (
     RULE_ACTION_ALLOW,
     RULE_ACTION_DENY,
     RULE_KIND_HOSTNAME_AND_PATH_MATCH,
+    RULE_KIND_BACKEND_MATCH,
     REQUEST_STATUS_ACCEPTED,
     REQUEST_STATUS_REJECTED,
     REQUEST_STATUS_PENDING,
@@ -62,6 +63,24 @@ def _hostname_and_path_match(rule: Rule, request: BackendRequest) -> bool:
 
     # At least one rule path must appear in the request's paths.
     return bool(set(rule_paths).intersection(request.paths))
+
+
+def _backend_match(rule: Rule, request: BackendRequest) -> bool:
+    """Check if a backend_match rule matches a backend request.
+
+    A rule matches if the rule's `backends` list contains the request's
+    `backend_name`.
+
+    Args:
+        rule: The rule to check.
+        request: The backend request to evaluate.
+
+    Returns:
+        True if the rule matches the request, False otherwise.
+    """
+    if rule_backend_name := rule.parameters.get("backend_name"):
+        return request.backend_name == rule_backend_name
+    return False
 
 
 def evaluate_request(request: BackendRequest) -> str:
@@ -119,4 +138,6 @@ def _matches(rule: Rule, request: BackendRequest) -> bool:
     """
     if rule.kind == RULE_KIND_HOSTNAME_AND_PATH_MATCH:
         return _hostname_and_path_match(rule, request)
+    if rule.kind == RULE_KIND_BACKEND_MATCH:
+        return _backend_match(rule, request)
     return False

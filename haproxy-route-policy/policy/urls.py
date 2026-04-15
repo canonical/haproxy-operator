@@ -19,6 +19,11 @@ urlpatterns = [
         name="api-request-detail",
     ),
     path(
+        "api/v1/requests/refresh",
+        views.RequestRefreshView.as_view(),
+        name="api-request-refresh",
+    ),
+    path(
         "api/v1/rules",
         views.ListCreateRulesView.as_view(),
         name="api-rules",
