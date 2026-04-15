@@ -48,8 +48,9 @@ frontend haproxy
     default_backend default
 
 peers haproxy_peers
-{% for address in peer_units_address %}
-    peer {{ address }}
+    bind *:{{ peer_tcp_port }}
+{% for entry in peer_units_address %}
+    peer {{ entry }}
 {% endfor %}
 {% for entry in stick_table_entries %}
     table {{ entry }} type ip size 100k expire 2m store http_req_rate(1m)
