@@ -380,7 +380,7 @@ class HaproxyRouteRequirersInformation:
         try:
             # Fetch approved requests from the policy charm and cross-reference with requirers data from haproxy-route
             requirers = haproxy_route.get_data(haproxy_route.relations)
-            approved_requirers = parse_haproxy_route_policy_requirer_data(
+            approved_requirers = get_approved_requirers_from_policy(
                 requirers.requirers_data, haproxy_route_policy
             )
 
@@ -673,7 +673,7 @@ def parse_haproxy_route_tcp_requirers_data(
     return tcp_frontends
 
 
-def parse_haproxy_route_policy_requirer_data(
+def get_approved_requirers_from_policy(
     requirers: list[HaproxyRouteRequirerData], haproxy_route_policy: HaproxyRoutePolicyRequirer
 ) -> list[HaproxyRouteRequirerData]:
     """Parse haproxy-route requirer data into backend requests for the policy charm.
@@ -681,6 +681,9 @@ def parse_haproxy_route_policy_requirer_data(
     Args:
         requirers: List of haproxy-route requirer data.
         haproxy_route_policy: The haproxy-route-policy requirer instance.
+
+    Returns:
+        list[HaproxyRouteRequirerData]: The list of requirer data that are approved by the policy charm.
     """
     try:
         if relation := haproxy_route_policy.relation:
