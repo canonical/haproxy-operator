@@ -118,11 +118,7 @@ def application_fixture(pytestconfig: pytest.Config, lxd_juju: jubilant.Juju):
         (f for f in pytestconfig.getoption("--charm-file") if f"{app_name}_" in f), None
     )
     assert charm_file, f"--charm-file with  {app_name} charm should be set"
-    lxd_juju.deploy(
-        charm=charm_file,
-        app=app_name,
-        base="ubuntu@24.04",
-    )
+    lxd_juju.deploy(charm=charm_file, app=app_name, base="ubuntu@24.04", log=False)
     return app_name
 
 
@@ -154,11 +150,7 @@ def haproxy_ddos_protection_configurator_fixture(
     )
     assert charm_file, f"--charm-file with {ddos_app_name} charm should be set"
 
-    lxd_juju.deploy(
-        charm=charm_file,
-        app=ddos_app_name,
-        base="ubuntu@24.04",
-    )
+    lxd_juju.deploy(charm=charm_file, app=ddos_app_name, base="ubuntu@24.04", log=False)
 
     return ddos_app_name
 
@@ -173,7 +165,9 @@ def configured_application_with_tls_base_fixture(
     """The haproxy charm configured and integrated with TLS provider."""
     if pytestconfig.getoption("--no-deploy") and "haproxy" in lxd_juju.status().apps:
         return application
-    lxd_juju.config(application, {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
+    lxd_juju.config(
+        application, {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG}, log=False
+    )
     lxd_juju.integrate(
         f"{application}:certificates",
         f"{certificate_provider_application}:certificates",
@@ -213,6 +207,7 @@ def certificate_provider_application_fixture(
         "self-signed-certificates",
         app=SELF_SIGNED_CERTIFICATES_APP_NAME,
         channel="1/edge",
+        log=False,
     )
     return SELF_SIGNED_CERTIFICATES_APP_NAME
 
@@ -225,15 +220,22 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
         logger.info("identity-platform is already deployed")
         return
     k8s_juju.deploy(
-        "self-signed-certificates", channel="1/stable", revision=317, trust=True
+        "self-signed-certificates",
+        channel="1/stable",
+        revision=317,
+        trust=True,
+        log=False,
     )
-    k8s_juju.deploy("hydra", channel="latest/edge", revision=399, trust=True)
-    k8s_juju.deploy("kratos", channel="latest/edge", revision=567, trust=True)
+    k8s_juju.deploy("hydra", channel="latest/edge", revision=399, trust=True, log=False)
+    k8s_juju.deploy(
+        "kratos", channel="latest/edge", revision=567, trust=True, log=False
+    )
     k8s_juju.deploy(
         "identity-platform-login-ui-operator",
         channel="latest/edge",
         revision=200,
         trust=True,
+        log=False,
     )
     k8s_juju.deploy(
         "traefik-k8s",
@@ -241,6 +243,7 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
         channel="latest/edge",
         revision=270,
         trust=True,
+        log=False,
     )
     k8s_juju.deploy(
         "postgresql-k8s",
@@ -252,6 +255,7 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
             "plugin_hstore_enable": "true",
             "plugin_pg_trgm_enable": "true",
         },
+        log=False,
     )
     # Integrations
     k8s_juju.integrate(
@@ -281,7 +285,7 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
         "identity-platform-login-ui-operator:public-route",
     )
 
-    k8s_juju.config("kratos", {"enforce_mfa": False})
+    k8s_juju.config("kratos", {"enforce_mfa": False}, log=False)
     k8s_juju.offer(app=f"{k8s_juju.model}.hydra", endpoint="oauth")
 
 
@@ -326,6 +330,7 @@ def deploy_any_charm_haproxy_route_requirer(
                 "src-overwrite": f"@{tf.name}",
                 "python-packages": "pydantic\ncryptography==45.0.6\nvalidators",
             },
+            log=False,
         )
     return app_name
 
@@ -379,9 +384,7 @@ def deploy_spoe_auth(
     assert charm_file, f"--charm-file with  {charm_name} charm should be set"
 
     lxd_juju.deploy(
-        charm=charm_file,
-        app=app_name,
-        config={"hostname": host_name},
+        charm=charm_file, app=app_name, config={"hostname": host_name}, log=False
     )
     return app_name
 
@@ -397,8 +400,9 @@ def inject_ca_certificate(lxd_juju, unit_name, ca_cert: str):
         juju.exec(
             command="sudo mv /home/ubuntu/iam.crt /usr/local/share/ca-certificates",
             unit=unit_name,
+            log=False,
         )
-        juju.exec(command="sudo update-ca-certificates", unit=unit_name)
+        juju.exec(command="sudo update-ca-certificates", unit=unit_name, log=False)
 
 
 @pytest.fixture(scope="session")

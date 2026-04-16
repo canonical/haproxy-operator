@@ -70,6 +70,7 @@ def test_haproxy_ddos_protection_configuration(
             "client-timeout": 60,
             "deny-paths": "/admin,/secret",
         },
+        log=False,
     )
     lxd_juju.wait(jubilant.all_active)
     haproxy_cfg = lxd_juju.cli(
