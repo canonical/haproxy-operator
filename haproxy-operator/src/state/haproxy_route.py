@@ -28,7 +28,7 @@ from charms.haproxy_route_policy.v0.haproxy_route_policy import (
     HaproxyRoutePolicyProviderAppData,
     HaproxyRoutePolicyRequirer,
 )
-from pydantic import IPvAnyAddress, ValidationError, model_validator
+from pydantic import Field, IPvAnyAddress, ValidationError, model_validator
 from pydantic.dataclasses import dataclass
 from typing_extensions import Self
 
@@ -287,6 +287,133 @@ class HAProxyRouteBackend:
         return self.application_data.protocol == "http"
 
 
+@dataclass(frozen=True)
+class HaproxyRoutePolicyProviderBackend:
+    """A representation of the haproxy-route-policy provider backend.
+
+    Attrs:
+        policy_backend_port: The port of the policy backend.
+        policy_backend_unit_addresses: The list of unit addresses for the policy backend.
+        path: The path identifier for the policy backend.
+        hostname: The external hostname for the policy backend.
+    """
+
+    policy_backend_port: int = Field(
+        gt=0, le=65535, description="Port number for the policy backend."
+    )
+    policy_backend_unit_addresses: list[IPvAnyAddress] = Field(
+        description="List of unit addresses for the policy backend."
+    )
+    model: str = Field(description="Model name for the policy backend.")
+    app: str = Field(description="Application name for the policy backend.")
+    hostname: Optional[str] = Field(description="External hostname for the policy backend.")
+
+    @classmethod
+    def from_requirer(
+        cls, haproxy_route_policy: HaproxyRoutePolicyRequirer, external_hostname: str | None
+    ) -> "HaproxyRoutePolicyProviderBackend| None":
+        """Create a HaproxyRoutePolicyProviderBackend from the policy requirer relation.
+
+        Args:
+            haproxy_route_policy: The haproxy-route-policy requirer instance.
+            external_hostname: The charm's configured external hostname.
+
+        Returns:
+            HaproxyRoutePolicyProviderBackend or None if relation data is invalid or missing.
+        """
+        try:
+            if relation := haproxy_route_policy.relation:
+                provider_data = relation.load(HaproxyRoutePolicyProviderAppData, relation.app)
+                provider_unit_addresses = [
+                    # explicitly cast to IPvAnyAddress because we already filtered out None values.
+                    cast(IPvAnyAddress, relation.data[unit].get("private-address"))
+                    for unit in relation.units
+                    if relation.data[unit].get("private-address") is not None
+                ]
+                return cls(
+                    policy_backend_port=provider_data.policy_backend_port,
+                    policy_backend_unit_addresses=provider_unit_addresses,
+                    model=provider_data.model,
+                    app=relation.app.name,
+                    hostname=external_hostname,
+                )
+        except ValidationError as exc:
+            logger.error("Validation error when parsing policy provider backend: %s", exc)
+            # We don't propagate this error because the data is likely incomplete and in that case
+            # we don't block the charm but simply skip rendering of the policy backend.
+        return None
+
+    @property
+    def backend_name(self) -> str:
+        """The backend name for the policy backend.
+
+        Returns:
+            str: The backend name for the policy backend.
+        """
+        return f"policy_{self.model}_{self.app}"
+
+    @property
+    def hostname_acl_name(self) -> str:
+        """The hostname ACL name for the policy backend.
+
+        Returns:
+            str: The hostname ACL name for the policy backend.
+        """
+        return f"{self.backend_name}_hostname"
+
+    @property
+    def path_acl_name(self) -> str:
+        """The path ACL name for the policy backend.
+
+        Returns:
+            str: The path ACL name for the policy backend.
+        """
+        return f"{self.backend_name}_path"
+
+    @property
+    def hostname_acl(self) -> str | None:
+        """Build the hostname ACL for the policy backend.
+
+        Returns:
+            str | None: The hostname ACL string, or None if no hostname is set.
+        """
+        if self.hostname:
+            return f"acl {self.hostname_acl_name} req.hdr(host),field(1,:) -i {self.hostname}"
+        return None
+
+    @property
+    def path_acl(self) -> str:
+        """Build the path ACL for the policy backend.
+
+        Returns:
+            str: The path ACL string.
+        """
+        return f"acl {self.path_acl_name} path_beg -i /{self.model}-{self.app}"
+
+    @property
+    def policy_backend_server_configuration(self) -> list[str]:
+        """Build the backend server configuration for the policy backend.
+
+        Returns:
+            list[str]: The backend server configuration for the policy backend.
+        """
+        return [
+            f"server {self.app}_{unit_index} {address!s}:{self.policy_backend_port} check"
+            for unit_index, address in enumerate(self.policy_backend_unit_addresses)
+        ]
+
+    @property
+    def use_backend_configuration(self) -> str:
+        """Build the use_backend configuration for the policy backend.
+
+        Returns:
+            str: The use_backend configuration for the policy backend.
+        """
+        if hostname_acl := self.hostname_acl:
+            return f"use_backend {self.backend_name} if {self.path_acl} {hostname_acl}"
+        return f"use_backend {self.backend_name} if {self.path_acl}"
+
+
 # pylint: disable=too-many-locals
 @dataclass(frozen=True)
 class HaproxyRouteRequirersInformation:
@@ -313,6 +440,7 @@ class HaproxyRouteRequirersInformation:
     tcp_frontends: list[HAProxyRouteTcpFrontend]
     # This is used to transform haproxy-route requirers to backend requests for the policy charm.
     valid_haproxy_route_requirers: list[HaproxyRouteRequirerData]
+    policy_provider_backend: HaproxyRoutePolicyProviderBackend | None
 
     @property
     def backend_requests_for_policy(self) -> list[HaproxyRoutePolicyBackendRequest]:
@@ -452,9 +580,11 @@ class HaproxyRouteRequirersInformation:
                 tcp_frontends=tcp_frontends,
                 ports_with_conflicts=set[int](),
                 valid_haproxy_route_requirers=requirers.requirers_data,
+                policy_provider_backend=HaproxyRoutePolicyProviderBackend.from_requirer(
+                    haproxy_route_policy=haproxy_route_policy, external_hostname=external_hostname
+                ),
             )
-        except DataValidationError as exc:
-            # This exception is only raised if the provider has "raise_on_validation_error" set
+        except (ValidationError, DataValidationError) as exc:
             raise HaproxyRouteIntegrationDataValidationError from exc
 
     @model_validator(mode="after")

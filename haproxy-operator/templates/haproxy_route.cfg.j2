@@ -44,6 +44,14 @@ frontend haproxy
 {% endif %}
     use_backend {{ backend.backend_name }} if {% if backend.path_acl_required %}acl_path_{{ backend.backend_name }}{% endif %} acl_host_{{ backend.backend_name }} {% if backend.deny_path_acl_required %}!acl_deny_path_{{ backend.backend_name }}{% endif +%}
 {% endfor %}
+{% if policy_provider_backend is not none %}
+    # Routing configuration for the haproxy-route-policy provider
+{% if policy_provider_backend is not none %}
+    {{ policy_provider_backend.hostname_acl }}
+{% endif %}
+    {{ policy_provider_backend.path_acl }}
+    {{ policy_provider_backend.use_backend_configuration }}
+{% endif %}
 
     default_backend default
 

@@ -165,7 +165,9 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
             len(evaluated),
             len(approved),
         )
-        self.haproxy_route_policy.set_approved_backend_requests(approved)
+        self.haproxy_route_policy.set_approved_backend_requests(
+            approved, HAPROXY_ROUTE_POLICY_PORT
+        )
 
 
 if __name__ == "__main__":  # pragma: nocover
