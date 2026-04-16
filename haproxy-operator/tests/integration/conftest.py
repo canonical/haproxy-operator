@@ -6,6 +6,7 @@
 
 import json
 import logging
+from math import log
 import pathlib
 import tempfile
 import typing
@@ -92,6 +93,7 @@ def application_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju, charm:
         charm=charm,
         app=app_name,
         base="ubuntu@24.04",
+        log=False,
     )
     return app_name
 
@@ -109,7 +111,10 @@ def certificate_provider_application_fixture(
         logger.warning("Using existing application: %s", SELF_SIGNED_CERTIFICATES_APP_NAME)
         return SELF_SIGNED_CERTIFICATES_APP_NAME
     juju.deploy(
-        "self-signed-certificates", app=SELF_SIGNED_CERTIFICATES_APP_NAME, channel="1/edge"
+        "self-signed-certificates",
+        app=SELF_SIGNED_CERTIFICATES_APP_NAME,
+        channel="1/edge",
+        log=False,
     )
     return SELF_SIGNED_CERTIFICATES_APP_NAME
 
@@ -129,9 +134,7 @@ def configured_application_with_tls_base_fixture(
         f"{application}:certificates", f"{certificate_provider_application}:certificates"
     )
     juju.wait(
-        lambda status: (
-            jubilant.all_active(status, application, certificate_provider_application)
-        ),
+        lambda status: jubilant.all_active(status, application, certificate_provider_application),
         timeout=JUJU_WAIT_TIMEOUT,
     )
     return application
@@ -169,7 +172,7 @@ def configured_application_with_tls_fixture(
             )
     # Ensure the removal is complete otherwise reintegration in next test may fail
     juju.wait(
-        lambda status: (jubilant.all_agents_idle(status)),
+        lambda status: jubilant.all_agents_idle(status),
     )
 
 
@@ -204,10 +207,11 @@ def any_charm_ingress_per_unit_requirer_fixture(
             "python-packages": "pydantic<2.0",
         },
         num_units=2,
+        log=False,
     )
 
     juju.wait(
-        lambda status: (jubilant.all_active(status, ANY_CHARM_INGRESS_PER_UNIT_REQUIRER)),
+        lambda status: jubilant.all_active(status, ANY_CHARM_INGRESS_PER_UNIT_REQUIRER),
         timeout=JUJU_WAIT_TIMEOUT,
     )
     return ANY_CHARM_INGRESS_PER_UNIT_REQUIRER
@@ -259,10 +263,11 @@ def any_charm_haproxy_route_requirer_base_fixture(
                     ]
                 ),
             },
+            log=False,
         )
         juju.wait(
-            lambda status: (
-                jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)
+            lambda status: jubilant.all_active(
+                status, ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION
             ),
             timeout=JUJU_WAIT_TIMEOUT,
         )
@@ -295,7 +300,7 @@ def any_charm_haproxy_route_requirer_fixture(
             juju.remove_relation(f"{app_name}:{endpoint}", relation.related_app)
 
     juju.wait(
-        lambda status: (jubilant.all_agents_idle(status)),
+        lambda status: jubilant.all_agents_idle(status),
     )
 
 
@@ -324,10 +329,11 @@ def any_charm_haproxy_route_tcp_requirer_base_fixture(
             ),
             "python-packages": "pydantic~=2.10\nvalidators",
         },
+        log=False,
     )
     juju.wait(
-        lambda status: (
-            jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION)
+        lambda status: jubilant.all_active(
+            status, ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION
         ),
         timeout=JUJU_WAIT_TIMEOUT,
     )
@@ -359,5 +365,5 @@ def any_charm_haproxy_route_tcp_requirer_fixture(
             juju.remove_relation(f"{app_name}:{endpoint}", relation.related_app)
 
     juju.wait(
-        lambda status: (jubilant.all_agents_idle(status)),
+        lambda status: jubilant.all_agents_idle(status),
     )

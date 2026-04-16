@@ -122,6 +122,7 @@ def application_fixture(pytestconfig: pytest.Config, lxd_juju: jubilant.Juju):
         charm=charm_file,
         app=app_name,
         base="ubuntu@24.04",
+        log=False,
     )
     return app_name
 
@@ -158,6 +159,7 @@ def haproxy_ddos_protection_configurator_fixture(
         charm=charm_file,
         app=ddos_app_name,
         base="ubuntu@24.04",
+        log=False,
     )
 
     return ddos_app_name
@@ -213,6 +215,7 @@ def certificate_provider_application_fixture(
         "self-signed-certificates",
         app=SELF_SIGNED_CERTIFICATES_APP_NAME,
         channel="1/edge",
+        log=False,
     )
     return SELF_SIGNED_CERTIFICATES_APP_NAME
 
@@ -225,15 +228,22 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
         logger.info("identity-platform is already deployed")
         return
     k8s_juju.deploy(
-        "self-signed-certificates", channel="1/stable", revision=317, trust=True
+        "self-signed-certificates",
+        channel="1/stable",
+        revision=317,
+        trust=True,
+        log=False,
     )
-    k8s_juju.deploy("hydra", channel="latest/edge", revision=399, trust=True)
-    k8s_juju.deploy("kratos", channel="latest/edge", revision=567, trust=True)
+    k8s_juju.deploy("hydra", channel="latest/edge", revision=399, trust=True, log=False)
+    k8s_juju.deploy(
+        "kratos", channel="latest/edge", revision=567, trust=True, log=False
+    )
     k8s_juju.deploy(
         "identity-platform-login-ui-operator",
         channel="latest/edge",
         revision=200,
         trust=True,
+        log=False,
     )
     k8s_juju.deploy(
         "traefik-k8s",
@@ -241,6 +251,7 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
         channel="latest/edge",
         revision=270,
         trust=True,
+        log=False,
     )
     k8s_juju.deploy(
         "postgresql-k8s",
@@ -252,6 +263,7 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
             "plugin_hstore_enable": "true",
             "plugin_pg_trgm_enable": "true",
         },
+        log=False,
     )
     # Integrations
     k8s_juju.integrate(
@@ -326,6 +338,7 @@ def deploy_any_charm_haproxy_route_requirer(
                 "src-overwrite": f"@{tf.name}",
                 "python-packages": "pydantic\ncryptography==45.0.6\nvalidators",
             },
+            log=False,
         )
     return app_name
 
@@ -382,6 +395,7 @@ def deploy_spoe_auth(
         charm=charm_file,
         app=app_name,
         config={"hostname": host_name},
+        log=False,
     )
     return app_name
 

@@ -71,9 +71,10 @@ def application_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju, charm:
         charm=charm,
         app=app_name,
         base="ubuntu@24.04",
+        log=False,
     )
     juju.wait(
-        lambda status: (jubilant.all_blocked(status, app_name)),
+        lambda status: jubilant.all_blocked(status, app_name),
         timeout=JUJU_WAIT_TIMEOUT,
     )
     return app_name

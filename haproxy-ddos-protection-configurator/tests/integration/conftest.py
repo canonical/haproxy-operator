@@ -68,5 +68,6 @@ def application_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju, charm:
         charm=charm,
         app=app_name,
         base="ubuntu@24.04",
+        log=False,
     )
     return app_name

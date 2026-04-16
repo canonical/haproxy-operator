@@ -61,6 +61,7 @@ def application_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju, charm:
         charm=charm,
         app=app_name,
         base="ubuntu@24.04",
+        log=False,
     )
     return app_name
 
@@ -94,6 +95,7 @@ def any_charm_haproxy_route_policy_requirer_fixture(
             ),
             "python-packages": "pydantic~=2.10\nvalidators",
         },
+        log=False,
     )
     juju.wait(
         lambda status: jubilant.all_active(
@@ -114,6 +116,7 @@ def postgresql_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju):
         app=POSTGRESQL_APPLICATION,
         channel="16/edge",
         base="ubuntu@24.04",
+        log=False,
     )
     juju.wait(
         lambda status: jubilant.all_active(status, POSTGRESQL_APPLICATION),

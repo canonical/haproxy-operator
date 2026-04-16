@@ -21,7 +21,9 @@ def test_charm_becomes_active_after_relation_with_postgresql(
         The charm is blocked before relation and active after relating with PostgreSQL.
     """
     postgresql_app = "postgresql"
-    juju.deploy("postgresql", app=postgresql_app, channel="16/edge", base="ubuntu@24.04")
+    juju.deploy(
+        "postgresql", app=postgresql_app, channel="16/edge", base="ubuntu@24.04", log=False
+    )
 
     juju.wait(lambda status: jubilant.all_blocked(status, application))
 
