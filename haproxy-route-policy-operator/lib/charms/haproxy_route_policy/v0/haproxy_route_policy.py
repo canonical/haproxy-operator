@@ -6,9 +6,9 @@
 This interface is used between the HAProxy charm (requirer) and the
 haproxy-route-policy charm (provider).
 
-The requirer publishes route policy requests under ``requests`` as a list of
+The requirer publishes route policy requests under ``backend_requests`` as a list of
 HAProxy backend objects. The provider publishes approved entries under
-``approved_backends`` and additionally exposes ``policy_backend_port`` and
+``approved_requests`` and additionally exposes ``policy_backend_port`` and
 provider unit addresses for policy web UI routing.
 """
 

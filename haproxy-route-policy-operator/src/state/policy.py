@@ -3,7 +3,7 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Charm state for database information."""
+"""Charm state for HAProxy route policy information."""
 
 import json
 import secrets

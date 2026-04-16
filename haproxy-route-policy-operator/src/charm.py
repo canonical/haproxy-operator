@@ -127,7 +127,6 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
                 requests = relation.load(
                     HaproxyRoutePolicyRequirerAppData, relation.app
                 ).backend_requests
-                logger.info(f"backend requests {requests}, auto approved.")
                 self.haproxy_route_policy.set_approved_backend_requests(requests)
 
         except DatabaseRelationMissingError:
