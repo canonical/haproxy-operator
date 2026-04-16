@@ -18,7 +18,7 @@ from validators import domain
 DJANGO_SECRET_KEY_SECRET_LABEL = "django-secret-key"  # nosec
 DJANGO_ADMIN_CREDENTIALS_SECRET_LABEL = "django-admin-credentials"  # nosec
 PEER_RELATION_NAME = "haproxy-route-policy-peer"
-SECRET_LENGTH = 32
+SECRET_NBYTES = 32
 DEFAULT_ALLOWED_HOSTS = ["localhost"]
 
 
@@ -131,7 +131,7 @@ def _get_django_admin_credentials(
         if charm.unit.is_leader():
             django_admin_credentials_data = {
                 "username": "admin",
-                "password": secrets.token_urlsafe(SECRET_LENGTH),
+                "password": secrets.token_urlsafe(SECRET_NBYTES),
             }
             secret = charm.app.add_secret(
                 label=DJANGO_ADMIN_CREDENTIALS_SECRET_LABEL,
@@ -160,7 +160,7 @@ def _get_django_secret_key(charm: ops.CharmBase, peer_relation: ops.Relation) ->
         return secret.get_content()
     except ops.SecretNotFoundError:
         if charm.unit.is_leader():
-            django_secret_key_data = {"secret-key": secrets.token_urlsafe(SECRET_LENGTH)}
+            django_secret_key_data = {"secret-key": secrets.token_urlsafe(SECRET_NBYTES)}
             secret = charm.app.add_secret(
                 label=DJANGO_SECRET_KEY_SECRET_LABEL, content=django_secret_key_data
             )
