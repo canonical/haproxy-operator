@@ -5,7 +5,6 @@
 
 from policy.db_models import BackendRequest, Rule
 from typing import Type
-from venv import logger
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.status import (
@@ -19,10 +18,19 @@ from django.db.utils import IntegrityError
 from django.db import transaction
 from policy import serializers
 from .db_models import REQUEST_STATUSES
+from policy.rule_engine import evaluate_request
+from .serializers import BackendRequestSerializer, RuleSerializer
 
 
 class ListCreateRequestsView(APIView):
     """View for listing and bulk-creating backend requests."""
+
+    def get_request_by_backend_name(self, backend_name: str) -> BackendRequest | None:
+        """Get a backend request by its backend name."""
+        try:
+            return BackendRequest.objects.get(backend_name=backend_name)
+        except BackendRequest.DoesNotExist:
+            return None
 
     def get(self, request):
         """List all requests, optionally filtered by status."""
@@ -39,7 +47,9 @@ class ListCreateRequestsView(APIView):
     def post(self, request):
         """Bulk create backend requests.
 
-        All new requests are set to 'pending' (evaluation logic is deferred).
+        Each new request is evaluated against existing rules immediately.
+        If a matching rule is found, the request status is set accordingly.
+        If no rules match, the request stays as 'pending'.
         """
         if not isinstance(request.data, list):
             return Response(
@@ -51,17 +61,25 @@ class ListCreateRequestsView(APIView):
         try:
             with transaction.atomic():
                 for backend_request in request.data:
-                    serializer = serializers.BackendRequestSerializer(
-                        data=backend_request
+                    # Get the request with the same backend_name if it exists and update it, otherwise create a new one
+                    req = self.get_request_by_backend_name(
+                        backend_request.get("backend_name")
                     )
+                    serializer = BackendRequestSerializer(req, data=backend_request)
                     if serializer.is_valid(raise_exception=True):
-                        serializer.save()
+                        # Evaluate rules and update status
+                        serializer.save(
+                            status=evaluate_request(
+                                BackendRequest(**serializer.validated_data)
+                            )
+                        )
                         created.append(serializer.data)
         except ValidationError as e:
             return Response({"error": str(e)}, status=HTTP_400_BAD_REQUEST)
-        except IntegrityError:
+        except IntegrityError as e:
             return Response(
-                {"error": "Invalid request data."}, status=HTTP_400_BAD_REQUEST
+                {"error": f"Invalid request data: {str(e)}"},
+                status=HTTP_400_BAD_REQUEST,
             )
         return Response(created, status=HTTP_201_CREATED)
 
@@ -87,12 +105,12 @@ class ListCreateRulesView(APIView):
     def get(self, request):
         """List all rules."""
         queryset = Rule.objects.all().order_by("-priority", "created_at")
-        serializer = serializers.RuleSerializer(queryset, many=True)
+        serializer = RuleSerializer(queryset, many=True)
         return Response(serializer.data)
 
     def post(self, request):
         """Create a new rule."""
-        serializer = serializers.RuleSerializer(data=request.data)
+        serializer = RuleSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response(serializer.data, status=HTTP_201_CREATED)
@@ -125,7 +143,6 @@ class RuleDetailView(APIView):
 
 def get_object(object_class: Type[Rule] | Type[BackendRequest], pk: str):
     try:
-        logger.info(f"Fetching object with ID: {pk}")
         return object_class.objects.get(pk=pk)
     except object_class.DoesNotExist:
         raise Http404

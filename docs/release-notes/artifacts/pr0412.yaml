@@ -1,0 +1,20 @@
+version_schema: 2
+
+changes:
+  - title: Added authentication to haproxy-route-policy REST API
+    author: tphan025
+    type: minor
+    description: >
+      Configured Django REST Framework with JWT and session-based authentication
+      as default authentication classes, requiring all API endpoints to be accessed
+      by authenticated users. Added test_settings_authenticated.py for auth-enabled
+      tests, a dedicated unit-auth tox environment, and integration tests verifying
+      that unauthenticated requests are rejected and authenticated requests succeed.
+      Added djangorestframework-simplejwt as a dependency.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/412
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false

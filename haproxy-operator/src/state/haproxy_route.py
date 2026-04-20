@@ -7,6 +7,7 @@ import logging
 from collections import defaultdict
 from collections.abc import Collection
 from functools import cached_property
+from pathlib import Path
 from typing import Optional, cast
 
 from charms.haproxy.v1.haproxy_route_tcp import (
@@ -22,7 +23,12 @@ from charms.haproxy.v2.haproxy_route import (
     RequirerApplicationData,
     ServerHealthCheck,
 )
-from pydantic import Field, IPvAnyAddress, model_validator
+from charms.haproxy_route_policy.v0.haproxy_route_policy import (
+    HaproxyRoutePolicyBackendRequest,
+    HaproxyRoutePolicyProviderAppData,
+    HaproxyRoutePolicyRequirer,
+)
+from pydantic import IPvAnyAddress, ValidationError, model_validator
 from pydantic.dataclasses import dataclass
 from typing_extensions import Self
 
@@ -35,6 +41,13 @@ from .haproxy_route_tcp import (
 
 HAPROXY_ROUTE_RELATION = "haproxy-route"
 HAPROXY_PEER_INTEGRATION = "haproxy-peers"
+HAPROXY_CAS_DIR = Path("/var/lib/haproxy/cas")
+HAPROXY_CAS_FILE = Path(HAPROXY_CAS_DIR / "cas.pem")
+# We put a leading space in front of computed properties to make the
+# rendered haproxy config consistent regardless of what property is None/rendered.
+# This is made to be a constant to explicitly indicate the intention and avoid
+# having properties like f" {}" which will be harder to maintain and understand.
+LEADING_SPACE = " "
 logger = logging.getLogger()
 
 
@@ -61,6 +74,18 @@ class HAProxyRouteServer:
     protocol: str
     check: Optional[ServerHealthCheck]
     maxconn: Optional[int]
+
+    @property
+    def server_health_check_configuration(self) -> str:
+        """Build the backend server health check configuration for HTTPS protocol.
+
+        Returns:
+            str: The backend server health check configuration for HTTPS protocol,
+            or an empty string if protocol is not HTTPS.
+        """
+        if self.check is None:
+            return ""
+        return f"{LEADING_SPACE}check inter {self.check.interval}s rise {self.check.rise} fall {self.check.fall}"
 
 
 @dataclass(frozen=True)
@@ -228,6 +253,39 @@ class HAProxyRouteBackend:
         hostname = next(iter(self.hostname_acls))
         return hostname[2:] if hostname.startswith("*.") else hostname
 
+    @property
+    def https_backend_server_configuration(self) -> str:
+        """Build the backend server configuration for HTTPS protocol.
+
+        Returns:
+            str: The backend server configuration for HTTPS protocol,
+            or an empty string if protocol is not HTTPS.
+        """
+        if self.application_data.protocol != "https":
+            return ""
+        return f"{LEADING_SPACE}ssl ca-file {HAPROXY_CAS_FILE} alpn h2,http/1.1 check-alpn h2,http/1.1"
+
+    @property
+    def grpc_backend_server_configuration(self) -> str:
+        """Build the backend server configuration for gRPC protocol.
+
+        Returns:
+            str: The backend server configuration for gRPC protocol,
+            or an empty string if external_grpc_port is not set.
+        """
+        if not self.application_data.external_grpc_port:
+            return ""
+        return f"{LEADING_SPACE}ssl ca-file {HAPROXY_CAS_FILE} alpn h2 check-alpn h2"
+
+    @property
+    def enable_http_check(self) -> bool:
+        """Return whether to enable HTTP health checks.
+
+        Returns:
+            bool: True if backend protocol is HTTP, False otherwise.
+        """
+        return self.application_data.protocol == "http"
+
 
 # pylint: disable=too-many-locals
 @dataclass(frozen=True)
@@ -252,7 +310,44 @@ class HaproxyRouteRequirersInformation:
     relation_ids_with_invalid_data: set[int]
     relation_ids_with_invalid_data_tcp: set[int]
     ports_with_conflicts: set[int]
-    tcp_frontends: list[HAProxyRouteTcpFrontend] = Field(strict=False)
+    tcp_frontends: list[HAProxyRouteTcpFrontend]
+    # This is used to transform haproxy-route requirers to backend requests for the policy charm.
+    valid_haproxy_route_requirers: list[HaproxyRouteRequirerData]
+
+    @property
+    def backend_requests_for_policy(self) -> list[HaproxyRoutePolicyBackendRequest]:
+        """Transform the requirer data into backend requests for the policy charm.
+
+        Returns:
+            list[HaproxyRoutePolicyBackendRequest]: The backend requests for the policy charm.
+        """
+        backend_requests: list[HaproxyRoutePolicyBackendRequest] = []
+        for requirer in self.valid_haproxy_route_requirers:
+            try:
+                port = requirer.application_data.external_grpc_port or (
+                    80 if requirer.application_data.allow_http else 443
+                )
+                backend_requests.append(
+                    HaproxyRoutePolicyBackendRequest(
+                        relation_id=requirer.relation_id,
+                        backend_name=requirer.application_data.service,
+                        hostname_acls=list(
+                            generate_hostname_acls(
+                                requirer.application_data, external_hostname=None
+                            )
+                        ),
+                        paths=requirer.application_data.paths,
+                        port=port,
+                    )
+                )
+            except ValidationError as exc:
+                logger.error(
+                    "Validation error for backend %s, skipping: %s",
+                    requirer.application_data.service,
+                    exc,
+                )
+                continue
+        return backend_requests
 
     @classmethod
     def from_provider(  # pylint: disable=too-many-arguments
@@ -260,6 +355,7 @@ class HaproxyRouteRequirersInformation:
         *,
         haproxy_route: HaproxyRouteProvider,
         haproxy_route_tcp: HaproxyRouteTcpProvider,
+        haproxy_route_policy: HaproxyRoutePolicyRequirer,
         external_hostname: Optional[str],
         peers: list[str],
         ca_certs_configured: bool,
@@ -269,6 +365,7 @@ class HaproxyRouteRequirersInformation:
         Args:
             haproxy_route: The haproxy-route provider class.
             haproxy_route_tcp: The haproxy-route-tcp provider class.
+            haproxy_route_policy: The haproxy-route-policy requirer class.
             external_hostname: The charm's configured hostname.
             peers: List of IP address of haproxy peer units.
             ca_certs_configured: If ca certificates are configured for haproxy backends.
@@ -281,15 +378,27 @@ class HaproxyRouteRequirersInformation:
                 for the haproxy-route interface.
         """
         try:
+            # Fetch approved requests from the policy charm and cross-reference with requirers data from haproxy-route
+            requirers = haproxy_route.get_data(haproxy_route.relations)
+            approved_requirers = get_approved_requirers_from_policy(
+                requirers.requirers_data, haproxy_route_policy
+            )
+
             # This is used to check that requirers don't ask for the same backend name.
             backend_names: set[str] = set()
             # Control stick tables for rate_limiting and
             # eventually any shared values between haproxy units.
             stick_table_entries: list[str] = []
-            requirers = haproxy_route.get_data(haproxy_route.relations)
             backends: list[HAProxyRouteBackend] = []
             relation_ids_with_invalid_data = requirers.relation_ids_with_invalid_data
-            for requirer in requirers.requirers_data:
+
+            # If there is a policy relation, only process the approved requirers. Otherwise, process all requirers.
+            requirers_to_process = (
+                approved_requirers
+                if haproxy_route_policy.relation is not None
+                else requirers.requirers_data
+            )
+            for requirer in requirers_to_process:
                 # Duplicate backend names check is done in the library's `get_data` method
                 backend_names.add(requirer.application_data.service)
 
@@ -342,6 +451,7 @@ class HaproxyRouteRequirersInformation:
                 relation_ids_with_invalid_data_tcp=relation_ids_with_invalid_data_tcp,
                 tcp_frontends=tcp_frontends,
                 ports_with_conflicts=set[int](),
+                valid_haproxy_route_requirers=requirers.requirers_data,
             )
         except DataValidationError as exc:
             # This exception is only raised if the provider has "raise_on_validation_error" set
@@ -561,3 +671,34 @@ def parse_haproxy_route_tcp_requirers_data(
             logger.error(f"Failed to parse TCP frontend: {exc}")
             continue
     return tcp_frontends
+
+
+def get_approved_requirers_from_policy(
+    requirers: list[HaproxyRouteRequirerData], haproxy_route_policy: HaproxyRoutePolicyRequirer
+) -> list[HaproxyRouteRequirerData]:
+    """Parse haproxy-route requirer data into backend requests for the policy charm.
+
+    Args:
+        requirers: List of haproxy-route requirer data.
+        haproxy_route_policy: The haproxy-route-policy requirer instance.
+
+    Returns:
+        list[HaproxyRouteRequirerData]: The list of requirer data that are approved by the policy charm.
+    """
+    try:
+        if relation := haproxy_route_policy.relation:
+            approved_requests = relation.load(
+                HaproxyRoutePolicyProviderAppData, relation.app
+            ).approved_requests
+            approved_backend_names = {request.backend_name for request in approved_requests}
+            return [
+                requirer
+                for requirer in requirers
+                if requirer.application_data.service in approved_backend_names
+            ]
+    except ValidationError:
+        logger.exception(
+            "Validation error when loading approved backend requests from policy relation."
+        )
+        return []
+    return []

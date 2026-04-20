@@ -1,0 +1,35 @@
+#!/bin/sh
+
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+set -e
+
+DJANGO_SECRET_KEY="$(snapctl get secret-key)"
+export DJANGO_SECRET_KEY
+DJANGO_DEBUG="$(snapctl get debug)"
+export DJANGO_DEBUG
+DJANGO_ALLOWED_HOSTS="$(snapctl get allowed-hosts)"
+if [ -z "$DJANGO_ALLOWED_HOSTS" ]; then
+  DJANGO_ALLOWED_HOSTS="[]"
+fi
+export DJANGO_ALLOWED_HOSTS
+DJANGO_LOG_LEVEL="$(snapctl get log-level)"
+export DJANGO_LOG_LEVEL
+DJANGO_DATABASE_PASSWORD="$(snapctl get database-password)"
+export DJANGO_DATABASE_PASSWORD
+DJANGO_DATABASE_HOST="$(snapctl get database-host)"
+export DJANGO_DATABASE_HOST
+DJANGO_DATABASE_PORT="$(snapctl get database-port)"
+export DJANGO_DATABASE_PORT
+DJANGO_DATABASE_USER="$(snapctl get database-user)"
+export DJANGO_DATABASE_USER
+DJANGO_DATABASE_NAME="$(snapctl get database-name)"
+export DJANGO_DATABASE_NAME
+
+if [ -z "$DJANGO_DATABASE_HOST" ] || [ -z "$DJANGO_DATABASE_PORT" ] || [ -z "$DJANGO_DATABASE_USER" ] || [ -z "$DJANGO_DATABASE_PASSWORD" ] || [ -z "$DJANGO_DATABASE_NAME" ]; then
+  >&2 echo "One or more database configuration values are missing. Please ensure database-host, database-port, database-user, database-password, and database-name are all set."
+  return 1
+fi
+
+exec "$SNAP/app/venv/bin/python3" "$SNAP/app/manage.py" "$@"

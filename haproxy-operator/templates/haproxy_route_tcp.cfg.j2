@@ -70,6 +70,17 @@ backend {{ frontend.default_backend_name }}
     hash-type consistent
 {% endif %}
 {% endif %}
+{% if frontend.default_backend.application_data.timeout %}
+{% if frontend.default_backend.application_data.timeout.server %}
+    timeout server {{ frontend.default_backend.application_data.timeout.server }}s
+{% endif %}
+{% if frontend.default_backend.application_data.timeout.connect %}
+    timeout connect {{ frontend.default_backend.application_data.timeout.connect }}s
+{% endif %}
+{% if frontend.default_backend.application_data.timeout.queue %}
+    timeout queue {{ frontend.default_backend.application_data.timeout.queue }}s
+{% endif %}
+{% endif %}
 {% if frontend.default_backend.application_data.retry %}
     retries {{ frontend.default_backend.application_data.retry.count }}
 {% if frontend.default_backend.application_data.retry.redispatch %}
@@ -92,6 +103,17 @@ backend {{ backend.name }}
     balance {{ backend.application_data.load_balancing.algorithm.value }}
 {% if backend.application_data.load_balancing.consistent_hashing %}
     hash-type consistent
+{% endif %}
+{% endif %}
+{% if backend.application_data.timeout %}
+{% if backend.application_data.timeout.server %}
+    timeout server {{ backend.application_data.timeout.server }}s
+{% endif %}
+{% if backend.application_data.timeout.connect %}
+    timeout connect {{ backend.application_data.timeout.connect }}s
+{% endif %}
+{% if backend.application_data.timeout.queue %}
+    timeout queue {{ backend.application_data.timeout.queue }}s
 {% endif %}
 {% endif %}
 {% if backend.application_data.retry %}

@@ -7,11 +7,25 @@ requires-python = ">=3.12"
 dependencies = [
     "django>=6.0.3",
     "djangorestframework>=3.16.1",
+    "djangorestframework-simplejwt>=5.5.1",
+    "gunicorn>=23.0.0",
+    "psycopg2-binary>=2.9.11",
     "validators>=0.35.0",
     "whitenoise>=6.12.0",
 ]
 
+[build-system]
+requires = ["uv_build>=0.7.2,<1"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
+module-name = ["haproxy_route_policy", "policy"]
+
 [dependency-groups]
+auth = [
+    "djangorestframework-simplejwt>=5.5.1",
+]
 coverage-report = [
     "coverage[toml]>=7.13.5",
 ]

@@ -1,0 +1,73 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+type: charm
+base: ubuntu@24.04
+build-base: ubuntu@24.04
+
+platforms:
+  amd64:
+
+parts:
+  charm:
+    source: .
+    plugin: uv
+    build-snaps:
+      - astral-uv
+
+name: haproxy-route-policy
+title: HAProxy route policy charm
+summary: Policy service for HAProxy route requests.
+description: |
+  A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
+  deploying and managing the HAProxy Route Policy API on machines.
+
+  The charm installs the `haproxy-route-policy` snap, configures it with
+  PostgreSQL relation credentials, runs database migrations, and starts gunicorn.
+links:
+  documentation: https://documentation.ubuntu.com/haproxy-charm/
+  issues: https://github.com/canonical/haproxy-operator/issues
+  source: https://github.com/canonical/haproxy-operator
+  contact:
+    - https://launchpad.net/~canonical-is-devops
+
+assumes:
+  - juju >= 3.6
+
+requires:
+  database:
+    interface: postgresql_client
+    description: Database used by the haproxy-route-policy service.
+    limit: 1
+    optional: false
+
+provides:
+  haproxy-route-policy:
+    interface: haproxy-route-policy
+    description: Interface between haproxy and the policy charm to approve/deny backend requests.
+
+actions:
+  get-admin-credentials:
+    description: Retrieve the admin credentials to call the HAProxy Route Policy API.
+    output:
+      username:
+        description: The admin username.
+        type: string
+      password:
+        description: The admin password.
+        type: string
+
+charm-libs:
+  - lib: data_platform_libs.data_interfaces
+    version: "0"
+
+peers:
+  haproxy-route-policy-peer:
+    interface: haproxy-route-policy-peer
+
+config:
+  options:
+    extra-allowed-hosts:
+      type: string
+      description: A comma-separated list of host/domain names that the haproxy-route-policy API
+        can serve. This configuration will set the DJANGO_ALLOWED_HOSTS environment
+        variable with its content being a JSON encoded list.
