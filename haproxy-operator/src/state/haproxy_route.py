@@ -55,6 +55,10 @@ class HaproxyRouteIntegrationDataValidationError(CharmStateValidationBaseError):
     """Exception raised when ingress integration is not established."""
 
 
+class HaproxyRoutePolicyMissingHostnameError(CharmStateValidationBaseError):
+    """Exception raised when haproxy-route-policy is present but external-hostname is missing."""
+
+
 @dataclass(frozen=True)
 class HAProxyRouteServer:
     """A representation of a server in the backend section of the haproxy config.
@@ -306,7 +310,7 @@ class HaproxyRoutePolicyProviderBackend:
     )
     model: str = Field(description="Model name for the policy backend.")
     app: str = Field(description="Application name for the policy backend.")
-    hostname: Optional[str] = Field(description="External hostname for the policy backend.")
+    hostname: str = Field(description="Hostname for the policy backend.")
 
     @classmethod
     def from_requirer(
@@ -318,9 +322,21 @@ class HaproxyRoutePolicyProviderBackend:
             haproxy_route_policy: The haproxy-route-policy requirer instance.
             external_hostname: The charm's configured external hostname.
 
+        Raises:
+            HaproxyRoutePolicyMissingHostnameError: When haproxy-route-policy relation is present
+                but external hostname is not set.
+
         Returns:
             HaproxyRoutePolicyProviderBackend or None if relation data is invalid or missing.
         """
+        if not external_hostname:
+            logger.error(
+                "External hostname is required for policy backend but is not set. "
+                "Skipping policy backend configuration."
+            )
+            raise HaproxyRoutePolicyMissingHostnameError(
+                "External hostname is required for haproxy-route-policy but is not set."
+            )
         try:
             if relation := haproxy_route_policy.relation:
                 provider_data = relation.load(HaproxyRoutePolicyProviderAppData, relation.app)
@@ -335,7 +351,7 @@ class HaproxyRoutePolicyProviderBackend:
                     policy_backend_unit_addresses=provider_unit_addresses,
                     model=provider_data.model,
                     app=relation.app.name,
-                    hostname=external_hostname,
+                    hostname=f"{provider_data.model}-{relation.app.name}.{external_hostname}",
                 )
         except ValidationError as exc:
             logger.error("Validation error when parsing policy provider backend: %s", exc)
@@ -362,33 +378,13 @@ class HaproxyRoutePolicyProviderBackend:
         return f"{self.backend_name}_hostname"
 
     @property
-    def path_acl_name(self) -> str:
-        """The path ACL name for the policy backend.
-
-        Returns:
-            str: The path ACL name for the policy backend.
-        """
-        return f"{self.backend_name}_path"
-
-    @property
-    def hostname_acl(self) -> str | None:
+    def hostname_acl(self) -> str:
         """Build the hostname ACL for the policy backend.
 
         Returns:
-            str | None: The hostname ACL string, or None if no hostname is set.
+            str: The hostname ACL string.
         """
-        if self.hostname:
-            return f"acl {self.hostname_acl_name} req.hdr(host),field(1,:) -i {self.hostname}"
-        return None
-
-    @property
-    def path_acl(self) -> str:
-        """Build the path ACL for the policy backend.
-
-        Returns:
-            str: The path ACL string.
-        """
-        return f"acl {self.path_acl_name} path_beg -i /{self.model}-{self.app}"
+        return f"acl {self.hostname_acl_name} req.hdr(host),field(1,:) -i {self.hostname}"
 
     @property
     def policy_backend_server_configuration(self) -> list[str]:
@@ -409,9 +405,7 @@ class HaproxyRoutePolicyProviderBackend:
         Returns:
             str: The use_backend configuration for the policy backend.
         """
-        if hostname_acl := self.hostname_acl:
-            return f"use_backend {self.backend_name} if {self.path_acl} {hostname_acl}"
-        return f"use_backend {self.backend_name} if {self.path_acl}"
+        return f"use_backend {self.backend_name} if {self.hostname_acl_name}"
 
 
 # pylint: disable=too-many-locals
@@ -569,6 +563,11 @@ class HaproxyRouteRequirersInformation:
                 )
             )
 
+            policy_provider_backend = None
+            if haproxy_route_policy.relation is not None:
+                policy_provider_backend = HaproxyRoutePolicyProviderBackend.from_requirer(
+                    haproxy_route_policy, external_hostname
+                )
             return HaproxyRouteRequirersInformation(
                 # Sort backend by the max depth of the required path.
                 # This is to ensure that backends with deeper path ACLs get routed first.
@@ -580,9 +579,7 @@ class HaproxyRouteRequirersInformation:
                 tcp_frontends=tcp_frontends,
                 ports_with_conflicts=set[int](),
                 valid_haproxy_route_requirers=requirers.requirers_data,
-                policy_provider_backend=HaproxyRoutePolicyProviderBackend.from_requirer(
-                    haproxy_route_policy=haproxy_route_policy, external_hostname=external_hostname
-                ),
+                policy_provider_backend=policy_provider_backend,
             )
         except (ValidationError, DataValidationError) as exc:
             raise HaproxyRouteIntegrationDataValidationError from exc
