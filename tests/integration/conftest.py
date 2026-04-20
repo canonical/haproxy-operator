@@ -420,20 +420,20 @@ def browser_context_manager():
 
 
 @pytest.fixture(scope="module", name="postgresql")
-def postgresql_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju):
+def postgresql_fixture(pytestconfig: pytest.Config, lxd_juju: jubilant.Juju):
     """Deploy PostgreSQL."""
     if (
         pytestconfig.getoption("--no-deploy")
-        and POSTGRESQL_APPLICATION in juju.status().apps
+        and POSTGRESQL_APPLICATION in lxd_juju.status().apps
     ):
         return POSTGRESQL_APPLICATION
-    juju.deploy(
+    lxd_juju.deploy(
         "postgresql",
         app=POSTGRESQL_APPLICATION,
         channel="16/edge",
         base="ubuntu@24.04",
     )
-    juju.wait(
+    lxd_juju.wait(
         lambda status: jubilant.all_active(status, POSTGRESQL_APPLICATION),
         timeout=JUJU_WAIT_TIMEOUT,
     )
