@@ -9,6 +9,8 @@ DJANGO_SECRET_KEY="$(snapctl get secret-key)"
 export DJANGO_SECRET_KEY
 DJANGO_ALLOWED_HOSTS="$(snapctl get allowed-hosts)"
 export DJANGO_ALLOWED_HOSTS
+DJANGO_CSRF_TRUSTED_ORIGINS="$(snapctl get csrf-trusted-origins)"
+export DJANGO_CSRF_TRUSTED_ORIGINS
 DJANGO_LOG_LEVEL="$(snapctl get log-level)"
 export DJANGO_LOG_LEVEL
 DJANGO_DATABASE_PASSWORD="$(snapctl get database-password)"

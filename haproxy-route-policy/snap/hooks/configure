@@ -25,6 +25,8 @@ esac
 
 DJANGO_ALLOWED_HOSTS="$(snapctl get allowed-hosts)"
 export DJANGO_ALLOWED_HOSTS
+DJANGO_CSRF_TRUSTED_ORIGINS="$(snapctl get csrf-trusted-origins)"
+export DJANGO_CSRF_TRUSTED_ORIGINS
 DJANGO_DATABASE_PASSWORD="$(snapctl get database-password)"
 export DJANGO_DATABASE_PASSWORD
 DJANGO_DATABASE_HOST="$(snapctl get database-host)"

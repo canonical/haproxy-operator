@@ -9,5 +9,6 @@ set -e
 snapctl set debug='false'
 snapctl set log-level='INFO'
 snapctl set allowed-hosts='["localhost", "127.0.0.1"]'
+snapctl set csrf-trusted-origins='[]'
 SECRET_KEY="$(tr -dc a-zA-Z0-9 < /dev/urandom | head -c 50)"
 snapctl set secret-key="$SECRET_KEY"

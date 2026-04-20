@@ -23,8 +23,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 DEBUG = True
 
-ALLOWED_HOSTS = json.loads(os.getenv("DJANGO_ALLOWED_HOSTS", "[]"))
-
+ALLOWED_HOSTS = json.loads(os.getenv("DJANGO_ALLOWED_HOSTS") or "[]")
+CSRF_TRUSTED_ORIGINS = json.loads(os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS") or "[]")
 # Application definition
 
 INSTALLED_APPS = [
