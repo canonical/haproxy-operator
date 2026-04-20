@@ -51,7 +51,7 @@ def test_oauth_spoe(
         HostConfig("haproxy3.internal", "haproxy-route-requirer3", None),
     ]
 
-    # Deploy the haproxy-requirer integration charms and she haproxy-spoe-auth charms
+    # Deploy the haproxy-requirer integration charms and the haproxy-spoe-auth charms
     for host_config in host_configs:
         any_charm_haproxy_route_deployer(host_config.requirer)
         if host_config.spoe:

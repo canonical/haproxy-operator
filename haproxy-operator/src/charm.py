@@ -202,18 +202,14 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(
             self.on.get_proxied_endpoints_action, self._on_get_proxied_endpoints_action
         )
-        self.framework.observe(
-            self.on[SPOE_AUTH_RELATION].relation_changed, self._on_config_changed
-        )
-        self.framework.observe(
-            self.on[SPOE_AUTH_RELATION].relation_broken, self._on_config_changed
-        )
-        self.framework.observe(
-            self.on[DDOS_PROTECTION_RELATION_NAME].relation_changed, self._on_config_changed
-        )
-        self.framework.observe(
-            self.on[DDOS_PROTECTION_RELATION_NAME].relation_broken, self._on_config_changed
-        )
+        # Hook relation-related events to the reconcile loop.
+        for relation in [
+            SPOE_AUTH_RELATION,
+            DDOS_PROTECTION_RELATION_NAME,
+            HAPROXY_ROUTE_POLICY_RELATION_NAME,
+        ]:
+            self.framework.observe(self.on[relation].relation_changed, self._on_config_changed)
+            self.framework.observe(self.on[relation].relation_broken, self._on_config_changed)
 
     @validate_config_and_tls(defer=False)
     def _on_install(self, _: typing.Any) -> None:
@@ -370,6 +366,10 @@ class HAProxyCharm(ops.CharmBase):
             peers=self._get_peer_units_address(),
             ca_certs_configured=bool(self.recv_ca_certs.get_all_certificates()),
         )
+        if self.unit.is_leader() and self.haproxy_route_policy.relation is not None:
+            self.haproxy_route_policy.provide_haproxy_route_policy_requests(
+                haproxy_route_requirers_information.backend_requests_for_policy
+            )
         # We ONLY allow the charm to run with no certificate requested if:
         # 1. there's only haproxy-route-tcp relations
         # AND

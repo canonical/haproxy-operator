@@ -97,7 +97,7 @@ class HaproxyRoutePolicyInformation:
         allowed_hosts = (
             [
                 cast(IPvAnyAddress | FQDN, address)
-                for address in cast(str, charm.config.get("allowed-hosts")).split(",")
+                for address in cast(str, charm.config.get("extra-allowed-hosts")).split(",")
             ]
             if charm.config.get("extra-allowed-hosts")
             else []
