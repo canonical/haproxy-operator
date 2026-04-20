@@ -13,7 +13,7 @@ provider unit addresses for policy web UI routing.
 """
 
 import logging
-from typing import Annotated
+from typing import Annotated, cast
 
 from ops import CharmBase
 from ops.framework import Object
@@ -26,6 +26,7 @@ from ops.model import (
 from pydantic import (
     BeforeValidator,
     Field,
+    HttpUrl,
     ValidationError,
     model_validator,
 )
@@ -40,7 +41,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 4
+LIBPATCH = 5
 
 
 def valid_domain_with_wildcard(value: str) -> str:
@@ -100,6 +101,9 @@ class HaproxyRoutePolicyRequirerAppData:
 
     backend_requests: list[HaproxyRoutePolicyBackendRequest] = Field(
         description="List of backends to be evaluated by the policy service."
+    )
+    proxied_endpoint: HttpUrl | None = Field(
+        description=("URL for the proxied endpoint that's exposing the Django web UI."),
     )
 
     @model_validator(mode="after")
@@ -201,7 +205,9 @@ class HaproxyRoutePolicyRequirer(Object):
         return self.charm.model.get_relation(self._relation_name)
 
     def provide_haproxy_route_policy_requests(
-        self, backend_requests: list[HaproxyRoutePolicyBackendRequest]
+        self,
+        backend_requests: list[HaproxyRoutePolicyBackendRequest],
+        proxied_endpoint: str | None,
     ) -> None:
         """Set and publish route policy requests."""
         relation = self.relation
@@ -209,7 +215,10 @@ class HaproxyRoutePolicyRequirer(Object):
             return
 
         try:
-            app_data = HaproxyRoutePolicyRequirerAppData(backend_requests=backend_requests)
+            app_data = HaproxyRoutePolicyRequirerAppData(
+                backend_requests=backend_requests,
+                proxied_endpoint=cast(HttpUrl | None, proxied_endpoint),
+            )
             relation.save(app_data, self.charm.app)
         except (
             ValidationError,

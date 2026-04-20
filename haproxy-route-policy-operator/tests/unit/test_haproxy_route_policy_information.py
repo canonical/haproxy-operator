@@ -14,7 +14,7 @@ from state.policy import HaproxyRoutePolicyInformation
 def _build_state(allowed_hosts: list[str]) -> HaproxyRoutePolicyInformation:
     """Build a valid state instance with overridable allowed hosts."""
     return HaproxyRoutePolicyInformation(
-        allowed_hosts=cast(list[Any], allowed_hosts),
+        extra_allowed_hosts=cast(list[Any], allowed_hosts),
         admin_username="admin",
         # Ignore bandit warning as this is for testing.
         admin_password="secret",  # nosec
@@ -25,15 +25,15 @@ def _build_state(allowed_hosts: list[str]) -> HaproxyRoutePolicyInformation:
 @pytest.mark.parametrize(
     "allowed_hosts, expected_allowed_hosts",
     [
-        pytest.param([], [], id="empty-list"),
-        pytest.param(["example.com"], ["example.com"], id="single-fqdn"),
+        pytest.param([], ["localhost"], id="empty-list"),
+        pytest.param(["example.com"], ["localhost", "example.com"], id="single-fqdn"),
         pytest.param(
             ["example.com", "api.example.com"],
-            ["example.com", "api.example.com"],
+            ["localhost", "example.com", "api.example.com"],
             id="multiple-fqdn",
         ),
-        pytest.param(["10.0.0.10"], ["10.0.0.10"], id="ipv4-address"),
-        pytest.param(["2001:db8::1"], ["2001:db8::1"], id="ipv6-address"),
+        pytest.param(["10.0.0.10"], ["localhost", "10.0.0.10"], id="ipv4-address"),
+        pytest.param(["2001:db8::1"], ["localhost", "2001:db8::1"], id="ipv6-address"),
     ],
 )
 def test_haproxy_route_policy_information_init_valid_allowed_hosts(
@@ -46,7 +46,7 @@ def test_haproxy_route_policy_information_init_valid_allowed_hosts(
     """
     state = _build_state(allowed_hosts)
 
-    assert [str(host) for host in state.allowed_hosts] == expected_allowed_hosts
+    assert [str(host) for host in state.allowed_hosts_configuration] == expected_allowed_hosts
 
 
 @pytest.mark.parametrize(
@@ -94,25 +94,3 @@ def test_haproxy_route_policy_information_init_rejects_none_string_fields(
 
     with pytest.raises(ValidationError):
         HaproxyRoutePolicyInformation(**payload)
-
-
-@pytest.mark.parametrize(
-    "allowed_hosts, expected",
-    [
-        pytest.param([], {"allowed-hosts": '["localhost"]'}, id="empty"),
-        pytest.param(
-            ["example.com", "api.example.com"],
-            {"allowed-hosts": '["localhost", "example.com", "api.example.com"]'},
-            id="multiple-fqdn",
-        ),
-    ],
-)
-def test_allowed_hosts_snap_configuration(allowed_hosts: list[str], expected: dict[str, str]):
-    """
-    arrange: initialize state with valid allowed hosts.
-    act: read snap configuration property.
-    assert: allowed-hosts is serialized to expected JSON string.
-    """
-    state = _build_state(allowed_hosts)
-
-    assert state.allowed_hosts_snap_configuration == expected
