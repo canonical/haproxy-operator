@@ -13,7 +13,7 @@ from charm import HaproxyRoutePolicyCharm
 from state.policy import (
     DJANGO_ADMIN_CREDENTIALS_SECRET_LABEL,
     DJANGO_SECRET_KEY_SECRET_LABEL,
-    SECRET_LENGTH,
+    SECRET_NBYTES,
 )
 
 
@@ -73,14 +73,14 @@ def test_config_changed_reconciles_snap_with_database_credentials(is_leader):
         secrets=[
             testing.Secret(
                 label=DJANGO_SECRET_KEY_SECRET_LABEL,
-                tracked_content={"secret-key": secrets.token_urlsafe(SECRET_LENGTH)},
+                tracked_content={"secret-key": secrets.token_urlsafe(SECRET_NBYTES)},
             ),
             testing.Secret(
                 label=DJANGO_ADMIN_CREDENTIALS_SECRET_LABEL,
                 # Ignore bandit warning as this is for testing.
                 tracked_content={
                     "username": "admin",
-                    "password": secrets.token_urlsafe(SECRET_LENGTH),
+                    "password": secrets.token_urlsafe(SECRET_NBYTES),
                 },  # nosec
             ),
         ],
