@@ -187,6 +187,7 @@ def test_haproxy_route_requirer_information_reserved_ports(
     haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
         haproxy_route=haproxy_route_provider_mock,
         haproxy_route_tcp=haproxy_route_tcp_provider_mock,
+        haproxy_route_policy=MagicMock(relation=None),
         external_hostname="test.domain",
         peers=[],
         ca_certs_configured=False,
@@ -223,6 +224,7 @@ def test_haproxy_route_requirer_information(
     haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
         haproxy_route=haproxy_route_provider_mock,
         haproxy_route_tcp=haproxy_route_tcp_provider_mock,
+        haproxy_route_policy=MagicMock(relation=None),
         external_hostname=None,
         peers=[],
         ca_certs_configured=False,
@@ -313,6 +315,7 @@ def test_tcp_grpc_port_conflict(
     haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
         haproxy_route=haproxy_route_provider_mock,
         haproxy_route_tcp=haproxy_route_tcp_provider_mock,
+        haproxy_route_policy=MagicMock(relation=None),
         external_hostname="haproxy.internal",
         peers=[],
         ca_certs_configured=True,
@@ -363,6 +366,7 @@ def test_tcp_port_conflict_standard_ports(
     haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
         haproxy_route=haproxy_route_provider_mock,
         haproxy_route_tcp=haproxy_route_tcp_provider_mock,
+        haproxy_route_policy=MagicMock(relation=None),
         external_hostname="haproxy.internal",
         peers=[],
         ca_certs_configured=False,
@@ -414,6 +418,7 @@ def test_grpc_port_conflict_standard_ports(
     haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
         haproxy_route=haproxy_route_provider_mock,
         haproxy_route_tcp=haproxy_route_tcp_provider_mock,
+        haproxy_route_policy=MagicMock(relation=None),
         external_hostname="haproxy.internal",
         peers=[],
         ca_certs_configured=True,
@@ -467,6 +472,7 @@ def test_tcp_grpc_different_ports(
     haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
         haproxy_route=haproxy_route_provider_mock,
         haproxy_route_tcp=haproxy_route_tcp_provider_mock,
+        haproxy_route_policy=MagicMock(relation=None),
         external_hostname="haproxy.internal",
         peers=[],
         ca_certs_configured=True,
@@ -511,6 +517,7 @@ def test_tcp_only_happy_path(
     haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
         haproxy_route=haproxy_route_provider_mock,
         haproxy_route_tcp=haproxy_route_tcp_provider_mock,
+        haproxy_route_policy=MagicMock(relation=None),
         external_hostname="test.example.com",
         peers=[],
         ca_certs_configured=False,
@@ -551,6 +558,7 @@ def test_http_only_happy_path(
     haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
         haproxy_route=haproxy_route_provider_mock,
         haproxy_route_tcp=haproxy_route_tcp_provider_mock,
+        haproxy_route_policy=MagicMock(relation=None),
         external_hostname="haproxy.internal",
         peers=[],
         ca_certs_configured=False,
@@ -973,6 +981,7 @@ def test_haproxy_route_requirers_information_with_wildcard_hostnames(
     haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
         haproxy_route=haproxy_route_provider_mock,
         haproxy_route_tcp=haproxy_route_tcp_provider_mock,
+        haproxy_route_policy=MagicMock(relation=None),
         external_hostname="haproxy.internal",
         peers=[],
         ca_certs_configured=False,

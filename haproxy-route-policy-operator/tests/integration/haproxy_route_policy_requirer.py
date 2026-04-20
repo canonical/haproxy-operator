@@ -2,7 +2,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""haproxy-route requirer source."""
+"""haproxy-route-policy requirer source."""
 
 import logging
 
@@ -30,7 +30,7 @@ class AnyCharm(AnyCharmBase):
         )
 
     def update_relation(self):
-        """Update haproxy-route-tcp relation data"""
+        """Update haproxy-route-policy relation data"""
         backend_requests = [
             HaproxyRoutePolicyBackendRequest(
                 relation_id=1,
