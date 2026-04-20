@@ -104,6 +104,7 @@ backend {{ backend.name }}
 {% if backend.application_data.load_balancing.consistent_hashing %}
     hash-type consistent
 {% endif %}
+{% endif %}
 {% if backend.application_data.timeout %}
 {% if backend.application_data.timeout.server %}
     timeout server {{ backend.application_data.timeout.server }}s
@@ -113,7 +114,6 @@ backend {{ backend.name }}
 {% endif %}
 {% if backend.application_data.timeout.queue %}
     timeout queue {{ backend.application_data.timeout.queue }}s
-{% endif %}
 {% endif %}
 {% endif %}
 {% if backend.application_data.retry %}
