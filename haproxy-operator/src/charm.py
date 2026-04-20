@@ -409,6 +409,9 @@ class HAProxyCharm(ops.CharmBase):
             ),
         )
         if self.unit.is_leader():
+            self.haproxy_route_policy.provide_haproxy_route_policy_requests(
+                haproxy_route_requirers_information.backend_requests_for_policy
+            )
             self._publish_haproxy_route_proxied_endpoints(haproxy_route_requirers_information)
             self._publish_haproxy_route_tcp_proxied_endpoints(
                 haproxy_route_requirers_information, ha_information
