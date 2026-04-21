@@ -100,6 +100,7 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
                 **database_information.haproxy_route_policy_snap_configuration,
             }
         )
+<<<<<<< expose_haproxy_route_policy_service
 
         if self.unit.is_leader():
             self.unit.status = ops.MaintenanceStatus("[leader] running database migrations")
@@ -116,6 +117,24 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
 
         self.unit.open_port("tcp", HAPROXY_ROUTE_POLICY_PORT)
 
+=======
+
+        if self.unit.is_leader():
+            self.unit.status = ops.MaintenanceStatus("[leader] running database migrations")
+            run_migrations()
+
+            self.unit.status = ops.MaintenanceStatus("[leader] updating Django admin user")
+            create_or_update_user(
+                haproxy_route_policy_information.admin_username,
+                haproxy_route_policy_information.admin_password,
+            )
+
+        self.unit.status = ops.MaintenanceStatus("starting gunicorn service")
+        start_gunicorn_service()
+
+        self.unit.open_port("tcp", HAPROXY_ROUTE_POLICY_PORT)
+
+>>>>>>> main
         if relation := self.haproxy_route_policy.relation:
             self._fetch_and_refresh_backend_requests(haproxy_route_policy_information, relation)
 
@@ -165,9 +184,13 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
             len(evaluated),
             len(approved),
         )
+<<<<<<< expose_haproxy_route_policy_service
         self.haproxy_route_policy.set_approved_backend_requests(
             approved, HAPROXY_ROUTE_POLICY_PORT
         )
+=======
+        self.haproxy_route_policy.set_approved_backend_requests(approved)
+>>>>>>> main
 
 
 if __name__ == "__main__":  # pragma: nocover
