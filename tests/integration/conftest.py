@@ -23,6 +23,8 @@ TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/haproxy_route_requirer.py"
 HAPROXY_ROUTE_LIB_SRC = "haproxy-operator/lib/charms/haproxy/v2/haproxy_route.py"
 APT_LIB_SRC = "haproxy-operator/lib/charms/operator_libs_linux/v0/apt.py"
+HAPROXY_ROUTE_POLICY_APP_NAME = "policy"
+POSTGRESQL_APPLICATION = "db"
 
 
 @pytest.fixture(scope="session", name="lxd_juju")
@@ -417,14 +419,38 @@ def browser_context_manager():
     logger.info("install chromium %s", completed_process)
 
 
+@pytest.fixture(scope="module", name="postgresql")
+def postgresql_fixture(pytestconfig: pytest.Config, lxd_juju: jubilant.Juju):
+    """Deploy PostgreSQL."""
+    if (
+        pytestconfig.getoption("--no-deploy")
+        and POSTGRESQL_APPLICATION in lxd_juju.status().apps
+    ):
+        return POSTGRESQL_APPLICATION
+    lxd_juju.deploy(
+        "postgresql",
+        app=POSTGRESQL_APPLICATION,
+        channel="16/edge",
+        base="ubuntu@24.04",
+    )
+    lxd_juju.wait(
+        lambda status: jubilant.all_active(status, POSTGRESQL_APPLICATION),
+        timeout=JUJU_WAIT_TIMEOUT,
+    )
+    return POSTGRESQL_APPLICATION
+
+
 @pytest.fixture(scope="module", name="haproxy_route_policy")
 def haproxy_route_policy_fixture(
-    pytestconfig: pytest.Config, lxd_juju: jubilant.Juju, app_name, host_name
+    pytestconfig: pytest.Config, lxd_juju: jubilant.Juju
 ) -> str:
     """Deploy the haproxy-route-policy charm."""
     charm_name = "haproxy-route-policy"
-    if pytestconfig.getoption("--no-deploy") and app_name in lxd_juju.status().apps:
-        return app_name
+    if (
+        pytestconfig.getoption("--no-deploy")
+        and HAPROXY_ROUTE_POLICY_APP_NAME in lxd_juju.status().apps
+    ):
+        return HAPROXY_ROUTE_POLICY_APP_NAME
 
     charm_file = next(
         (f for f in pytestconfig.getoption("--charm-file") if f"{charm_name}_" in f),
@@ -434,7 +460,6 @@ def haproxy_route_policy_fixture(
 
     lxd_juju.deploy(
         charm=charm_file,
-        app=app_name,
-        config={"hostname": host_name},
+        app=HAPROXY_ROUTE_POLICY_APP_NAME,
     )
-    return app_name
+    return HAPROXY_ROUTE_POLICY_APP_NAME
