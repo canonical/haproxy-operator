@@ -114,7 +114,9 @@ def test_provider_app_data_model_accepts_valid_payload():
     assert: payload is validated and fields are preserved.
     """
     request = HaproxyRoutePolicyBackendRequest(**VALID_BACKEND_REQUEST)
-    app_data = HaproxyRoutePolicyProviderAppData(approved_requests=[request])
+    app_data = HaproxyRoutePolicyProviderAppData(
+        approved_requests=[request], policy_backend_port=8080, model="test-model"
+    )
 
     assert len(app_data.approved_requests) == 1
     assert app_data.approved_requests[0].backend_name == "backend-a"

@@ -3,18 +3,6 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-DJANGO_DEBUG="$(snapctl get debug)"
-export DJANGO_DEBUG
-
-case "$DJANGO_DEBUG" in
-  "true") ;;
-  "false") ;;
-  *)
-    >&2 echo "'$DJANGO_DEBUG is not a supported value for django_debug. Possible values are true, false"
-    return 1
-    ;;
-esac
-
 DJANGO_LOG_LEVEL="$(snapctl get log-level)"
 export DJANGO_LOG_LEVEL
 
