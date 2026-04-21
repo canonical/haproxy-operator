@@ -25,6 +25,7 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
     TokenVerifyView,
 )
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
 from policy import urls as policy_urls
 
@@ -35,3 +36,5 @@ urlpatterns = [
     path("api/token/verify/", TokenVerifyView.as_view(), name="token_verify"),
     path("", include(policy_urls)),
 ]
+
+urlpatterns += staticfiles_urlpatterns()
