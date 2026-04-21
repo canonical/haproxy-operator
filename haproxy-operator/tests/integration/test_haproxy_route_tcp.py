@@ -73,3 +73,27 @@ def test_haproxy_route_tcp(
             "hash-type consistent",
         ]
     )
+
+    # Test with timeouts
+    juju.run(
+        f"{any_charm_haproxy_route_tcp_requirer}/0",
+        "rpc",
+        {"method": "update_relation_with_timeouts"},
+    )
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, any_charm_haproxy_route_tcp_requirer
+        )
+    )
+
+    haproxy_config = juju.ssh(
+        f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
+    )
+    assert all(
+        entry in haproxy_config
+        for entry in [
+            "timeout server 10s",
+            "timeout connect 5s",
+            "timeout queue 2s",
+        ]
+    )
