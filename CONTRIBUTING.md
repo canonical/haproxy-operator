@@ -99,70 +99,27 @@ To add signatures on your commits, follow the
 
 ## Develop
 
-To make contributions to this charm, you'll need a working
-[development setup](https://documentation.ubuntu.com/juju/latest/howto/manage-your-juju-deployment/set-up-your-juju-deployment-local-testing-and-development/).
+To make contributions to this charm, you'll need a working [development setup](https://documentation.ubuntu.com/juju/3.6/howto/manage-your-juju-deployment/set-up-your-juju-deployment-local-testing-and-development/).
 
-The code for this charm can be downloaded as follows:
+You can create an environment for development with `tox`:
 
-```
-git clone https://github.com/canonical/haproxy-operator
-```
-
-Make sure to install [`uv`](https://docs.astral.sh/uv/). For example, you can install `uv` on Ubuntu using:
-
-```bash
-sudo snap install astral-uv --classic
+```shell
+tox devenv -e integration
+source venv/bin/activate
 ```
 
-For other systems, follow the [`uv` installation guide](https://docs.astral.sh/uv/getting-started/installation/).
-
-Then install `tox` with its extensions, and install a range of Python versions:
-
-```bash
-uv python install
-uv tool install tox --with tox-uv
-uv tool update-shell
-```
-
-To create a development environment, run:
-
-```bash
-uv sync --all-groups
-source .venv/bin/activate
-```
-
-### Test
+## Test
 
 This project uses `tox` for managing test environments. There are some pre-configured environments
 that can be used for linting and formatting code when you're preparing contributions to the charm:
 
-* ``tox``: Executes all of the basic checks and tests (``lint``, ``unit``, ``static``, and ``coverage-report``).
-* ``tox -e fmt``: Runs formatting using ``ruff``.
+* ``tox``: Executes all of the basic checks and tests (``lint``, ``unit``, and ``format``).
+* ``tox -e format``: Updates your code according to linting rules.
 * ``tox -e lint``: Runs a range of static code analysis to check the code.
-* ``tox -e static``: Runs other checks such as ``bandit`` for security issues.
 * ``tox -e unit``: Runs the unit tests.
 * ``tox -e integration``: Runs the integration tests.
 
-### Build the rock and charm
-
-Use [Rockcraft](https://documentation.ubuntu.com/rockcraft/stable/) to create an
-OCI image for the HAProxy app, and then upload the image to a MicroK8s registry,
-which stores OCI archives so they can be downloaded and deployed.
-
-Enable the MicroK8s registry:
-
-```bash
-microk8s enable registry
-```
-
-The following commands pack the OCI image and push it into
-the MicroK8s registry:
-
-```bash
-cd <project_dir>
-rockcraft pack
-skopeo --insecure-policy copy --dest-tls-verify=false oci-archive:<rock-name>.rock docker://localhost:32000/<app-name>:latest
-```
+## Build the charm
 
 Build the charm in this git repository using:
 
@@ -170,16 +127,21 @@ Build the charm in this git repository using:
 charmcraft pack
 ```
 
-### Deploy
+## Release the charm
 
-```bash
-# Create a model
-juju add-model charm-dev
-# Enable DEBUG logging
-juju model-config logging-config="<root>=INFO;unit=DEBUG"
-# Deploy the charm
-juju deploy ./haproxy*.charm 
-```
+Our release note policy is described in our [documentation](https://documentation.ubuntu.com/haproxy-charm/latest/release-notes/).
 
+It is implemented by this [workflow](https://github.com/canonical/haproxy-operator/deployments/charmhub-stable-promote) that is triggered automatically on Monday.
 
+To give the required approval, click on the three horizontal dots on the right of the screen.
 
+- Once the charm has been published to `stable`:
+
+  - Create a PR to list the content for the [release note](https://github.com/canonical/haproxy-operator/tree/main/docs/release-notes/releases).
+  - Include all PR merged into the release published to stable and not listed in the previous release.
+
+- Once merged, a new [Add release notes](https://github.com/canonical/haproxy-operator/pulls) PR will be automatically created.
+
+  - Edit it to refine the release notes.
+
+- Once merged, announce the new release on [Charmhub](https://discourse.charmhub.io/c/announcements-and-community/33) (tags: "charms" and "haproxy").
