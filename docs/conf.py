@@ -252,7 +252,10 @@ linkcheck_ignore = [
 
 # A regex list of URLs where anchors are ignored by 'make linkcheck'
 
-linkcheck_anchors_ignore_for_url = [r"https://github\.com/.*"]
+linkcheck_anchors_ignore_for_url = [
+    r"https://github\.com/.*",
+    "https://opendev.org/openstack/charm-hacluster/src/*",
+    ]
 
 # give linkcheck multiple tries on failure
 # linkcheck_timeout = 30
@@ -317,10 +320,10 @@ html_js_files = ['js/bundle.js']
 
 # Specifies a reST snippet to be appended to each .rst file
 
-rst_epilog = """
-.. include:: /reuse/links.txt
-.. include:: /reuse/substitutions.txt
-"""
+#rst_epilog = """
+#.. include:: /reuse/links.txt
+#.. include:: /reuse/substitutions.txt
+#"""
 
 # Feedback button at the top; enabled by default
 #
