@@ -1,0 +1,21 @@
+version_schema: 2
+
+changes:
+  - title: Integrated haproxy-route-policy relation into haproxy-operator
+    author: tphan025
+    type: minor
+    description: >
+      Added a new `haproxy-route-policy` requirer relation to the haproxy-operator
+      charm. When the relation is present, the charm publishes backend requests
+      derived from haproxy-route requirers to the policy provider and only
+      configures backends that appear in the approved list returned by the policy
+      charm. When no policy relation exists, all haproxy-route backends continue
+      to be configured as before. Vendored the haproxy-route-policy interface
+      library and updated unit tests to pass the new policy parameter.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/458
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false

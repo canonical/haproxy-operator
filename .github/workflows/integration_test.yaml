@@ -59,7 +59,8 @@ jobs:
       modules: |
         [
           "test_oauth_spoe.py",
-          "test_haproxy_ddos.py"
+          "test_haproxy_ddos.py",
+          "test_haproxy_route_policy.py"
         ]
       with-uv: true
       pre-run-script: ./tests/integration/setup-integration-tests.sh

@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-04-17
+
+- Added missing settings from haproxy-route-tcp relation template.
+
 ## 2026-04-01
 
 - Fixed hosts validation in haproxy-route and haproxy-route-tcp relation libraries.
