@@ -13,7 +13,7 @@ provider unit addresses for policy web UI routing.
 """
 
 import logging
-from typing import Annotated, cast
+from typing import Annotated
 
 from ops import CharmBase
 from ops.framework import Object
@@ -27,7 +27,9 @@ from pydantic import (
     BeforeValidator,
     Field,
     HttpUrl,
+    TypeAdapter,
     ValidationError,
+    field_validator,
     model_validator,
 )
 from pydantic.dataclasses import dataclass
@@ -41,7 +43,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 5
+LIBPATCH = 7
 
 
 def valid_domain_with_wildcard(value: str) -> str:
@@ -102,9 +104,19 @@ class HaproxyRoutePolicyRequirerAppData:
     backend_requests: list[HaproxyRoutePolicyBackendRequest] = Field(
         description="List of backends to be evaluated by the policy service."
     )
-    proxied_endpoint: HttpUrl | None = Field(
+    proxied_endpoint: str | None = Field(
         description=("URL for the proxied endpoint that's exposing the Django web UI."),
     )
+
+    @field_validator("proxied_endpoint")
+    def validate_proxied_endpoint(cls, value: str | None) -> str | None:
+        """Validate that the proxied endpoint, if provided, is a valid URL."""
+        if value is not None:
+            try:
+                TypeAdapter(HttpUrl).validate_python(value)
+            except ValueError as exc:
+                raise ValueError(f"Invalid proxied endpoint URL: {value}") from exc
+        return value
 
     @model_validator(mode="after")
     def validate_unique_backend_names(self):
@@ -217,7 +229,7 @@ class HaproxyRoutePolicyRequirer(Object):
         try:
             app_data = HaproxyRoutePolicyRequirerAppData(
                 backend_requests=backend_requests,
-                proxied_endpoint=cast(HttpUrl | None, proxied_endpoint),
+                proxied_endpoint=proxied_endpoint,
             )
             relation.save(app_data, self.charm.app)
         except (
