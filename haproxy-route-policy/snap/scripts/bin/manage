@@ -12,8 +12,6 @@ if [ -z "$DJANGO_ALLOWED_HOSTS" ]; then
   DJANGO_ALLOWED_HOSTS="[]"
 fi
 export DJANGO_ALLOWED_HOSTS
-DJANGO_CSRF_TRUSTED_ORIGINS="$(snapctl get csrf-trusted-origins)"
-export DJANGO_CSRF_TRUSTED_ORIGINS
 DJANGO_LOG_LEVEL="$(snapctl get log-level)"
 export DJANGO_LOG_LEVEL
 DJANGO_DATABASE_PASSWORD="$(snapctl get database-password)"
