@@ -59,6 +59,12 @@ def start_gunicorn_service() -> None:
     package.start()
 
 
+def is_service_active() -> bool:
+    """Check if the snap gunicorn app is active."""
+    package = snap.SnapCache()[SNAP_NAME]
+    return package.services["haproxy-route-policy"].get("active", False)
+
+
 def create_or_update_user(username: str, password: str) -> None:
     """Create or update the HTTP proxy policy superuser.
 
