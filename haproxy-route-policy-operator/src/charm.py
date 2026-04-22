@@ -53,6 +53,7 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
         self.framework.observe(self.on.upgrade_charm, self._reconcile)
         self.framework.observe(self.on.start, self._reconcile)
         self.framework.observe(self.on.config_changed, self._reconcile)
+        self.framework.observe(self.on.update_status, self._reconcile)
         self.framework.observe(
             self.on.get_admin_credentials_action, self._on_get_admin_credentials_action
         )
