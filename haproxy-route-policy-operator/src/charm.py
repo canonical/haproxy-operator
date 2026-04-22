@@ -23,6 +23,7 @@ from policy import (
     configure_snap,
     create_or_update_user,
     install_snap,
+    is_service_active,
     run_migrations,
     start_gunicorn_service,
 )
@@ -101,13 +102,14 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
             haproxy_route_policy_requirer_data = relation.load(
                 HaproxyRoutePolicyRequirerAppData, relation.app
             )
-            self._fetch_and_refresh_backend_requests(
-                haproxy_route_policy_information, haproxy_route_policy_requirer_data
-            )
-            if (proxied_endpoint := haproxy_route_policy_requirer_data.proxied_endpoint) and (
-                host := proxied_endpoint.host
-            ):
-                allowed_hosts.append(host)
+            if is_service_active():
+                # We can only send requests to the policy API if the service is active.
+                self._fetch_and_refresh_backend_requests(
+                    haproxy_route_policy_information, haproxy_route_policy_requirer_data
+                )
+
+            if proxied_endpoint := haproxy_route_policy_requirer_data.proxied_endpoint:
+                allowed_hosts.append(proxied_endpoint)
 
         configure_snap(
             {

@@ -370,7 +370,7 @@ class HAProxyCharm(ops.CharmBase):
         if self.unit.is_leader() and self.haproxy_route_policy.relation is not None:
             self.haproxy_route_policy.provide_haproxy_route_policy_requests(
                 haproxy_route_requirers_information.backend_requests_for_policy,
-                f"https://{haproxy_route_requirers_information.policy_provider_backend.hostname}"
+                haproxy_route_requirers_information.policy_provider_backend.hostname
                 if haproxy_route_requirers_information.policy_provider_backend
                 else None,
             )
