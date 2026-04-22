@@ -5,7 +5,6 @@
 
 """Charm state for HAProxy route policy information."""
 
-import json
 import secrets
 from typing import Annotated, cast
 
@@ -66,19 +65,19 @@ class HaproxyRoutePolicyInformation:
         secret_key: Django secret key.
     """
 
-    allowed_hosts: list[FQDN | IPvAnyAddress] = Field()
+    extra_allowed_hosts: list[FQDN | IPvAnyAddress] = Field()
     admin_username: str = Field()
     admin_password: str = Field()
     secret_key: str = Field()
 
     @property
-    def allowed_hosts_snap_configuration(self) -> dict[str, str]:
-        """Return snap configuration keys and values."""
-        return {
-            "allowed-hosts": json.dumps(
-                DEFAULT_ALLOWED_HOSTS + [str(host) for host in self.allowed_hosts]
-            ),
-        }
+    def allowed_hosts_configuration(self) -> list[str]:
+        """Get the allowed hosts snap configuration.
+
+        Returns:
+            list: The allowed hosts to set in snap configuration.
+        """
+        return DEFAULT_ALLOWED_HOSTS + [str(host) for host in self.extra_allowed_hosts]
 
     @classmethod
     def from_charm(cls, charm: ops.CharmBase) -> "HaproxyRoutePolicyInformation":
@@ -94,7 +93,7 @@ class HaproxyRoutePolicyInformation:
         if not peer_relation:
             raise PeerRelationMissingError("Peer relation is missing.")
 
-        allowed_hosts = (
+        extra_allowed_hosts = (
             [
                 cast(IPvAnyAddress | FQDN, address)
                 for address in cast(str, charm.config.get("extra-allowed-hosts")).split(",")
@@ -109,7 +108,7 @@ class HaproxyRoutePolicyInformation:
             )
         secret_key = _get_django_secret_key(charm, peer_relation)["secret-key"]
         return cls(
-            allowed_hosts=allowed_hosts,
+            extra_allowed_hosts=extra_allowed_hosts,
             admin_username=credentials["username"],
             admin_password=credentials["password"],
             secret_key=secret_key,

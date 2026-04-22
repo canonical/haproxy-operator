@@ -369,7 +369,10 @@ class HAProxyCharm(ops.CharmBase):
         )
         if self.unit.is_leader() and self.haproxy_route_policy.relation is not None:
             self.haproxy_route_policy.provide_haproxy_route_policy_requests(
-                haproxy_route_requirers_information.backend_requests_for_policy
+                haproxy_route_requirers_information.backend_requests_for_policy,
+                haproxy_route_requirers_information.policy_provider_backend.hostname
+                if haproxy_route_requirers_information.policy_provider_backend
+                else None,
             )
         # We ONLY allow the charm to run with no certificate requested if:
         # 1. there's only haproxy-route-tcp relations
@@ -409,9 +412,6 @@ class HAProxyCharm(ops.CharmBase):
             ),
         )
         if self.unit.is_leader():
-            self.haproxy_route_policy.provide_haproxy_route_policy_requests(
-                haproxy_route_requirers_information.backend_requests_for_policy
-            )
             self._publish_haproxy_route_proxied_endpoints(haproxy_route_requirers_information)
             self._publish_haproxy_route_tcp_proxied_endpoints(
                 haproxy_route_requirers_information, ha_information
