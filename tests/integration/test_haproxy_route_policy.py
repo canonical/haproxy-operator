@@ -8,10 +8,15 @@ import logging
 
 import jubilant
 import pytest
+from typing import Callable, Any
+import json
+import requests
+from .helper import get_unit_ip_address
 
 logger = logging.getLogger(__name__)
 
 TEST_HOSTNAME = "example.com"
+HAPROXY_ROUTE_REQUIRER_NAME = "haproxy-route-requirer"
 
 
 @pytest.mark.abort_on_fail
@@ -20,10 +25,46 @@ def test_haproxy_route_policy(
     haproxy_route_policy: str,
     lxd_juju: jubilant.Juju,
     postgresql: str,
+    any_charm_haproxy_route_deployer: Callable[[str], Any],
 ):
     """Test the HAProxy route policy integration."""
+    any_charm_haproxy_route_deployer(HAPROXY_ROUTE_REQUIRER_NAME)
     lxd_juju.integrate(f"{haproxy_route_policy}:database", f"{postgresql}:database")
     lxd_juju.integrate(
         f"{configured_application_with_tls}:haproxy-route-policy",
         haproxy_route_policy,
     )
+    lxd_juju.integrate(
+        f"{HAPROXY_ROUTE_REQUIRER_NAME}:require-haproxy-route", configured_application_with_tls
+    )
+    lxd_juju.run(
+        f"{HAPROXY_ROUTE_REQUIRER_NAME}/0",
+        "rpc",
+        {
+            "method": "update_relation",
+            "args": json.dumps(
+                [
+                    {
+                        "service": HAPROXY_ROUTE_REQUIRER_NAME,
+                        "ports": [80],
+                        "hostname": TEST_HOSTNAME,
+                    }
+                ]
+            ),
+        },
+    )
+    lxd_juju.wait(jubilant.all_active)
+    admin_credentials = lxd_juju.run(
+        f"{haproxy_route_policy}/0",
+        "get-admin-credentials",
+    )
+    logger.info(f"Admin credentials: {admin_credentials}")
+    haproxy_unit_ip = get_unit_ip_address(lxd_juju, configured_application_with_tls)
+
+    response = requests.get(
+        f"https://{str(haproxy_unit_ip)}/api/v1/requests",
+        headers={"Host": TEST_HOSTNAME},
+        auth=("admin", admin_credentials["password"]),
+        verify=False,
+    )
+    logger.info(f"Response from HAProxy route policy: {response.json()}")

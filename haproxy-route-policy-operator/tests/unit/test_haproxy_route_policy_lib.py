@@ -3,8 +3,6 @@
 
 """Unit tests for haproxy-route-policy interface library models."""
 
-from typing import cast
-
 import pytest
 from charms.haproxy_route_policy.v0.haproxy_route_policy import (
     HaproxyRoutePolicyBackendRequest,
@@ -12,7 +10,7 @@ from charms.haproxy_route_policy.v0.haproxy_route_policy import (
     HaproxyRoutePolicyRequirerAppData,
     valid_domain_with_wildcard,
 )
-from pydantic import HttpUrl, ValidationError
+from pydantic import ValidationError
 
 VALID_BACKEND_REQUEST = {
     "relation_id": 10,
@@ -103,7 +101,7 @@ def test_requirer_app_data_model_accepts_valid_payload():
     """
     request = HaproxyRoutePolicyBackendRequest(**VALID_BACKEND_REQUEST)
     app_data = HaproxyRoutePolicyRequirerAppData(
-        backend_requests=[request], proxied_endpoint=cast(HttpUrl, "https://example.com")
+        backend_requests=[request], proxied_endpoint="example.com"
     )
 
     assert len(app_data.backend_requests) == 1
