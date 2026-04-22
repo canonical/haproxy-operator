@@ -35,10 +35,11 @@ def test_haproxy_route_policy(
         haproxy_route_policy,
     )
     lxd_juju.integrate(
-        f"{HAPROXY_ROUTE_REQUIRER_NAME}:require-haproxy-route", configured_application_with_tls
+        f"{HAPROXY_ROUTE_REQUIRER_NAME}:require-haproxy-route",
+        configured_application_with_tls,
     )
     lxd_juju.run(
-        f"{HAPROXY_ROUTE_REQUIRER_NAME}/0",
+        f"{HAPROXY_ROUTE_REQUIRER_NAME}/leader",
         "rpc",
         {
             "method": "update_relation",
@@ -55,7 +56,7 @@ def test_haproxy_route_policy(
     )
     lxd_juju.wait(jubilant.all_active)
     admin_credentials = lxd_juju.run(
-        f"{haproxy_route_policy}/0",
+        f"{haproxy_route_policy}/leader",
         "get-admin-credentials",
     )
     logger.info(f"Admin credentials: {admin_credentials}")
