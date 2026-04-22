@@ -71,6 +71,7 @@ def test_haproxy_route_policy(
     response = requests.get(
         f"https://{str(haproxy_unit_ip)}/api/v1/requests",
         headers={
+            # split(':)[1] is used here because in multi-controllers setup the model name is prefixed with the controller name.
             "Host": f"{lxd_juju.model.split(':')[1]}-{haproxy_route_policy}.{TEST_HOSTNAME}"
         },
         auth=("admin", admin_credentials.results["password"]),
