@@ -28,6 +28,9 @@ def test_haproxy_route_policy(
     any_charm_haproxy_route_deployer: Callable[[str], Any],
 ):
     """Test the HAProxy route policy integration."""
+    lxd_juju.config(
+        configured_application_with_tls, {"external-hostname": TEST_HOSTNAME}
+    )
     any_charm_haproxy_route_deployer(HAPROXY_ROUTE_REQUIRER_NAME)
     lxd_juju.integrate(f"{haproxy_route_policy}:database", f"{postgresql}:database")
     lxd_juju.integrate(
@@ -37,6 +40,11 @@ def test_haproxy_route_policy(
     lxd_juju.integrate(
         f"{HAPROXY_ROUTE_REQUIRER_NAME}:require-haproxy-route",
         configured_application_with_tls,
+    )
+    # Wait for any-charm to settle before running the action
+    lxd_juju.wait(
+        lambda status: not status.apps[HAPROXY_ROUTE_REQUIRER_NAME].is_waiting,
+        timeout=5 * 60,
     )
     lxd_juju.run(
         f"{HAPROXY_ROUTE_REQUIRER_NAME}/leader",
@@ -59,13 +67,16 @@ def test_haproxy_route_policy(
         f"{haproxy_route_policy}/leader",
         "get-admin-credentials",
     )
-    logger.info(f"Admin credentials: {admin_credentials}")
     haproxy_unit_ip = get_unit_ip_address(lxd_juju, configured_application_with_tls)
-
     response = requests.get(
         f"https://{str(haproxy_unit_ip)}/api/v1/requests",
-        headers={"Host": TEST_HOSTNAME},
-        auth=("admin", admin_credentials["password"]),
+        headers={
+            "Host": f"{lxd_juju.model.split(':')[1]}-{haproxy_route_policy}.{TEST_HOSTNAME}"
+        },
+        auth=("admin", admin_credentials.results["password"]),
         verify=False,
     )
-    logger.info(f"Response from HAProxy route policy: {response.json()}")
+    backend_requests = response.json()
+    assert len(backend_requests) == 1
+    assert backend_requests[0]["hostname_acls"] == [TEST_HOSTNAME]
+    assert backend_requests[0]["status"] == "pending"
