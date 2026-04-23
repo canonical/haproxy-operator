@@ -23,7 +23,6 @@ from policy import (
     configure_snap,
     create_or_update_user,
     install_snap,
-    is_service_active,
     run_migrations,
     start_gunicorn_service,
 )
@@ -98,15 +97,11 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
         haproxy_route_policy_information = HaproxyRoutePolicyInformation.from_charm(self)
 
         allowed_hosts = haproxy_route_policy_information.allowed_hosts_configuration
+        haproxy_route_policy_requirer_data = None
         if relation := self.haproxy_route_policy.relation:
             haproxy_route_policy_requirer_data = relation.load(
                 HaproxyRoutePolicyRequirerAppData, relation.app
             )
-            if is_service_active():
-                # We can only send requests to the policy API if the service is active.
-                self._fetch_and_refresh_backend_requests(
-                    haproxy_route_policy_information, haproxy_route_policy_requirer_data
-                )
 
             if proxied_endpoint := haproxy_route_policy_requirer_data.proxied_endpoint:
                 allowed_hosts.append(proxied_endpoint)
@@ -133,6 +128,10 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
 
         self.unit.open_port("tcp", HAPROXY_ROUTE_POLICY_PORT)
 
+        if haproxy_route_policy_requirer_data is not None:
+            self._fetch_and_refresh_backend_requests(
+                haproxy_route_policy_information, haproxy_route_policy_requirer_data
+            )
         self.unit.status = ops.ActiveStatus()
 
     def _on_get_admin_credentials_action(self, event: ops.ActionEvent) -> None:
@@ -172,11 +171,6 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
             for req, ev in zip(backend_requests, evaluated, strict=True)
             if ev.status == "accepted"
         ]
-        logger.info(
-            "backend requests evaluated: %d total, %d approved",
-            len(evaluated),
-            len(approved),
-        )
         self.haproxy_route_policy.set_approved_backend_requests(
             approved, HAPROXY_ROUTE_POLICY_PORT
         )

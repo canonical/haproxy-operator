@@ -32,5 +32,5 @@ if [ -z "$DJANGO_DATABASE_HOST" ] || [ -z "$DJANGO_DATABASE_PORT" ] || [ -z "$DJ
   return 1
 fi
 
-exec gunicorn --bind 0.0.0.0:8080 haproxy_route_policy.wsgi \
-  --capture-output --log-level="$LOG_LEVEL"
+exec gunicorn --chdir "$SNAP/app" --bind 0.0.0.0:8080 \
+  haproxy_route_policy.wsgi:application --capture-output --log-level="$LOG_LEVEL"

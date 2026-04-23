@@ -21,10 +21,7 @@ import psycopg2.extensions
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
-# This is set to True for django to serve static files for the admin UI directly
-# In future iteration the responsibility if serving static files will be moved to 
-# a dedicated reverse proxy deployed by the policy charm. 
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = json.loads(os.getenv("DJANGO_ALLOWED_HOSTS") or "[]")
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -45,13 +42,13 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
     "policy.middleware.DatabaseErrorMiddleware",
 ]
 

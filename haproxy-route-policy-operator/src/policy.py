@@ -62,7 +62,7 @@ def start_gunicorn_service() -> None:
 def is_service_active() -> bool:
     """Check if the snap gunicorn app is active."""
     package = snap.SnapCache()[SNAP_NAME]
-    return package.services["haproxy-route-policy"].get("active", False)
+    return package.services["gunicorn"].get("active", False)
 
 
 def create_or_update_user(username: str, password: str) -> None:
