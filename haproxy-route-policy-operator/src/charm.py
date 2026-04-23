@@ -24,6 +24,7 @@ from policy import (
     configure_snap,
     create_or_update_user,
     install_snap,
+    is_service_active,
     run_migrations,
     start_gunicorn_service,
 )
