@@ -1,6 +1,6 @@
 {% extends 'haproxy.cfg.j2' %}
 {% block proxy_configuration %}
-{% if http_backends %}
+{% if http_backends or policy_provider_backend is not none %}
 frontend haproxy
     mode http
     bind [::]:80 v4v6
@@ -48,8 +48,24 @@ frontend haproxy
 {% endif %}
     use_backend {{ backend.backend_name }} if {% if backend.path_acl_required %}acl_path_{{ backend.backend_name }}{% endif %} acl_host_{{ backend.backend_name }} {% if backend.deny_path_acl_required %}!acl_deny_path_{{ backend.backend_name }}{% endif +%}
 {% endfor %}
+{% if policy_provider_backend is not none %}
+    # Routing configuration for the haproxy-route-policy provider
+    {{ policy_provider_backend.hostname_acl }}
+    {{ policy_provider_backend.use_backend_configuration }}
+{% endif %}
 
     default_backend default
+
+{% if policy_provider_backend is not none %}
+# Backend configuration for the haproxy-route-policy provider
+backend {{ policy_provider_backend.backend_name }}
+    mode http
+    http-request set-header X-Forwarded-Proto https
+    http-request set-header X-Forwarded-Ssl on
+{% for server_configuration in policy_provider_backend.policy_backend_server_configuration %}
+    {{ server_configuration}}
+{% endfor %}
+{% endif %}
 
 peers haproxy_peers
 {% for address in peer_units_address %}

@@ -6,9 +6,9 @@
 This interface is used between the HAProxy charm (requirer) and the
 haproxy-route-policy charm (provider).
 
-The requirer publishes route policy requests under ``requests`` as a list of
+The requirer publishes route policy requests under ``backend_requests`` as a list of
 HAProxy backend objects. The provider publishes approved entries under
-``approved_backends`` and additionally exposes ``policy_backend_port`` and
+``approved_requests`` and additionally exposes ``policy_backend_port`` and
 provider unit addresses for policy web UI routing.
 """
 
@@ -40,7 +40,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 8
 
 
 def valid_domain_with_wildcard(value: str) -> str:
@@ -57,6 +57,17 @@ def valid_domain_with_wildcard(value: str) -> str:
     """
     fqdn = value[2:] if value.startswith("*.") else value
     if not bool(domain(fqdn)):
+        raise ValueError(f"Invalid domain: {value}")
+    return value
+
+
+def valid_domain(value: str) -> str:
+    """Validate if value is a valid domain without wildcards.
+
+    Raises:
+        ValueError: When value is not a valid domain.
+    """
+    if not bool(domain(value)):
         raise ValueError(f"Invalid domain: {value}")
     return value
 
@@ -101,6 +112,9 @@ class HaproxyRoutePolicyRequirerAppData:
     backend_requests: list[HaproxyRoutePolicyBackendRequest] = Field(
         description="List of backends to be evaluated by the policy service."
     )
+    proxied_endpoint: Annotated[str, BeforeValidator(valid_domain)] | None = Field(
+        description=("URL for the proxied endpoint that's exposing the Django web UI."),
+    )
 
     @model_validator(mode="after")
     def validate_unique_backend_names(self):
@@ -118,6 +132,12 @@ class HaproxyRoutePolicyProviderAppData:
     approved_requests: list[HaproxyRoutePolicyBackendRequest] = Field(
         description="List of approved backend requests."
     )
+    policy_backend_port: int = Field(
+        gt=0,
+        le=65535,
+        description="Port number for the policy backend service (e.g. for routing to policy web UI).",
+    )
+    model: str = Field(description="Model name where the policy backend is deployed.")
 
 
 class HaproxyRoutePolicyProvider(Object):
@@ -144,7 +164,7 @@ class HaproxyRoutePolicyProvider(Object):
         return self.charm.model.get_relation(self.relation_name)
 
     def set_approved_backend_requests(
-        self, approved_requests: list[HaproxyRoutePolicyBackendRequest]
+        self, approved_requests: list[HaproxyRoutePolicyBackendRequest], policy_backend_port: int
     ) -> None:
         """Set and publish approved backend requests."""
         relation = self.relation
@@ -152,7 +172,11 @@ class HaproxyRoutePolicyProvider(Object):
             return
 
         try:
-            app_data = HaproxyRoutePolicyProviderAppData(approved_requests=approved_requests)
+            app_data = HaproxyRoutePolicyProviderAppData(
+                approved_requests=approved_requests,
+                policy_backend_port=policy_backend_port,
+                model=self.charm.model.name,
+            )
             relation.save(app_data, self.charm.app)
         except (
             ValidationError,
@@ -191,7 +215,9 @@ class HaproxyRoutePolicyRequirer(Object):
         return self.charm.model.get_relation(self._relation_name)
 
     def provide_haproxy_route_policy_requests(
-        self, backend_requests: list[HaproxyRoutePolicyBackendRequest]
+        self,
+        backend_requests: list[HaproxyRoutePolicyBackendRequest],
+        proxied_endpoint: str | None,
     ) -> None:
         """Set and publish route policy requests."""
         relation = self.relation
@@ -199,7 +225,10 @@ class HaproxyRoutePolicyRequirer(Object):
             return
 
         try:
-            app_data = HaproxyRoutePolicyRequirerAppData(backend_requests=backend_requests)
+            app_data = HaproxyRoutePolicyRequirerAppData(
+                backend_requests=backend_requests,
+                proxied_endpoint=proxied_endpoint,
+            )
             relation.save(app_data, self.charm.app)
         except (
             ValidationError,

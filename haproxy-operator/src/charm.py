@@ -271,6 +271,7 @@ class HAProxyCharm(ops.CharmBase):
             self.haproxy_route_provider,
             self.haproxy_route_tcp_provider,
             self.reverseproxy_requirer,
+            self.haproxy_route_policy,
         )
         proxy_mode = charm_state.mode
         if proxy_mode == ProxyMode.INVALID:
@@ -368,7 +369,10 @@ class HAProxyCharm(ops.CharmBase):
         )
         if self.unit.is_leader() and self.haproxy_route_policy.relation is not None:
             self.haproxy_route_policy.provide_haproxy_route_policy_requests(
-                haproxy_route_requirers_information.backend_requests_for_policy
+                haproxy_route_requirers_information.backend_requests_for_policy,
+                haproxy_route_requirers_information.policy_provider_backend.hostname
+                if haproxy_route_requirers_information.policy_provider_backend
+                else None,
             )
         # We ONLY allow the charm to run with no certificate requested if:
         # 1. there's only haproxy-route-tcp relations
@@ -408,9 +412,6 @@ class HAProxyCharm(ops.CharmBase):
             ),
         )
         if self.unit.is_leader():
-            self.haproxy_route_policy.provide_haproxy_route_policy_requests(
-                haproxy_route_requirers_information.backend_requests_for_policy
-            )
             self._publish_haproxy_route_proxied_endpoints(haproxy_route_requirers_information)
             self._publish_haproxy_route_tcp_proxied_endpoints(
                 haproxy_route_requirers_information, ha_information
@@ -432,6 +433,7 @@ class HAProxyCharm(ops.CharmBase):
                 self.haproxy_route_provider,
                 self.haproxy_route_tcp_provider,
                 self.reverseproxy_requirer,
+                self.haproxy_route_policy,
             )
             proxy_mode = charm_state.mode
 
@@ -446,7 +448,7 @@ class HAProxyCharm(ops.CharmBase):
                         ca_certs_configured=bool(self.recv_ca_certs.get_all_certificates()),
                     )
                 )
-                return [
+                certificate_requests = [
                     CertificateRequestAttributes(
                         common_name=hostname_acl, sans_dns=frozenset([hostname_acl])
                     )
@@ -461,6 +463,18 @@ class HAProxyCharm(ops.CharmBase):
                     for backend in frontend.backends
                     if backend.application_data.sni is not None
                 ]
+                # Add the generated hostname with subdomain of the policy charm.
+                if (
+                    haproxy_route_policy_backend
+                    := haproxy_route_requirer_information.policy_provider_backend
+                ):
+                    certificate_requests.append(
+                        CertificateRequestAttributes(
+                            common_name=haproxy_route_policy_backend.hostname,
+                            sans_dns=frozenset([haproxy_route_policy_backend.hostname]),
+                        )
+                    )
+                return certificate_requests
         except (
             HaproxyRouteIntegrationDataValidationError,
             TLSNotReadyError,

@@ -1,0 +1,24 @@
+version_schema: 2
+
+changes:
+  - title: Route policy web UI through HAProxy and extend interface library with provider metadata
+    author: tphan025
+    type: minor
+    description: >
+      Extended the haproxy-route-policy interface library to
+      include policy_backend_port and model in the provider app data, enabling
+      the haproxy-operator to build a dedicated backend and hostname-based
+      routing for the policy web UI. Added HaproxyRoutePolicyProviderBackend
+      dataclass in haproxy_route.py that derives a subdomain hostname
+      (<model>-<app>.<external-hostname>), generates ACLs, backend server
+      entries, and use_backend directives. Updated the Jinja2 template to
+      render the policy backend alongside regular haproxy-route backends and
+      request a TLS certificate for the generated hostname. On the snap side, added
+      CSRF_TRUSTED_ORIGINS and SECURE_PROXY_SSL_HEADER settings.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/469
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false

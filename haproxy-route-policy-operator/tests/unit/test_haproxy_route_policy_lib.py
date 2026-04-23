@@ -100,7 +100,9 @@ def test_requirer_app_data_model_accepts_valid_payload():
     assert: payload is validated and fields are preserved.
     """
     request = HaproxyRoutePolicyBackendRequest(**VALID_BACKEND_REQUEST)
-    app_data = HaproxyRoutePolicyRequirerAppData(backend_requests=[request])
+    app_data = HaproxyRoutePolicyRequirerAppData(
+        backend_requests=[request], proxied_endpoint="example.com"
+    )
 
     assert len(app_data.backend_requests) == 1
     assert app_data.backend_requests[0].backend_name == "backend-a"
@@ -114,7 +116,9 @@ def test_provider_app_data_model_accepts_valid_payload():
     assert: payload is validated and fields are preserved.
     """
     request = HaproxyRoutePolicyBackendRequest(**VALID_BACKEND_REQUEST)
-    app_data = HaproxyRoutePolicyProviderAppData(approved_requests=[request])
+    app_data = HaproxyRoutePolicyProviderAppData(
+        approved_requests=[request], policy_backend_port=8080, model="test-model"
+    )
 
     assert len(app_data.approved_requests) == 1
     assert app_data.approved_requests[0].backend_name == "backend-a"
@@ -140,4 +144,6 @@ def test_requirer_app_data_rejects_duplicate_backend_names():
     ]
 
     with pytest.raises(ValidationError):
-        HaproxyRoutePolicyRequirerAppData(backend_requests=duplicated_requests)
+        HaproxyRoutePolicyRequirerAppData(
+            backend_requests=duplicated_requests, proxied_endpoint=None
+        )

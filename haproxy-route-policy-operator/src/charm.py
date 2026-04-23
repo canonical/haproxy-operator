@@ -5,6 +5,7 @@
 
 """haproxy-route-policy-operator charm."""
 
+import json
 import logging
 from typing import Any
 
@@ -94,9 +95,20 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
         self.unit.status = ops.MaintenanceStatus("configuring haproxy-route-policy")
         database_information = DatabaseInformation.from_requirer(self, self.database)
         haproxy_route_policy_information = HaproxyRoutePolicyInformation.from_charm(self)
+
+        allowed_hosts = haproxy_route_policy_information.allowed_hosts_configuration
+        haproxy_route_policy_requirer_data = None
+        if relation := self.haproxy_route_policy.relation:
+            haproxy_route_policy_requirer_data = relation.load(
+                HaproxyRoutePolicyRequirerAppData, relation.app
+            )
+
+            if proxied_endpoint := haproxy_route_policy_requirer_data.proxied_endpoint:
+                allowed_hosts.append(proxied_endpoint)
+
         configure_snap(
             {
-                **haproxy_route_policy_information.allowed_hosts_snap_configuration,
+                **{"allowed-hosts": json.dumps(allowed_hosts)},
                 **database_information.haproxy_route_policy_snap_configuration,
             }
         )
@@ -116,9 +128,10 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
 
         self.unit.open_port("tcp", HAPROXY_ROUTE_POLICY_PORT)
 
-        if relation := self.haproxy_route_policy.relation:
-            self._fetch_and_refresh_backend_requests(haproxy_route_policy_information, relation)
-
+        if haproxy_route_policy_requirer_data is not None:
+            self._fetch_and_refresh_backend_requests(
+                haproxy_route_policy_information, haproxy_route_policy_requirer_data
+            )
         self.unit.status = ops.ActiveStatus()
 
     def _on_get_admin_credentials_action(self, event: ops.ActionEvent) -> None:
@@ -140,12 +153,10 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
     def _fetch_and_refresh_backend_requests(
         self,
         haproxy_route_policy_information: HaproxyRoutePolicyInformation,
-        haproxy_route_policy_relation: ops.Relation,
+        haproxy_route_policy_requirer_data: HaproxyRoutePolicyRequirerAppData,
     ) -> None:
         """Fetch backend requests from relation and refresh their status via the policy API."""
-        backend_requests = haproxy_route_policy_relation.load(
-            HaproxyRoutePolicyRequirerAppData, haproxy_route_policy_relation.app
-        ).backend_requests
+        backend_requests = haproxy_route_policy_requirer_data.backend_requests
 
         client = HaproxyRoutePolicyClient(
             username=haproxy_route_policy_information.admin_username,
@@ -160,12 +171,9 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
             for req, ev in zip(backend_requests, evaluated, strict=True)
             if ev.status == "accepted"
         ]
-        logger.info(
-            "backend requests evaluated: %d total, %d approved",
-            len(evaluated),
-            len(approved),
+        self.haproxy_route_policy.set_approved_backend_requests(
+            approved, HAPROXY_ROUTE_POLICY_PORT
         )
-        self.haproxy_route_policy.set_approved_backend_requests(approved)
 
 
 if __name__ == "__main__":  # pragma: nocover
