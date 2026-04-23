@@ -40,4 +40,6 @@ class AnyCharm(AnyCharmBase):
                 hostname_acls=["example.com"],
             )
         ]
-        self._haproxy_route_policy.provide_haproxy_route_policy_requests(backend_requests)
+        self._haproxy_route_policy.provide_haproxy_route_policy_requests(
+            backend_requests, "model-app.example.com"
+        )
