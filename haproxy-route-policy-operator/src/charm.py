@@ -17,12 +17,14 @@ from charms.haproxy_route_policy.v0.haproxy_route_policy import (
     HaproxyRoutePolicyProvider,
     HaproxyRoutePolicyRequirerAppData,
 )
+from pydantic import ValidationError
 
 from policy import (
     HaproxyRoutePolicyClient,
     configure_snap,
     create_or_update_user,
     install_snap,
+    is_service_active,
     run_migrations,
     start_gunicorn_service,
 )
@@ -53,8 +55,12 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
         self.framework.observe(self.on.upgrade_charm, self._reconcile)
         self.framework.observe(self.on.start, self._reconcile)
         self.framework.observe(self.on.config_changed, self._reconcile)
+        self.framework.observe(self.on.update_status, self._reconcile)
         self.framework.observe(
             self.on.get_admin_credentials_action, self._on_get_admin_credentials_action
+        )
+        self.framework.observe(
+            self.on.refresh_backend_requests_action, self._on_refresh_backend_requests_action
         )
         self.framework.observe(self.on[PEER_RELATION_NAME].relation_joined, self._reconcile)
         self.framework.observe(self.on[PEER_RELATION_NAME].relation_changed, self._reconcile)
@@ -149,6 +155,25 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
             return
         except ops.SecretNotFoundError:
             event.fail("Admin credentials not found.")
+
+    def _on_refresh_backend_requests_action(self, event: ops.ActionEvent) -> None:
+        """Handle the refresh-backend-requests action."""
+        if not is_service_active():
+            event.fail("Policy application is not running.")
+            return
+        try:
+            if relation := self.haproxy_route_policy.relation:
+                haproxy_route_policy_requirer_data = relation.load(
+                    HaproxyRoutePolicyRequirerAppData, relation.app
+                )
+
+                haproxy_route_policy_information = HaproxyRoutePolicyInformation.from_charm(self)
+                self._fetch_and_refresh_backend_requests(
+                    haproxy_route_policy_information, haproxy_route_policy_requirer_data
+                )
+                event.set_results({"result": "Backend requests refreshed."})
+        except ValidationError as exc:
+            event.fail(f"Invalid relation data: {exc}")
 
     def _fetch_and_refresh_backend_requests(
         self,
