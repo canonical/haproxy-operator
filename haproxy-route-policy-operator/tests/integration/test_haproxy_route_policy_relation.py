@@ -42,4 +42,3 @@ def test_haproxy_route_policy_relation(
             status, application, any_charm_haproxy_route_policy_requirer
         )
     )
-    logger.info(juju.status().apps[application].relations["haproxy-route-policy"])
