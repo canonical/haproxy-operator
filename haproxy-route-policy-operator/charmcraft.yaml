@@ -43,7 +43,8 @@ requires:
 provides:
   haproxy-route-policy:
     interface: haproxy-route-policy
-    description: Interface between haproxy and the policy charm to approve/deny backend requests.
+    description: Interface between haproxy and the policy charm to approve/deny
+      backend requests.
 
 actions:
   get-admin-credentials:
@@ -55,6 +56,8 @@ actions:
       password:
         description: The admin password.
         type: string
+  refresh-backend-requests:
+    description: Refresh the backend requests in the HAProxy Route Policy API.
 
 charm-libs:
   - lib: data_platform_libs.data_interfaces
@@ -68,6 +71,7 @@ config:
   options:
     extra-allowed-hosts:
       type: string
-      description: A comma-separated list of host/domain names that the haproxy-route-policy API
-        can serve. This configuration will set the DJANGO_ALLOWED_HOSTS environment
-        variable with its content being a JSON encoded list.
+      description: A comma-separated list of host/domain names that the
+        haproxy-route-policy API can serve. This configuration will set the
+        DJANGO_ALLOWED_HOSTS environment variable with its content being a JSON
+        encoded list.
