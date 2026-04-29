@@ -151,26 +151,6 @@ def configured_application_with_tls_fixture(
     """
     yield configured_application_with_tls_base
 
-    # Remove all relations except peer relations and the certificates relation
-    for endpoint, app_status_relation in (
-        juju.status().apps[configured_application_with_tls_base].relations.items()
-    ):
-        for relation in app_status_relation:
-            if relation.related_app == configured_application_with_tls_base:
-                continue
-            # Keep the certificates relation created by configured_application_with_tls_base fixture
-            if (
-                endpoint == "certificates"
-                and relation.related_app == certificate_provider_application
-            ):
-                continue
-            juju.remove_relation(
-                f"{configured_application_with_tls_base}:{endpoint}", relation.related_app
-            )
-    # Ensure the removal is complete otherwise reintegration in next test may fail
-    juju.wait(
-        lambda status: (jubilant.all_agents_idle(status)),
-    )
 
 
 @pytest.fixture(name="any_charm_ingress_per_unit_requirer")
@@ -288,15 +268,6 @@ def any_charm_haproxy_route_requirer_fixture(
     if app_name not in juju.status().apps:
         return
 
-    for endpoint, app_status_relation in juju.status().apps[app_name].relations.items():
-        for relation in app_status_relation:
-            if relation.related_app == app_name:
-                continue
-            juju.remove_relation(f"{app_name}:{endpoint}", relation.related_app)
-
-    juju.wait(
-        lambda status: (jubilant.all_agents_idle(status)),
-    )
 
 
 @pytest.fixture(scope="module", name="any_charm_haproxy_route_tcp_requirer_base")
@@ -351,13 +322,3 @@ def any_charm_haproxy_route_tcp_requirer_fixture(
     app_name = any_charm_haproxy_route_tcp_requirer_base
     if app_name not in juju.status().apps:
         return
-
-    for endpoint, app_status_relation in juju.status().apps[app_name].relations.items():
-        for relation in app_status_relation:
-            if relation.related_app == app_name:
-                continue
-            juju.remove_relation(f"{app_name}:{endpoint}", relation.related_app)
-
-    juju.wait(
-        lambda status: (jubilant.all_agents_idle(status)),
-    )
