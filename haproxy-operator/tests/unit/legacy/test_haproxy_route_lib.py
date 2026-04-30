@@ -170,7 +170,7 @@ def test_requirers_data_duplicate_services():
     """
     arrange: Create HaproxyRouteRequirersData with duplicate service names.
     act: Validate the model.
-    assert: Validation raises an error.
+    assert: relation_ids_with_invalid_data contains the relations with duplicate services.
     """
     app_data1 = RequirerApplicationData(
         service="test-service",
@@ -193,10 +193,11 @@ def test_requirers_data_duplicate_services():
         units_data=[RequirerUnitData(address="10.0.0.2")],
     )
 
-    with pytest.raises(DataValidationError):
-        HaproxyRouteRequirersData(
-            requirers_data=[requirer_data1, requirer_data2], relation_ids_with_invalid_data=set()
-        )
+    data = HaproxyRouteRequirersData(
+        requirers_data=[requirer_data1, requirer_data2], relation_ids_with_invalid_data=set()
+    )
+
+    assert data.relation_ids_with_invalid_data == {1, 2}
 
 
 def test_load_legacy_requirer_application_data(mock_relation_data):
