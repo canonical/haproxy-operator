@@ -154,7 +154,7 @@ LIBAPI = 2
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 2
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -738,10 +738,11 @@ class HaproxyRouteRequirersData:
             )
 
         self.relation_ids_with_invalid_data.update(
-            relation_id
-            for relation_ids in relation_ids_per_service.values()
-            for relation_id in relation_ids
-            if len(relation_ids) > 1
+            *[
+                set(relation_ids)
+                for relation_ids in relation_ids_per_service.values()
+                if len(relation_ids) > 1
+            ]
         )
         return self
 
@@ -762,10 +763,11 @@ class HaproxyRouteRequirersData:
                 )
 
         self.relation_ids_with_invalid_data.update(
-            relation_id
-            for relation_ids in relation_ids_per_port.values()
-            for relation_id in relation_ids
-            if len(relation_ids) > 1
+            *[
+                set(relation_ids)
+                for relation_ids in relation_ids_per_port.values()
+                if len(relation_ids) > 1
+            ]
         )
         return self
 
