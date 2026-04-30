@@ -152,7 +152,6 @@ def configured_application_with_tls_fixture(
     yield configured_application_with_tls_base
 
 
-
 @pytest.fixture(name="any_charm_ingress_per_unit_requirer")
 def any_charm_ingress_per_unit_requirer_fixture(
     pytestconfig: pytest.Config, juju: jubilant.Juju, configured_application_with_tls: str
@@ -267,7 +266,6 @@ def any_charm_haproxy_route_requirer_fixture(
     app_name = any_charm_haproxy_route_requirer_base
     if app_name not in juju.status().apps:
         return
-
 
 
 @pytest.fixture(scope="module", name="any_charm_haproxy_route_tcp_requirer_base")
