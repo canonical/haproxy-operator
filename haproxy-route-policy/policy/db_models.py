@@ -33,9 +33,11 @@ RULE_ACTIONS = [
 RULE_ACTION_CHOICES = [(action, action) for action in RULE_ACTIONS]
 
 RULE_KIND_HOSTNAME_AND_PATH_MATCH = "hostname_and_path_match"
+RULE_KIND_BACKEND_MATCH = "backend_match"
 
 RULE_KINDS = [
     RULE_KIND_HOSTNAME_AND_PATH_MATCH,
+    RULE_KIND_BACKEND_MATCH,
 ]
 
 RULE_KIND_CHOICES = [(kind, kind) for kind in RULE_KINDS]

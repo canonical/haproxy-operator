@@ -7,8 +7,6 @@ set -xe
 
 DJANGO_SECRET_KEY="$(snapctl get secret-key)"
 export DJANGO_SECRET_KEY
-DJANGO_DEBUG="$(snapctl get debug)"
-export DJANGO_DEBUG
 DJANGO_ALLOWED_HOSTS="$(snapctl get allowed-hosts)"
 export DJANGO_ALLOWED_HOSTS
 DJANGO_LOG_LEVEL="$(snapctl get log-level)"
@@ -34,5 +32,5 @@ if [ -z "$DJANGO_DATABASE_HOST" ] || [ -z "$DJANGO_DATABASE_PORT" ] || [ -z "$DJ
   return 1
 fi
 
-exec gunicorn --bind 0.0.0.0:8080 haproxy_route_policy.wsgi \
-  --capture-output --log-level="$LOG_LEVEL"
+exec gunicorn --chdir "$SNAP/app" --bind 0.0.0.0:8080 \
+  haproxy_route_policy.wsgi:application --capture-output --log-level="$LOG_LEVEL"

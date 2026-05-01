@@ -18,6 +18,7 @@ dependencies = [
   "requests==2.33.1",
   "charmlibs-snap==1.0.1",
   "pydantic>=2.12.5",
+  "validators>=0.35.0",
 ]
 
 [dependency-groups]

@@ -197,6 +197,7 @@ class HAProxyService:
             "spoe_auth_info_list": spoe_oauth_info_list,
             "ip_allow_list_file": IP_ALLOW_LIST_FILE,
             "deny_paths_file": DENY_PATHS_FILE,
+            "policy_provider_backend": haproxy_route_requirers_information.policy_provider_backend,
         }
         self._render_haproxy_config(HAPROXY_ROUTE_CONFIG_TEMPLATE, template_context)
         if spoe_oauth_info_list:

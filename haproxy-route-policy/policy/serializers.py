@@ -46,4 +46,13 @@ class RuleSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError(
                         f"Invalid path(s) in rule: {', '.join([str(path) for path in invalid_paths])}"
                     )
+        if attrs.get("kind") == "backend_match":
+            if not isinstance(attrs.get("parameters"), dict):
+                raise serializers.ValidationError(
+                    "The parameters field must be a JSON object."
+                )
+            if not attrs["parameters"].get("backend_name"):
+                raise serializers.ValidationError(
+                    "The parameters field must contain a 'backend_name' key for backend_match rules."
+                )
         return attrs

@@ -1,0 +1,21 @@
+version_schema: 2
+
+changes:
+  - title: Publish proxied endpoint URL to policy provider and auto-add host to
+      allowed-hosts
+    author: tphan025
+    type: minor
+    description: >
+      Add a new proxied_endpoint field on the requirer app data. The
+      haproxy-operator now publishes the generated hostname. On the
+      policy-operator side, the charm extracts the host from the proxied
+      endpoint and appends it to the Django allowed-hosts list. Refactored
+      HaproxyRoutePolicyInformation to rename allowed_hosts to
+      extra_allowed_hosts. Updated unit tests accordingly.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/475
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false

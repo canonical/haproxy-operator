@@ -111,3 +111,20 @@ class AnyCharm(AnyCharmBase):
             retry_count=3,
             retry_redispatch=True,
         )
+
+    def update_relation_with_timeouts(self):
+        """Update haproxy-route-tcp relation data with timeouts"""
+        self._haproxy_route_tcp.provide_haproxy_route_tcp_requirements(
+            port=4444,
+            backend_port=4000,
+            sni=CNAME,
+            check_type=TCPHealthCheckType.GENERIC,
+            check_interval=60,
+            check_rise=3,
+            check_fall=3,
+            check_send="ping\r\n",
+            check_expect="pong",
+            server_timeout=10,
+            connect_timeout=5,
+            queue_timeout=2,
+        )

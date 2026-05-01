@@ -48,7 +48,7 @@ Relevant links:
 
 ### Fixed issues with the DDoS protection configurator charm found in staging
 
-Removed "assumes juju >= 3.6" for the HAProxy DDoS protection configurator charm. The HAProxy DDoS protection configurator charm works without requiring Juju version 3.6 or  higher. This change enhances compatibility with earlier Juju versions.
+Removed `assumes juju >= 3.6` for the HAProxy DDoS protection configurator charm. The HAProxy DDoS protection configurator charm works without requiring Juju version 3.6 or  higher. This change enhances compatibility with earlier Juju versions.
 Added the `sc` prefix to the `conn_rate` and `conn_cur` options in the HAProxy template.
 Fixed the previous PR changelog and artifact to accurately reflect requirer instead of provider.
 
