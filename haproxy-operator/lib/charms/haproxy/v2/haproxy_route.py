@@ -154,7 +154,7 @@ LIBAPI = 2
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 2
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -725,19 +725,25 @@ class HaproxyRouteRequirersData:
     @model_validator(mode="after")
     def check_services_unique(self) -> Self:
         """Check that requirers define unique services.
-
-        Raises:
-            DataValidationError: When requirers declared duplicate services.
+        If multiple requirers declare the same service name,
+        their relation ids are added to relation_ids_with_invalid_data.
 
         Returns:
             The validated model.
         """
-        services = [
-            requirer_data.application_data.service for requirer_data in self.requirers_data
-        ]
-        if len(services) != len(set(services)):
-            raise DataValidationError("Services declaration by requirers must be unique.")
+        relation_ids_per_service: dict[str, list[int]] = defaultdict(list[int])
+        for requirer_data in self.requirers_data:
+            relation_ids_per_service[requirer_data.application_data.service].append(
+                requirer_data.relation_id
+            )
 
+        self.relation_ids_with_invalid_data.update(
+            *[
+                set(relation_ids)
+                for relation_ids in relation_ids_per_service.values()
+                if len(relation_ids) > 1
+            ]
+        )
         return self
 
     @model_validator(mode="after")
@@ -757,10 +763,11 @@ class HaproxyRouteRequirersData:
                 )
 
         self.relation_ids_with_invalid_data.update(
-            relation_id
-            for relation_ids in relation_ids_per_port.values()
-            for relation_id in relation_ids
-            if len(relation_ids) > 1
+            *[
+                set(relation_ids)
+                for relation_ids in relation_ids_per_port.values()
+                if len(relation_ids) > 1
+            ]
         )
         return self
 

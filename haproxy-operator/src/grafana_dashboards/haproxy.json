@@ -12185,8 +12185,8 @@
       {
         "current": {
           "selected": false,
-          "text": "localhost:9123",
-          "value": "localhost:9123"
+          "text": "localhost:8404",
+          "value": "localhost:8404"
         },
         "datasource": {
           "type": "prometheus",

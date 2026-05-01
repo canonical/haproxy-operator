@@ -267,6 +267,35 @@ def test_check_external_grpc_port_unique(
     assert data.relation_ids_with_invalid_data == {1, 2, 3, 4, 5}
 
 
+def test_check_services_unique(
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
+) -> None:
+    """
+    arrange: Create HaproxyRouteRequirersData with duplicate and unique service names.
+    act: Instantiate HaproxyRouteRequirersData.
+    assert: relation_ids_with_invalid_data contains only relations with duplicate services.
+    """
+    requirer_data_1 = haproxy_route_relation_data(
+        "duplicate-service",
+        relation_id=1,
+    )
+    requirer_data_2 = haproxy_route_relation_data(
+        "duplicate-service",
+        relation_id=2,
+    )
+    requirer_data_3 = haproxy_route_relation_data(
+        "unique-service",
+        relation_id=3,
+    )
+
+    data = HaproxyRouteRequirersData(
+        requirers_data=[requirer_data_1, requirer_data_2, requirer_data_3],
+        relation_ids_with_invalid_data=set(),
+    )
+
+    assert data.relation_ids_with_invalid_data == {1, 2}
+
+
 @pytest.mark.parametrize(
     "domain,expected",
     [

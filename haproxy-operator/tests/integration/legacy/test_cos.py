@@ -15,6 +15,6 @@ async def test_metrics(application: Application, ops_test: OpsTest):
     """
     for unit in application.units:
         _, stdout, _ = await ops_test.juju(
-            "ssh", unit.name, "curl", "-m", "10", "localhost:9123/metrics"
+            "ssh", unit.name, "curl", "-m", "10", "localhost:8404/metrics"
         )
         assert "haproxy_backend_max_connect_time_seconds" in stdout
