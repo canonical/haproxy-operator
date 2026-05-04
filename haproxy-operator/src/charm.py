@@ -148,7 +148,7 @@ class HAProxyCharm(ops.CharmBase):
         self._grafana_agent = COSAgentProvider(
             self,
             metrics_endpoints=[
-                {"path": "/metrics", "port": 9123},
+                {"path": "/metrics", "port": 8404},
             ],
             dashboard_dirs=["./src/grafana_dashboards"],
         )
