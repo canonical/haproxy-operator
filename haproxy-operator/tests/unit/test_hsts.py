@@ -98,8 +98,7 @@ def test_hsts_disabled_allow_http(monkeypatch: pytest.MonkeyPatch, certificates_
     assert render_file_mock.call_count == 1
     haproxy_conf_contents = render_file_mock.call_args.args[1]
     assert (
-        "acl is_allow_http { req.hdr(host),field(1,:) -i haproxy.internal }"
-        in haproxy_conf_contents
+        "acl is_allow_http req.hdr(host),field(1,:) -i haproxy.internal" in haproxy_conf_contents
     )
     render_file_mock.assert_any_call(
         pathlib.Path("/etc/haproxy/haproxy.cfg"),
@@ -166,8 +165,7 @@ def test_redirect_allow_http_uses_named_acl(
     assert render_file_mock.call_count == 1
     haproxy_conf_contents = render_file_mock.call_args.args[1]
     assert (
-        "acl is_allow_http { req.hdr(host),field(1,:) -i haproxy.internal }"
-        in haproxy_conf_contents
+        "acl is_allow_http req.hdr(host),field(1,:) -i haproxy.internal" in haproxy_conf_contents
     )
     assert (
         "http-request redirect scheme https unless { ssl_fc } || is_allow_http"
