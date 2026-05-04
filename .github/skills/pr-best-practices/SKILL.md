@@ -2,9 +2,9 @@
 name: pr-best-practices
 description: >
   Analyzes a merged LLM-authored PR by comparing its first commit (the LLM's initial output)
-  with the final merged state (after human reviews and code changes), then synthesizes do's
-  and don'ts into .github/instructions/best-practices.instructions.md so Copilot automatically
-  uses these lessons in future sessions. Use this skill whenever the user wants to learn from a PR's
+  with the final merged state (after human review), then synthesizes do's and don'ts into
+  .github/instructions/best-practices.instructions.md so Copilot automatically uses these
+  lessons in future sessions. Use this skill whenever the user wants to learn from a PR's
   review cycle, extract patterns from AI-generated code revisions, update best practices
   based on reviewer feedback, or says anything like "analyze PR #N", "extract lessons from
   this PR", "update best practices", or "what did reviewers change in this PR".
@@ -34,12 +34,8 @@ Retrieve the PR's title, URL, base branch, merged status, and the list of all co
 - **Final iteration**: the merged commit (or the last commit before merge).
 
 Use the GitHub API or `git` to get the full unified diff between the tree at the first
-commit and the tree at the final commit. Focus on source files and not generated or lock files.
-
-The most important source files present in this repo are:
-- `**/*.py`: Charm code and test code
-- `haproxy-operator/*.j2`: Jinja2 templates used to render the HAProxy configuration
-- `**/*.yaml`: Charmcraft or snapcraft files used to pack the corresponding snap/charm
+commit and the tree at the final commit. Focus on source files (`.py`, `.yaml`, `.sh`, etc.),
+not generated or lock files.
 
 ### Step 3: Assess significance
 
