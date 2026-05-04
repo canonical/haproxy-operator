@@ -29,6 +29,9 @@ __pycache__/
 terraform/**/.terraform*
 terraform/**/.tfvars
 terraform/**/*.tfstate*
+# Skill eval workspaces (scratch data from skill development runs)
+*-workspace/
+
 haproxy-route-policy/db.sqlite3
 haproxy-route-policy/.python-version
 
