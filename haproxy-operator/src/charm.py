@@ -17,6 +17,7 @@ from charms.certificate_transfer_interface.v1.certificate_transfer import (
     CertificatesRemovedEvent,
     CertificateTransferRequires,
 )
+from charms.dns_record.v0.dns_record import DNSRecordRequires
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.haproxy.v0.ddos_protection import (
     DDOS_PROTECTION_RELATION_NAME,
@@ -46,6 +47,7 @@ from interface_hacluster.ops_ha_interface import HAServiceRequires
 from ops.charm import ActionEvent
 from ops.model import Port
 
+from dns_record import DNS_RECORD_RELATION, DNSRecordService
 from haproxy import HAPROXY_SERVICE, HAProxyService
 from http_interface import (
     HTTPBackendAvailableEvent,
@@ -56,7 +58,12 @@ from http_interface import (
 from state.charm_state import CharmState, ProxyMode
 from state.ddos_protection import DDosProtection
 from state.exception import CharmStateValidationBaseError
-from state.ha import HACLUSTER_INTEGRATION, HAPROXY_PEER_INTEGRATION, HAInformation, HAInformationValidationError
+from state.ha import (
+    HACLUSTER_INTEGRATION,
+    HAPROXY_PEER_INTEGRATION,
+    HAInformation,
+    HAInformationValidationError,
+)
 from state.haproxy_route import (
     HAPROXY_ROUTE_RELATION,
     HAProxyRouteBackend,
@@ -69,9 +76,6 @@ from state.spoe_auth import SpoeAuthInformation
 from state.tls import TLSInformation, TLSNotReadyError
 from state.validation import validate_config_and_tls
 from tls_relation import TLSRelationService
-from charms.dns_record.v0.dns_record import DNSRecordRequires
-
-from dns_record import DNS_RECORD_RELATION, DNSRecordService
 
 logger = logging.getLogger(__name__)
 

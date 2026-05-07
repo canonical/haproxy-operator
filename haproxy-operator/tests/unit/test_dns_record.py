@@ -3,10 +3,14 @@
 
 """Unit tests for the dns_record service module."""
 
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
 import pytest
-from charms.dns_record.v0.dns_record import CreateRecordRequestError, DNSRecordRequires, RecordRequest
+from charms.dns_record.v0.dns_record import (
+    CreateRecordRequestError,
+    DNSRecordRequires,
+    RecordRequest,
+)
 
 from dns_record import DNSRecordService
 

@@ -7,7 +7,6 @@ import json
 import logging
 
 import jubilant
-import pytest
 
 logger = logging.getLogger(__name__)
 
