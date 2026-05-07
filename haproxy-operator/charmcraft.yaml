@@ -64,7 +64,9 @@ requires:
   haproxy-route-policy:
     interface: haproxy-route-policy
     limit: 1
-
+  dns-record:
+    interface: dns_record
+    optional: true
 
 provides:
   ingress:
@@ -146,4 +148,6 @@ charm-libs:
 - lib: haproxy.ddos_protection
   version: "0"
 - lib: haproxy_route_policy.haproxy_route_policy
+  version: "0"
+- lib: dns_record.dns_record
   version: "0"
