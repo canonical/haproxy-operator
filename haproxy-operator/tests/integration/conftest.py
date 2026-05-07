@@ -320,3 +320,24 @@ def any_charm_haproxy_route_tcp_requirer_fixture(
     app_name = any_charm_haproxy_route_tcp_requirer_base
     if app_name not in juju.status().apps:
         return
+
+
+BIND_OPERATOR_APP_NAME = "bind"
+
+
+@pytest.fixture(scope="module", name="bind_operator")
+def bind_operator_fixture(
+    juju: jubilant.Juju, configured_application_with_tls_base: str
+) -> str:
+    """Deploy bind-operator and integrate with haproxy.
+
+    Returns:
+        The bind-operator application name.
+    """
+    juju.deploy("bind", app=BIND_OPERATOR_APP_NAME, channel="latest/stable")
+    juju.integrate(
+        f"{configured_application_with_tls_base}:dns-record",
+        f"{BIND_OPERATOR_APP_NAME}:dns-record",
+    )
+    juju.wait(jubilant.all_active, timeout=10 * 60)
+    return BIND_OPERATOR_APP_NAME
