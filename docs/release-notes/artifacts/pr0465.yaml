@@ -1,0 +1,23 @@
+version_schema: 2
+
+changes:
+  - title: Added admin UI, backend_match rule kind, request refresh endpoint, and enabled DEBUG mode
+    author: tphan025
+    type: minor
+    description: >
+      Introduced a Django admin interface for BackendRequest and Rule models
+      with a custom "Refresh Requests" action that re-evaluates all requests
+      against current rules. Added a new `backend_match` rule kind that matches
+      requests by backend name, with corresponding serializer validation and
+      rule engine logic. Added a public `GET /api/v1/requests/refresh` endpoint
+      for re-evaluation. Enabled Django DEBUG mode by default,
+      removed the DJANGO_DEBUG snap config option from configure hook and
+      startup scripts, and configured static file serving and collectstatic
+      during snap build for the admin UI.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/465
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false

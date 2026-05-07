@@ -15,6 +15,7 @@ from subprocess import STDOUT, CalledProcessError, check_output  # nosec
 import ops
 from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpProvider
 from charms.haproxy.v2.haproxy_route import HaproxyRouteProvider
+from charms.haproxy_route_policy.v0.haproxy_route_policy import HaproxyRoutePolicyRequirer
 from charms.traefik_k8s.v1.ingress_per_unit import IngressPerUnitProvider
 from charms.traefik_k8s.v2.ingress import IngressPerAppProvider
 from pydantic import Field, ValidationError, field_validator
@@ -111,6 +112,7 @@ class CharmState:
         haproxy_route_provider: HaproxyRouteProvider,
         haproxy_route_tcp_provider: HaproxyRouteTcpProvider,
         reverseproxy_requirer: HTTPRequirer,
+        haproxy_route_policy: HaproxyRoutePolicyRequirer,
     ) -> ProxyMode:
         """Validate if all the necessary preconditions are fulfilled.
 
@@ -120,6 +122,7 @@ class CharmState:
             haproxy_route_provider: The haproxy route provider.
             haproxy_route_tcp_provider: The haproxy-route-tcp provider.
             reverseproxy_requirer: The reverse proxy requirer.
+            haproxy_route_policy: The haproxy route policy requirer.
 
         Raises:
             HaproxyTooManyIntegrationsError: when there are too many integrations and
@@ -132,7 +135,9 @@ class CharmState:
         is_ingress_per_unit_related = bool(ingress_per_unit_provider.relations)
         is_legacy_related = bool(reverseproxy_requirer.relations)
         is_haproxy_route_related = bool(
-            haproxy_route_provider.relations or haproxy_route_tcp_provider.relations
+            haproxy_route_provider.relations
+            or haproxy_route_tcp_provider.relations
+            or haproxy_route_policy.relation is not None
         )
 
         if (
@@ -172,6 +177,7 @@ class CharmState:
         haproxy_route_provider: HaproxyRouteProvider,
         haproxy_route_tcp_provider: HaproxyRouteTcpProvider,
         reverseproxy_requirer: HTTPRequirer,
+        haproxy_route_policy: HaproxyRoutePolicyRequirer,
     ) -> "CharmState":
         """Create a CharmState class from a charm instance.
 
@@ -182,6 +188,7 @@ class CharmState:
             haproxy_route_provider: The haproxy-route provider.
             haproxy_route_tcp_provider: The haproxy-route-tcp provider.
             reverseproxy_requirer: The reverse proxy requirer.
+            haproxy_route_policy: The haproxy route policy requirer.
 
         Raises:
             InvalidCharmConfigError: When the charm's config is invalid.
@@ -200,6 +207,7 @@ class CharmState:
                     haproxy_route_provider,
                     haproxy_route_tcp_provider,
                     reverseproxy_requirer,
+                    haproxy_route_policy,
                 ),
                 global_max_connection=global_max_connection,
                 enable_hsts=enable_hsts,

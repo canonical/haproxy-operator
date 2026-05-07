@@ -25,6 +25,7 @@ from charms.haproxy.v0.ddos_protection import (
 from charms.haproxy.v0.spoe_auth import SpoeAuthRequirer
 from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpProvider
 from charms.haproxy.v2.haproxy_route import HaproxyRouteProvider
+from charms.haproxy_route_policy.v0.haproxy_route_policy import HaproxyRoutePolicyRequirer
 from charms.tls_certificates_interface.v4.tls_certificates import (
     CertificateAvailableEvent,
     CertificateRequestAttributes,
@@ -78,6 +79,7 @@ WEBSITE_RELATION = "website"
 RECV_CA_CERTS_RELATION = "receive-ca-certs"
 SPOE_AUTH_RELATION = "spoe-auth"
 HAPROXY_ROUTE_TCP_RELATION = "haproxy-route-tcp"
+HAPROXY_ROUTE_POLICY_RELATION_NAME = "haproxy-route-policy"
 
 
 class HaproxyUnitAddressNotAvailableError(CharmStateValidationBaseError):
@@ -124,7 +126,9 @@ class HAProxyCharm(ops.CharmBase):
         self.haproxy_route_tcp_provider = HaproxyRouteTcpProvider(self)
         self.spoe_auth_requirer = SpoeAuthRequirer(self, SPOE_AUTH_RELATION)
         self.ddos_requirer = DDoSProtectionRequirer(self)
-
+        self.haproxy_route_policy = HaproxyRoutePolicyRequirer(
+            self, HAPROXY_ROUTE_POLICY_RELATION_NAME
+        )
         self.recv_ca_certs = CertificateTransferRequires(self, RECV_CA_CERTS_RELATION)
         self.certificates = TLSCertificatesRequiresV4(
             charm=self,
@@ -144,7 +148,7 @@ class HAProxyCharm(ops.CharmBase):
         self._grafana_agent = COSAgentProvider(
             self,
             metrics_endpoints=[
-                {"path": "/metrics", "port": 9123},
+                {"path": "/metrics", "port": 8404},
             ],
             dashboard_dirs=["./src/grafana_dashboards"],
         )
@@ -198,18 +202,14 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(
             self.on.get_proxied_endpoints_action, self._on_get_proxied_endpoints_action
         )
-        self.framework.observe(
-            self.on[SPOE_AUTH_RELATION].relation_changed, self._on_config_changed
-        )
-        self.framework.observe(
-            self.on[SPOE_AUTH_RELATION].relation_broken, self._on_config_changed
-        )
-        self.framework.observe(
-            self.on[DDOS_PROTECTION_RELATION_NAME].relation_changed, self._on_config_changed
-        )
-        self.framework.observe(
-            self.on[DDOS_PROTECTION_RELATION_NAME].relation_broken, self._on_config_changed
-        )
+        # Hook relation-related events to the reconcile loop.
+        for relation in [
+            SPOE_AUTH_RELATION,
+            DDOS_PROTECTION_RELATION_NAME,
+            HAPROXY_ROUTE_POLICY_RELATION_NAME,
+        ]:
+            self.framework.observe(self.on[relation].relation_changed, self._on_config_changed)
+            self.framework.observe(self.on[relation].relation_broken, self._on_config_changed)
 
     @validate_config_and_tls(defer=False)
     def _on_install(self, _: typing.Any) -> None:
@@ -271,6 +271,7 @@ class HAProxyCharm(ops.CharmBase):
             self.haproxy_route_provider,
             self.haproxy_route_tcp_provider,
             self.reverseproxy_requirer,
+            self.haproxy_route_policy,
         )
         proxy_mode = charm_state.mode
         if proxy_mode == ProxyMode.INVALID:
@@ -359,12 +360,20 @@ class HAProxyCharm(ops.CharmBase):
         haproxy_route_requirers_information = HaproxyRouteRequirersInformation.from_provider(
             haproxy_route=self.haproxy_route_provider,
             haproxy_route_tcp=self.haproxy_route_tcp_provider,
+            haproxy_route_policy=self.haproxy_route_policy,
             external_hostname=typing.cast(
                 typing.Optional[str], self.model.config.get("external-hostname")
             ),
             peers=self._get_peer_units_address(),
             ca_certs_configured=bool(self.recv_ca_certs.get_all_certificates()),
         )
+        if self.unit.is_leader() and self.haproxy_route_policy.relation is not None:
+            self.haproxy_route_policy.provide_haproxy_route_policy_requests(
+                haproxy_route_requirers_information.backend_requests_for_policy,
+                haproxy_route_requirers_information.policy_provider_backend.hostname
+                if haproxy_route_requirers_information.policy_provider_backend
+                else None,
+            )
         # We ONLY allow the charm to run with no certificate requested if:
         # 1. there's only haproxy-route-tcp relations
         # AND
@@ -424,6 +433,7 @@ class HAProxyCharm(ops.CharmBase):
                 self.haproxy_route_provider,
                 self.haproxy_route_tcp_provider,
                 self.reverseproxy_requirer,
+                self.haproxy_route_policy,
             )
             proxy_mode = charm_state.mode
 
@@ -432,12 +442,13 @@ class HAProxyCharm(ops.CharmBase):
                     HaproxyRouteRequirersInformation.from_provider(
                         haproxy_route=self.haproxy_route_provider,
                         haproxy_route_tcp=self.haproxy_route_tcp_provider,
+                        haproxy_route_policy=self.haproxy_route_policy,
                         external_hostname=external_hostname,
                         peers=self._get_peer_units_address(),
                         ca_certs_configured=bool(self.recv_ca_certs.get_all_certificates()),
                     )
                 )
-                return [
+                certificate_requests = [
                     CertificateRequestAttributes(
                         common_name=hostname_acl, sans_dns=frozenset([hostname_acl])
                     )
@@ -452,6 +463,18 @@ class HAProxyCharm(ops.CharmBase):
                     for backend in frontend.backends
                     if backend.application_data.sni is not None
                 ]
+                # Add the generated hostname with subdomain of the policy charm.
+                if (
+                    haproxy_route_policy_backend
+                    := haproxy_route_requirer_information.policy_provider_backend
+                ):
+                    certificate_requests.append(
+                        CertificateRequestAttributes(
+                            common_name=haproxy_route_policy_backend.hostname,
+                            sans_dns=frozenset([haproxy_route_policy_backend.hostname]),
+                        )
+                    )
+                return certificate_requests
         except (
             HaproxyRouteIntegrationDataValidationError,
             TLSNotReadyError,
@@ -622,6 +645,7 @@ class HAProxyCharm(ops.CharmBase):
         haproxy_route_requirers_information = HaproxyRouteRequirersInformation.from_provider(
             haproxy_route=self.haproxy_route_provider,
             haproxy_route_tcp=self.haproxy_route_tcp_provider,
+            haproxy_route_policy=self.haproxy_route_policy,
             external_hostname=typing.cast("str | None", self.config.get("external-hostname")),
             peers=self._get_peer_units_address(),
             ca_certs_configured=bool(self.recv_ca_certs.get_all_certificates()),
