@@ -3,7 +3,6 @@
 
 """Integration tests for haproxy-operator dns-record relation."""
 
-import json
 import logging
 
 import jubilant
@@ -11,45 +10,43 @@ import jubilant
 logger = logging.getLogger(__name__)
 
 
-def test_dns_record_relation_publishes_a_record(
+def _dig(juju: jubilant.Juju, unit: str, nameserver: str, hostname: str) -> str:
+    """Run a DNS query via dig from within a Juju unit.
+
+    Args:
+        juju: The jubilant Juju instance.
+        unit: Unit to run dig from (e.g. 'haproxy/0').
+        nameserver: IP address of the DNS server to query.
+        hostname: Hostname to resolve.
+
+    Returns:
+        Raw dig output.
+    """
+    return juju.ssh(unit, f"dig +short @{nameserver} {hostname} A")
+
+
+def test_dns_record_resolves_via_bind(
     juju: jubilant.Juju,
     configured_application_with_tls: str,
     bind_operator: str,
 ):
     """
     arrange: haproxy and bind-operator integrated via dns-record, external-hostname set
-    act: wait for all charms to be active
-    assert: haproxy's dns-record relation databag contains an A record for the external hostname
+    act: query bind's DNS server for the haproxy external hostname
+    assert: bind resolves the hostname to haproxy's IP address
     """
-    relations_output = juju.cli(
-        "show-unit",
-        f"{configured_application_with_tls}/0",
-        "--format=json",
+    status = juju.status()
+    bind_units = status.apps[bind_operator].units
+    bind_ip = next(iter(bind_units.values())).address
+
+    haproxy_units = status.apps[configured_application_with_tls].units
+    haproxy_ip = next(iter(haproxy_units.values())).address
+
+    dig_output = _dig(juju, f"{configured_application_with_tls}/0", bind_ip, "haproxy.internal")
+
+    assert haproxy_ip in dig_output, (
+        f"Expected bind to resolve 'haproxy.internal' to {haproxy_ip!r}, got: {dig_output!r}"
     )
-    unit_data = json.loads(relations_output)
-
-    dns_relation_data = None
-    for unit_info in unit_data.values():
-        for relation in unit_info.get("relation-info", []):
-            if relation.get("endpoint") == "dns-record":
-                dns_relation_data = relation
-                break
-
-    assert dns_relation_data is not None, "dns-record relation not found in unit data"
-
-    app_data_raw = dns_relation_data.get("application-data", {})
-    dns_entries_raw = app_data_raw.get("dns_entries")
-    assert dns_entries_raw is not None, "dns_entries key missing from relation databag"
-
-    dns_entries = json.loads(dns_entries_raw)
-    assert len(dns_entries) >= 1, "Expected at least one DNS entry in the databag"
-
-    domains = [entry.get("domain") for entry in dns_entries]
-    assert "haproxy.internal" in domains, (
-        f"Expected 'haproxy.internal' in DNS entries, got: {domains}"
-    )
-    record_types = [entry.get("record_type") for entry in dns_entries]
-    assert "A" in record_types, f"Expected an A record, got record types: {record_types}"
 
 
 def test_dns_record_updated_on_hostname_change(
@@ -58,33 +55,26 @@ def test_dns_record_updated_on_hostname_change(
     bind_operator: str,
 ):
     """
-    arrange: haproxy and bind-operator integrated, new hostname configured
-    act: change external-hostname config
-    assert: the new hostname appears in the dns-record databag
+    arrange: haproxy and bind-operator integrated
+    act: change external-hostname config to a new hostname
+    assert: bind resolves the new hostname to haproxy's IP
     """
     new_hostname = "haproxy-new.internal"
     juju.config(configured_application_with_tls, {"external-hostname": new_hostname})
     juju.wait(jubilant.all_active, timeout=5 * 60)
 
-    relations_output = juju.cli(
-        "show-unit",
-        f"{configured_application_with_tls}/0",
-        "--format=json",
+    status = juju.status()
+    bind_units = status.apps[bind_operator].units
+    bind_ip = next(iter(bind_units.values())).address
+
+    haproxy_units = status.apps[configured_application_with_tls].units
+    haproxy_ip = next(iter(haproxy_units.values())).address
+
+    dig_output = _dig(juju, f"{configured_application_with_tls}/0", bind_ip, new_hostname)
+
+    assert haproxy_ip in dig_output, (
+        f"Expected bind to resolve {new_hostname!r} to {haproxy_ip!r}, got: {dig_output!r}"
     )
-    unit_data = json.loads(relations_output)
-
-    dns_relation_data = None
-    for unit_info in unit_data.values():
-        for relation in unit_info.get("relation-info", []):
-            if relation.get("endpoint") == "dns-record":
-                dns_relation_data = relation
-                break
-
-    assert dns_relation_data is not None
-    app_data_raw = dns_relation_data.get("application-data", {})
-    dns_entries = json.loads(app_data_raw.get("dns_entries", "[]"))
-    domains = [entry.get("domain") for entry in dns_entries]
-    assert new_hostname in domains, f"New hostname {new_hostname!r} not found in: {domains}"
 
     juju.config(configured_application_with_tls, {"external-hostname": "haproxy.internal"})
     juju.wait(jubilant.all_active, timeout=5 * 60)
