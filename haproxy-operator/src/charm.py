@@ -56,7 +56,7 @@ from http_interface import (
 from state.charm_state import CharmState, ProxyMode
 from state.ddos_protection import DDosProtection
 from state.exception import CharmStateValidationBaseError
-from state.ha import HACLUSTER_INTEGRATION, HAPROXY_PEER_INTEGRATION, HAInformation
+from state.ha import HACLUSTER_INTEGRATION, HAPROXY_PEER_INTEGRATION, HAInformation, HAInformationValidationError
 from state.haproxy_route import (
     HAPROXY_ROUTE_RELATION,
     HAProxyRouteBackend,
@@ -69,6 +69,9 @@ from state.spoe_auth import SpoeAuthInformation
 from state.tls import TLSInformation, TLSNotReadyError
 from state.validation import validate_config_and_tls
 from tls_relation import TLSRelationService
+from charms.dns_record.v0.dns_record import DNSRecordRequires
+
+from dns_record import DNS_RECORD_RELATION, DNSRecordService
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +146,8 @@ class HAProxyCharm(ops.CharmBase):
         )
 
         self._tls = TLSRelationService(self.model, self.certificates, self.recv_ca_certs)
+        self.dns_record_requirer = DNSRecordRequires(self)
+        self._dns_record_service = DNSRecordService(self.model, self.dns_record_requirer)
         self.website_requirer = HTTPProvider(self, WEBSITE_RELATION)
 
         self._grafana_agent = COSAgentProvider(
@@ -181,6 +186,12 @@ class HAProxyCharm(ops.CharmBase):
             self._ingress_per_unit_provider.on.data_removed, self._on_ingress_data_removed
         )
         self.framework.observe(self.hacluster.on.ha_ready, self._on_config_changed)
+        self.framework.observe(
+            self.on[DNS_RECORD_RELATION].relation_created, self._on_dns_record_relation_created
+        )
+        self.framework.observe(
+            self.on[DNS_RECORD_RELATION].relation_joined, self._on_dns_record_relation_joined
+        )
         self.framework.observe(
             self.recv_ca_certs.on.certificate_set_updated, self._on_ca_certificates_updated
         )
@@ -299,6 +310,8 @@ class HAProxyCharm(ops.CharmBase):
 
                 self.unit.set_ports(80)
                 self.haproxy_service.reconcile_default(charm_state)
+        if self.unit.is_leader():
+            self._update_dns_records()
         self.unit.status = ops.ActiveStatus()
 
     def _configure_ingress(
@@ -507,6 +520,50 @@ class HAProxyCharm(ops.CharmBase):
         """Handle the CA certificates removed event."""
         self._tls.update_trusted_cas()
         self._reconcile()
+
+    def _on_dns_record_relation_created(self, _: ops.RelationCreatedEvent) -> None:
+        """Handle the dns-record relation created event."""
+        if self.unit.is_leader():
+            self._update_dns_records()
+
+    def _on_dns_record_relation_joined(self, _: ops.RelationJoinedEvent) -> None:
+        """Handle the dns-record relation joined event."""
+        if self.unit.is_leader():
+            self._update_dns_records()
+
+    def _update_dns_records(self) -> None:
+        """Publish A records for all managed hostnames to the dns-record relation.
+
+        Uses the VIP when an HA relation is active, otherwise uses the ingress
+        binding address of this unit.
+        """
+        if not self.unit.is_leader():
+            return
+
+        hostnames = [req.common_name for req in self._get_certificate_requests()]
+        if not hostnames:
+            return
+
+        try:
+            ha_information = HAInformation.from_charm(self)
+        except HAInformationValidationError:
+            logger.warning("HA configuration invalid (VIP likely not set); using binding IP.")
+            ha_information = None
+
+        if ha_information and ha_information.ha_integration_ready and ha_information.vip:
+            ip = str(ha_information.vip)
+        else:
+            network_binding = self.model.get_binding(INGRESS_RELATION)
+            if network_binding is None:
+                logger.warning("Cannot resolve network binding for DNS records.")
+                return
+            ingress_addresses = network_binding.network.ingress_addresses
+            if not ingress_addresses:
+                logger.warning("No ingress addresses found; skipping DNS record update.")
+                return
+            ip = str(ingress_addresses[0])
+
+        self._dns_record_service.update_dns_records(hostnames, ip)
 
     @validate_config_and_tls(defer=False)
     def _on_ingress_per_unit_data_provided(self, _: IngressDataReadyEvent) -> None:
