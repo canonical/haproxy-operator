@@ -143,9 +143,21 @@ actions:
           If no backend with this name is present, an empty list is returned.
 
 charm-libs:
-- lib: traefik_k8s.ingress_per_unit
+- lib: certificate_transfer_interface.certificate_transfer
   version: "1"
+- lib: grafana_agent.cos_agent
+  version: "0"
 - lib: haproxy.ddos_protection
   version: "0"
 - lib: haproxy_route_policy.haproxy_route_policy
   version: "0"
+- lib: operator_libs_linux.apt
+  version: "0"
+- lib: operator_libs_linux.systemd
+  version: "1"
+- lib: tls_certificates_interface.tls_certificates
+  version: "4"
+- lib: traefik_k8s.ingress
+  version: "2"
+- lib: traefik_k8s.ingress_per_unit
+  version: "1"
