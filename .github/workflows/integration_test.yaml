@@ -43,7 +43,8 @@ jobs:
     with:
       provider: lxd
       juju-channel: 3/stable
-      self-hosted-runner: true
+      self-hosted-runner: false
+      runs-on-base: ubuntu-24.04
       charmcraft-channel: latest/edge
       working-directory: ${{ matrix.charm.working-directory }}
       modules: ${{ matrix.charm.modules }}
@@ -56,7 +57,8 @@ jobs:
       use-canonical-k8s: true
       provider: 'k8s'
       channel: '1.32-classic/stable'
-      self-hosted-runner: true
+      self-hosted-runner: false
+      runs-on-base: ubuntu-24.04
       juju-channel: 3/stable
       modules: |
         [
