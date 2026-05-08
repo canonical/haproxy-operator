@@ -76,7 +76,7 @@ defaults
     timeout server 50000
 
 frontend prometheus
-    bind :9123
+    bind :8404
     mode http
     http-request use-service prometheus-exporter if { path /metrics }
     no log
