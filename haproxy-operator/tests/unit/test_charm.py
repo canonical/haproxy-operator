@@ -462,7 +462,11 @@ def test_dns_record_relation_joined_triggers_dns_update(
     """
     context, update_dns_mock = context_with_dns_mock
     state = ops.testing.State(
-        **{**base_state, "relations": base_state.get("relations", []) + [dns_record_relation], "leader": True}
+        **{
+            **base_state,
+            "relations": [*base_state.get("relations", []), dns_record_relation],
+            "leader": True,
+        }
     )
     context.run(context.on.relation_joined(dns_record_relation), state)
     update_dns_mock.assert_called_once()
@@ -478,7 +482,11 @@ def test_dns_record_relation_created_triggers_dns_update(
     """
     context, update_dns_mock = context_with_dns_mock
     state = ops.testing.State(
-        **{**base_state, "relations": base_state.get("relations", []) + [dns_record_relation], "leader": True}
+        **{
+            **base_state,
+            "relations": [*base_state.get("relations", []), dns_record_relation],
+            "leader": True,
+        }
     )
     context.run(context.on.relation_created(dns_record_relation), state)
     update_dns_mock.assert_called_once()
@@ -500,7 +508,7 @@ def test_dns_update_uses_vip_when_ha_active(
     )
     state = ops.testing.State(
         config={"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "vip": "192.168.1.100"},
-        relations=base_state.get("relations", []) + [dns_record_relation, ha_relation],
+        relations=[*base_state.get("relations", []), dns_record_relation, ha_relation],
         leader=True,
     )
     context.run(context.on.config_changed(), state)
@@ -522,7 +530,7 @@ def test_dns_update_uses_binding_ip_when_no_ha(
     context, update_dns_mock = context_with_dns_mock
     state = ops.testing.State(
         config={"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG},
-        relations=base_state.get("relations", []) + [dns_record_relation],
+        relations=[*base_state.get("relations", []), dns_record_relation],
         leader=True,
     )
     with patch("ops.model.Model.get_binding") as mock_binding:

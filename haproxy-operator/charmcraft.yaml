@@ -149,5 +149,3 @@ charm-libs:
   version: "0"
 - lib: haproxy_route_policy.haproxy_route_policy
   version: "0"
-- lib: dns_record.dns_record
-  version: "0"

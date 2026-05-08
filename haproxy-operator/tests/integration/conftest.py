@@ -129,9 +129,7 @@ def configured_application_with_tls_base_fixture(
         f"{application}:certificates", f"{certificate_provider_application}:certificates"
     )
     juju.wait(
-        lambda status: (
-            jubilant.all_active(status, application, certificate_provider_application)
-        ),
+        lambda status: jubilant.all_active(status, application, certificate_provider_application),
         timeout=JUJU_WAIT_TIMEOUT,
     )
     return application
@@ -186,7 +184,7 @@ def any_charm_ingress_per_unit_requirer_fixture(
     )
 
     juju.wait(
-        lambda status: (jubilant.all_active(status, ANY_CHARM_INGRESS_PER_UNIT_REQUIRER)),
+        lambda status: jubilant.all_active(status, ANY_CHARM_INGRESS_PER_UNIT_REQUIRER),
         timeout=JUJU_WAIT_TIMEOUT,
     )
     return ANY_CHARM_INGRESS_PER_UNIT_REQUIRER
@@ -240,8 +238,8 @@ def any_charm_haproxy_route_requirer_base_fixture(
             },
         )
         juju.wait(
-            lambda status: (
-                jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)
+            lambda status: jubilant.all_active(
+                status, ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION
             ),
             timeout=JUJU_WAIT_TIMEOUT,
         )
@@ -295,8 +293,8 @@ def any_charm_haproxy_route_tcp_requirer_base_fixture(
         },
     )
     juju.wait(
-        lambda status: (
-            jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION)
+        lambda status: jubilant.all_active(
+            status, ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION
         ),
         timeout=JUJU_WAIT_TIMEOUT,
     )
@@ -326,9 +324,7 @@ BIND_OPERATOR_APP_NAME = "bind"
 
 
 @pytest.fixture(scope="module", name="bind_operator")
-def bind_operator_fixture(
-    juju: jubilant.Juju, configured_application_with_tls_base: str
-) -> str:
+def bind_operator_fixture(juju: jubilant.Juju, configured_application_with_tls_base: str) -> str:
     """Deploy bind-operator and integrate with haproxy.
 
     Returns:
