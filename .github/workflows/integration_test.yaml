@@ -26,7 +26,8 @@ jobs:
                 "test_ingress_per_unit.py",
                 "test_haproxy_route_tcp.py",
                 "test_haproxy_route_grpc.py",
-                "test_haproxy_route_https_backend.py"
+                "test_haproxy_route_https_backend.py",
+                "test_dns_record.py"
               ]
           - name: haproxy-spoe-auth-operator
             working-directory: ./haproxy-spoe-auth-operator
