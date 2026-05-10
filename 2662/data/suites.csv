@@ -1,0 +1,2 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"Test the HAProxy route policy integration.","74703","test_haproxy_route_policy","tests.integration","2026-05-10","passed","2026-05-10","","test_haproxy_route_policy","",""
