@@ -15,7 +15,7 @@ classifiers = [
 ]
 dependencies = [
   "ops==3.7.0",
-  "requests==2.33.1",
+  "requests==2.34.1",
   "charmlibs-snap==1.0.1",
   "pydantic>=2.12.5",
   "validators>=0.35.0",
