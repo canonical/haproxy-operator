@@ -10,7 +10,6 @@ import logging
 import subprocess  # nosec
 import textwrap
 from pathlib import Path
-from weakref import proxy
 
 import ops
 
