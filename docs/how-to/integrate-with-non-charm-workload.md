@@ -102,7 +102,7 @@ content-type: text/html
 
 If you wish to use the `haproxy` charm for TCP traffic other than HTTP/HTTPS/gRPC, for example, SSH, SMTP, or you wish `haproxy` not to process your HTTP/HTTPS/gRPC traffic and just pass it through to the backend, you can use the TCP-related configurations `tcp-*` in the `ingress-configurator`.
 
-For example, if you wish to relay SSH traffic to the backend, you can:
+For example, to relay SSH traffic to the backend, run:
 
 ```
 juju config ingress-configurator \
