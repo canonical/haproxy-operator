@@ -97,3 +97,18 @@ def test_haproxy_route_tcp(
             "timeout queue 2s",
         ]
     )
+
+    assert all(
+        entry in haproxy_config
+        for entry in [
+            "backend haproxy_route_tcp_4444_default_backend",
+            "default_backend haproxy_route_tcp_4444_default_backend",
+        ]
+    )
+    assert all(
+        entry not in haproxy_config
+        for entry in [
+            f"{any_charm_haproxy_route_tcp_requirer}_4444",
+            f"default_backend {any_charm_haproxy_route_tcp_requirer}_4444",
+        ]
+    )
