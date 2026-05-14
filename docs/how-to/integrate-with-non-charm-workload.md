@@ -93,3 +93,23 @@ accept-ranges: bytes
 content-length: 14
 content-type: text/html
 ```
+
+<!-- vale Canonical.007-Headings-sentence-case = NO -->
+
+## Configuration for TCP ingress
+
+<!-- vale Canonical.007-Headings-sentence-case = YES -->
+
+If you wish to use the `haproxy` charm for TCP traffic other than HTTP/HTTPS/gRPC, for example, SSH, SMTP, or you wish `haproxy` not to process your HTTP/HTTPS/gRPC traffic and just pass it through to the backend, you can use the TCP-related configurations `tcp-*` in the `ingress-configurator`.
+
+For example, if you wish to relay SSH traffic to the backend, you can:
+
+```
+juju config ingress-configurator \
+  tcp-backend-addresses=$BACKEND_IP \
+  tcp-backend-port=22 \
+  tcp-enforce-tls=false \
+  tcp-frontend-port=1022 # port 22 on haproxy is already occupied
+```
+
+And when you `ssh -p 1022 ubuntu@$HAPROXY_IP`, `haproxy` will relay the traffic to the backend on port 22.
