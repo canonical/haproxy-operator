@@ -472,3 +472,25 @@ def test_requirer_application_data_with_invalid_wildcard_sni(invalid_sni):
             sni=invalid_sni,
             enforce_tls=True,
         )
+
+
+def test_requirer_application_data_proxy_protocol_defaults_to_false():
+    """
+    arrange: Create a TcpRequirerApplicationData model without proxy_protocol.
+    act: Validate the model.
+    assert: proxy_protocol defaults to False.
+    """
+    data = TcpRequirerApplicationData(port=8080)
+
+    assert data.proxy_protocol is False
+
+
+def test_requirer_application_data_proxy_protocol_enabled():
+    """
+    arrange: Create a TcpRequirerApplicationData model with proxy_protocol=True.
+    act: Validate the model.
+    assert: proxy_protocol is True.
+    """
+    data = TcpRequirerApplicationData(port=8080, proxy_protocol=True)
+
+    assert data.proxy_protocol is True
