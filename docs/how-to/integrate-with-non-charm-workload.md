@@ -96,7 +96,7 @@ content-type: text/html
 
 <!-- vale Canonical.007-Headings-sentence-case = NO -->
 
-## Configuration for TCP ingress
+## Configure for TCP ingress
 
 <!-- vale Canonical.007-Headings-sentence-case = YES -->
 
