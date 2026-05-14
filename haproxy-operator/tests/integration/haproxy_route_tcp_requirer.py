@@ -136,4 +136,5 @@ class AnyCharm(AnyCharmBase):
             port=4444,
             backend_port=4000,
             proxy_protocol=True,
+            sni=CNAME,
         )
