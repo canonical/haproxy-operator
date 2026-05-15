@@ -1014,7 +1014,7 @@ class HaproxyRouteTcpRequirer(Object):
             charm: The charm that is instantiating the library.
             relation_name: The name of the relation to bind to.
             port: The provider port.
-            backend_port: Optional[int] backend service port.
+            backend_port: Optional backend service port. Defaults to the provider port.
             hosts: List of backend server addresses. Currently only support IP addresses.
             sni: List of URL paths to route to this service.
             check_interval: Interval between health checks in seconds.
@@ -1141,7 +1141,7 @@ class HaproxyRouteTcpRequirer(Object):
 
         Args:
             port: The provider port.
-            backend_port: Optional[int] backend service port.
+            backend_port: Optional backend service port. Defaults to the provider port.
             hosts: List of backend server addresses. Currently only support IP addresses.
             sni: List of URL paths to route to this service.
             check_interval: Interval between health checks in seconds.
@@ -1241,7 +1241,7 @@ class HaproxyRouteTcpRequirer(Object):
 
         Args:
             port: The provider port.
-            backend_port: Optional[int] backend service port.
+            backend_port: Optional backend service port. Defaults to the provider port.
             hosts: List of backend server addresses. Currently only support IP addresses.
             sni: List of URL paths to route to this service.
             check_interval: Interval between health checks in seconds.
