@@ -955,10 +955,25 @@ class HaproxyRouteProvider(Object):
         Returns:
             RequirerApplicationData: Validated application data from the requirer.
         """
-        try:
-            return cast(
-                RequirerApplicationData, RequirerApplicationData.load(relation.data[relation.app])
+        if relation.app is None:
+            msg = (
+                f"Requirer application data does not exist even though relation {relation.id} "
+                "is still present."
             )
+            logger.error(msg)
+            raise DataValidationError(msg)
+
+        databag = relation.data.get(relation.app)
+        if databag is None:
+            msg = (
+                f"Requirer application databag for relation {relation.id} and app "
+                f"{relation.app.name} does not exist."
+            )
+            logger.error(msg)
+            raise DataValidationError(msg)
+
+        try:
+            return cast(RequirerApplicationData, RequirerApplicationData.load(databag))
         except DataValidationError:
             logger.error("Invalid requirer application data for %s", relation.app.name)
             raise

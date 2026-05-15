@@ -4,6 +4,7 @@
 """Unit tests for haproxy-route interface library HaproxyRouteRequirerData."""
 
 import ipaddress
+import json
 import typing
 from unittest.mock import MagicMock
 
@@ -11,6 +12,7 @@ import pytest
 from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpRequirersData
 from charms.haproxy.v2.haproxy_route import (
     HaproxyRewriteMethod,
+    HaproxyRouteProvider,
     HaproxyRouteRequirerData,
     HaproxyRouteRequirersData,
     RequirerApplicationData,
@@ -266,3 +268,73 @@ def test_check_external_grpc_port_unique(
     )
 
     assert data.relation_ids_with_invalid_data == {1, 2, 3, 4, 5}
+
+
+def test_get_data_skips_orphan_relation_data_and_keeps_processing():
+    """
+    arrange: Create one orphan relation (missing remote app) and one valid relation.
+    act: Fetch provider data from both relations.
+    assert: Invalid relation is tracked while valid relation is still returned.
+    """
+    provider = object.__new__(HaproxyRouteProvider)
+    provider.raise_on_validation_error = False
+
+    valid_app = MagicMock()
+    valid_app.name = "valid-app"
+    valid_unit = MagicMock()
+    valid_unit.name = "valid/0"
+    valid_relation = MagicMock()
+    valid_relation.id = 1
+    valid_relation.app = valid_app
+    valid_relation.units = [valid_unit]
+    valid_relation.data = {
+        valid_app: {"service": json.dumps("valid-service"), "ports": json.dumps([8080])},
+        valid_unit: {"address": json.dumps("10.0.0.1")},
+    }
+
+    orphan_relation = MagicMock()
+    orphan_relation.id = 2
+    orphan_relation.app = None
+    orphan_relation.units = []
+    orphan_relation.data = {}
+
+    result = provider.get_data([orphan_relation, valid_relation])
+
+    assert result.relation_ids_with_invalid_data == {2}
+    assert [requirer.relation_id for requirer in result.requirers_data] == [1]
+
+
+def test_get_data_removes_stale_invalid_relation_ids():
+    """
+    arrange: Fetch provider data once with an orphan relation and then without it.
+    act: Call get_data twice with updated relation lists.
+    assert: Removed invalid relation ids do not persist to the next call.
+    """
+    provider = object.__new__(HaproxyRouteProvider)
+    provider.raise_on_validation_error = False
+
+    valid_app = MagicMock()
+    valid_app.name = "valid-app"
+    valid_unit = MagicMock()
+    valid_unit.name = "valid/0"
+    valid_relation = MagicMock()
+    valid_relation.id = 1
+    valid_relation.app = valid_app
+    valid_relation.units = [valid_unit]
+    valid_relation.data = {
+        valid_app: {"service": json.dumps("valid-service"), "ports": json.dumps([8080])},
+        valid_unit: {"address": json.dumps("10.0.0.1")},
+    }
+
+    orphan_relation = MagicMock()
+    orphan_relation.id = 2
+    orphan_relation.app = None
+    orphan_relation.units = []
+    orphan_relation.data = {}
+
+    first = provider.get_data([orphan_relation, valid_relation])
+    second = provider.get_data([valid_relation])
+
+    assert first.relation_ids_with_invalid_data == {2}
+    assert second.relation_ids_with_invalid_data == set()
+    assert [requirer.relation_id for requirer in second.requirers_data] == [1]
