@@ -100,7 +100,7 @@ content-type: text/html
 
 <!-- vale Canonical.007-Headings-sentence-case = YES -->
 
-If you wish to use the `haproxy` charm for TCP traffic other than HTTP/HTTPS/gRPC (for example, for SSH or SMTP), or you wish `haproxy` to pass your HTTP/HTTPS/gRPC traffic through to the backend, use the TCP-related configurations `tcp-*` in the `ingress-configurator` charm.
+If you wish to use the `haproxy` charm for TCP traffic other than HTTP/HTTPS/gRPC (for example, for SSH or SMTP), or you wish `haproxy` to pass your HTTP/HTTPS/gRPC traffic through to the backend without any process by the `haproxy`, use the TCP-related configurations `tcp-*` in the `ingress-configurator` charm.
 
 For example, to relay SMTP traffic to the backend, run:
 
