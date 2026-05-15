@@ -93,3 +93,21 @@ accept-ranges: bytes
 content-length: 14
 content-type: text/html
 ```
+
+<!-- vale Canonical.007-Headings-sentence-case = NO -->
+
+## Configure for TCP ingress
+
+<!-- vale Canonical.007-Headings-sentence-case = YES -->
+
+If you wish to use the `haproxy` charm for TCP traffic other than HTTP/HTTPS/gRPC (for example, for SSH or SMTP), or you wish `haproxy` to pass your HTTP/HTTPS/gRPC traffic through to the backend without any process by the `haproxy`, use the TCP-related configurations `tcp-*` in the `ingress-configurator` charm.
+
+For example, to relay SMTP traffic to the backend, run:
+
+```
+juju config ingress-configurator \
+  tcp-backend-addresses=$BACKEND_IP \
+  tcp-backend-port=587 \
+  tcp-enforce-tls=false \
+  tcp-frontend-port=587
+```
