@@ -884,6 +884,9 @@ class HaproxyRouteProvider(Object):
 
         Returns:
             HaproxyRouteRequirersData: Validated data from all haproxy-route requirers.
+                When ``raise_on_validation_error`` is ``False``, relations with orphaned
+                or invalid application data are skipped and reported in
+                ``relation_ids_with_invalid_data``.
         """
         requirers_data: list[HaproxyRouteRequirerData] = []
         relation_ids_with_invalid_data: set[int] = set()
@@ -950,7 +953,8 @@ class HaproxyRouteProvider(Object):
             relation: The relation to fetch application data from.
 
         Raises:
-            DataValidationError: When requirer application data validation fails.
+            DataValidationError: When requirer application data validation fails, including
+                orphaned relations where the remote application or its databag is missing.
 
         Returns:
             RequirerApplicationData: Validated application data from the requirer.
