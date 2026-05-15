@@ -130,6 +130,7 @@ def test_redirect_without_allow_http_uses_named_acl(
 
     ctx = ops.testing.Context(HAProxyCharm)
     state = ops.testing.State(
+        leader=True,
         relations=[certificates_integration, haproxy_route_relation],
     )
     out = ctx.run(
@@ -159,6 +160,7 @@ def test_redirect_allow_http_uses_named_acl(
 
     ctx = ops.testing.Context(HAProxyCharm)
     state = ops.testing.State(
+        leader=True,
         relations=[certificates_integration, haproxy_route_relation],
     )
     out = ctx.run(
