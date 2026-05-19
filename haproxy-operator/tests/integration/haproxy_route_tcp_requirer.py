@@ -128,3 +128,12 @@ class AnyCharm(AnyCharmBase):
             connect_timeout=5,
             queue_timeout=2,
         )
+
+    def update_relation_with_proxy_protocol(self):
+        """Update haproxy-route-tcp relation data with proxy protocol enabled."""
+        self._haproxy_route_tcp.provide_haproxy_route_tcp_requirements(
+            port=4444,
+            backend_port=4000,
+            proxy_protocol=True,
+            sni=CNAME,
+        )
