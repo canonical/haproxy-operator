@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    "description lang=en": "Learn how to deploy the haproxy-route-policy charm to gate backends routed through HAProxy. Create allow rules and propagate approvals using the policy REST API."
+---
+
 (how_to_control_haproxy_route_relation_data)=
 
 # How to control haproxy-route relation data with the policy charm
