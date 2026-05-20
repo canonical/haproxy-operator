@@ -101,7 +101,7 @@ curl -H "Host: tutorial-haproxy-route-policy.haproxy.internal" -u "admin:$POLICY
 
 ## Propagate approved requests
 
-Run the action to propagate the updated approvals back to the `haproxy` charm:
+Run the `refresh-backend-requests` action to propagate the updated approvals back to the `haproxy` charm:
 
 ```sh
 juju run haproxy-route-policy/0 refresh-backend-requests
