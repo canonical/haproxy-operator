@@ -36,6 +36,15 @@ Retrieve the PR's title, URL, base branch, merged status, and the list of all co
 Use the GitHub API or `git` to get the full unified diff between the tree at the first
 commit and the tree at the final commit. Focus on source files and not generated or lock files.
 
+For **test files only** (`**/tests/**/*.py`), also compute:
+- Diff A: `base_branch_sha -> first_commit_sha`
+- Diff B: `first_commit_sha -> final_commit_sha`
+
+Only derive test-specific rules from Diff B hunks that correspond to test files that already
+had meaningful changes in Diff A. If a test file appears only in Diff B (i.e., no meaningful
+test diff in Diff A), treat that as "tests were added later" and do not infer detailed testing
+heuristics from it.
+
 The most important source files present in this repo are:
 - `**/*.py`: Charm code and test code
 - `haproxy-operator/*.j2`: Jinja2 templates used to render the HAProxy configuration
@@ -85,6 +94,13 @@ Rules must be:
 (what the LLM wrote) and after (what the reviewer changed it to). Use the actual variable
 names, function signatures, and patterns from the PR — not invented pseudocode. If the
 change is too large to quote fully, extract the most illustrative 5–15 lines.
+
+Special case for tests added only after the first commit:
+- If test files have no meaningful Diff A changes but do have Diff B additions, collapse this
+  into a single generic testing reminder rule for that PR:
+  - **Don't**: "Don't forget to add tests."
+- In this case, include one concrete "after" snippet from the added tests as evidence, and
+  explicitly note that there was no corresponding first-commit test implementation to compare.
 
 ### Step 6: Update `.github/instructions/best-practices.instructions.md`
 
@@ -152,6 +168,8 @@ Summarise what was done:
   human judgment. That delta is the signal.
 - If a PR has dozens of commits, still only compare the *first* commit tree vs the *merged*
   tree — intermediate steps are noise.
+- Exception for tests: use both `base -> first` and `first -> final` to decide whether a
+  test change reflects reviewer refinement or simply late addition of missing tests.
 - When the same anti-pattern appears across multiple PRs, consolidate into one rule and
   list all PR references.
 - Prefer specificity over generality. "Always call `relation.data[self.app].update()`
