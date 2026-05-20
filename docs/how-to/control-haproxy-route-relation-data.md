@@ -7,7 +7,7 @@ This guide will show you how to use the `haproxy-route-policy` charm to control 
 ## Set up the model
 
 ```sh
-juju add-model tutorial
+juju add-model haproxy-route-guide
 ```
 
 ## Deploy HAProxy and a backend requirer
