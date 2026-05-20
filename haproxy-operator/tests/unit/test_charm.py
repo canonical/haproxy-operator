@@ -471,7 +471,7 @@ class TestCertificateSharingViaPeerRelation:
         act: Trigger config_changed.
         assert: Certificate data is written to the peer relation app databag.
         """
-        _mock_certificate, mock_private_key = mock_certificate_and_key
+        _mock_certificate, _mock_private_key = mock_certificate_and_key
         monkeypatch.setattr("haproxy.render_file", MagicMock())
         monkeypatch.setattr("haproxy.HAProxyService.reconcile_haproxy_route", MagicMock())
         monkeypatch.setattr(
