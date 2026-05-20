@@ -64,7 +64,9 @@ curl -H "Host: haproxy.internal" https://$HAPROXY_IP -k
 
 You should see the HAProxy default page instead of the Apache server:
 
-```
+```{terminal}
+:output-only:
+
 Default page for the haproxy-operator charm.
 ```
 
