@@ -165,15 +165,15 @@ def test_share_certificates_via_peer_relation(
 
     import json
 
-    from tls_relation import PEER_TLS_KEY
+    from tls_relation import PEER_RELATION_TLS_CERT_DATABAG_KEY
 
-    raw_data = peer_relation.data[harness.model.app].get(PEER_TLS_KEY)
+    raw_data = peer_relation.data[harness.model.app].get(PEER_RELATION_TLS_CERT_DATABAG_KEY)
     assert raw_data is not None
     data = json.loads(raw_data)
     assert data["hostnames"] == [hostname]
     assert hostname in data["certificates"]
     assert data["certificates"][hostname]["certificate"] == str(mock_certificate)
-    assert data["private_key"] == str(mock_private_key)
+    assert "private_key" not in data
 
 
 def test_non_leader_from_charm_reads_peer_relation(
@@ -185,8 +185,9 @@ def test_non_leader_from_charm_reads_peer_relation(
     assert: TLSInformation is correctly deserialized from the peer relation.
     """
     import json
+    from unittest.mock import PropertyMock, patch
 
-    from state.tls import PEER_TLS_KEY
+    from state.tls import PEER_RELATION_TLS_CERT_DATABAG_KEY
 
     mock_certificate, mock_private_key = mock_certificate_and_key
     harness.set_leader(False)
@@ -200,16 +201,19 @@ def test_non_leader_from_charm_reads_peer_relation(
                     "chain": [str(mock_certificate)],
                 }
             },
-            "private_key": str(mock_private_key),
         }
     )
     peer_relation_id = harness.add_relation("haproxy-peers", "haproxy")
     harness.update_relation_data(
-        peer_relation_id, harness.model.app.name, {PEER_TLS_KEY: peer_data}
+        peer_relation_id, harness.model.app.name, {PEER_RELATION_TLS_CERT_DATABAG_KEY: peer_data}
     )
     harness.begin()
 
-    result = TLSInformation.from_charm(harness.charm, harness.charm.certificates)
+    with patch.object(
+        type(harness.charm.certificates), "private_key", new_callable=PropertyMock
+    ) as mock_pk:
+        mock_pk.return_value = mock_private_key
+        result = TLSInformation.from_charm(harness.charm, harness.charm.certificates)
 
     assert result is not None
     assert result.hostnames == [hostname]

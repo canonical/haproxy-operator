@@ -22,7 +22,7 @@ from ops.model import Model, Relation
 
 from haproxy import file_exists, read_file, render_file
 from state.haproxy_route import HAPROXY_CAS_DIR, HAPROXY_CAS_FILE
-from state.tls import PEER_TLS_KEY, TLSInformation
+from state.tls import PEER_RELATION_TLS_CERT_DATABAG_KEY, TLSInformation
 
 TLS_CERT = "certificates"
 HAPROXY_CERTS_DIR = Path("/var/lib/haproxy/certs")
@@ -113,9 +113,8 @@ class TLSRelationService:
         data = {
             "hostnames": tls_information.hostnames,
             "certificates": certificates_data,
-            "private_key": str(tls_information.private_key),
         }
-        peer_relation.data[self.application][PEER_TLS_KEY] = json.dumps(data)
+        peer_relation.data[self.application][PEER_RELATION_TLS_CERT_DATABAG_KEY] = json.dumps(data)
         logger.info("Shared TLS certificate data via peer relation.")
 
     def update_trusted_cas(self) -> None:

@@ -494,13 +494,12 @@ class TestCertificateSharingViaPeerRelation:
         out_peer_relation = next(r for r in out.relations if r.endpoint == "haproxy-peers")
         peer_app_data = out_peer_relation.local_app_data
         assert peer_app_data is not None
-        assert tls_relation.PEER_TLS_KEY in peer_app_data
+        assert tls_relation.PEER_RELATION_TLS_CERT_DATABAG_KEY in peer_app_data
 
-        shared_data = json.loads(peer_app_data[tls_relation.PEER_TLS_KEY])
+        shared_data = json.loads(peer_app_data[tls_relation.PEER_RELATION_TLS_CERT_DATABAG_KEY])
         assert "hostnames" in shared_data
         assert "certificates" in shared_data
-        assert "private_key" in shared_data
-        assert shared_data["private_key"] == str(mock_private_key)
+        assert "private_key" not in shared_data
 
     def test_non_leader_reads_certificates_from_peer_relation(
         self,
@@ -520,6 +519,11 @@ class TestCertificateSharingViaPeerRelation:
             "tls_relation.TLSRelationService.write_certificate_to_unit", write_cert_mock
         )
         monkeypatch.setattr("haproxy.render_file", MagicMock())
+        monkeypatch.setattr(
+            "charms.tls_certificates_interface.v4.tls_certificates"
+            ".TLSCertificatesRequiresV4.private_key",
+            property(lambda self: private_key),
+        )
 
         peer_tls_data = json.dumps(
             {
@@ -530,12 +534,11 @@ class TestCertificateSharingViaPeerRelation:
                         "chain": [str(certificate)],
                     }
                 },
-                "private_key": str(private_key),
             }
         )
         peer_relation_with_tls = scenario.PeerRelation(
             endpoint="haproxy-peers",
-            local_app_data={tls_relation.PEER_TLS_KEY: peer_tls_data},
+            local_app_data={tls_relation.PEER_RELATION_TLS_CERT_DATABAG_KEY: peer_tls_data},
         )
 
         ctx = ops.testing.Context(HAProxyCharm)
@@ -588,6 +591,11 @@ class TestCertificateSharingViaPeerRelation:
         monkeypatch.setattr(
             "charm.HAProxyCharm._get_unit_address", MagicMock(return_value="10.0.0.2")
         )
+        monkeypatch.setattr(
+            "charms.tls_certificates_interface.v4.tls_certificates"
+            ".TLSCertificatesRequiresV4.private_key",
+            property(lambda self: private_key),
+        )
 
         peer_tls_data = json.dumps(
             {
@@ -598,12 +606,11 @@ class TestCertificateSharingViaPeerRelation:
                         "chain": [str(certificate)],
                     }
                 },
-                "private_key": str(private_key),
             }
         )
         peer_relation_with_tls = scenario.PeerRelation(
             endpoint="haproxy-peers",
-            local_app_data={tls_relation.PEER_TLS_KEY: peer_tls_data},
+            local_app_data={tls_relation.PEER_RELATION_TLS_CERT_DATABAG_KEY: peer_tls_data},
         )
 
         haproxy_route_relation = build_haproxy_route_relation()

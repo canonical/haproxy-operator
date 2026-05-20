@@ -17,7 +17,7 @@ from charms.tls_certificates_interface.v4.tls_certificates import (
 
 from .ha import HAPROXY_PEER_INTEGRATION
 
-PEER_TLS_KEY = "tls_certificate_data"
+PEER_RELATION_TLS_CERT_DATABAG_KEY = "tls_certificate_data"
 
 logger = logging.getLogger()
 
@@ -71,7 +71,7 @@ class TLSInformation:
             TLSInformation if available, None if non-leader and peer data not yet available.
         """
         if not charm.unit.is_leader():
-            return cls._from_peer_relation(charm)
+            return cls._from_peer_relation(charm, certificates)
 
         cls.validate(charm, certificates, allow_no_certificates)
 
@@ -99,11 +99,17 @@ class TLSInformation:
         )
 
     @classmethod
-    def _from_peer_relation(cls, charm: ops.CharmBase) -> typing.Optional["TLSInformation"]:
+    def _from_peer_relation(
+        cls, charm: ops.CharmBase, certificates: TLSCertificatesRequiresV4
+    ) -> typing.Optional["TLSInformation"]:
         """Read TLS certificate data from the peer relation app databag.
+
+        The private key is fetched from the TLS library (application-owned secret)
+        rather than from the peer relation data.
 
         Args:
             charm: The haproxy charm.
+            certificates: TLS certificates requirer class.
 
         Returns:
             TLSInformation if available, None if the peer relation does not exist
@@ -113,13 +119,16 @@ class TLSInformation:
         if not peer_relation:
             logger.info("Peer relation not available, cannot read TLS data.")
             return None
-        raw = peer_relation.data[charm.app].get(PEER_TLS_KEY)
+        raw = peer_relation.data[charm.app].get(PEER_RELATION_TLS_CERT_DATABAG_KEY)
         if not raw:
             logger.info("No TLS certificate data in peer relation yet.")
             return None
+        private_key = certificates.private_key
+        if not private_key:
+            logger.info("Private key not yet available from TLS library.")
+            return None
         data = json.loads(raw)
         hostnames = data["hostnames"]
-        private_key = data["private_key"]
         tls_cert_and_ca_chain: dict[str, tuple[Certificate, list[Certificate]]] = {}
         for hostname, cert_data in data["certificates"].items():
             certificate = Certificate.from_string(cert_data["certificate"])
@@ -128,7 +137,7 @@ class TLSInformation:
         return cls(
             hostnames=hostnames,
             tls_cert_and_ca_chain=tls_cert_and_ca_chain,
-            private_key=private_key,
+            private_key=str(private_key),
         )
 
     # Validation is done in this method instead of using a pydantic model because
