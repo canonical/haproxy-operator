@@ -70,7 +70,7 @@ Default page for the haproxy-operator charm.
 
 ## Access the policy API
 
-HAProxy exposes the policy REST API through at a generated subdomain. Query the list of pending backend requests:
+HAProxy exposes the policy REST API through at a generated subdomain. Query the list of pending backend requests using the IP address of the HAProxy unit and the policy admin password:
 
 ```sh
 HAPROXY_IP=$(juju status --format json | jq -r '.applications.haproxy.units."haproxy/0"."public-address"')
