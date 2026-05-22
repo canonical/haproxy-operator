@@ -66,7 +66,7 @@ from state.haproxy_route import (
 from state.ingress import IngressRequirersInformation
 from state.ingress_per_unit import IngressPerUnitRequirersInformation
 from state.spoe_auth import SpoeAuthInformation
-from state.tls import TLSInformation, TLSNotReadyError
+from state.tls import PeerCertificatesNotReadyError, TLSInformation, TLSNotReadyError
 from state.validation import validate_config_and_tls
 from tls_relation import TLSRelationService
 
@@ -295,8 +295,7 @@ class HAProxyCharm(ops.CharmBase):
             case _:
                 if self.model.get_relation(TLS_CERT_RELATION):
                     tls_information = TLSInformation.from_charm(self, self.certificates)
-                    if tls_information:
-                        self._reconcile_certificates(tls_information)
+                    self._reconcile_certificates(tls_information)
 
                 self.unit.set_ports(80)
                 self.haproxy_service.reconcile_default(charm_state)
@@ -321,9 +320,6 @@ class HAProxyCharm(ops.CharmBase):
     ) -> None:
         """Configure the ingress or ingress-per-unit relation."""
         tls_information = TLSInformation.from_charm(self, self.certificates)
-        if not tls_information:
-            logger.info("TLS information not available yet, skipping ingress configuration.")
-            return
         self._reconcile_certificates(tls_information)
 
         ingress_provider = (
@@ -347,8 +343,7 @@ class HAProxyCharm(ops.CharmBase):
         """Configure the legacy mode."""
         if self.model.get_relation(TLS_CERT_RELATION):
             tls_information = TLSInformation.from_charm(self, self.certificates)
-            if tls_information:
-                self._reconcile_certificates(tls_information)
+            self._reconcile_certificates(tls_information)
 
         legacy_invalid_requested_port: list[str] = []
         required_ports: set[Port] = set()
@@ -402,10 +397,14 @@ class HAProxyCharm(ops.CharmBase):
                 for frontend in haproxy_route_requirers_information.tcp_frontends
             )
         )
-        tls_information = TLSInformation.from_charm(self, self.certificates, allow_no_certificates)
-        if not tls_information and not allow_no_certificates:
-            logger.info("TLS information not available yet, skipping haproxy-route configuration.")
-            return
+        tls_information = None
+        try:
+            tls_information = TLSInformation.from_charm(
+                self, self.certificates, allow_no_certificates
+            )
+        except PeerCertificatesNotReadyError:
+            if not allow_no_certificates:
+                raise
         if tls_information:
             self._reconcile_certificates(tls_information)
         ddos_protection_config = DDosProtection.from_charm(self.ddos_requirer)
@@ -534,8 +533,6 @@ class HAProxyCharm(ops.CharmBase):
         self._reconcile()
         if self.unit.is_leader():
             tls_information = TLSInformation.from_charm(self, self.certificates)
-            if not tls_information:
-                return
             for relation in self._ingress_per_unit_provider.relations:
                 for unit in relation.units:
                     if not self._ingress_per_unit_provider.is_unit_ready(relation, unit):
@@ -562,8 +559,6 @@ class HAProxyCharm(ops.CharmBase):
         self._reconcile()
         if self.unit.is_leader():
             tls_information = TLSInformation.from_charm(self, self.certificates)
-            if not tls_information:
-                return
             integration_data = self._ingress_provider.get_data(event.relation)
             path_prefix = f"{integration_data.app.model}-{integration_data.app.name}"
             self._ingress_provider.publish_url(

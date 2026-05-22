@@ -224,16 +224,18 @@ def test_non_leader_from_charm_reads_peer_relation(
     assert result.private_key == str(mock_private_key)
 
 
-def test_non_leader_from_charm_returns_none_without_peer_data(
+def test_non_leader_from_charm_raises_without_peer_data(
     harness: Harness,
 ):
     """arrange: Given a non-leader unit with no certificate data in the peer relation.
     act: Run TLSInformation.from_charm.
-    assert: None is returned.
+    assert: PeerCertificatesNotReadyError is raised.
     """
+    from state.tls import PeerCertificatesNotReadyError
+
     harness.set_leader(False)
     harness.add_relation("haproxy-peers", "haproxy")
     harness.begin()
 
-    result = TLSInformation.from_charm(harness.charm, harness.charm.certificates)
-    assert result is None
+    with pytest.raises(PeerCertificatesNotReadyError):
+        TLSInformation.from_charm(harness.charm, harness.charm.certificates)
