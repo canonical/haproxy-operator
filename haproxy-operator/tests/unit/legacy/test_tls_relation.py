@@ -3,8 +3,9 @@
 
 """Unit tests for charm file."""
 
+import json
 import typing
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 from charmlibs.interfaces.tls_certificates import (
@@ -14,7 +15,12 @@ from charmlibs.interfaces.tls_certificates import (
 )
 from ops.testing import Harness
 
-from state.tls import TLSInformation, TLSNotReadyError
+from state.tls import (
+    PEER_RELATION_TLS_CERT_DATABAG_KEY,
+    PeerCertificatesNotReadyError,
+    TLSInformation,
+    TLSNotReadyError,
+)
 from tls_relation import TLSRelationService
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
@@ -163,10 +169,6 @@ def test_share_certificates_via_peer_relation(
 
     tls_relation_service.share_certificates_via_peer_relation(peer_relation, tls_information)
 
-    import json
-
-    from tls_relation import PEER_RELATION_TLS_CERT_DATABAG_KEY
-
     raw_data = peer_relation.data[harness.model.app].get(PEER_RELATION_TLS_CERT_DATABAG_KEY)
     assert raw_data is not None
     data = json.loads(raw_data)
@@ -184,11 +186,6 @@ def test_non_leader_from_charm_reads_peer_relation(
     act: Run TLSInformation.from_charm.
     assert: TLSInformation is correctly deserialized from the peer relation.
     """
-    import json
-    from unittest.mock import PropertyMock, patch
-
-    from state.tls import PEER_RELATION_TLS_CERT_DATABAG_KEY
-
     mock_certificate, mock_private_key = mock_certificate_and_key
     harness.set_leader(False)
     hostname = "haproxy.internal"
@@ -231,8 +228,6 @@ def test_non_leader_from_charm_raises_without_peer_data(
     act: Run TLSInformation.from_charm.
     assert: PeerCertificatesNotReadyError is raised.
     """
-    from state.tls import PeerCertificatesNotReadyError
-
     harness.set_leader(False)
     harness.add_relation("haproxy-peers", "haproxy")
     harness.begin()
