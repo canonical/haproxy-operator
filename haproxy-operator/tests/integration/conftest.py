@@ -204,9 +204,6 @@ def any_charm_haproxy_route_requirer_base_fixture(
         {
             "any_charm.py": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(encoding="utf-8"),
             "haproxy_route.py": pathlib.Path(HAPROXY_ROUTE_LIB_SRC).read_text(encoding="utf-8"),
-            "tls_certificates.py": pathlib.Path(
-                "lib/charms/tls_certificates_interface/v4/tls_certificates.py"
-            ).read_text(encoding="utf-8"),
             "apt.py": pathlib.Path(APT_LIB_SRC).read_text(encoding="utf-8"),
             "grpc_server/__main__.py": pathlib.Path(GRPC_SERVER_DIR / "__main__.py").read_text(
                 encoding="utf-8"
@@ -232,6 +229,7 @@ def any_charm_haproxy_route_requirer_base_fixture(
                     [
                         "pydantic",
                         "cryptography==45.0.6",
+                        "charmlibs-interfaces-tls-certificates",
                         "grpcio",
                         "grpcio-reflection",
                         "validators",

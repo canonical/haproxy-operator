@@ -20,12 +20,12 @@ from subprocess import CalledProcessError  # nosec: B404
 import apt
 import ops
 from any_charm_base import AnyCharmBase
-from haproxy_route import HaproxyRouteRequirer
-from tls_certificates import (
+from charmlibs.interfaces.tls_certificates import (
     CertificateRequestAttributes,
     Mode,
     TLSCertificatesRequiresV4,
 )
+from haproxy_route import HaproxyRouteRequirer
 
 HAPROXY_ROUTE_RELATION = "require-haproxy-route"
 TLS_CERT_RELATION = "require-tls-certificates"

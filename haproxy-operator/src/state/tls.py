@@ -9,11 +9,11 @@ import typing
 from dataclasses import dataclass
 
 import ops
-from charms.haproxy.v2.haproxy_route import valid_domain_with_wildcard
-from charms.tls_certificates_interface.v4.tls_certificates import (
+from charmlibs.interfaces.tls_certificates import (
     Certificate,
     TLSCertificatesRequiresV4,
 )
+from charms.haproxy.v2.haproxy_route import valid_domain_with_wildcard
 
 from .ha import HAPROXY_PEER_INTEGRATION
 

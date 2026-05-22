@@ -9,14 +9,13 @@ import logging
 import typing
 from pathlib import Path
 
-from charms.certificate_transfer_interface.v1.certificate_transfer import (
-    CertificateTransferRequires,
-)
-from charms.tls_certificates_interface.v4.tls_certificates import (
+from charmlibs.interfaces.tls_certificates import (
     Certificate,
-    PrivateKey,
     ProviderCertificate,
     TLSCertificatesRequiresV4,
+)
+from charms.certificate_transfer_interface.v1.certificate_transfer import (
+    CertificateTransferRequires,
 )
 from ops.model import Model, Relation
 
@@ -127,7 +126,7 @@ class TLSRelationService:
         self.write_cas_to_unit(ca_certificates)
 
     def _certificate_matches_stored_content(
-        self, certificate: Certificate, chain: list[Certificate], private_key: PrivateKey
+        self, certificate: Certificate, chain: list[Certificate], private_key: str
     ) -> bool:
         """Check if the certificate matches the stored content.
 
@@ -151,7 +150,7 @@ class TLSRelationService:
         return expected_certificate == existing_certificate
 
     def write_certificate_to_unit(
-        self, certificate: Certificate, chain: list[Certificate], private_key: PrivateKey
+        self, certificate: Certificate, chain: list[Certificate], private_key: str
     ) -> None:
         """Store certificate in workload.
 
