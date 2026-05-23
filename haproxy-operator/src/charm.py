@@ -67,7 +67,12 @@ from state.haproxy_route import (
 from state.ingress import IngressRequirersInformation
 from state.ingress_per_unit import IngressPerUnitRequirersInformation
 from state.spoe_auth import SpoeAuthInformation
-from state.tls import TLSInformation, TLSNotReadyError, haproxy_peer_relation_app_data_encoder
+from state.tls import (
+    SHARED_PRIVATE_KEY_SECRET_LABEL,
+    TLSInformation,
+    TLSNotReadyError,
+    haproxy_peer_relation_app_data_encoder,
+)
 from state.validation import validate_config_and_tls
 from tls_relation import TLSRelationService
 
@@ -81,7 +86,6 @@ RECV_CA_CERTS_RELATION = "receive-ca-certs"
 SPOE_AUTH_RELATION = "spoe-auth"
 HAPROXY_ROUTE_TCP_RELATION = "haproxy-route-tcp"
 HAPROXY_ROUTE_POLICY_RELATION_NAME = "haproxy-route-policy"
-SHARED_PRIVATE_KEY_SECRET_LABEL = "haproxy-shared-private-key"
 
 
 class HaproxyUnitAddressNotAvailableError(CharmStateValidationBaseError):
