@@ -20,7 +20,8 @@ from pydantic.dataclasses import dataclass as pydantic_dataclass
 logger = logging.getLogger()
 
 HAPROXY_PEER_RELATION = "haproxy-peers"
-SHARED_PRIVATE_KEY_SECRET_LABEL = "haproxy-shared-private-key"
+# Disable bandit since this is not hardcoded credentials.
+SHARED_PRIVATE_KEY_SECRET_LABEL = "haproxy-shared-private-key"  # nosec
 
 
 class TLSNotReadyError(Exception):
