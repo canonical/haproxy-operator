@@ -82,9 +82,6 @@ class TLSRelationService:
         if len(self.certificates.certificate_requests) == 0:
             logger.warning("No certificate was requested")
             return
-        logger.info(
-            f"Shared certificates: {tls_information.tls_cert_and_ca_chain.shared_certificates}"
-        )
         for certificate, chain in tls_information.tls_cert_and_ca_chain.shared_certificates:
             if not self._certificate_matches_stored_content(
                 certificate=certificate,
