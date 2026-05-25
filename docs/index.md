@@ -13,9 +13,7 @@ This charm provides infrastructure operators and DevOps engineers straightforwar
 
 ## In this documentation
 
-### Basics
-
-Start here to prepare your environment and set up a basic deployment of the HAProxy charm. 
+### Basics 
 
 * **Tutorial**: {ref}`tutorial_getting_started` 
 
