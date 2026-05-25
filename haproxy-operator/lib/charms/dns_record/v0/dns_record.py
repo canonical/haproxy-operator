@@ -127,6 +127,7 @@ class DnsRecordError(Exception):
         Args:
             msg (str): Explanation of the error.
         """
+        super().__init__(msg)
         self.msg = msg
 
 
@@ -417,9 +418,11 @@ class DNSRecordBase(ops.Object):
             the relation data.
         """
         relation = self.model.get_relation(self.relation_name)
-        if not relation:
+        if not relation or not relation.app:
             return None
         relation_data: ops.RelationDataContent = relation.data[relation.app]
+        if not relation_data:
+            return []
         return self._handle_relation_data({k: json.loads(v) for k, v in relation_data.items()})
 
 

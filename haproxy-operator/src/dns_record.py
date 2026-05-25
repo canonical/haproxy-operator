@@ -57,4 +57,8 @@ class DNSRecordService:
             except CreateRecordRequestError:
                 logger.warning("Failed to create DNS record request for %s", hostname)
 
+        if not entries:
+            logger.info("No valid DNS record entries to publish, skipping update.")
+            return
+
         self.dns_record_requirer.update_relation_data(entries)

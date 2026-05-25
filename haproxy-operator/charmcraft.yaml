@@ -145,6 +145,8 @@ actions:
 charm-libs:
 - lib: certificate_transfer_interface.certificate_transfer
   version: "1"
+- lib: dns_record.dns_record
+  version: "0"
 - lib: grafana_agent.cos_agent
   version: "0"
 - lib: haproxy.ddos_protection

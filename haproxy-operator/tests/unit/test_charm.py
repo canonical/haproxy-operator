@@ -535,7 +535,7 @@ def test_dns_update_uses_binding_ip_when_no_ha(
     )
     with patch("ops.model.Model.get_binding") as mock_binding:
         mock_network = MagicMock()
-        mock_network.network.ingress_addresses = [MagicMock(__str__=lambda self: "10.0.0.5")]
+        mock_network.network.ingress_addresses = ["10.0.0.5"]
         mock_binding.return_value = mock_network
         context.run(context.on.config_changed(), state)
 
