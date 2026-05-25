@@ -9,21 +9,17 @@ The HAProxy operator is an open-source software operator that deploys and operat
 
 ## In this documentation
 
-| | |
-|--|--|
-|  {ref}`Tutorial <tutorial_index>`</br>  Get started - a hands-on introduction to using the charm for new users </br> |  {ref}`How-to guides <how_to_index>` </br> Step-by-step guides covering key operations and common tasks |
-| {ref}`Reference <reference_index>` </br> Technical information - specifications, APIs, architecture | {ref}`Explanation <explanation_index>` </br> Concepts - discussion and clarification of key topics  |
+TBD
 
-## Contributing to this documentation
+## How this documentation is organized
 
-Documentation is an important part of this project, and we take the same open-source approach
-to the documentation as the code. As such, we welcome community contributions, suggestions, and
-constructive feedback on our documentation.
-See {ref}`how_to_contribute` for more information.
+The documentation uses the
+[Diátaxis documentation structure](https://diataxis.fr/).
 
-
-If there's a particular area of documentation that you'd like to see that's missing, please 
-[file a bug](https://github.com/canonical/haproxy-operator/issues).
+* The {ref}`Tutorial <tutorial_index>` takes you step-by-step through a basic deployment of the HAProxy charm, and there are advanced tutorials covering load balancing for different server protocols.
+* The {ref}`How-to guides <how_to_index>` assume you have basic familiarity with the HAProxy charm. They cover practical tasks such as configuring, integrating, and upgrading your HAProxy deployment.
+* {ref}`Reference <reference_index>` provides technical details on supported server protocols and authentication.
+* {ref}`Explanation <explanation_index>` includes context and overviews on security and high availability.
 
 ## Project and community
 
@@ -45,5 +41,10 @@ Tutorial <tutorial/index.md>
 How-to guides <how-to/index.md>
 Reference <reference/index.md>
 Explanation <explanation/index.md>
+```
+
+```{toctree}
+:hidden:
+:maxdepth: 1
 Release notes <release-notes/index.md>
 ```
