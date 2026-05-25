@@ -5,7 +5,11 @@ myst:
 ---
 # HAProxy operator
 
-The HAProxy operator is an open-source software operator that deploys and operates HAProxy IAAS/VM that functions on Juju 3.3 and above. The charm offers advanced features such as TLS, monitoring and high-availability. This operator is built for **IAAS/VM** and is not supported in **Kubernetes** environments.
+The HAProxy operator is an open-source software operator that deploys and operates HAProxy on Juju 3.3 and above.
+
+The charm provides a managed ingress entry point for backend applications, handling secure traffic routing and load balancing. It also offers advanced features such as TLS, monitoring and high-availability. This operator is built for **IaaS/VM** and is not supported in **Kubernetes** environments.
+
+This charm provides infrastructure operators and DevOps engineers straightforward deployment and operation of HAProxy.
 
 ## In this documentation
 
@@ -28,7 +32,7 @@ Start here to prepare your environment and set up a basic deployment of the HAPr
 
 ## How this documentation is organized
 
-The documentation uses the
+This documentation uses the
 [Diátaxis documentation structure](https://diataxis.fr/).
 
 * The {ref}`Tutorial <tutorial_index>` takes you step-by-step through a basic deployment of the HAProxy charm, and there are advanced tutorials covering load balancing for different server protocols.
@@ -42,8 +46,8 @@ The HAProxy operator is a member of the Ubuntu family. It's an open-source proje
 projects, contributions, suggestions, fixes, and constructive feedback.
 
 - [Code of conduct](https://ubuntu.com/community/code-of-conduct)
-- [Get support](https://discourse.charmhub.io/)
-- [Join our online chat](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)
+- Get support through the [Discourse forum](https://discourse.charmhub.io/)
+- Join our [online chat](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)
 - {ref}`Contribute <how_to_contribute>`
 
 Thinking about using the HAProxy operator for your next project? 
