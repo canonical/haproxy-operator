@@ -9,7 +9,22 @@ The HAProxy operator is an open-source software operator that deploys and operat
 
 ## In this documentation
 
-TBD
+### Basics
+
+Start here to prepare your environment and set up a basic deployment of the HAProxy charm. 
+
+* **Tutorial**: {ref}`tutorial_getting_started` 
+
+### Understanding the HAProxy charm
+
+* **Server protocols**: {ref}`reference_http2_support` • {ref}`tutorial_loadbalancing_for_an_ftp_server` • {ref}`tutorial_loadbalancing_for_a_grpc_server` • {ref}`reference_grpc_support` 
+* **Configuring and integrating**: {ref}`Provide extra configuration to ingress requirers <how_to_provide_extra_configurations_for_ingress_requirer_charms>` • {ref}`Configure a virtual IP on OpenStack <how_to_configure_virtual_ip_on_openstack>` • {ref}`Integrate with non-charmed workloads <how_to_integrate_with_non_charm_workload>`
+
+### Security and performance
+
+* **Security**: {ref}`Overview <explanation_security>` • {ref}`how_to_enable_ddos_protection`
+* **SPOE authentication**: {ref}`reference_spoe-auth_support` • {ref}`Protect a hostname using OpenID Connect <how_to_protect_hostname_spoe_auth>`
+* **High availability**: {ref}`explanation_high_availability` • {ref}`how_to_configure_high_availability`
 
 ## How this documentation is organized
 
