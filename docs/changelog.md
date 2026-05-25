@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-05-25
+
+- docs: Updated the home page to implement the new pattern for the "In this documentation" section.
+
 ## 2026-04-17
 
 - Added missing settings from haproxy-route-tcp relation template.
