@@ -1,1 +1,3 @@
 https://github.com/canonical/haproxy-operator/deployments/charmhub-stable-promote
+# charmhub.io returns 500 intermittently
+https://charmhub.io/haproxy-ddos-protection-configurator/configurations
