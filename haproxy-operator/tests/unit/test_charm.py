@@ -327,7 +327,7 @@ def test_spoe_auth(monkeypatch: pytest.MonkeyPatch, certificates_integration):
     assert: The haproxy.conf and spoe_auth.conf files are writtern with the relevant lines.
     """
     monkeypatch.setattr(
-        "charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.private_key",
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4.private_key",
         MagicMock(),
     )
     render_file_mock = MagicMock()
@@ -370,7 +370,7 @@ def test_two_spoe_auth(monkeypatch: pytest.MonkeyPatch, certificates_integration
     assert: The haproxy.conf and spoe_auth.conf files are writtern with the relevant lines.
     """
     monkeypatch.setattr(
-        "charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.private_key",
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4.private_key",
         MagicMock(),
     )
     render_file_mock = MagicMock()
@@ -429,7 +429,7 @@ def test_spoe_auth_invalid_data(monkeypatch: pytest.MonkeyPatch, certificates_in
     assert: No file should be updated and the charm should be blocked.
     """
     monkeypatch.setattr(
-        "charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.private_key",
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4.private_key",
         MagicMock(),
     )
     render_file_mock = MagicMock()

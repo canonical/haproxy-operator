@@ -29,6 +29,9 @@ jobs:
             require-check-lib: false
     name: Unit tests for ${{ matrix.charm.name }}
     uses: canonical/operator-workflows/.github/workflows/test.yaml@main
+    permissions:
+      contents: write
+      pull-requests: write
     secrets: inherit
     with:
       runs-on-base: ubuntu-24.04

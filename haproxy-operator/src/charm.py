@@ -12,6 +12,12 @@ import logging
 import typing
 
 import ops
+from charmlibs.interfaces.tls_certificates import (
+    CertificateAvailableEvent,
+    CertificateRequestAttributes,
+    Mode,
+    TLSCertificatesRequiresV4,
+)
 from charms.certificate_transfer_interface.v1.certificate_transfer import (
     CertificatesAvailableEvent,
     CertificatesRemovedEvent,
@@ -27,12 +33,6 @@ from charms.haproxy.v0.spoe_auth import SpoeAuthRequirer
 from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpProvider
 from charms.haproxy.v2.haproxy_route import HaproxyRouteProvider
 from charms.haproxy_route_policy.v0.haproxy_route_policy import HaproxyRoutePolicyRequirer
-from charms.tls_certificates_interface.v4.tls_certificates import (
-    CertificateAvailableEvent,
-    CertificateRequestAttributes,
-    Mode,
-    TLSCertificatesRequiresV4,
-)
 from charms.traefik_k8s.v1.ingress_per_unit import (
     IngressDataReadyEvent,
     IngressDataRemovedEvent,
@@ -778,5 +778,4 @@ class HAProxyCharm(ops.CharmBase):
 
 
 if __name__ == "__main__":  # pragma: nocover
-    ops.main(HAProxyCharm)
     ops.main(HAProxyCharm)
