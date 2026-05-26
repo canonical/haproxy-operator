@@ -54,6 +54,20 @@ class HaproxyRouteTcpServer:
     maxconn: Optional[int]
     send_proxy: bool = False
 
+    @property
+    def server_address(self) -> str:
+        """Get the server address string for HAProxy configuration.
+
+        Returns the address with port suffix when port is set, or just
+        the address when port is None (port-range mode).
+
+        Returns:
+            str: The server address in format "address:port" or "address".
+        """
+        if self.port:
+            return f"{self.address}:{self.port}"
+        return str(self.address)
+
 
 @dataclass
 class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
