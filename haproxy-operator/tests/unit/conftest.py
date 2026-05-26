@@ -457,8 +457,9 @@ def tcp_reconcile_context_fixture():
 
 def build_haproxy_route_tcp_relation(
     *,
-    port: int = 4000,
+    port: int | None = 4000,
     backend_port: int | None = None,
+    backend_port_range: str | None = None,
     sni: str | None = None,
     enforce_tls: bool = True,
     tls_terminate: bool = False,
@@ -469,6 +470,7 @@ def build_haproxy_route_tcp_relation(
     Args:
         port: Frontend port.
         backend_port: Backend port (defaults to port).
+        backend_port_range: Port range in the form "{start_port}-{end_port}".
         sni: Server Name Indication value.
         enforce_tls: Whether to enforce TLS.
         tls_terminate: Whether to terminate TLS.
@@ -478,12 +480,15 @@ def build_haproxy_route_tcp_relation(
         A scenario Relation for haproxy-route-tcp.
     """
     app_data: dict[str, str | int | bool | None] = {
-        "port": port,
         "enforce_tls": enforce_tls,
         "tls_terminate": tls_terminate,
     }
+    if port is not None:
+        app_data["port"] = port
     if backend_port is not None:
         app_data["backend_port"] = backend_port
+    if backend_port_range is not None:
+        app_data["backend_port_range"] = backend_port_range
     if sni is not None:
         app_data["sni"] = sni
 

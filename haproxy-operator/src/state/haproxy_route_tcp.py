@@ -41,6 +41,7 @@ class HaproxyRouteTcpServer:
         server_name: The name of the unit with invalid characters replaced.
         address: The IP address of the requirer unit.
         port: The port that the requirer application wishes to be exposed.
+            None when backend_port_range is used.
         check: Health check configuration.
         maxconn: Maximum allowed connections before requests are queued.
         send_proxy: Whether to enable PROXY protocol for this server.
@@ -48,7 +49,7 @@ class HaproxyRouteTcpServer:
 
     server_name: str
     address: IPvAnyAddress
-    port: int
+    port: Optional[int]
     check: Optional[TCPServerHealthCheck]
     maxconn: Optional[int]
     send_proxy: bool = False
@@ -101,7 +102,8 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
 
         Creates HaproxyRouteTcpServer instances from the unit data, assigning
         sequential server names and using the application's backend port and
-        health check configuration.
+        health check configuration. When backend_port_range is set, the port
+        is omitted from server entries.
 
         Returns:
             list[HaproxyRouteTcpServer]: List of configured backend servers.
@@ -111,11 +113,15 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
         if not backend_addresses:
             backend_addresses = [unit_data.address for unit_data in self.units_data]
 
+        backend_port = (
+            None if self.application_data.backend_port_range else self.application_data.backend_port
+        )
+
         for i, address in enumerate(backend_addresses):
             servers.append(
                 HaproxyRouteTcpServer(
                     server_name=f"{self.application}-{i}",
-                    port=cast(int, self.application_data.backend_port),
+                    port=cast(Optional[int], backend_port),
                     address=address,
                     check=self.application_data.check,
                     maxconn=self.application_data.server_maxconn,
@@ -134,7 +140,18 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
         Returns:
             str: The endpoint name in format "{application}_{port}".
         """
+        if self.application_data.backend_port_range:
+            return f"{self.application}_{self.application_data.backend_port_range.replace('-', '_')}"
         return f"{self.application}_{self.application_data.port}"
+
+    @property
+    def is_port_range(self) -> bool:
+        """Indicate if this backend uses a port range.
+
+        Returns:
+            bool: Whether port range is used.
+        """
+        return self.application_data.backend_port_range is not None
 
     @property
     def tcp_check_options(self) -> list[str]:
@@ -209,11 +226,14 @@ class HAProxyRouteTcpFrontend:
     )
 
     @classmethod
-    def from_backends(cls, backends: list[HAProxyRouteTcpBackend]) -> "Self":
+    def from_backends(
+        cls, backends: list[HAProxyRouteTcpBackend], port: Optional[int] = None
+    ) -> "Self":
         """Instantiate a HAProxyRouteTcpFrontend class from a list of backends.
 
         Args:
             backends: List of backend endpoints.
+            port: Optional port override (used for port-range expansion).
 
         Raises:
             HAProxyRouteTcpFrontendValidationError: When the frontend is initialized with no backends.
@@ -223,8 +243,9 @@ class HAProxyRouteTcpFrontend:
         """
         # If there's only one backend, return the class directly with values from the backend
         if len(backends) == 1:
+            frontend_port = port if port is not None else backends[0].application_data.port
             return cls(
-                port=backends[0].application_data.port,
+                port=cast(int, frontend_port),
                 backends=backends,
                 enforce_tls=backends[0].application_data.enforce_tls,
                 tls_terminate=backends[0].application_data.tls_terminate,
@@ -262,7 +283,9 @@ class HAProxyRouteTcpFrontend:
                 "Cannot create HAProxyRouteTcpFrontend from empty backends list"
             )
         return cls(
-            port=rendered_backends[0].application_data.port,
+            port=cast(
+                int, port if port is not None else rendered_backends[0].application_data.port
+            ),
             backends=rendered_backends,
             enforce_tls=rendered_backends[0].application_data.enforce_tls,
             tls_terminate=rendered_backends[0].application_data.tls_terminate,

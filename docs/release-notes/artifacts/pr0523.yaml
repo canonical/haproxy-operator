@@ -1,0 +1,20 @@
+version_schema: 2
+
+changes:
+  - title: Added backend_port_range attribute to haproxy-route-tcp relation
+    author: copilot
+    type: minor
+    description: >
+      Added a backend_port_range attribute to the haproxy-route-tcp relation
+      data model that allows mapping from multiple frontend ports to multiple
+      backend ports. When set, it creates one frontend per port in the range
+      and omits the port from server entries in the backend configuration.
+      Proper pydantic validation ensures backend_port_range cannot be set
+      at the same time as port or backend_port.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/523
+      related_doc:
+      related_issue: https://github.com/canonical/haproxy-operator/issues/522
+    visibility: public
+    highlight: false

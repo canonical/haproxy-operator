@@ -793,11 +793,15 @@ def parse_haproxy_route_tcp_requirers_data(
     port_to_backends_mapping: dict[int, list[HAProxyRouteTcpBackend]] = defaultdict(list)
     for requirer in tcp_requirers.requirers_data:
         endpoint = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(requirer)
-        port_to_backends_mapping[endpoint.application_data.port].append(endpoint)
+        if endpoint.application_data.backend_port_range:
+            for port in endpoint.application_data.port_range_ports:
+                port_to_backends_mapping[port].append(endpoint)
+        elif endpoint.application_data.port is not None:
+            port_to_backends_mapping[endpoint.application_data.port].append(endpoint)
     tcp_frontends: list[HAProxyRouteTcpFrontend] = []
-    for backends in port_to_backends_mapping.values():
+    for port, backends in port_to_backends_mapping.items():
         try:
-            frontend = HAProxyRouteTcpFrontend.from_backends(backends)
+            frontend = HAProxyRouteTcpFrontend.from_backends(backends, port=port)
             tcp_frontends.append(frontend)
         except HAProxyRouteTcpFrontendValidationError as exc:
             logger.error(f"Failed to parse TCP frontend: {exc}")

@@ -494,3 +494,77 @@ def test_requirer_application_data_proxy_protocol_enabled():
     data = TcpRequirerApplicationData(port=8080, proxy_protocol=True)
 
     assert data.proxy_protocol is True
+
+
+def test_requirer_application_data_port_range_valid():
+    """
+    arrange: Create a TcpRequirerApplicationData model with a valid backend_port_range.
+    act: Validate the model.
+    assert: Model validation passes and port_range_ports returns the expected list.
+    """
+    data = TcpRequirerApplicationData(backend_port_range="4000-4005")
+
+    assert data.backend_port_range == "4000-4005"
+    assert data.port is None
+    assert data.backend_port is None
+    assert data.port_range_ports == [4000, 4001, 4002, 4003, 4004, 4005]
+
+
+def test_requirer_application_data_port_range_cannot_be_set_with_port():
+    """
+    arrange: Create a TcpRequirerApplicationData model with both port and backend_port_range.
+    act: Validate the model.
+    assert: Validation fails.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(port=8080, backend_port_range="4000-4005")
+
+
+def test_requirer_application_data_port_range_cannot_be_set_with_backend_port():
+    """
+    arrange: Create a TcpRequirerApplicationData model with both backend_port and backend_port_range.
+    act: Validate the model.
+    assert: Validation fails.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(backend_port=8080, backend_port_range="4000-4005")
+
+
+def test_requirer_application_data_port_range_invalid_format():
+    """
+    arrange: Create a TcpRequirerApplicationData model with an invalid backend_port_range format.
+    act: Validate the model.
+    assert: Validation fails.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(backend_port_range="invalid")
+
+
+def test_requirer_application_data_port_range_start_greater_than_end():
+    """
+    arrange: Create a TcpRequirerApplicationData model where start > end in range.
+    act: Validate the model.
+    assert: Validation fails.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(backend_port_range="5000-4000")
+
+
+def test_requirer_application_data_port_range_out_of_bounds():
+    """
+    arrange: Create a TcpRequirerApplicationData model with ports outside valid range.
+    act: Validate the model.
+    assert: Validation fails.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(backend_port_range="0-100")
+
+
+def test_requirer_application_data_neither_port_nor_range():
+    """
+    arrange: Create a TcpRequirerApplicationData model without port or backend_port_range.
+    act: Validate the model.
+    assert: Validation fails.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData()

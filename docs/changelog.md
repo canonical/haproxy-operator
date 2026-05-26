@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-05-26
+
+- Added `backend_port_range` attribute to `haproxy-route-tcp` relation to allow mapping from multiple frontend ports to multiple backend ports.
+
 ## 2026-04-17
 
 - Added missing settings from haproxy-route-tcp relation template.
