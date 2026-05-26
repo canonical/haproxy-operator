@@ -157,7 +157,6 @@ class SomeCharm(CharmBase):
 
 import json
 import logging
-import re
 from collections import defaultdict
 from enum import Enum
 from typing import Annotated, Any, MutableMapping, Optional, cast
@@ -683,14 +682,18 @@ class TcpRequirerApplicationData(_DatabagModel):
         """
         if self.backend_port_range is None:
             return self
-        pattern = r"^(\d+)-(\d+)$"
-        match = re.match(pattern, self.backend_port_range)
-        if not match:
+        parts = self.backend_port_range.split("-")
+        if len(parts) != 2:
             raise ValueError(
                 "backend_port_range must be in the format '{start_port}-{end_port}'."
             )
-        start_port = int(match.group(1))
-        end_port = int(match.group(2))
+        try:
+            start_port = int(parts[0])
+            end_port = int(parts[1])
+        except ValueError as exc:
+            raise ValueError(
+                "backend_port_range must contain valid port numbers."
+            ) from exc
         if not (1 <= start_port <= 65535 and 1 <= end_port <= 65535):
             raise ValueError("Ports in backend_port_range must be between 1 and 65535.")
         if start_port >= end_port:
