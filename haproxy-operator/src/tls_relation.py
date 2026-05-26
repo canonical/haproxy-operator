@@ -8,14 +8,14 @@ import logging
 import typing
 from pathlib import Path
 
-from charms.certificate_transfer_interface.v1.certificate_transfer import (
-    CertificateTransferRequires,
-)
-from charms.tls_certificates_interface.v4.tls_certificates import (
+from charmlibs.interfaces.tls_certificates import (
     Certificate,
     PrivateKey,
     ProviderCertificate,
     TLSCertificatesRequiresV4,
+)
+from charms.certificate_transfer_interface.v1.certificate_transfer import (
+    CertificateTransferRequires,
 )
 from ops.model import Model
 
