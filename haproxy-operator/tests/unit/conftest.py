@@ -11,6 +11,15 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import scenario
+from charmlibs.interfaces.tls_certificates import (
+    Certificate,
+    CertificateSigningRequest,
+    PrivateKey,
+    generate_ca,
+    generate_certificate,
+    generate_csr,
+    generate_private_key,
+)
 from charms.haproxy.v0.spoe_auth import SpoeAuthProviderAppData, SpoeAuthProviderUnitData
 from charms.haproxy.v1.haproxy_route_tcp import (
     HaproxyRouteTcpRequirerData,
@@ -21,15 +30,6 @@ from charms.haproxy.v2.haproxy_route import (
     HaproxyRouteRequirerData,
     RequirerApplicationData,
     RequirerUnitData,
-)
-from charms.tls_certificates_interface.v4.tls_certificates import (
-    Certificate,
-    CertificateSigningRequest,
-    PrivateKey,
-    generate_ca,
-    generate_certificate,
-    generate_csr,
-    generate_private_key,
 )
 from ops.testing import Context
 
@@ -111,14 +111,14 @@ def mock_certificate_fixture(
     provider_cert_mock.certificate = certificate
     monkeypatch.setattr(
         (
-            "charms.tls_certificates_interface.v4.tls_certificates"
+            "charmlibs.interfaces.tls_certificates"
             ".TLSCertificatesRequiresV4.get_assigned_certificate"
         ),
         MagicMock(return_value=(provider_cert_mock, private_key)),
     )
     monkeypatch.setattr(
         (
-            "charms.tls_certificates_interface.v4.tls_certificates"
+            "charmlibs.interfaces.tls_certificates"
             ".TLSCertificatesRequiresV4.get_assigned_certificates"
         ),
         MagicMock(return_value=([provider_cert_mock], private_key)),

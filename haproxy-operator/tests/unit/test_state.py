@@ -9,6 +9,9 @@ from unittest.mock import MagicMock, Mock
 
 import ops
 import pytest
+from charmlibs.interfaces.tls_certificates import (
+    TLSCertificatesRequiresV4,
+)
 from charms.haproxy.v0.ddos_protection import (
     DDoSProtectionInvalidRelationDataError,
     DDoSProtectionProviderAppData,
@@ -21,9 +24,6 @@ from charms.haproxy.v1.haproxy_route_tcp import (
 from charms.haproxy.v2.haproxy_route import (
     HaproxyRouteRequirerData,
     HaproxyRouteRequirersData,
-)
-from charms.tls_certificates_interface.v4.tls_certificates import (
-    TLSCertificatesRequiresV4,
 )
 from charms.traefik_k8s.v1.ingress_per_unit import (
     DataValidationError as V1DataValidationError,
