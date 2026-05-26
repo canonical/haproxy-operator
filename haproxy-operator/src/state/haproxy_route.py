@@ -794,7 +794,7 @@ def parse_haproxy_route_tcp_requirers_data(
     for requirer in tcp_requirers.requirers_data:
         endpoint = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(requirer)
         if endpoint.application_data.backend_port_range:
-            for port in endpoint.application_data.port_range_ports:
+            for port in endpoint.application_data.requested_ports_in_range:
                 port_to_backends_mapping[port].append(endpoint)
         elif endpoint.application_data.port is not None:
             port_to_backends_mapping[endpoint.application_data.port].append(endpoint)

@@ -762,7 +762,7 @@ class TcpRequirerApplicationData(_DatabagModel):
         return self
 
     @property
-    def port_range_ports(self) -> list[int]:
+    def requested_ports_in_range(self) -> list[int]:
         """Get the list of ports from the backend_port_range.
 
         Returns:
@@ -834,7 +834,7 @@ class HaproxyRouteTcpRequirersData:
         relation_ids_per_port: dict[int, list[int]] = defaultdict(list[int])
         for requirer_data in self.requirers_data:
             if requirer_data.application_data.backend_port_range:
-                for port in requirer_data.application_data.port_range_ports:
+                for port in requirer_data.application_data.requested_ports_in_range:
                     relation_ids_per_port[port].append(requirer_data.relation_id)
             elif requirer_data.application_data.port is not None:
                 relation_ids_per_port[requirer_data.application_data.port].append(

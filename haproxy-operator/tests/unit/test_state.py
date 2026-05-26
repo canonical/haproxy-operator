@@ -1841,7 +1841,7 @@ def test_haproxy_route_tcp_port_range_backend(
     tcp_endpoint = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(haproxy_route_tcp)
     assert tcp_endpoint.servers[0].port is None
     assert tcp_endpoint.is_port_range is True
-    assert tcp_endpoint.application_data.port_range_ports == [4000, 4001, 4002, 4003, 4004, 4005]
+    assert tcp_endpoint.application_data.requested_ports_in_range == [4000, 4001, 4002, 4003, 4004, 4005]
 
 
 def test_haproxy_route_tcp_port_range_creates_multiple_frontends(

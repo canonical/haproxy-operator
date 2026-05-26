@@ -500,14 +500,14 @@ def test_requirer_application_data_port_range_valid():
     """
     arrange: Create a TcpRequirerApplicationData model with a valid backend_port_range.
     act: Validate the model.
-    assert: Model validation passes and port_range_ports returns the expected list.
+    assert: Model validation passes and requested_ports_in_range returns the expected list.
     """
     data = TcpRequirerApplicationData(backend_port_range="4000-4005")
 
     assert data.backend_port_range == "4000-4005"
     assert data.port is None
     assert data.backend_port is None
-    assert data.port_range_ports == [4000, 4001, 4002, 4003, 4004, 4005]
+    assert data.requested_ports_in_range == [4000, 4001, 4002, 4003, 4004, 4005]
 
 
 def test_requirer_application_data_port_range_cannot_be_set_with_port():
