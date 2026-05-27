@@ -527,13 +527,11 @@ class HAProxyCharm(ops.CharmBase):
 
     def _on_dns_record_relation_created(self, _: ops.RelationCreatedEvent) -> None:
         """Handle the dns-record relation created event."""
-        if self.unit.is_leader():
-            self._update_dns_records()
+        self._update_dns_records()
 
     def _on_dns_record_relation_joined(self, _: ops.RelationJoinedEvent) -> None:
         """Handle the dns-record relation joined event."""
-        if self.unit.is_leader():
-            self._update_dns_records()
+        self._update_dns_records()
 
     def _update_dns_records(self) -> None:
         """Publish A records for all managed hostnames to the dns-record relation.
@@ -548,6 +546,8 @@ class HAProxyCharm(ops.CharmBase):
         if not hostnames:
             return
 
+        # The try/except is needed for the relation_created/joined handlers which call
+        # _update_dns_records directly without going through _reconcile first.
         try:
             ha_information = HAInformation.from_charm(self)
         except HAInformationValidationError:

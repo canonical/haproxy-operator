@@ -24,7 +24,7 @@ def mock_requirer_fixture():
 
 
 @pytest.fixture(name="mock_model")
-def mock_model_fixture(mock_requirer):
+def mock_model_fixture():
     """Create a mocked ops.Model with a dns-record relation."""
     model = MagicMock()
     model.get_relation.return_value = MagicMock()

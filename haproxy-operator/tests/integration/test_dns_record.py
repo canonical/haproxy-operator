@@ -95,6 +95,16 @@ def test_dns_record_relation_removal_does_not_break_haproxy(
         f"{configured_application_with_tls}:dns-record",
         f"{bind_operator}:dns-record",
     )
+    # Wait for the relation to actually be removed before asserting active status,
+    # otherwise the check may pass before removal hooks fire.
+    juju.wait(
+        lambda status: "dns-record"
+        not in [
+            rel.endpoint
+            for rel in status.apps[configured_application_with_tls].relations
+        ],
+        timeout=5 * 60,
+    )
     juju.wait(
         lambda status: status.apps[configured_application_with_tls].is_active,
         timeout=5 * 60,
