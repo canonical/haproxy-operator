@@ -341,6 +341,7 @@ class HAProxyCharm(ops.CharmBase):
             tls_information.hostnames[0],
             ddos_protection_config,
         )
+        self._publish_certificate_to_peer_units(tls_information)
 
     def _configure_legacy(self, charm_state: CharmState) -> None:
         """Configure the legacy mode."""
@@ -431,12 +432,7 @@ class HAProxyCharm(ops.CharmBase):
             self._publish_haproxy_route_tcp_proxied_endpoints(
                 haproxy_route_requirers_information, ha_information
             )
-            if peer_relation := self.model.get_relation(HAPROXY_PEER_INTEGRATION):
-                peer_relation.save(
-                    obj=tls_information.tls_cert_and_ca_chain,
-                    dst=self.app,
-                    encoder=haproxy_peer_relation_app_data_encoder,
-                )
+            self._publish_certificate_to_peer_units(tls_information)
 
     def _get_certificate_requests(self) -> typing.List[CertificateRequestAttributes]:
         """Get the certificate requests.
@@ -752,6 +748,18 @@ class HAProxyCharm(ops.CharmBase):
                 },
             )
             return private_key
+
+    def _publish_certificate_to_peer_units(self, tls_information: TLSInformation) -> None:
+        """Publish the certificate and CA chain to peer units via the peer relation."""
+        if not self.unit.is_leader():
+            return
+
+        if peer_relation := self.model.get_relation(HAPROXY_PEER_INTEGRATION):
+            peer_relation.save(
+                obj=tls_information.tls_cert_and_ca_chain,
+                dst=self.app,
+                encoder=haproxy_peer_relation_app_data_encoder,
+            )
 
 
 if __name__ == "__main__":  # pragma: nocover
