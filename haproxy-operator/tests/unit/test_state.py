@@ -1844,22 +1844,24 @@ def test_haproxy_route_tcp_port_range_backend(
     assert tcp_endpoint.application_data.requested_ports_in_range == [4000, 4001, 4002, 4003, 4004, 4005]
 
 
-def test_haproxy_route_tcp_port_range_creates_multiple_frontends(
+def test_haproxy_route_tcp_port_range_creates_single_frontend(
     haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
 ):
     """
     arrange: Generate TCP relation data with a port range of 4000-4002.
     act: Parse the data into frontends.
-    assert: Three frontends are created, one per port in the range.
+    assert: One frontend is created with a port range bind.
     """
     tcp_requirers = HaproxyRouteTcpRequirersData(
         requirers_data=[haproxy_route_tcp_relation_data(backend_port_range="4000-4002")],
         relation_ids_with_invalid_data=set(),
     )
     frontends = parse_haproxy_route_tcp_requirers_data(tcp_requirers)
-    assert len(frontends) == 3
-    frontend_ports = sorted(f.port for f in frontends)
-    assert frontend_ports == [4000, 4001, 4002]
+    assert len(frontends) == 1
+    assert frontends[0].port == 4000
+    assert frontends[0].port_range_end == 4002
+    assert frontends[0].bind_port == "4000-4002"
+    assert frontends[0].covered_ports == [4000, 4001, 4002]
 
 
 def test_haproxy_route_tcp_port_range_conflict_with_single_port(
@@ -1931,7 +1933,7 @@ def test_haproxy_route_tcp_port_range_config_rendering(
     """
     arrange: Generate TCP relation data with a port range and parse into frontends.
     act: Render the TCP template.
-    assert: The config contains frontends for each port in the range and servers have no port.
+    assert: The config contains a single frontend with port range bind and servers have no port.
     """
     from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -1942,7 +1944,7 @@ def test_haproxy_route_tcp_port_range_config_rendering(
         relation_ids_with_invalid_data=set(),
     )
     frontends = parse_haproxy_route_tcp_requirers_data(tcp_requirers)
-    assert len(frontends) == 3
+    assert len(frontends) == 1
 
     env = Environment(
         loader=FileSystemLoader("templates"),
@@ -1960,11 +1962,7 @@ def test_haproxy_route_tcp_port_range_config_rendering(
     )
 
     assert "frontend haproxy_route_tcp_5000" in rendered
-    assert "frontend haproxy_route_tcp_5001" in rendered
-    assert "frontend haproxy_route_tcp_5002" in rendered
-    assert "bind [::]:5000" in rendered
-    assert "bind [::]:5001" in rendered
-    assert "bind [::]:5002" in rendered
+    assert "bind [::]:5000-5002" in rendered
     # Server entries should not have port when port range is used
     assert "tcp-route-requirer-0 10.0.0.1 " in rendered
     assert "tcp-route-requirer-0 10.0.0.1:" not in rendered

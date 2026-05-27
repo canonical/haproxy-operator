@@ -631,7 +631,10 @@ class HaproxyRouteRequirersInformation:
             for backend in valid_backends
             if backend.application_data.external_grpc_port
         }
-        tcp_ports = {frontend.port: frontend for frontend in self.tcp_frontends}
+        tcp_ports: dict[int, HAProxyRouteTcpFrontend] = {}
+        for frontend in self.tcp_frontends:
+            for covered_port in frontend.covered_ports:
+                tcp_ports[covered_port] = frontend
 
         # Check for conflicts between standard HTTP and TCP/gRPC ports
         if has_http_backends:
@@ -686,7 +689,7 @@ class HaproxyRouteRequirersInformation:
         return [
             frontend
             for frontend in self.tcp_frontends
-            if frontend.port not in self.ports_with_conflicts
+            if not any(p in self.ports_with_conflicts for p in frontend.covered_ports)
         ]
 
     @property
@@ -791,14 +794,28 @@ def parse_haproxy_route_tcp_requirers_data(
         list[HAProxyRouteTcpFrontend]: The parsed frontend data.
     """
     port_to_backends_mapping: dict[int, list[HAProxyRouteTcpBackend]] = defaultdict(list)
+    port_range_backends: list[HAProxyRouteTcpBackend] = []
     for requirer in tcp_requirers.requirers_data:
         endpoint = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(requirer)
         if endpoint.application_data.backend_port_range:
-            for port in endpoint.application_data.requested_ports_in_range:
-                port_to_backends_mapping[port].append(endpoint)
+            port_range_backends.append(endpoint)
         elif endpoint.application_data.port is not None:
             port_to_backends_mapping[endpoint.application_data.port].append(endpoint)
     tcp_frontends: list[HAProxyRouteTcpFrontend] = []
+
+    # Create frontends for port-range backends (one frontend per range)
+    for endpoint in port_range_backends:
+        ports = endpoint.application_data.requested_ports_in_range
+        if ports:
+            try:
+                frontend = HAProxyRouteTcpFrontend.from_backends(
+                    [endpoint], port=ports[0]
+                )
+                tcp_frontends.append(frontend)
+            except HAProxyRouteTcpFrontendValidationError as exc:
+                logger.error(f"Failed to parse TCP frontend: {exc}")
+
+    # Create frontends for single-port backends
     for port, backends in port_to_backends_mapping.items():
         try:
             frontend = HAProxyRouteTcpFrontend.from_backends(backends, port=port)
