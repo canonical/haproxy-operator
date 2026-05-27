@@ -581,7 +581,7 @@ def dns_record_relation_fixture():
 @pytest.fixture(name="context_with_dns_mock")
 def context_with_dns_mock_fixture():
     """Context fixture with dns_record and haproxy service mocked."""
-    from charms.tls_certificates_interface.v4.tls_certificates import CertificateRequestAttributes
+    from charmlibs.interfaces.tls_certificates import CertificateRequestAttributes
 
     with (
         patch("haproxy.HAProxyService.install"),
