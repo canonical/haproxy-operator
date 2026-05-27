@@ -71,37 +71,25 @@ def test_update_dns_records_multiple_hostnames(service, mock_requirer):
     mock_requirer.update_relation_data.assert_called_once_with([fake_entry, fake_entry])
 
 
-def test_update_dns_records_no_relation(service, mock_model, mock_requirer):
+@pytest.mark.parametrize(
+    "hostnames, ip, has_relation",
+    [
+        pytest.param(["app.example.com"], "10.0.0.5", False, id="no_relation"),
+        pytest.param([], "10.0.0.5", True, id="empty_hostnames"),
+        pytest.param(["app.example.com"], "", True, id="empty_ip"),
+    ],
+)
+def test_update_dns_records_noop(hostnames, ip, has_relation, mock_model, mock_requirer):
     """
-    arrange: no dns-record relation active
+    arrange: conditions where update should be a no-op (no relation, empty hostnames, empty IP)
     act: call update_dns_records
     assert: update_relation_data is never called
     """
-    mock_model.get_relation.return_value = None
+    if not has_relation:
+        mock_model.get_relation.return_value = None
+    service = DNSRecordService(mock_model, mock_requirer)
 
-    service.update_dns_records(["app.example.com"], "10.0.0.5")
-
-    mock_requirer.update_relation_data.assert_not_called()
-
-
-def test_update_dns_records_empty_hostnames(service, mock_requirer):
-    """
-    arrange: empty hostname list
-    act: call update_dns_records
-    assert: update_relation_data is never called
-    """
-    service.update_dns_records([], "10.0.0.5")
-
-    mock_requirer.update_relation_data.assert_not_called()
-
-
-def test_update_dns_records_empty_ip(service, mock_requirer):
-    """
-    arrange: empty IP string
-    act: call update_dns_records
-    assert: update_relation_data is never called
-    """
-    service.update_dns_records(["app.example.com"], "")
+    service.update_dns_records(hostnames, ip)
 
     mock_requirer.update_relation_data.assert_not_called()
 
