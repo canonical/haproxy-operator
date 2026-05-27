@@ -16,6 +16,7 @@ from charmlibs.interfaces.tls_certificates import (
     CertificateAvailableEvent,
     CertificateRequestAttributes,
     Mode,
+    PrivateKey,
     TLSCertificatesRequiresV4,
 )
 from charms.certificate_transfer_interface.v1.certificate_transfer import (
@@ -44,7 +45,7 @@ from charms.traefik_k8s.v2.ingress import (
 )
 from interface_hacluster.ops_ha_interface import HAServiceRequires
 from ops.charm import ActionEvent
-from ops.model import Port
+from ops.model import Port, SecretNotFoundError
 
 from haproxy import HAPROXY_SERVICE, HAProxyService
 from http_interface import (
@@ -66,7 +67,12 @@ from state.haproxy_route import (
 from state.ingress import IngressRequirersInformation
 from state.ingress_per_unit import IngressPerUnitRequirersInformation
 from state.spoe_auth import SpoeAuthInformation
-from state.tls import TLSInformation, TLSNotReadyError
+from state.tls import (
+    SHARED_PRIVATE_KEY_SECRET_LABEL,
+    TLSInformation,
+    TLSNotReadyError,
+    haproxy_peer_relation_app_data_encoder,
+)
 from state.validation import validate_config_and_tls
 from tls_relation import TLSRelationService
 
@@ -139,7 +145,8 @@ class HAProxyCharm(ops.CharmBase):
                 self.haproxy_route_provider.on.data_available,
                 self.haproxy_route_provider.on.data_removed,
             ],
-            mode=Mode.UNIT,
+            mode=Mode.APP,
+            private_key=self._ensure_private_key(),
         )
 
         self._tls = TLSRelationService(self.model, self.certificates, self.recv_ca_certs)
@@ -201,6 +208,14 @@ class HAProxyCharm(ops.CharmBase):
         )
         self.framework.observe(
             self.on.get_proxied_endpoints_action, self._on_get_proxied_endpoints_action
+        )
+        # Hook peer relation events so non-leader units reconcile when the leader
+        # publishes certificate data to the peer relation app databag.
+        self.framework.observe(
+            self.on[HAPROXY_PEER_INTEGRATION].relation_changed, self._on_config_changed
+        )
+        self.framework.observe(
+            self.on[HAPROXY_PEER_INTEGRATION].relation_joined, self._on_config_changed
         )
         # Hook relation-related events to the reconcile loop.
         for relation in [
@@ -326,6 +341,7 @@ class HAProxyCharm(ops.CharmBase):
             tls_information.hostnames[0],
             ddos_protection_config,
         )
+        self._publish_certificate_to_peer_units(tls_information)
 
     def _configure_legacy(self, charm_state: CharmState) -> None:
         """Configure the legacy mode."""
@@ -416,6 +432,7 @@ class HAProxyCharm(ops.CharmBase):
             self._publish_haproxy_route_tcp_proxied_endpoints(
                 haproxy_route_requirers_information, ha_information
             )
+            self._publish_certificate_to_peer_units(tls_information)
 
     def _get_certificate_requests(self) -> typing.List[CertificateRequestAttributes]:
         """Get the certificate requests.
@@ -714,6 +731,35 @@ class HAProxyCharm(ops.CharmBase):
                     ],
                     relation,
                 )
+
+    def _ensure_private_key(self) -> PrivateKey | None:
+        """Ensure that a private key exists as a secret before passing it to the lib."""
+        if not self.unit.is_leader():
+            return None
+        try:
+            secret = self.model.get_secret(label=SHARED_PRIVATE_KEY_SECRET_LABEL)
+            return PrivateKey.from_string(secret.get_content(refresh=True)["private-key"])
+        except SecretNotFoundError:
+            private_key = PrivateKey.generate()
+            self.app.add_secret(
+                label=SHARED_PRIVATE_KEY_SECRET_LABEL,
+                content={
+                    "private-key": str(private_key),
+                },
+            )
+            return private_key
+
+    def _publish_certificate_to_peer_units(self, tls_information: TLSInformation) -> None:
+        """Publish the certificate and CA chain to peer units via the peer relation."""
+        if not self.unit.is_leader():
+            return
+
+        if peer_relation := self.model.get_relation(HAPROXY_PEER_INTEGRATION):
+            peer_relation.save(
+                obj=tls_information.tls_cert_and_ca_chain,
+                dst=self.app,
+                encoder=haproxy_peer_relation_app_data_encoder,
+            )
 
 
 if __name__ == "__main__":  # pragma: nocover
