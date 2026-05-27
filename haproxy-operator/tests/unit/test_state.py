@@ -9,6 +9,9 @@ from unittest.mock import MagicMock, Mock
 
 import ops
 import pytest
+from charmlibs.interfaces.tls_certificates import (
+    TLSCertificatesRequiresV4,
+)
 from charms.haproxy.v0.ddos_protection import (
     DDoSProtectionInvalidRelationDataError,
     DDoSProtectionProviderAppData,
@@ -21,9 +24,6 @@ from charms.haproxy.v1.haproxy_route_tcp import (
 from charms.haproxy.v2.haproxy_route import (
     HaproxyRouteRequirerData,
     HaproxyRouteRequirersData,
-)
-from charms.tls_certificates_interface.v4.tls_certificates import (
-    TLSCertificatesRequiresV4,
 )
 from charms.traefik_k8s.v1.ingress_per_unit import (
     DataValidationError as V1DataValidationError,
@@ -1799,3 +1799,31 @@ def test_haproxy_route_tcp_frontend_from_backends_terminate_and_not_terminate_tl
     assert frontend.port == 4000
     assert len(frontend.backends) == 2
     assert frontend.relation_ids_with_invalid_data == {2}
+
+
+def test_haproxy_route_tcp_backend_servers_send_proxy(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Generate TCP relation data with proxy_protocol=True.
+    act: Initialize the HAProxyRouteTcpBackend and get servers.
+    assert: Each server has send_proxy set to True.
+    """
+    haproxy_route_tcp = haproxy_route_tcp_relation_data(port=4000, proxy_protocol=True)
+    backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(haproxy_route_tcp)
+
+    assert all(server.send_proxy is True for server in backend.servers)
+
+
+def test_haproxy_route_tcp_backend_servers_send_proxy_default(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Generate TCP relation data without proxy_protocol.
+    act: Initialize the HAProxyRouteTcpBackend and get servers.
+    assert: Each server has send_proxy set to False.
+    """
+    haproxy_route_tcp = haproxy_route_tcp_relation_data(port=4000)
+    backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(haproxy_route_tcp)
+
+    assert all(server.send_proxy is False for server in backend.servers)
