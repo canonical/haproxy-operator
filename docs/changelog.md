@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-05-27
+
+- Added optional `dns-record` relation to publish DNS A records for HAProxy hostnames.
+
 ## 2026-04-17
 
 - Added missing settings from haproxy-route-tcp relation template.
