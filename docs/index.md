@@ -16,9 +16,10 @@ This charm provides infrastructure operators and DevOps engineers straightforwar
 | | |
 |--|--|
 | **Tutorial** | {ref}`tutorial_getting_started` |
-| **Deployment** | {ref}`Ingress requirers <how_to_provide_extra_configurations_for_ingress_requirer_charms>` • {ref}`Virtual IP on OpenStack <how_to_configure_virtual_ip_on_openstack>` • {ref}`High availability <how_to_configure_high_availability>` |
+| **Deployment** | {ref}`High availability <how_to_configure_high_availability>` • {ref}`Virtual IP on OpenStack <how_to_configure_virtual_ip_on_openstack>` |
+| **Operations** | {ref}`Upgrade <how_to_upgrade>` • {ref}`Contribute <how_to_contribute>` |
+| **Integrations** | {ref}`Non-charmed workloads <how_to_integrate_with_non_charm_workload>` • {ref}`Ingress requirers <how_to_provide_extra_configurations_for_ingress_requirer_charms>` |
 | **Supported protocols** | {ref}`FTP <tutorial_loadbalancing_for_an_ftp_server>` • {ref}`gRPC <tutorial_loadbalancing_for_a_grpc_server>` • {ref}`HTTP/2 <reference_http2_support>` |
-| **Operations** | {ref}`Integrate with non-charmed workloads <how_to_integrate_with_non_charm_workload>` • {ref}`Upgrade <how_to_upgrade>` |
 | **Security** | {ref}`Overview <explanation_security>` • {ref}`DDoS protection <how_to_enable_ddos_protection>` • {ref}`Authentication proxy <how_to_protect_hostname_spoe_auth>` |
 
 ## How this documentation is organized
