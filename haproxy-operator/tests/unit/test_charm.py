@@ -7,7 +7,7 @@ import json
 import logging
 import pathlib
 import re
-from unittest.mock import ANY, MagicMock
+from unittest.mock import ANY, MagicMock, patch
 
 import ops
 import ops.testing
@@ -525,8 +525,6 @@ def test_dns_update_uses_binding_ip_when_no_ha(
     act: config_changed fires
     assert: update_dns_records is called with the binding ingress address
     """
-    from unittest.mock import patch
-
     context, update_dns_mock = context_with_dns_mock
     state = ops.testing.State(
         config={"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG},
