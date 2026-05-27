@@ -39,12 +39,8 @@ juju integrate ingress-configurator:haproxy-route haproxy
 ```
 
 <!-- SPREAD
-juju add-model haproxy-route-guide
-juju deploy haproxy --channel=2.8/edge
-juju deploy self-signed-certificates cert
-juju integrate haproxy:certificates cert
-juju deploy ingress-configurator requirer --channel=latest/edge
-juju integrate ingress-configurator:haproxy-route haproxy
+juju wait-for application haproxy --query='status=="active"' --timeout 10m
+juju wait-for application cert --query='status=="active"' --timeout 10m
 juju wait-for application requirer --query='status=="active"' --timeout 10m
 -->
 
