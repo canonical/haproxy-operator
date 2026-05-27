@@ -10,13 +10,23 @@ myst:
 
 This guide will show you how to use the `haproxy-route-policy` charm to control which backends are allowed to be routed through `haproxy`. When integrated, all `haproxy-route` backends are blocked by default until explicitly approved through the policy API.
 
-## Set up the model
+## Prerequisites
+
+This guide assumes that you are working in a Juju model named `haproxy-route-guide`. You will need:
+
+- A Juju controller bootstrapped on a machine cloud (e.g. LXD)
+- The `haproxy` charm deployed with TLS certificates
+- A backend requirer (e.g. `ingress-configurator`) integrated with `haproxy`
+
+If you have already completed the [Getting started tutorial](../tutorial/getting-started.md), you can reuse that setup. Otherwise, follow the steps below to set up the required environment.
+
+### Set up the model
 
 ```sh
 juju add-model haproxy-route-guide
 ```
 
-## Deploy HAProxy and a backend requirer
+### Deploy HAProxy and a backend requirer
 
 Deploy the `haproxy` charm with TLS and an `ingress-configurator` as the backend requirer:
 
@@ -29,10 +39,16 @@ juju integrate ingress-configurator:haproxy-route haproxy
 ```
 
 <!-- SPREAD
+juju add-model haproxy-route-guide
+juju deploy haproxy --channel=2.8/edge
+juju deploy self-signed-certificates cert
+juju integrate haproxy:certificates cert
+juju deploy ingress-configurator requirer --channel=latest/edge
+juju integrate ingress-configurator:haproxy-route haproxy
 juju wait-for application requirer --query='status=="active"' --timeout 10m
 -->
 
-## Configure the backend requirer
+### Configure the backend requirer
 
 Install a web server on the requirer unit and configure the external hostname on the `haproxy` charm:
 
@@ -88,9 +104,9 @@ curl -H "Host: tutorial-haproxy-route-policy.haproxy.internal" -u "admin:$POLICY
 
 The response contains a JSON list of backend requests waiting for approval.
 
-## Create an allow rule and refresh requests
+## Create an allow rule
 
-Create a rule to allow backends matching the configured hostname, then refresh all pending requests:
+Create a rule to allow backends matching the configured hostname:
 
 ```sh
 HAPROXY_IP=$(juju status --format json | jq -r '.applications.haproxy.units."haproxy/0"."public-address"')
@@ -102,6 +118,15 @@ curl -H "Host: tutorial-haproxy-route-policy.haproxy.internal" -u "admin:$POLICY
     "parameters": {"hostnames": ["haproxy.internal"]},
     "action": "allow"
 }'
+```
+
+## Refresh pending requests
+
+Refresh all pending requests so the new rule is evaluated against them:
+
+```sh
+HAPROXY_IP=$(juju status --format json | jq -r '.applications.haproxy.units."haproxy/0"."public-address"')
+POLICY_ADMIN_PASSWORD=$(juju run haproxy-route-policy/0 get-admin-credentials --format json | jq -r '.results.password')
 curl -H "Host: tutorial-haproxy-route-policy.haproxy.internal" -u "admin:$POLICY_ADMIN_PASSWORD" https://$HAPROXY_IP/api/v1/requests/refresh -k
 ```
 
