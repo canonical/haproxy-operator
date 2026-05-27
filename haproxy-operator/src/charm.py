@@ -557,7 +557,7 @@ class HAProxyCharm(ops.CharmBase):
         if ha_information and ha_information.ha_integration_ready and ha_information.vip:
             ip = str(ha_information.vip)
         else:
-            network_binding = self.model.get_binding(INGRESS_RELATION)
+            network_binding = self.model.get_binding(DNS_RECORD_RELATION)
             if network_binding is None:
                 logger.warning("Cannot resolve network binding for DNS records.")
                 return
