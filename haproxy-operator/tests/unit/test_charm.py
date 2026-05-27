@@ -37,6 +37,23 @@ def test_install(context_with_install_mock, base_state):
     reconcile_default_mock.assert_called_once()
 
 
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_non_leader_waiting_for_peer_data(peer_relation, certificates_integration):
+    """
+    arrange: prepare state as non-leader with peer relation but no cert data in databag.
+    act: trigger config changed.
+    assert: unit status is WaitingStatus because peer cert data is not available yet.
+    """
+    ctx = ops.testing.Context(HAProxyCharm)
+    state = ops.testing.State(
+        relations=[peer_relation, certificates_integration],
+        leader=False,
+        config={"external-hostname": "haproxy.internal"},
+    )
+    out = ctx.run(ctx.on.config_changed(), state)
+    assert out.unit_status.name == ops.testing.WaitingStatus.name
+
+
 def test_ingress_per_unit_mode_success(
     context_with_install_mock, base_state_with_ingress_per_unit
 ):
