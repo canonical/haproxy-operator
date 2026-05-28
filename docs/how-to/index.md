@@ -20,6 +20,7 @@ Integrate with non-charm workloads <integrate-with-non-charm-workload.md>
 Provide extra configurations for ingress requirer charms <provide-extra-configurations-for-ingress-requirer-charms.md>
 Protect a hostname using OpenID Connect <protect-hostname-spoe-auth.md>
 Enable DDoS Protection <enable-ddos-protection.md>
+Control haproxy-route relation data <control-haproxy-route-relation-data.md>
 Configure high availability <configure-high-availability.md>
 ```
 
