@@ -1,20 +1,23 @@
 version_schema: 2
 
 changes:
-  - title: Added backend_port_range attribute to haproxy-route-tcp relation
-    author: copilot
+  - title: Switch TLS certificates to app mode with shared private key and peer relation distribution
+    author: tphan025
     type: minor
     description: >
-      Added a backend_port_range attribute to the haproxy-route-tcp relation
-      data model that allows mapping from multiple frontend ports to multiple
-      backend ports. When set, it creates one frontend per port in the range
-      and omits the port from server entries in the backend configuration.
-      Proper pydantic validation ensures backend_port_range cannot be set
-      at the same time as port or backend_port.
+      Switched the TLS certificates library from unit mode to app mode so
+      only the leader requests and receives certificates. The leader stores
+      a shared private key in a Juju secret and publishes certificates plus
+      CA chains to the peer relation app databag. Non-leader units read TLS
+      information from the peer relation instead of the certificates
+      relation directly, enabling all units to serve the same certificates
+      without individual CSR requests. Added peer relation-changed/joined
+      observers so non-leader units reconcile when certificate data is
+      published.
     urls:
       pr:
         - https://github.com/canonical/haproxy-operator/pull/523
       related_doc:
-      related_issue: https://github.com/canonical/haproxy-operator/issues/522
+      related_issue:
     visibility: public
     highlight: false

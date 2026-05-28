@@ -296,6 +296,7 @@ def base_state_fixture(peer_relation):
     """
     input_state = {
         "relations": [peer_relation],
+        "leader": True,
     }
     return input_state
 
@@ -316,6 +317,7 @@ def base_state_with_ingress_fixture(peer_relation, ingress_integration, certific
         "config": {
             "external-hostname": "ingress.local",
         },
+        "leader": True,
     }
     return input_state
 
@@ -353,6 +355,7 @@ def base_state_haproxy_route_fixture(
         "config": {
             "external-hostname": "haproxy.internal",
         },
+        "leader": True,
     }
     return input_state
 
@@ -417,6 +420,7 @@ def base_state_with_ingress_per_unit_fixture(
         "config": {
             "external-hostname": "ingress.local",
         },
+        "leader": True,
     }
     return input_state
 
