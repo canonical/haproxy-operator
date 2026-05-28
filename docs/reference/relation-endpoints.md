@@ -45,9 +45,9 @@ juju integrate <charm>:haproxy-route-tcp haproxy:haproxy-route-tcp
 ### `ingress`
 
 - **Interface**: `ingress`
-- **Supported charms**: Any charm implementing the traefik-compatible `ingress` interface
+- **Supported charms**: Any charm implementing the Traefik-compatible `ingress` interface
 
-Exposes per-application ingress to charms that use the traefik-compatible `ingress` interface, load-balancing traffic across all units of the application.
+Exposes per-application ingress to charms that use the Traefik-compatible `ingress` interface, load-balancing traffic across all units of the application.
 
 Example `ingress` integrate command:
 
@@ -60,9 +60,9 @@ juju integrate <charm>:ingress haproxy:ingress
 ### `ingress-per-unit`
 
 - **Interface**: `ingress_per_unit`
-- **Supported charms**: Any charm implementing the traefik-compatible `ingress-per-unit` interface
+- **Supported charms**: Any charm implementing the Traefik-compatible `ingress-per-unit` interface
 
-Provides a dedicated ingress URL per unit, rather than per application, for charms that use the traefik-compatible `ingress-per-unit` interface.
+Provides a dedicated ingress URL per unit, rather than per application, for charms that use the Traefik-compatible `ingress-per-unit` interface.
 
 Example `ingress-per-unit` integrate command:
 
@@ -140,6 +140,7 @@ juju integrate haproxy:reverseproxy <charm>:website
 - **Supported charms**: [hacluster](https://charmhub.io/hacluster)
 
 Integrates with the `hacluster` charm to enable active/passive high-availability using a shared virtual IP address.
+See {ref}`how_to_configure_high_availability` for more details.
 
 Example `ha` integrate command:
 
@@ -185,6 +186,7 @@ juju integrate haproxy:spoe-auth haproxy-spoe-auth:spoe-auth
 - **Supported charms**: [haproxy-ddos-protection-configurator](https://charmhub.io/haproxy-ddos-protection-configurator)
 
 Receives DDoS protection policy settings — including rate limits, connection limits, and timeouts — from an external configurator charm.
+See {ref}`how_to_enable_ddos_protection` for more details.
 
 Example `ddos-protection` integrate command:
 
@@ -216,4 +218,4 @@ juju integrate haproxy:haproxy-route-policy haproxy-route-policy:haproxy-route-p
 - **Interface**: `haproxy-peers`
 - **Supported charms**: Internal peer relation, no external charms
 
-Used by HAProxy units to coordinate state with each other, required for correct behaviour when multiple units are deployed.
+Used by HAProxy units to coordinate state with each other, required for correct behavior when multiple units are deployed.
