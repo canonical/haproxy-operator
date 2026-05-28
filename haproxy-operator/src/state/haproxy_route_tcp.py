@@ -128,7 +128,9 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
             backend_addresses = [unit_data.address for unit_data in self.units_data]
 
         backend_port = (
-            None if self.application_data.backend_port_range else self.application_data.backend_port
+            None
+            if self.application_data.backend_port_range
+            else self.application_data.backend_port
         )
 
         for i, address in enumerate(backend_addresses):
@@ -155,7 +157,9 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
             str: The endpoint name in format "{application}_{port}".
         """
         if self.application_data.backend_port_range:
-            return f"{self.application}_{self.application_data.backend_port_range.replace('-', '_')}"
+            return (
+                f"{self.application}_{self.application_data.backend_port_range.replace('-', '_')}"
+            )
         return f"{self.application}_{self.application_data.port}"
 
     @property
@@ -233,10 +237,10 @@ class HAProxyRouteTcpFrontend:
     """
 
     port: int = Field(description="The port exposed on the provider.", gt=0, le=65535)
+    backends: list[HAProxyRouteTcpBackend] = Field(description="List of backend endpoints.")
     port_range_end: Optional[int] = Field(
         description="End port for port-range frontends.", default=None
     )
-    backends: list[HAProxyRouteTcpBackend] = Field(description="List of backend endpoints.")
     enforce_tls: bool = Field(description="Whether to enforce TLS for all traffic.", default=True)
     tls_terminate: bool = Field(description="Whether to enable tls termination.", default=True)
     relation_ids_with_invalid_data: set[int] = Field(
