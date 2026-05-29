@@ -15,7 +15,7 @@ This charm provides infrastructure operators and DevOps engineers straightforwar
 
 | | |
 |--|--|
-| **Tutorial** | {ref}`tutorial_getting_started` |
+| **Get started** | {ref}`tutorial_getting_started` |
 | **Deployment** | {ref}`High availability <how_to_configure_high_availability>` • {ref}`Virtual IP on OpenStack <how_to_configure_virtual_ip_on_openstack>` |
 | **Operations** | {ref}`Upgrade <how_to_upgrade>` • {ref}`Contribute <how_to_contribute>` |
 | **Integrations** | {ref}`Non-charmed workloads <how_to_integrate_with_non_charm_workload>` • {ref}`Ingress requirers <how_to_provide_extra_configurations_for_ingress_requirer_charms>` |
@@ -38,6 +38,7 @@ The HAProxy operator is a member of the Ubuntu family. It's an open-source proje
 projects, contributions, suggestions, fixes, and constructive feedback.
 
 - [Code of conduct](https://ubuntu.com/community/code-of-conduct)
+- [File a bug](https://github.com/canonical/haproxy-operator/issues)
 - Get support through the [Discourse forum](https://discourse.charmhub.io/)
 - Join our [online chat](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)
 - {ref}`Contribute <how_to_contribute>`
