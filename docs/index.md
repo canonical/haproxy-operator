@@ -16,9 +16,8 @@ This charm provides infrastructure operators and DevOps engineers straightforwar
 | | |
 |--|--|
 | **Get started** | {ref}`tutorial_getting_started` |
-| **Deployment** | {ref}`High availability <how_to_configure_high_availability>` • {ref}`Virtual IP on OpenStack <how_to_configure_virtual_ip_on_openstack>` |
-| **Operations** | {ref}`Upgrade <how_to_upgrade>` • {ref}`Contribute <how_to_contribute>` |
-| **Integrations** | {ref}`Non-charmed workloads <how_to_integrate_with_non_charm_workload>` • {ref}`Ingress requirers <how_to_provide_extra_configurations_for_ingress_requirer_charms>` |
+| **Deployment** | {ref}`High availability <how_to_configure_high_availability>` • {ref}`Backend routing <how_to_control_haproxy_route_relation_data>` • {ref}`Virtual IP on OpenStack <how_to_configure_virtual_ip_on_openstack>` |
+| **Integrations** | {ref}`Relation endpoints <reference_relation_endpoints>` • {ref}`Non-charmed workloads <how_to_integrate_with_non_charm_workload>` • {ref}`Ingress requirers <how_to_provide_extra_configurations_for_ingress_requirer_charms>` |
 | **Supported protocols** | {ref}`FTP <tutorial_loadbalancing_for_an_ftp_server>` • {ref}`gRPC <tutorial_loadbalancing_for_a_grpc_server>` • {ref}`HTTP/2 <reference_http2_support>` |
 | **Security** | {ref}`Overview <explanation_security>` • {ref}`DDoS protection <how_to_enable_ddos_protection>` • {ref}`Authentication proxy <how_to_protect_hostname_spoe_auth>` |
 
@@ -37,7 +36,7 @@ This documentation uses the
 The HAProxy operator is a member of the Ubuntu family. It's an open-source project that warmly welcomes community 
 projects, contributions, suggestions, fixes, and constructive feedback.
 
-- [Code of conduct](https://ubuntu.com/community/code-of-conduct)
+- [Code of conduct](https://ubuntu.com/community/docs/ethos/code-of-conduct)
 - [File a bug](https://github.com/canonical/haproxy-operator/issues)
 - Get support through the [Discourse forum](https://discourse.charmhub.io/)
 - Join our [online chat](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)
