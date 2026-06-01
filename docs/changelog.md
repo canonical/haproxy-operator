@@ -15,6 +15,7 @@ Each revision is versioned by the date of the revision.
 ## 2026-05-25
 
 - docs: Updated the home page to implement the new pattern for the "In this documentation" section.
+- docs: Reorganized two tutorials to how-to section; expanded the upgrade guide
 
 ## 2026-04-17
 
