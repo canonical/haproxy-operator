@@ -13,7 +13,7 @@ The charm provides a managed ingress entry point for backend applications, handl
 
 ```{list-table}
    :header-rows: 1
-   :widths: 10 20
+   :widths: 10 25
 
 * - 
   - 
