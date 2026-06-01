@@ -20,11 +20,11 @@ The charm provides a managed ingress entry point for backend applications, handl
 * - **Get started**
   - {ref}`tutorial_getting_started`
 * - **Deployment**
-  - {ref}`Configure high availability <how_to_configure_high_availability>` • {ref}`Control backend routing <how_to_control_haproxy_route_relation_data>` • {ref}`Configure OpenStack virtual IP <how_to_configure_virtual_ip_on_openstack>`
+  - {ref}`Configure high availability <how_to_configure_high_availability>` • {ref}`Control backend routing <how_to_control_haproxy_route_relation_data>` • {ref}`Create OpenStack virtual IP <how_to_configure_virtual_ip_on_openstack>`
 * - **Integrations**
   - {ref}`Relation endpoints <reference_relation_endpoints>` • {ref}`Integrate with non-charmed workloads <how_to_integrate_with_non_charm_workload>` • {ref}`Configure ingress requirers <how_to_provide_extra_configurations_for_ingress_requirer_charms>`
 * - **Supported protocols** 
-  - {ref}`FTP <tutorial_loadbalancing_for_an_ftp_server>` • {ref}`gRPC <tutorial_loadbalancing_for_a_grpc_server>` • {ref}`HTTP/2 <reference_http2_support>`
+  - {ref}`FTP <how_to_loadbalancing_for_an_ftp_server>` • {ref}`gRPC <how_to_loadbalancing_for_a_grpc_server>` • {ref}`HTTP/2 <reference_http2_support>`
 * - **Security**
   - {ref}`Overview <explanation_security>` • {ref}`Enable DDoS protection <how_to_enable_ddos_protection>` • {ref}`Protect a hostname <how_to_protect_hostname_spoe_auth>`
 ```
