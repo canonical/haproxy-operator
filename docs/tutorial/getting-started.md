@@ -138,9 +138,17 @@ Well done! You've successfully completed the HAProxy tutorial.
 
 To remove the model environment you created, use the following command:
 
+<!-- SPREAD SKIP -->
+
 ```
 juju destroy-model haproxy-tutorial --no-prompt
 ```
+
+<!-- SPREAD SKIP END -->
+
+<!-- SPREAD
+juju destroy-model haproxy-tutorial --no-prompt --force
+-->
 
 ## Next steps
 
