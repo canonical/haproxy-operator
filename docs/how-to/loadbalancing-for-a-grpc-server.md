@@ -1,6 +1,6 @@
 (how_to_loadbalancing_for_a_grpc_server)=
 
-# How to provide loadbalancing for a gRPC server
+# How to provide load balancing for a gRPC server
 
 In this guide we'll look at how to deploy the HAProxy charm to provide load balancing for a VM running [`flagd`](https://flagd.dev). This guide is done on LXD and assumes that you have a Juju controller bootstrapped and a machine model to deploy charms.
 

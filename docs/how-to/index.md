@@ -24,15 +24,15 @@ Control haproxy-route relation data <control-haproxy-route-relation-data.md>
 Configure virtual IP on OpenStack <configure-virtual-ip-on-openstack.md>
 ```
 
-## Loadbalancing
+## Load balancing
 
-Additional steps need to be performed to provide loadbalancing to your deployment
+Additional steps need to be performed to provide load balancing to your deployment
 depending on your required server protocol.
 
 ```{toctree}
 :maxdepth: 1
-Provide loadbalancing for a gRPC server <loadbalancing-for-a-grpc-server.md>
-Provide loadbalancing for an FTP server <loadbalancing-for-an-ftp-server.md>
+Provide load balancing for a gRPC server <loadbalancing-for-a-grpc-server.md>
+Provide load balancing for an FTP server <loadbalancing-for-an-ftp-server.md>
 ```
 
 ## Security
