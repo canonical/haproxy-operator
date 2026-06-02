@@ -34,7 +34,7 @@ integration-suites:
     pytest-arguments-template: |
       {% set charm = artifacts.charms | selectattr("name", "equalto", "haproxy-ddos-protection-configurator") | first %}
       {% for build in charm.builds | selectattr("arch", "equalto", arch) %}
-      --charm-file={{ build.path }}
+      --charm-file={{ build.path | replace('./', '../', 1) }}
       {% endfor %}
   haproxy-route-policy-operator/tests/integration/:
     summary: haproxy-route-policy-operator integration tests
