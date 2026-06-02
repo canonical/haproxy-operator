@@ -1,0 +1,33 @@
+version: 1
+rocks: []
+charms:
+- name: haproxy-ddos-protection-configurator
+  charmcraft-yaml: haproxy-ddos-protection-configurator/charmcraft.yaml
+  resources: {}
+  platforms:
+  - arch: amd64
+- name: haproxy
+  charmcraft-yaml: haproxy-operator/charmcraft.yaml
+  resources: {}
+  platforms:
+  - arch: amd64
+- name: haproxy-route-policy
+  charmcraft-yaml: haproxy-route-policy-operator/charmcraft.yaml
+  resources: {}
+  platforms:
+  - arch: amd64
+- name: haproxy-spoe-auth
+  charmcraft-yaml: haproxy-spoe-auth-operator/charmcraft.yaml
+  resources: {}
+  platforms:
+  - arch: amd64
+snaps:
+- name: haproxy-route-policy
+  snapcraft-yaml: haproxy-route-policy/snap/snapcraft.yaml
+  pack-dir: haproxy-route-policy
+  platforms:
+  - arch: amd64
+- name: haproxy-spoe-auth
+  snapcraft-yaml: haproxy-spoe-auth-snap/snapcraft.yaml
+  platforms:
+  - arch: amd64

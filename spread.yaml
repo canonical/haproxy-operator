@@ -1,35 +1,38 @@
-# Copyright 2026 Canonical Ltd.
-# See LICENSE file for licensing details.
-
-project: haproxy-operator-tests
-
+project: haproxy-operator
+path: /home/ubuntu/proj
+kill-timeout: 60m
+warn-timeout: 1m
 backends:
-  github-ci:
-    type: adhoc
-
-    allocate: |
-      echo "Allocating ad-hoc $SPREAD_SYSTEM"
-      if [ -z "${GITHUB_RUN_ID:-}" ]; then
-        FATAL "this back-end only works inside GitHub CI"
-        exit 1
-      fi
-      echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/99-spread-users
-      ADDRESS localhost:22
-    discard: |
-      echo "Discarding ad-hoc $SPREAD_SYSTEM"
+  integration-test:
+    type: integration-test
     systems:
-      # username and password are required because docs-spread.yaml creates a new user (ubuntu:ubuntu)
-      # Before tests are ran.
-      - ubuntu-24.04:
-          username: ubuntu
-          password: ubuntu
-          workers: 1
-
-suites:
-  tests/spread/:
-    summary: Automated spread testing
-    systems:
-      - ubuntu-24.04
-
-path: /home/spread/proj
-kill-timeout: 1h
+    - ubuntu-24.04
+environment:
+  CONCIERGE: '$(HOST: echo "${CONCIERGE:-concierge.yaml}")'
+  OPCLI_GIT_REF: '$(HOST: echo "${OPCLI_GIT_REF:-main}")'
+exclude:
+- .git
+- .tox
+- .venv
+- .*_cache
+integration-suites:
+  haproxy-operator/tests/integration/:
+    summary: haproxy-operator integration tests
+    cwd: ./
+    backends:
+    - integration-test
+  haproxy-spoe-auth-operator/tests/integration/:
+    summary: haproxy-spoe-auth-operator integration tests
+    cwd: ./
+    backends:
+    - integration-test
+  haproxy-ddos-protection-configurator/tests/integration/:
+    summary: haproxy-ddos-protection-configurator integration tests
+    cwd: ./
+    backends:
+    - integration-test
+  haproxy-route-policy-operator/tests/integration/:
+    summary: haproxy-route-policy-operator integration tests
+    cwd: ./
+    backends:
+    - integration-test
