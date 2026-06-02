@@ -8,3 +8,9 @@ providers:
   lxd:
     enable: true
     bootstrap: true
+
+host:
+  snaps:
+    charmcraft:
+      channel: latest/stable
+      classic: true
