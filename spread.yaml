@@ -21,11 +21,21 @@ integration-suites:
     working-dir: haproxy-operator/
     backends:
     - integration-test
+    pytest-arguments-template: |
+      {% set charm = artifacts.charms | selectattr("name", "equalto", "haproxy") | first %}
+      {% for build in charm.builds | selectattr("arch", "equalto", arch) %}
+      --charm-file={{ build.path | replace('./', '../', 1) }}
+      {% endfor %}
   haproxy-spoe-auth-operator/tests/integration/:
     summary: haproxy-spoe-auth-operator integration tests
     working-dir: haproxy-spoe-auth-operator/
     backends:
     - integration-test
+    pytest-arguments-template: |
+      {% set charm = artifacts.charms | selectattr("name", "equalto", "haproxy-spoe-auth") | first %}
+      {% for build in charm.builds | selectattr("arch", "equalto", arch) %}
+      --charm-file={{ build.path | replace('./', '../', 1) }}
+      {% endfor %}
   haproxy-ddos-protection-configurator/tests/integration/:
     summary: haproxy-ddos-protection-configurator integration tests
     working-dir: haproxy-ddos-protection-configurator/
@@ -41,6 +51,11 @@ integration-suites:
     working-dir: haproxy-route-policy-operator/
     backends:
     - integration-test
+    pytest-arguments-template: |
+      {% set charm = artifacts.charms | selectattr("name", "equalto", "haproxy-route-policy") | first %}
+      {% for build in charm.builds | selectattr("arch", "equalto", arch) %}
+      --charm-file={{ build.path | replace('./', '../', 1) }}
+      {% endfor %}
   tests/integration/:
     summary: global integration tests (cross-charm, requires LXD + canonical-k8s)
     working-dir: ./
