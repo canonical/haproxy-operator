@@ -16,10 +16,8 @@ JUJU_WAIT_TIMEOUT = 10 * 60  # 10 minutes
 @pytest.fixture(scope="session", name="charm")
 def charm_fixture(pytestconfig: pytest.Config):
     """Pytest fixture that returns the --charm-file."""
-    charm_name = "haproxy-ddos-protection-configurator"
-    charm_files = pytestconfig.getoption("--charm-file")
-    charm = next((f for f in charm_files if f"{charm_name}_" in f), None)
-    assert charm, f"--charm-file matching {charm_name} must be set"
+    charm = pytestconfig.getoption("--charm-file")
+    assert charm, "--charm-file must be set"
     return charm
 
 

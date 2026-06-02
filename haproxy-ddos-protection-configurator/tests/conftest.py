@@ -10,4 +10,4 @@ def pytest_addoption(parser):
     Args:
         parser: Pytest parser.
     """
-    parser.addoption("--charm-file", action="append", default=[])
+    parser.addoption("--charm-file", action="store")
