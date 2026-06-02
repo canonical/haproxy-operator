@@ -31,6 +31,12 @@ integration-suites:
     working-dir: haproxy-ddos-protection-configurator/
     backends:
     - integration-test
+    pytest-arguments-template: |
+      {% for charm in artifacts.charms if charm.name == "haproxy-ddos-protection-configurator" %}
+        {% for build in charm.builds if build.arch == arch %}
+          --charm-file={{ build.path }}
+        {% endfor %}
+      {% endfor %}
   haproxy-route-policy-operator/tests/integration/:
     summary: haproxy-route-policy-operator integration tests
     working-dir: haproxy-route-policy-operator/
