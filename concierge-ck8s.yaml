@@ -12,3 +12,8 @@ providers:
     enable: true
     bootstrap: false
     channel: 1.32-classic/stable
+    features:
+      load-balancer:
+        enabled: true
+        l2-mode: true
+        cidrs: 10.43.45.0/24
