@@ -15,6 +15,6 @@ The pages in this section contain technical information for topics relevant to t
 grpc-support.md
 http2-support.md
 relation-endpoints.md
-spoe-auth-support.md
+SPOE authentication <spoe-auth-support.md>
 Changelog <../changelog.md>
 ```

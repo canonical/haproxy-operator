@@ -17,16 +17,6 @@ This tutorial walks through the deployment of the HAProxy charm to provide HTTP 
 ```{toctree}
 :glob:
 :titlesonly:
-Getting Started <getting-started.md>
+Basic HAProxy deployment <getting-started.md>
 ```
 
-## Protocol-specific setup
-
-In these tutorials you will learn how to use HAProxy to provide load balancing for different protocols.
-
-```{toctree}
-:glob:
-:titlesonly:
-Loadbalancing for an FTP server <loadbalancing-for-an-ftp-server.md>
-Loadbalancing for a gRPC server <loadbalancing-for-a-grpc-server.md>
-```

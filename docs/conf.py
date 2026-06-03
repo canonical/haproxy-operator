@@ -232,6 +232,8 @@ redirects = {
     'reference/style-guide-myst/': '../myst-syntax-reference',
     'reference/style-guide/': '../rst-syntax-reference',
     './getting-started': './tutorial/getting-started',
+    'tutorial/loadbalancing-for-a-grpc-server': '/how-to/loadbalancing-for-a-grpc-server',
+    'tutorial/loadbalancing-for-an-ftp-server': '/how-to/loadbalancing-for-an-ftp-server',
 }
 
 

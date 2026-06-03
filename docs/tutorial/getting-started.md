@@ -4,6 +4,8 @@
 
 In this tutorial we'll deploy the HAProxy charm to provide ingress to a backend application, then configure high-avalability using the `hacluster` relation. This tutorial is done on LXD and assumes that you have a Juju controller bootstrapped and a machine model to deploy charms.
 
+(tutorial_requirements)=
+
 ## Requirements
 
 You will need a working station, e.g., a laptop, with AMD64 architecture. Your working station
@@ -136,13 +138,21 @@ Well done! You've successfully completed the HAProxy tutorial.
 
 To remove the model environment you created, use the following command:
 
+<!-- SPREAD SKIP -->
+
 ```
 juju destroy-model haproxy-tutorial --no-prompt
 ```
 
+<!-- SPREAD SKIP END -->
+
+<!-- SPREAD
+juju destroy-model haproxy-tutorial --no-prompt --force
+-->
+
 ## Next steps
 
-Check out these advanced tutorials to learn how to use HAProxy to provide load balancing for different protocols.
+Check out these advanced guides to learn how to use HAProxy to provide load balancing for different protocols.
 
-* {ref}`tutorial_loadbalancing_for_an_ftp_server`
-* {ref}`tutorial_loadbalancing_for_a_grpc_server`
+* {ref}`how_to_loadbalancing_for_an_ftp_server`
+* {ref}`how_to_loadbalancing_for_a_grpc_server`
