@@ -41,6 +41,8 @@ class HaproxyRouteTcpServer:
         server_name: The name of the unit with invalid characters replaced.
         address: The IP address of the requirer unit.
         port: The port that the requirer application wishes to be exposed.
+            When None, the server uses HAProxy's dynamic port pass-through
+            (set-dst-port fc_dst_port must be configured in the frontend).
         check: Health check configuration.
         maxconn: Maximum allowed connections before requests are queued.
         send_proxy: Whether to enable PROXY protocol for this server.
@@ -48,7 +50,7 @@ class HaproxyRouteTcpServer:
 
     server_name: str
     address: IPvAnyAddress
-    port: int
+    port: Optional[int]
     check: Optional[TCPServerHealthCheck]
     maxconn: Optional[int]
     send_proxy: bool = False
@@ -103,6 +105,9 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
         sequential server names and using the application's backend port and
         health check configuration.
 
+        For port_range backends, the server port is set to None so HAProxy's
+        dynamic port pass-through (set-dst-port fc_dst_port) takes effect.
+
         Returns:
             list[HaproxyRouteTcpServer]: List of configured backend servers.
         """
@@ -111,13 +116,14 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
         if not backend_addresses:
             backend_addresses = [unit_data.address for unit_data in self.units_data]
 
+        is_port_range = self.application_data.port_range is not None
         for i, address in enumerate(backend_addresses):
             servers.append(
                 HaproxyRouteTcpServer(
                     server_name=f"{self.application}-{i}",
-                    port=cast(int, self.application_data.backend_port),
+                    port=None if is_port_range else cast(int, self.application_data.backend_port),
                     address=address,
-                    check=self.application_data.check,
+                    check=None if is_port_range else self.application_data.check,
                     maxconn=self.application_data.server_maxconn,
                     send_proxy=self.application_data.proxy_protocol,
                 )
@@ -128,12 +134,16 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
     def name(self) -> str:
         """Get the unique name for this TCP endpoint.
 
-        Combines the application name and frontend port to create a unique
+        Combines the application name and frontend port (or port range) to create a unique
         identifier for the HAProxy configuration section.
 
         Returns:
-            str: The endpoint name in format "{application}_{port}".
+            str: The endpoint name in format "{application}_{port}" or
+                "{application}_{start}_{end}" for port ranges.
         """
+        if self.application_data.port_range is not None:
+            range_slug = self.application_data.port_range.replace("-", "_")
+            return f"{self.application}_{range_slug}"
         return f"{self.application}_{self.application_data.port}"
 
     @property
@@ -194,14 +204,22 @@ class HAProxyRouteTcpFrontend:
     """A representation of a TCP frontend in the haproxy config.
 
     Attrs:
-        port: The port exposed on the provider.
+        port: The port exposed on the provider. Mutually exclusive with port_range.
+        port_range: A range of ports exposed on the provider (e.g. "10500-10600").
+            Mutually exclusive with port.
         backends: List of backend endpoints for this frontend.
         enforce_tls: Whether to enforce TLS for all traffic.
         tls_terminate: Whether to enable TLS termination.
     """
 
-    port: int = Field(description="The port exposed on the provider.", gt=0, le=65535)
     backends: list[HAProxyRouteTcpBackend] = Field(description="List of backend endpoints.")
+    port: Optional[int] = Field(
+        description="The port exposed on the provider.", default=None, gt=0, le=65535
+    )
+    port_range: Optional[str] = Field(
+        description="A range of ports exposed on the provider (e.g. '10500-10600').",
+        default=None,
+    )
     enforce_tls: bool = Field(description="Whether to enforce TLS for all traffic.", default=True)
     tls_terminate: bool = Field(description="Whether to enable tls termination.", default=True)
     relation_ids_with_invalid_data: set[int] = Field(
@@ -225,6 +243,7 @@ class HAProxyRouteTcpFrontend:
         if len(backends) == 1:
             return cls(
                 port=backends[0].application_data.port,
+                port_range=backends[0].application_data.port_range,
                 backends=backends,
                 enforce_tls=backends[0].application_data.enforce_tls,
                 tls_terminate=backends[0].application_data.tls_terminate,
@@ -263,11 +282,27 @@ class HAProxyRouteTcpFrontend:
             )
         return cls(
             port=rendered_backends[0].application_data.port,
+            port_range=rendered_backends[0].application_data.port_range,
             backends=rendered_backends,
             enforce_tls=rendered_backends[0].application_data.enforce_tls,
             tls_terminate=rendered_backends[0].application_data.tls_terminate,
             relation_ids_with_invalid_data=relation_ids_with_invalid_data,
         )
+
+    @property
+    def all_frontend_ports(self) -> list[int]:
+        """Get all ports in this frontend.
+
+        Returns:
+            list[int]: A list of all ports. For single-port frontends, a one-element list.
+                For port-range frontends, all ports in the range (inclusive).
+        """
+        if self.port is not None:
+            return [self.port]
+        if self.port_range is not None:
+            start, end = (int(p) for p in self.port_range.split("-"))
+            return list(range(start, end + 1))
+        return []
 
     @property
     def backend_sni_routing_configurations(self) -> list[BackendRoutingConfiguration]:
@@ -315,7 +350,33 @@ class HAProxyRouteTcpFrontend:
         Returns:
             str: The name of the default backend.
         """
+        if self.port_range is not None:
+            range_slug = self.port_range.replace("-", "_")
+            return f"haproxy_route_tcp_{range_slug}_default_backend"
         return f"haproxy_route_tcp_{self.port}_default_backend"
+
+    @property
+    def frontend_name(self) -> str:
+        """Get the frontend name for this frontend.
+
+        Returns:
+            str: The name of the frontend.
+        """
+        if self.port_range is not None:
+            range_slug = self.port_range.replace("-", "_")
+            return f"haproxy_route_tcp_{range_slug}"
+        return f"haproxy_route_tcp_{self.port}"
+
+    @property
+    def bind_address(self) -> str:
+        """Get the bind address string for this frontend.
+
+        Returns:
+            str: The bind address including port or port range.
+        """
+        if self.port_range is not None:
+            return self.port_range
+        return str(self.port)
 
     @property
     def content_inspect_delay_required(self) -> bool:

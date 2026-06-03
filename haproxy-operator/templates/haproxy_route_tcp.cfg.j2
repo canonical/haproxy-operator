@@ -1,7 +1,11 @@
 {% macro render_tcp_server(server) -%}
     server
 {{ server.server_name }}
+{% if server.port is not none %}
 {{ server.address }}:{{ server.port }}
+{% else %}
+{{ server.address }}:0
+{% endif %}
 {% if server.check %}
 check
 inter {{ server.check.interval }}s
@@ -17,10 +21,13 @@ send-proxy
 {%- endmacro %}
 
 {% for frontend in tcp_frontends %}
-frontend haproxy_route_tcp_{{ frontend.port }}
+frontend {{ frontend.frontend_name }}
     mode tcp
     option tcplog
-    bind [::]:{{ frontend.port }} v4v6 {% if frontend.tls_terminate %} ssl crt {{ haproxy_crt_dir }} {% endif +%}
+    bind [::]:{{ frontend.bind_address }} v4v6 {% if frontend.tls_terminate and not frontend.port_range %} ssl crt {{ haproxy_crt_dir }} {% endif +%}
+{% if frontend.port_range %}
+    tcp-request session set-dst-port fc_dst_port
+{% endif %}
 
 {# DDOS protection configuration. #}
 {% if ddos_protection_config.client_timeout %}

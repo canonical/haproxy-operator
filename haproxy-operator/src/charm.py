@@ -418,8 +418,9 @@ class HAProxyCharm(ops.CharmBase):
             80,
             443,
             *(
-                frontend.port
+                port
                 for frontend in haproxy_route_requirers_information.valid_tcp_frontends()
+                for port in frontend.all_frontend_ports
             ),
             *(
                 backend.application_data.external_grpc_port
@@ -707,6 +708,7 @@ class HAProxyCharm(ops.CharmBase):
     ) -> None:
         """Publish the proxied endpoints for TCP frontends."""
         for frontend in haproxy_route_requirers_information.valid_tcp_frontends():
+            port_str = frontend.port_range if frontend.port_range else str(frontend.port)
             for backend in frontend.backends:
                 relation = self.model.get_relation(HAPROXY_ROUTE_TCP_RELATION, backend.relation_id)
                 if not relation:
@@ -716,17 +718,17 @@ class HAProxyCharm(ops.CharmBase):
                     continue
                 if frontend.is_sni_routing_enabled:
                     self.haproxy_route_tcp_provider.publish_proxied_endpoints(
-                        [f"{backend.application_data.sni}:{frontend.port}"], relation
+                        [f"{backend.application_data.sni}:{port_str}"], relation
                     )
                     continue
                 if ha_information.ha_integration_ready:
                     self.haproxy_route_tcp_provider.publish_proxied_endpoints(
-                        [f"{ha_information.vip}:{frontend.port}"], relation
+                        [f"{ha_information.vip}:{port_str}"], relation
                     )
                     continue
                 self.haproxy_route_tcp_provider.publish_proxied_endpoints(
                     [
-                        f"{unit_address}:{frontend.port}"
+                        f"{unit_address}:{port_str}"
                         for unit_address in self._get_peer_units_address()
                     ],
                     relation,

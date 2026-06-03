@@ -137,3 +137,11 @@ class AnyCharm(AnyCharmBase):
             proxy_protocol=True,
             sni=CNAME,
         )
+
+    def update_relation_with_port_range(self):
+        """Update haproxy-route-tcp relation data with a port range."""
+        self._haproxy_route_tcp.provide_haproxy_route_tcp_requirements(
+            port_range="4440-4445",
+            enforce_tls=False,
+            tls_terminate=False,
+        )

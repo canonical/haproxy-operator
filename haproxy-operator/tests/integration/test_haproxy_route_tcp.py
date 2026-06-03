@@ -114,3 +114,33 @@ def test_haproxy_route_tcp(
         f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
     )
     assert "send-proxy" in haproxy_config
+
+
+@pytest.mark.abort_on_fail
+def test_haproxy_route_tcp_port_range(
+    configured_application_with_tls: str,
+    any_charm_haproxy_route_tcp_requirer: str,
+    juju: jubilant.Juju,
+):
+    """Test that port range configuration is correctly applied.
+
+    Assert that HAProxy is configured with a port range bind and set-dst-port directive.
+    Port pass-through connectivity is an HAProxy runtime concern; the charm's responsibility
+    is to generate the correct configuration.
+    """
+    juju.run(
+        f"{any_charm_haproxy_route_tcp_requirer}/0",
+        "rpc",
+        {"method": "update_relation_with_port_range"},
+    )
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, any_charm_haproxy_route_tcp_requirer
+        )
+    )
+
+    haproxy_config = juju.ssh(
+        f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
+    )
+    assert "bind [::]:4440-4445 v4v6" in haproxy_config
+    assert "tcp-request session set-dst-port fc_dst_port" in haproxy_config

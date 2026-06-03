@@ -1827,3 +1827,99 @@ def test_haproxy_route_tcp_backend_servers_send_proxy_default(
     backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(haproxy_route_tcp)
 
     assert all(server.send_proxy is False for server in backend.servers)
+
+
+def test_haproxy_route_tcp_backend_port_range_servers(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Generate TCP relation data with port_range.
+    act: Initialize the HAProxyRouteTcpBackend and get servers.
+    assert: Each server has port=None (for dynamic port pass-through).
+    """
+    haproxy_route_tcp = haproxy_route_tcp_relation_data(
+        port_range="10500-10600", tls_terminate=False
+    )
+    backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(haproxy_route_tcp)
+
+    assert all(server.port is None for server in backend.servers)
+    assert all(server.check is None for server in backend.servers)
+
+
+def test_haproxy_route_tcp_backend_port_range_name(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Generate TCP relation data with port_range.
+    act: Initialize the HAProxyRouteTcpBackend and check the name.
+    assert: Backend name uses range slug format.
+    """
+    haproxy_route_tcp = haproxy_route_tcp_relation_data(
+        port_range="10500-10600", tls_terminate=False
+    )
+    backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(haproxy_route_tcp)
+
+    assert backend.name == "tcp-route-requirer_10500_10600"
+
+
+def test_haproxy_route_tcp_frontend_port_range_properties(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Generate TCP relation data with port_range and build a frontend.
+    act: Check frontend properties.
+    assert: frontend_name, bind_address, default_backend_name, and all_frontend_ports are correct.
+    """
+    haproxy_route_tcp = haproxy_route_tcp_relation_data(
+        port_range="10500-10502", tls_terminate=False
+    )
+    backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(haproxy_route_tcp)
+    frontend = HAProxyRouteTcpFrontend.from_backends([backend])
+
+    assert frontend.port_range == "10500-10502"
+    assert frontend.port is None
+    assert frontend.frontend_name == "haproxy_route_tcp_10500_10502"
+    assert frontend.bind_address == "10500-10502"
+    assert frontend.default_backend_name == "haproxy_route_tcp_10500_10502_default_backend"
+    assert frontend.all_frontend_ports == [10500, 10501, 10502]
+
+
+def test_haproxy_route_tcp_frontend_single_port_all_frontend_ports(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Generate TCP relation data with single port and build a frontend.
+    act: Check all_frontend_ports, frontend_name, and bind_address.
+    assert: all_frontend_ports returns a single-element list and names are correct.
+    """
+    haproxy_route_tcp = haproxy_route_tcp_relation_data(port=4000)
+    backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(haproxy_route_tcp)
+    frontend = HAProxyRouteTcpFrontend.from_backends([backend])
+
+    assert frontend.port == 4000
+    assert frontend.port_range is None
+    assert frontend.all_frontend_ports == [4000]
+    assert frontend.frontend_name == "haproxy_route_tcp_4000"
+    assert frontend.bind_address == "4000"
+    assert frontend.default_backend_name == "haproxy_route_tcp_4000_default_backend"
+
+
+def test_parse_haproxy_route_tcp_requirers_data_with_port_range(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Build HaproxyRouteTcpRequirersData with a port_range requirer.
+    act: Call parse_haproxy_route_tcp_requirers_data.
+    assert: Returns one frontend with port_range set.
+    """
+    from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpRequirersData
+
+    requirer = haproxy_route_tcp_relation_data(port_range="10500-10600", tls_terminate=False)
+    requirers_data = HaproxyRouteTcpRequirersData(
+        requirers_data=[requirer], relation_ids_with_invalid_data=set()
+    )
+    frontends = parse_haproxy_route_tcp_requirers_data(requirers_data)
+
+    assert len(frontends) == 1
+    assert frontends[0].port_range == "10500-10600"
+    assert frontends[0].port is None
