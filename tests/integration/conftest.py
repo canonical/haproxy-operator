@@ -32,7 +32,7 @@ def lxd_juju_fixture(request: pytest.FixtureRequest):
     """Bootstrap a new lxd controller and model and return a Juju fixture for it."""
     juju = jubilant.Juju()
 
-    lxd_controller_name = "localhost"
+    lxd_controller_name = "concierge-lxd"
     lxd_cloud_name = "localhost"
     juju.wait_timeout = JUJU_WAIT_TIMEOUT
     try:
