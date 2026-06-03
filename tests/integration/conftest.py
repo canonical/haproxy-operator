@@ -31,7 +31,7 @@ POSTGRESQL_APPLICATION = "db"
 def k8s_cloud_client_fixture():
     """Register the k8s cloud in the local Juju client config."""
     k8s_config = subprocess.run(  # nosec
-        ["k8s", "config"], capture_output=True
+        ["sudo", "k8s", "config"], capture_output=True
     )
     if k8s_config.returncode != 0:
         raise RuntimeError(
