@@ -27,6 +27,17 @@ HAPROXY_ROUTE_POLICY_APP_NAME = "policy"
 POSTGRESQL_APPLICATION = "db"
 
 
+@pytest.fixture(scope="session", name="k8s_cloud_client")
+def k8s_cloud_client_fixture():
+    """Register the k8s cloud in the local Juju client config."""
+    k8s_config = subprocess.run(["k8s", "config"], capture_output=True, check=True)  # nosec
+    subprocess.run(  # nosec
+        ["juju", "add-k8s", "ck8s", "--client"],
+        input=k8s_config.stdout,
+        check=True,
+    )
+
+
 @pytest.fixture(scope="session", name="lxd_juju")
 def lxd_juju_fixture(request: pytest.FixtureRequest):
     """Bootstrap a new lxd controller and model and return a Juju fixture for it."""
@@ -69,7 +80,7 @@ def lxd_juju_fixture(request: pytest.FixtureRequest):
 
 
 @pytest.fixture(scope="session", name="k8s_juju")
-def k8s_juju_fixture(lxd_juju: jubilant.Juju, request: pytest.FixtureRequest):
+def k8s_juju_fixture(lxd_juju: jubilant.Juju, request: pytest.FixtureRequest, k8s_cloud_client):
     """Bootstrap a new k8s model in the lxd controller and return a Juju fixture for it."""
     clouds_json = lxd_juju.cli("clouds", "--format=json", include_model=False)
     clouds = json.loads(clouds_json)

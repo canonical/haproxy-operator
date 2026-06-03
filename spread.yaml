@@ -66,5 +66,3 @@ integration-suites:
     - integration-test
     environment:
       CONCIERGE: concierge-ck8s.yaml
-    prepare: |
-      k8s config | sudo -u ubuntu juju add-k8s ck8s --client
