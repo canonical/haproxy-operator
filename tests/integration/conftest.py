@@ -30,7 +30,15 @@ POSTGRESQL_APPLICATION = "db"
 @pytest.fixture(scope="session", name="k8s_cloud_client")
 def k8s_cloud_client_fixture():
     """Register the k8s cloud in the local Juju client config."""
-    k8s_config = subprocess.run(["k8s", "config"], capture_output=True, check=True)  # nosec
+    k8s_config = subprocess.run(  # nosec
+        ["k8s", "config"], capture_output=True
+    )
+    if k8s_config.returncode != 0:
+        raise RuntimeError(
+            f"k8s config failed (exit {k8s_config.returncode}):\n"
+            f"stdout: {k8s_config.stdout.decode()}\n"
+            f"stderr: {k8s_config.stderr.decode()}"
+        )
     subprocess.run(  # nosec
         ["juju", "add-k8s", "ck8s", "--client"],
         input=k8s_config.stdout,
