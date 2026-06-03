@@ -10,9 +10,19 @@ backends:
     type: integration-test
     systems:
     - ubuntu-24.04
+  docs:
+    type: opcli-minimal
+    systems:
+    - ubuntu-24.04
 environment:
   CONCIERGE: '$(HOST: echo "${CONCIERGE:-concierge.yaml}")'
   OPCLI_GIT_REF: '$(HOST: echo "${OPCLI_GIT_REF:-main}")'
+  TUTORIAL: docs/tutorial/getting-started.md
+suites:
+  tests/spread/tutorial/:
+    summary: Tutorial smoke test (getting-started.md)
+    systems:
+    - ubuntu-24.04
 exclude:
 - .git
 - .tox

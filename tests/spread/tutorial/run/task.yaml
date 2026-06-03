@@ -1,0 +1,9 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+summary: Run getting-started tutorial
+
+execute: |
+  runuser -l ubuntu -s /bin/bash -c \
+    'set -ex; . <(opcli tutorial expand -- "$1")' \
+    _ "${SPREAD_PATH}${TUTORIAL}"
