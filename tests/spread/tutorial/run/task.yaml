@@ -4,6 +4,5 @@
 summary: Run getting-started tutorial
 
 execute: |
-  runuser -l ubuntu -s /bin/bash -c \
-    'set -ex; . <(opcli tutorial expand -- "$1")' \
-    _ "${SPREAD_PATH}${TUTORIAL}"
+  opcli tutorial expand -- "${SPREAD_PATH}/${TUTORIAL}" > /tmp/tutorial-script.sh
+  runuser -l ubuntu -s /bin/bash -c 'set -ex; . "$1"' _ /tmp/tutorial-script.sh
