@@ -22,7 +22,8 @@ suites:
   tests/spread/tutorial/:
     summary: Tutorial smoke test (getting-started.md)
     systems:
-    - ubuntu-24.04
+    - docs-ci:ubuntu-24.04
+    - docs-local:ubuntu-24.04
 exclude:
 - .git
 - .tox
