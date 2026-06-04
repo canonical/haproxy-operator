@@ -16,6 +16,11 @@ Each revision is versioned by the date of the revision.
 
 - Added optional `dns-record` relation to publish DNS A records for HAProxy hostnames.
 
+## 2026-05-25
+
+- docs: Updated the home page to implement the new pattern for the "In this documentation" section.
+- docs: Reorganized two tutorials to how-to section; expanded the upgrade guide
+
 ## 2026-04-17
 
 - Added missing settings from haproxy-route-tcp relation template.
