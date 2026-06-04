@@ -5,7 +5,7 @@
 
 import logging
 
-from charms.dns_record.v0.dns_record import (
+from charms.dns_integrator.v0.dns_record import (
     CreateRecordRequestError,
     DNSRecordRequires,
     RecordRequest,

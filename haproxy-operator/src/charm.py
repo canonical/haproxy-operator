@@ -24,7 +24,7 @@ from charms.certificate_transfer_interface.v1.certificate_transfer import (
     CertificatesRemovedEvent,
     CertificateTransferRequires,
 )
-from charms.dns_record.v0.dns_record import DNSRecordRequires
+from charms.dns_integrator.v0.dns_record import DNSRecordRequires
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.haproxy.v0.ddos_protection import (
     DDOS_PROTECTION_RELATION_NAME,
@@ -198,10 +198,10 @@ class HAProxyCharm(ops.CharmBase):
         )
         self.framework.observe(self.hacluster.on.ha_ready, self._on_config_changed)
         self.framework.observe(
-            self.on[DNS_RECORD_RELATION].relation_created, self._on_dns_record_relation_created
+            self.on[DNS_RECORD_RELATION].relation_created, self._on_config_changed
         )
         self.framework.observe(
-            self.on[DNS_RECORD_RELATION].relation_joined, self._on_dns_record_relation_joined
+            self.on[DNS_RECORD_RELATION].relation_joined, self._on_config_changed
         )
         self.framework.observe(
             self.recv_ca_certs.on.certificate_set_updated, self._on_ca_certificates_updated
@@ -542,19 +542,13 @@ class HAProxyCharm(ops.CharmBase):
         self._tls.update_trusted_cas()
         self._reconcile()
 
-    def _on_dns_record_relation_created(self, _: ops.RelationCreatedEvent) -> None:
-        """Handle the dns-record relation created event."""
-        self._update_dns_records()
-
-    def _on_dns_record_relation_joined(self, _: ops.RelationJoinedEvent) -> None:
-        """Handle the dns-record relation joined event."""
-        self._update_dns_records()
-
     def _update_dns_records(self) -> None:
         """Publish A records for all managed hostnames to the dns-record relation.
 
         Uses the VIP when an HA relation is active, otherwise uses the ingress
         binding address of this unit.
+
+        Called at the end of _reconcile(), so config/TLS validation has already passed.
         """
         if not self.unit.is_leader():
             return
@@ -563,12 +557,9 @@ class HAProxyCharm(ops.CharmBase):
         if not hostnames:
             return
 
-        # The try/except is needed for the relation_created/joined handlers which call
-        # _update_dns_records directly without going through _reconcile first.
         try:
             ha_information = HAInformation.from_charm(self)
         except HAInformationValidationError:
-            logger.warning("HA configuration invalid (VIP likely not set); using binding IP.")
             ha_information = None
 
         if ha_information and ha_information.ha_integration_ready and ha_information.vip:

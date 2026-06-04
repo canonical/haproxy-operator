@@ -472,13 +472,13 @@ def test_spoe_auth_invalid_data(monkeypatch: pytest.MonkeyPatch, certificates_in
     assert spoe_auth_relation.remote_app_name in out.unit_status.message
 
 
-def test_dns_record_relation_joined_triggers_dns_update(
+def test_dns_record_relation_joined_triggers_reconcile(
     context_with_dns_mock, base_state, dns_record_relation
 ):
     """
     arrange: charm state with dns-record relation
     act: dns_record_relation_joined event fires
-    assert: DNSRecordService.update_dns_records is called
+    assert: DNSRecordService.update_dns_records is called (via reconcile)
     """
     context, update_dns_mock = context_with_dns_mock
     state = ops.testing.State(
@@ -492,13 +492,13 @@ def test_dns_record_relation_joined_triggers_dns_update(
     update_dns_mock.assert_called_once()
 
 
-def test_dns_record_relation_created_triggers_dns_update(
+def test_dns_record_relation_created_triggers_reconcile(
     context_with_dns_mock, base_state, dns_record_relation
 ):
     """
     arrange: charm state with dns-record relation
     act: dns_record_relation_created event fires
-    assert: DNSRecordService.update_dns_records is called
+    assert: DNSRecordService.update_dns_records is called (via reconcile)
     """
     context, update_dns_mock = context_with_dns_mock
     state = ops.testing.State(

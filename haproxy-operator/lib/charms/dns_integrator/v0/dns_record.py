@@ -11,7 +11,7 @@ It is completely backwards compatible with the legacy bind.v0.dns_record library
 
 ```python
 
-from charms.dns_record.v0 import dns_record
+from charms.dns_integrator.v0 import dns_record
 
 class DNSRecordRequirerCharm(ops.CharmBase):
     def __init__(self, *args):
