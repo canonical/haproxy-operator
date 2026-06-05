@@ -15,14 +15,8 @@ backends:
     systems:
     - ubuntu-24.04
 environment:
-  CONCIERGE: '$(HOST: echo "${CONCIERGE:-concierge.yaml}")'
   OPCLI_GIT_REF: '$(HOST: echo "${OPCLI_GIT_REF:-main}")'
-  TUTORIAL: docs/tutorial/getting-started.md
-suites:
-  tests/spread/tutorial/:
-    summary: Tutorial smoke test (getting-started.md)
-    backends:
-    - docs
+  CONCIERGE: concierge-lxd.yaml
 exclude:
 - .git
 - .tox
@@ -65,3 +59,10 @@ integration-suites:
     prepare: |
       sudo k8s config | juju add-k8s ck8s --client
     pytest-arguments-template: *default-pytest-args
+suites:
+  tests/spread/tutorial/:
+    summary: Tutorial smoke test (getting-started.md)
+    backends:
+    - docs
+    environment:
+      TUTORIAL: docs/tutorial/getting-started.md
