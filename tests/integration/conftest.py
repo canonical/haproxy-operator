@@ -26,26 +26,6 @@ APT_LIB_SRC = "haproxy-operator/lib/charms/operator_libs_linux/v0/apt.py"
 HAPROXY_ROUTE_POLICY_APP_NAME = "policy"
 POSTGRESQL_APPLICATION = "db"
 
-
-@pytest.fixture(scope="session", name="k8s_cloud_client")
-def k8s_cloud_client_fixture():
-    """Register the k8s cloud in the local Juju client config."""
-    k8s_config = subprocess.run(  # nosec
-        ["sudo", "k8s", "config"], capture_output=True
-    )
-    if k8s_config.returncode != 0:
-        raise RuntimeError(
-            f"k8s config failed (exit {k8s_config.returncode}):\n"
-            f"stdout: {k8s_config.stdout.decode()}\n"
-            f"stderr: {k8s_config.stderr.decode()}"
-        )
-    subprocess.run(  # nosec
-        ["juju", "add-k8s", "ck8s", "--client"],
-        input=k8s_config.stdout,
-        check=True,
-    )
-
-
 @pytest.fixture(scope="session", name="lxd_juju")
 def lxd_juju_fixture(request: pytest.FixtureRequest):
     """Bootstrap a new lxd controller and model and return a Juju fixture for it."""
@@ -88,7 +68,7 @@ def lxd_juju_fixture(request: pytest.FixtureRequest):
 
 
 @pytest.fixture(scope="session", name="k8s_juju")
-def k8s_juju_fixture(lxd_juju: jubilant.Juju, request: pytest.FixtureRequest, k8s_cloud_client):
+def k8s_juju_fixture(lxd_juju: jubilant.Juju, request: pytest.FixtureRequest):
     """Bootstrap a new k8s model in the lxd controller and return a Juju fixture for it."""
     clouds_json = lxd_juju.cli("clouds", "--format=json", include_model=False)
     clouds = json.loads(clouds_json)

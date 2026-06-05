@@ -62,4 +62,6 @@ integration-suites:
     - integration-test
     environment:
       CONCIERGE: concierge-ck8s.yaml
+    prepare: |
+      sudo k8s config | juju add-k8s ck8s --client
     pytest-arguments-template: *default-pytest-args
