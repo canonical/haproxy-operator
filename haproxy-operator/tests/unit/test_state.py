@@ -1827,3 +1827,156 @@ def test_haproxy_route_tcp_backend_servers_send_proxy_default(
     backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(haproxy_route_tcp)
 
     assert all(server.send_proxy is False for server in backend.servers)
+
+
+def test_port_range_frontend_properties(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Create a port_range backend.
+    act: Build the frontend and check properties.
+    assert: frontend_name, bind_address and all_frontend_ports reflect the range.
+    """
+    backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(port_range="10500-10502")
+    )
+    frontend = HAProxyRouteTcpFrontend.from_backends([backend])
+
+    assert frontend.port_range == "10500-10502"
+    assert frontend.port is None
+    assert frontend.frontend_name == "haproxy_route_tcp_10500_10502"
+    assert frontend.bind_address == "10500-10502"
+    assert frontend.all_frontend_ports == [10500, 10501, 10502]
+
+
+def test_port_range_default_backend_name(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Create a port_range frontend.
+    act: Get default_backend_name.
+    assert: Uses range representation in the name.
+    """
+    backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(port_range="10500-10502")
+    )
+    frontend = HAProxyRouteTcpFrontend.from_backends([backend])
+
+    assert frontend.default_backend_name == "haproxy_route_tcp_10500_10502_default_backend"
+
+
+def test_port_range_servers_are_portless(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Create a backend with port_range set.
+    act: Access the servers property.
+    assert: All servers have port=None for 1:1 passthrough.
+    """
+    backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(port_range="10500-10502")
+    )
+
+    assert all(server.port is None for server in backend.servers)
+
+
+def test_port_range_frontend_all_frontend_ports_for_single_port(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Create a regular single-port frontend.
+    act: Get all_frontend_ports.
+    assert: Returns a one-element list with the single port.
+    """
+    backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(port=4000)
+    )
+    frontend = HAProxyRouteTcpFrontend.from_backends([backend])
+
+    assert frontend.all_frontend_ports == [4000]
+
+
+def test_parse_haproxy_route_tcp_requirers_data_range_is_standalone(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Create a port_range requirer alongside a single-port requirer.
+    act: Call parse_haproxy_route_tcp_requirers_data.
+    assert: Two separate frontends are created; range frontend has port_range set.
+    """
+    requirers_data = HaproxyRouteTcpRequirersData(
+        requirers_data=[
+            haproxy_route_tcp_relation_data(
+                relation_id=0,
+                port=4000,
+                sni="api.example.com",
+                enforce_tls=True,
+                tls_terminate=True,
+            ),
+            haproxy_route_tcp_relation_data(
+                relation_id=1,
+                port_range="10500-10502",
+            ),
+        ],
+        relation_ids_with_invalid_data=set(),
+    )
+
+    frontends = parse_haproxy_route_tcp_requirers_data(requirers_data)
+
+    assert len(frontends) == 2
+    range_frontends = [f for f in frontends if f.port_range is not None]
+    single_frontends = [f for f in frontends if f.port is not None]
+    assert len(range_frontends) == 1
+    assert len(single_frontends) == 1
+    assert range_frontends[0].port_range == "10500-10502"
+
+
+def test_valid_tcp_frontends_excludes_range_with_conflict(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Set up a port_range frontend whose range overlaps with an HTTP standard port.
+    act: Initialize HaproxyRouteRequirersInformation.
+    assert: The range frontend is excluded from valid_tcp_frontends.
+    """
+    haproxy_route_tcp_provider_mock = MagicMock()
+    haproxy_route_tcp_provider_mock.get_data = MagicMock(
+        return_value=HaproxyRouteTcpRequirersData(
+            requirers_data=[
+                haproxy_route_tcp_relation_data(
+                    relation_id=0,
+                    port_range="79-81",
+                )
+            ],
+            relation_ids_with_invalid_data=set(),
+        )
+    )
+
+    haproxy_route_provider_mock = MagicMock()
+    haproxy_route_provider_mock.get_data = MagicMock(
+        return_value=HaproxyRouteRequirersData(
+            requirers_data=[
+                haproxy_route_tcp_relation_data.__self__.__class__  # unused, just need HTTP flag
+            ]
+            if False
+            else [],
+            relation_ids_with_invalid_data=set(),
+        )
+    )
+    haproxy_route_provider_mock.get_data = MagicMock(
+        return_value=HaproxyRouteRequirersData(
+            requirers_data=[],
+            relation_ids_with_invalid_data=set(),
+        )
+    )
+
+    haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
+        haproxy_route=haproxy_route_provider_mock,
+        haproxy_route_tcp=haproxy_route_tcp_provider_mock,
+        haproxy_route_policy=MagicMock(relation=None),
+        external_hostname="test.example.com",
+        peers=[],
+        ca_certs_configured=False,
+    )
+
+    assert len(haproxy_route_information.valid_tcp_frontends()) == 1

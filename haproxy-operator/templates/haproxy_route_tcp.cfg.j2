@@ -1,7 +1,7 @@
 {% macro render_tcp_server(server) -%}
     server
 {{ server.server_name }}
-{{ server.address }}:{{ server.port }}
+{{ server.address }}{% if server.port %}:{{ server.port }}{% endif %}
 {% if server.check %}
 check
 inter {{ server.check.interval }}s
@@ -17,10 +17,10 @@ send-proxy
 {%- endmacro %}
 
 {% for frontend in tcp_frontends %}
-frontend haproxy_route_tcp_{{ frontend.port }}
+frontend {{ frontend.frontend_name }}
     mode tcp
     option tcplog
-    bind [::]:{{ frontend.port }} v4v6 {% if frontend.tls_terminate %} ssl crt {{ haproxy_crt_dir }} {% endif +%}
+    bind [::]:{{ frontend.bind_address }} v4v6 {% if not frontend.port_range and frontend.tls_terminate %} ssl crt {{ haproxy_crt_dir }} {% endif +%}
 
 {# DDOS protection configuration. #}
 {% if ddos_protection_config.client_timeout %}
@@ -40,8 +40,13 @@ frontend haproxy_route_tcp_{{ frontend.port }}
     http-request allow if allowed_ips
 {% endif %}
 
-{# This configuration block is only applicable when not terminating TLS. #}
-{% if not frontend.tls_terminate %}
+{# For port_range frontends: capture the incoming destination port for 1:1 passthrough. #}
+{% if frontend.port_range %}
+    tcp-request session set-dst-port fc_dst_port
+{% endif %}
+
+{# This configuration block is only applicable when not terminating TLS (and not a range frontend). #}
+{% if not frontend.port_range and not frontend.tls_terminate %}
 {% if frontend.content_inspect_delay_required %}
     tcp-request inspect-delay 5s
 {% endif %}

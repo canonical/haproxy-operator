@@ -494,3 +494,180 @@ def test_requirer_application_data_proxy_protocol_enabled():
     data = TcpRequirerApplicationData(port=8080, proxy_protocol=True)
 
     assert data.proxy_protocol is True
+
+
+def test_port_range_valid():
+    """
+    arrange: Create a TcpRequirerApplicationData with a valid port_range.
+    act: Validate the model.
+    assert: Model validation passes.
+    """
+    data = TcpRequirerApplicationData(port_range="10500-10510", hosts=[MOCK_ADDRESS])
+
+    assert data.port_range == "10500-10510"
+    assert data.port is None
+
+
+def test_port_range_invalid_format():
+    """
+    arrange: Create a TcpRequirerApplicationData with a malformed port_range.
+    act: Validate the model.
+    assert: ValidationError is raised.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(port_range="not-a-range", hosts=[MOCK_ADDRESS])
+
+
+def test_port_range_start_exceeds_end():
+    """
+    arrange: Create a TcpRequirerApplicationData with start > end in port_range.
+    act: Validate the model.
+    assert: ValidationError is raised.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(port_range="10510-10500", hosts=[MOCK_ADDRESS])
+
+
+def test_port_range_out_of_bounds():
+    """
+    arrange: Create a TcpRequirerApplicationData with an invalid port number in port_range.
+    act: Validate the model.
+    assert: ValidationError is raised.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(port_range="0-100", hosts=[MOCK_ADDRESS])
+
+
+def test_port_range_requires_at_least_one_of_port_or_range():
+    """
+    arrange: Create a TcpRequirerApplicationData with neither port nor port_range.
+    act: Validate the model.
+    assert: ValidationError is raised.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(hosts=[MOCK_ADDRESS])
+
+
+def test_port_range_forbids_sni():
+    """
+    arrange: Create a TcpRequirerApplicationData with both port_range and sni.
+    act: Validate the model.
+    assert: ValidationError is raised.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(
+            port_range="10500-10510", sni="api.internal", hosts=[MOCK_ADDRESS]
+        )
+
+
+def test_port_range_self_overlap_with_port():
+    """
+    arrange: Create a TcpRequirerApplicationData where the port falls inside port_range.
+    act: Validate the model.
+    assert: ValidationError is raised.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(port=10505, port_range="10500-10510", hosts=[MOCK_ADDRESS])
+
+
+def test_port_range_self_overlap_with_backend_port():
+    """
+    arrange: Create a TcpRequirerApplicationData where backend_port falls inside port_range.
+    act: Validate the model.
+    assert: ValidationError is raised.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(
+            port_range="10500-10510", backend_port=10505, hosts=[MOCK_ADDRESS]
+        )
+
+
+def test_check_ports_unique_range_overlap():
+    """
+    arrange: Create two requirers whose port_ranges overlap.
+    act: Construct HaproxyRouteTcpRequirersData.
+    assert: Both have relation IDs flagged in invalid_data_relation_ids.
+    """
+    requirer_a = HaproxyRouteTcpRequirerData(
+        relation_id=1,
+        application="app-a",
+        application_data=cast(
+            TcpRequirerApplicationData,
+            TcpRequirerApplicationData.from_dict(
+                {"port_range": "10500-10510", "hosts": ["10.0.0.1"]}
+            ),
+        ),
+        units_data=[
+            cast(TcpRequirerUnitData, TcpRequirerUnitData.from_dict({"address": "10.0.0.1"}))
+        ],
+    )
+    requirer_b = HaproxyRouteTcpRequirerData(
+        relation_id=2,
+        application="app-b",
+        application_data=cast(
+            TcpRequirerApplicationData,
+            TcpRequirerApplicationData.from_dict(
+                {"port_range": "10508-10515", "hosts": ["10.0.0.2"]}
+            ),
+        ),
+        units_data=[
+            cast(TcpRequirerUnitData, TcpRequirerUnitData.from_dict({"address": "10.0.0.2"}))
+        ],
+    )
+    data = HaproxyRouteTcpRequirersData(
+        requirers_data=[requirer_a, requirer_b],
+        relation_ids_with_invalid_data=set(),
+    )
+
+    assert data.relation_ids_with_invalid_data == {1, 2}
+
+
+def test_check_ports_unique_range_and_port_overlap():
+    """
+    arrange: Create a port requirer and a port_range requirer where the port is inside the range.
+    act: Construct HaproxyRouteTcpRequirersData.
+    assert: Both relation IDs are flagged as invalid.
+    """
+    requirer_single = HaproxyRouteTcpRequirerData(
+        relation_id=1,
+        application="app-single",
+        application_data=cast(
+            TcpRequirerApplicationData,
+            TcpRequirerApplicationData.from_dict({"port": 10505, "hosts": ["10.0.0.1"]}),
+        ),
+        units_data=[
+            cast(TcpRequirerUnitData, TcpRequirerUnitData.from_dict({"address": "10.0.0.1"}))
+        ],
+    )
+    requirer_range = HaproxyRouteTcpRequirerData(
+        relation_id=2,
+        application="app-range",
+        application_data=cast(
+            TcpRequirerApplicationData,
+            TcpRequirerApplicationData.from_dict(
+                {"port_range": "10500-10510", "hosts": ["10.0.0.2"]}
+            ),
+        ),
+        units_data=[
+            cast(TcpRequirerUnitData, TcpRequirerUnitData.from_dict({"address": "10.0.0.2"}))
+        ],
+    )
+    data = HaproxyRouteTcpRequirersData(
+        requirers_data=[requirer_single, requirer_range],
+        relation_ids_with_invalid_data=set(),
+    )
+
+    assert data.relation_ids_with_invalid_data == {1, 2}
+
+
+def test_expand_port_range():
+    """
+    arrange: A valid port range string.
+    act: Call expand_port_range.
+    assert: Returns the expected set of ports.
+    """
+    from charms.haproxy.v1.haproxy_route_tcp import expand_port_range
+
+    result = expand_port_range("10500-10503")
+
+    assert result == {10500, 10501, 10502, 10503}
