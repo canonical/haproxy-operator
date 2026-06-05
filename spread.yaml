@@ -57,7 +57,7 @@ integration-suites:
     environment:
       CONCIERGE: concierge-ck8s.yaml
     prepare: |
-      sudo k8s config | juju add-k8s ck8s --client
+      sudo k8s config | juju add-k8s ck8s --client --controller concierge-lxd
     pytest-arguments-template: *default-pytest-args
 suites:
   tests/spread/tutorial/:

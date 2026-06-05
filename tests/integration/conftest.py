@@ -78,14 +78,18 @@ def k8s_juju_fixture(lxd_juju: jubilant.Juju, request: pytest.FixtureRequest):
     )
     k8s_cloud = k8s_clouds[0]
 
-    # Add the k8s cloud to our new controller.
-    lxd_juju.cli(
-        "add-cloud",
-        "--controller",
-        lxd_juju.status().model.controller,
-        k8s_cloud,
-        include_model=False,
-    )
+    # Add the k8s cloud to our new controller (no-op if prepare already did it).
+    try:
+        lxd_juju.cli(
+            "add-cloud",
+            "--controller",
+            lxd_juju.status().model.controller,
+            k8s_cloud,
+            include_model=False,
+        )
+    except jubilant.CLIError as err:
+        if "already exists" not in str(err):
+            raise
 
     new_juju = jubilant.Juju(model=lxd_juju.model)
     new_juju.wait_timeout = JUJU_WAIT_TIMEOUT
@@ -93,7 +97,7 @@ def k8s_juju_fixture(lxd_juju: jubilant.Juju, request: pytest.FixtureRequest):
     try:
         new_juju.add_model(k8s_model_name, k8s_cloud)
     except jubilant.CLIError as err:
-        if not "already exists":
+        if "already exists" not in str(err):
             logger.exception(err)
             raise
         new_juju.model = k8s_model_name
