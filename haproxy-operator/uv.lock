@@ -1245,7 +1245,7 @@ wheels = [
 [[package]]
 name = "opcli"
 version = "0.0.1a1"
-source = { git = "https://github.com/canonical/charm-ci.git?rev=main#dbaa0f3125a8d61cd615ea6346ced7e14de5f56a" }
+source = { git = "https://github.com/canonical/charm-ci.git?rev=main#51abd78efc852c71aaacd2ae865c493dd3766856" }
 dependencies = [
     { name = "jinja2" },
     { name = "pydantic" },
