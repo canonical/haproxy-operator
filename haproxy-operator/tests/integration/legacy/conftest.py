@@ -15,6 +15,7 @@ import pytest_asyncio
 from juju.application import Application
 from juju.client._definitions import FullStatus, UnitStatus
 from juju.model import Model
+from opcli.pytest_plugin import CharmPathList
 from pytest_operator.plugin import OpsTest
 
 logger = logging.getLogger(__name__)
@@ -33,9 +34,9 @@ async def model_fixture(ops_test: OpsTest) -> Model:
 
 
 @pytest_asyncio.fixture(scope="module", name="charm")
-async def charm_fixture(charm_paths: dict[str, list[str]]) -> str:
+async def charm_fixture(charm_paths: dict[str, CharmPathList]) -> str:
     """Get path to the haproxy charm."""
-    return charm_paths["haproxy"][0]
+    return charm_paths["haproxy"].path
 
 
 @pytest_asyncio.fixture(scope="module", name="application")

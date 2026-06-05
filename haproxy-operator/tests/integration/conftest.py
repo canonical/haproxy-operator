@@ -14,6 +14,7 @@ from pathlib import Path
 import jubilant
 import pytest
 import yaml
+from opcli.pytest_plugin import CharmPathList
 
 from .helper import pytestconfig_arg_no_deploy
 
@@ -38,9 +39,9 @@ GRPC_SERVICE_STUB_SRC = GRPC_SERVER_DIR / "echo_pb2_grpc.py"
 
 
 @pytest.fixture(scope="session", name="charm")
-def charm_fixture(charm_paths: dict[str, list[str]]) -> str:
+def charm_fixture(charm_paths: dict[str, CharmPathList]) -> str:
     """Pytest fixture that returns the path to the haproxy charm."""
-    return charm_paths["haproxy"][0]
+    return charm_paths["haproxy"].path
 
 
 @pytest.fixture(scope="module", name="juju")

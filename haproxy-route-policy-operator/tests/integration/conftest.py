@@ -10,6 +10,7 @@ import typing
 import jubilant
 import pytest
 import yaml
+from opcli.pytest_plugin import CharmPathList
 
 JUJU_WAIT_TIMEOUT = 10 * 60  # 10 minutes
 ANY_CHARM_HAPROXY_ROUTE_POLICY_REQUIRER_APPLICATION = "any-charm-haproxy-route-policy-requirer"
@@ -19,9 +20,9 @@ POSTGRESQL_APPLICATION = "postgresql"
 
 
 @pytest.fixture(scope="session", name="charm")
-def charm_fixture(charm_paths: dict[str, list[str]]) -> str:
+def charm_fixture(charm_paths: dict[str, CharmPathList]) -> str:
     """Pytest fixture that returns the path to the haproxy-route-policy charm."""
-    return charm_paths["haproxy-route-policy"][0]
+    return charm_paths["haproxy-route-policy"].path
 
 
 @pytest.fixture(scope="module", name="juju")
