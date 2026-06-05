@@ -9,60 +9,10 @@ on:
   - cron: "0 15 * * SAT"
 
 jobs:
-  test-matrix:
-    name: Test matrix
-    runs-on: ubuntu-latest
+  doc-test:
+    uses: canonical/charm-ci/.github/workflows/doc-test.yml@main
     permissions:
       contents: read
       actions: read
-    outputs:
-      matrix: ${{ steps.matrix.outputs.matrix }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install uv
-        run: sudo snap install astral-uv --classic
-
-      - name: Install opcli
-        run: uv tool install "git+https://github.com/canonical/charm-ci.git@main"
-
-      - name: Install spread
-        run: |
-          sudo snap install go --classic
-          go install github.com/canonical/spread/cmd/spread@latest
-          sudo ln -sf ~/go/bin/spread /usr/local/bin/spread
-
-      - name: Generate test matrix
-        id: matrix
-        run: |
-          matrix=$(opcli spread jobs --include "docs-ci:*")
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
-          echo "Test matrix: $matrix"
-
-  test:
-    name: "${{ matrix.name }}"
-    needs: [test-matrix]
-    runs-on: ${{ fromJSON(matrix.runs-on) }}
-    permissions:
-      contents: read
-      actions: read
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.test-matrix.outputs.matrix) }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install uv
-        run: sudo snap install astral-uv --classic
-
-      - name: Install opcli
-        run: uv tool install "git+https://github.com/canonical/charm-ci.git@main"
-
-      - name: Install spread
-        run: |
-          sudo snap install go --classic
-          go install github.com/canonical/spread/cmd/spread@latest
-          sudo ln -sf ~/go/bin/spread /usr/local/bin/spread
-
-      - name: Run spread task
-        run: opcli spread run -- -vv ${{ matrix.selector }}
+    with:
+      spread-jobs-include: "docs-ci:*"
