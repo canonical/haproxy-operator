@@ -1827,3 +1827,195 @@ def test_haproxy_route_tcp_backend_servers_send_proxy_default(
     backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(haproxy_route_tcp)
 
     assert all(server.send_proxy is False for server in backend.servers)
+
+
+# Port range tests
+
+
+def test_haproxy_route_tcp_port_range_backend_servers(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Generate TCP relation data with port_range.
+    act: Initialize the HAProxyRouteTcpBackend class with the generated relation data.
+    assert: Server entries have no port (port is None) so HAProxy uses destination port.
+    """
+    haproxy_route_tcp: HaproxyRouteTcpRequirerData = haproxy_route_tcp_relation_data(
+        port_range="10500-10600"
+    )
+    backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(haproxy_route_tcp)
+
+    assert backend.servers[0].port is None
+    assert backend.servers[0].address == haproxy_route_tcp.units_data[0].address
+    assert backend.name == f"{haproxy_route_tcp.application}_10500_10600"
+
+
+def test_haproxy_route_tcp_port_range_frontend_properties(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Generate TCP relation data with port_range.
+    act: Parse into HAProxyRouteTcpFrontend.
+    assert: Frontend has correct port_range, all_ports, frontend_name, and bind_ports.
+    """
+    from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpRequirersData
+
+    from state.haproxy_route import parse_haproxy_route_tcp_requirers_data
+
+    haproxy_route_tcp: HaproxyRouteTcpRequirerData = haproxy_route_tcp_relation_data(
+        port_range="10500-10502"
+    )
+    requirers = HaproxyRouteTcpRequirersData(
+        requirers_data=[haproxy_route_tcp],
+        relation_ids_with_invalid_data=set(),
+    )
+    frontends = parse_haproxy_route_tcp_requirers_data(requirers)
+
+    assert len(frontends) == 1
+    frontend = frontends[0]
+    assert frontend.port_range == "10500-10502"
+    assert frontend.port == 10500
+    assert frontend.all_ports == [10500, 10501, 10502]
+    assert frontend.frontend_name == "haproxy_route_tcp_10500_10502"
+    assert frontend.bind_ports == "10500-10502"
+    assert frontend.default_backend_name == "haproxy_route_tcp_10500_10502_default_backend"
+
+
+def test_haproxy_route_tcp_port_range_conflict_with_http_backend(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
+):
+    """
+    arrange: Setup a TCP port-range that includes port 80, plus an HTTP backend.
+    act: Initialize HaproxyRouteRequirersInformation.
+    assert: The port-range frontend is invalid (port 80 conflicts with HTTP backends).
+    """
+    from charms.haproxy.v2.haproxy_route import HaproxyRouteRequirersData
+
+    tcp_relation_id = 0
+    haproxy_route_tcp_provider_mock = MagicMock()
+    haproxy_route_tcp_provider_mock.get_data = MagicMock(
+        return_value=HaproxyRouteTcpRequirersData(
+            requirers_data=[
+                haproxy_route_tcp_relation_data(
+                    port_range="79-81",
+                    relation_id=tcp_relation_id,
+                )
+            ],
+            relation_ids_with_invalid_data=set(),
+        )
+    )
+
+    http_relation_id = 1
+    haproxy_route_provider_mock = MagicMock()
+    haproxy_route_provider_mock.get_data = MagicMock(
+        return_value=HaproxyRouteRequirersData(
+            requirers_data=[
+                haproxy_route_relation_data("http_service", relation_id=http_relation_id)
+            ],
+            relation_ids_with_invalid_data=set(),
+        )
+    )
+
+    haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
+        haproxy_route=haproxy_route_provider_mock,
+        haproxy_route_tcp=haproxy_route_tcp_provider_mock,
+        haproxy_route_policy=MagicMock(relation=None),
+        external_hostname="haproxy.internal",
+        peers=[],
+        ca_certs_configured=False,
+    )
+
+    assert tcp_relation_id in haproxy_route_information.relation_ids_with_invalid_data_tcp
+    assert len(haproxy_route_information.valid_tcp_frontends()) == 0
+
+
+def test_haproxy_route_tcp_port_range_vs_single_port_conflict(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Setup a TCP port-range and a single-port TCP requirer that overlap.
+    act: Initialize HaproxyRouteRequirersInformation with both.
+    assert: Both frontends are excluded from valid_tcp_frontends.
+    """
+    from charms.haproxy.v2.haproxy_route import HaproxyRouteRequirersData
+
+    range_relation_id = 0
+    single_relation_id = 1
+
+    haproxy_route_tcp_provider_mock = MagicMock()
+    haproxy_route_tcp_provider_mock.get_data = MagicMock(
+        return_value=HaproxyRouteTcpRequirersData(
+            requirers_data=[
+                haproxy_route_tcp_relation_data(
+                    port_range="10500-10600", relation_id=range_relation_id
+                ),
+                haproxy_route_tcp_relation_data(port=10550, relation_id=single_relation_id),
+            ],
+            relation_ids_with_invalid_data=set(),
+        )
+    )
+
+    haproxy_route_provider_mock = MagicMock()
+    haproxy_route_provider_mock.get_data = MagicMock(
+        return_value=HaproxyRouteRequirersData(
+            requirers_data=[],
+            relation_ids_with_invalid_data=set(),
+        )
+    )
+
+    haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
+        haproxy_route=haproxy_route_provider_mock,
+        haproxy_route_tcp=haproxy_route_tcp_provider_mock,
+        haproxy_route_policy=MagicMock(relation=None),
+        external_hostname=None,
+        peers=[],
+        ca_certs_configured=False,
+    )
+
+    assert len(haproxy_route_information.valid_tcp_frontends()) == 0
+
+
+def test_haproxy_route_tcp_port_range_valid_no_conflicts(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Setup a TCP port-range with no conflicts.
+    act: Initialize HaproxyRouteRequirersInformation.
+    assert: The port-range frontend is valid and all ports appear in valid_tcp_frontends.
+    """
+    from charms.haproxy.v2.haproxy_route import HaproxyRouteRequirersData
+
+    relation_id = 0
+    haproxy_route_tcp_provider_mock = MagicMock()
+    haproxy_route_tcp_provider_mock.get_data = MagicMock(
+        return_value=HaproxyRouteTcpRequirersData(
+            requirers_data=[
+                haproxy_route_tcp_relation_data(port_range="10500-10502", relation_id=relation_id)
+            ],
+            relation_ids_with_invalid_data=set(),
+        )
+    )
+
+    haproxy_route_provider_mock = MagicMock()
+    haproxy_route_provider_mock.get_data = MagicMock(
+        return_value=HaproxyRouteRequirersData(
+            requirers_data=[],
+            relation_ids_with_invalid_data=set(),
+        )
+    )
+
+    haproxy_route_information = HaproxyRouteRequirersInformation.from_provider(
+        haproxy_route=haproxy_route_provider_mock,
+        haproxy_route_tcp=haproxy_route_tcp_provider_mock,
+        haproxy_route_policy=MagicMock(relation=None),
+        external_hostname=None,
+        peers=[],
+        ca_certs_configured=False,
+    )
+
+    valid_frontends = haproxy_route_information.valid_tcp_frontends()
+    assert len(valid_frontends) == 1
+    frontend = valid_frontends[0]
+    assert frontend.port_range == "10500-10502"
+    assert frontend.all_ports == [10500, 10501, 10502]

@@ -494,3 +494,202 @@ def test_requirer_application_data_proxy_protocol_enabled():
     data = TcpRequirerApplicationData(port=8080, proxy_protocol=True)
 
     assert data.proxy_protocol is True
+
+
+# Port range tests
+
+
+def test_port_range_valid():
+    """
+    arrange: Create a TcpRequirerApplicationData with a valid port_range.
+    act: Validate the model.
+    assert: Model validation passes and port_range_ports returns the correct list.
+    """
+    data = TcpRequirerApplicationData(port_range="10500-10600")
+
+    assert data.port_range == "10500-10600"
+    assert data.port is None
+    assert data.backend_port is None
+    assert len(data.port_range_ports) == 101
+    assert data.port_range_ports[0] == 10500
+    assert data.port_range_ports[-1] == 10600
+
+
+def test_port_range_mutually_exclusive_with_port():
+    """
+    arrange: Create a TcpRequirerApplicationData with both port and port_range set.
+    act: Validate the model.
+    assert: ValidationError is raised.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(port=8080, port_range="10500-10600")
+
+
+def test_port_range_or_port_required():
+    """
+    arrange: Create a TcpRequirerApplicationData with neither port nor port_range.
+    act: Validate the model.
+    assert: ValidationError is raised.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData()
+
+
+def test_port_range_invalid_format():
+    """
+    arrange: Create a TcpRequirerApplicationData with an invalid port_range format.
+    act: Validate the model.
+    assert: ValidationError is raised.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(port_range="not-a-range")
+
+
+def test_port_range_start_not_less_than_end():
+    """
+    arrange: Create a TcpRequirerApplicationData where port_range start >= end.
+    act: Validate the model.
+    assert: ValidationError is raised.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(port_range="10600-10500")
+
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(port_range="10500-10500")
+
+
+def test_port_range_out_of_valid_range():
+    """
+    arrange: Create a TcpRequirerApplicationData with port_range values outside 1-65535.
+    act: Validate the model.
+    assert: ValidationError is raised.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(port_range="0-100")
+
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(port_range="100-65536")
+
+
+def test_port_range_sni_not_allowed():
+    """
+    arrange: Create a TcpRequirerApplicationData with both port_range and sni.
+    act: Validate the model.
+    assert: ValidationError is raised.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(port_range="10500-10600", sni="api.example.com")
+
+
+def test_port_range_conflict_with_single_port():
+    """
+    arrange: Create two requirers where a single port overlaps with a port range.
+    act: Create HaproxyRouteTcpRequirersData.
+    assert: Both conflicting relation IDs are marked invalid.
+    """
+    range_data = TcpRequirerApplicationData(port_range="10500-10600")
+    single_data = TcpRequirerApplicationData(port=10550)
+
+    range_requirer = HaproxyRouteTcpRequirerData(
+        relation_id=1,
+        application="range-app",
+        application_data=range_data,
+        units_data=[TcpRequirerUnitData(address=MOCK_ADDRESS)],
+    )
+    single_requirer = HaproxyRouteTcpRequirerData(
+        relation_id=2,
+        application="single-app",
+        application_data=single_data,
+        units_data=[TcpRequirerUnitData(address=ANOTHER_MOCK_ADDRESS)],
+    )
+
+    requirers_data = HaproxyRouteTcpRequirersData(
+        requirers_data=[range_requirer, single_requirer],
+        relation_ids_with_invalid_data=set(),
+    )
+
+    assert 1 in requirers_data.relation_ids_with_invalid_data
+    assert 2 in requirers_data.relation_ids_with_invalid_data
+
+
+def test_port_range_conflict_between_two_ranges():
+    """
+    arrange: Create two requirers with overlapping port ranges.
+    act: Create HaproxyRouteTcpRequirersData.
+    assert: Both relation IDs are marked invalid.
+    """
+    range1_data = TcpRequirerApplicationData(port_range="10500-10600")
+    range2_data = TcpRequirerApplicationData(port_range="10550-10650")
+
+    range1_requirer = HaproxyRouteTcpRequirerData(
+        relation_id=1,
+        application="app1",
+        application_data=range1_data,
+        units_data=[TcpRequirerUnitData(address=MOCK_ADDRESS)],
+    )
+    range2_requirer = HaproxyRouteTcpRequirerData(
+        relation_id=2,
+        application="app2",
+        application_data=range2_data,
+        units_data=[TcpRequirerUnitData(address=ANOTHER_MOCK_ADDRESS)],
+    )
+
+    requirers_data = HaproxyRouteTcpRequirersData(
+        requirers_data=[range1_requirer, range2_requirer],
+        relation_ids_with_invalid_data=set(),
+    )
+
+    assert 1 in requirers_data.relation_ids_with_invalid_data
+    assert 2 in requirers_data.relation_ids_with_invalid_data
+
+
+def test_port_range_no_conflict_with_non_overlapping_range():
+    """
+    arrange: Create two requirers with non-overlapping port ranges.
+    act: Create HaproxyRouteTcpRequirersData.
+    assert: Neither relation ID is marked invalid.
+    """
+    range1_data = TcpRequirerApplicationData(port_range="10500-10600")
+    range2_data = TcpRequirerApplicationData(port_range="10601-10700")
+
+    range1_requirer = HaproxyRouteTcpRequirerData(
+        relation_id=1,
+        application="app1",
+        application_data=range1_data,
+        units_data=[TcpRequirerUnitData(address=MOCK_ADDRESS)],
+    )
+    range2_requirer = HaproxyRouteTcpRequirerData(
+        relation_id=2,
+        application="app2",
+        application_data=range2_data,
+        units_data=[TcpRequirerUnitData(address=ANOTHER_MOCK_ADDRESS)],
+    )
+
+    requirers_data = HaproxyRouteTcpRequirersData(
+        requirers_data=[range1_requirer, range2_requirer],
+        relation_ids_with_invalid_data=set(),
+    )
+
+    assert not requirers_data.relation_ids_with_invalid_data
+
+
+def test_port_range_dump_and_load():
+    """
+    arrange: Create a TcpRequirerApplicationData with port_range, dump and reload it.
+    act: Dump to databag and load back.
+    assert: Data round-trips correctly.
+    """
+    from typing import cast as _cast
+
+    data = TcpRequirerApplicationData(port_range="10500-10600")
+    databag = data.dump()
+    assert databag is not None
+
+    loaded = _cast(
+        TcpRequirerApplicationData,
+        TcpRequirerApplicationData.load(databag),
+    )
+
+    assert loaded.port_range == "10500-10600"
+    assert loaded.port is None
+    assert len(loaded.port_range_ports) == 101

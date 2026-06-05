@@ -611,6 +611,56 @@ class HaproxyRouteRequirersInformation:
             )
         return self
 
+    def _invalidate_tcp_frontends_on_port(
+        self, port: int, port_to_frontends: dict[int, list[HAProxyRouteTcpFrontend]]
+    ) -> None:
+        """Mark all TCP frontends on a given port as conflicted."""
+        self.ports_with_conflicts.add(port)
+        for frontend in port_to_frontends[port]:
+            self.relation_ids_with_invalid_data_tcp.update(
+                {backend.relation_id for backend in frontend.backends}
+            )
+
+    def _check_tcp_tcp_overlaps(
+        self, port_to_frontends: dict[int, list[HAProxyRouteTcpFrontend]]
+    ) -> None:
+        """Mark ports where more than one TCP frontend claims the same port."""
+        for port, frontends in port_to_frontends.items():
+            if len(frontends) > 1:
+                logger.error(f"TCP backends conflict on port {port}.")
+                self._invalidate_tcp_frontends_on_port(port, port_to_frontends)
+
+    def _check_http_vs_tcp_grpc(
+        self,
+        standard_ports: set[int],
+        port_to_frontends: dict[int, list[HAProxyRouteTcpFrontend]],
+        grpc_ports: dict[int, HAProxyRouteBackend],
+    ) -> None:
+        """Mark conflicts between standard HTTP ports and TCP/gRPC frontends."""
+        for standard_port in standard_ports:
+            if standard_port in port_to_frontends:
+                logger.error(
+                    f"TCP backend conflicts with HTTP backends on external port {standard_port}."
+                )
+                self._invalidate_tcp_frontends_on_port(standard_port, port_to_frontends)
+            if standard_port in grpc_ports:
+                logger.error(
+                    f"gRPC backend conflicts with HTTP backends on external port {standard_port}."
+                )
+                self.relation_ids_with_invalid_data.add(grpc_ports[standard_port].relation_id)
+                self.ports_with_conflicts.add(standard_port)
+
+    def _check_grpc_vs_tcp(
+        self,
+        port_to_frontends: dict[int, list[HAProxyRouteTcpFrontend]],
+        grpc_ports: dict[int, HAProxyRouteBackend],
+    ) -> None:
+        """Mark conflicts between gRPC backends and TCP frontends sharing a port."""
+        for port in grpc_ports.keys() & port_to_frontends.keys():
+            logger.error(f"Conflicting TCP backend and gRPC backend on external port {port}.")
+            self._invalidate_tcp_frontends_on_port(port, port_to_frontends)
+            self.relation_ids_with_invalid_data.add(grpc_ports[port].relation_id)
+
     @model_validator(mode="after")
     def check_tcp_http_port_conflicts(self) -> Self:
         """Check for port conflicts between HTTP backends and TCP/gRPC backends.
@@ -618,6 +668,7 @@ class HaproxyRouteRequirersInformation:
         the TCP/gRPC backend relation_id is added to the invalid data list.
         If conflict between TCP and gRPC backends is found,
         both relation_ids are added to the invalid data lists.
+        Port-range frontends are expanded so each port in the range is checked.
 
         Returns:
             Self: The validated model
@@ -625,40 +676,21 @@ class HaproxyRouteRequirersInformation:
         standard_ports = {80, 443}
         valid_backends = self.valid_backends()
         has_http_backends = any(not b.application_data.external_grpc_port for b in valid_backends)
-
         grpc_ports = {
             backend.application_data.external_grpc_port: backend
             for backend in valid_backends
             if backend.application_data.external_grpc_port
         }
-        tcp_ports = {frontend.port: frontend for frontend in self.tcp_frontends}
 
-        # Check for conflicts between standard HTTP and TCP/gRPC ports
+        port_to_frontends: dict[int, list[HAProxyRouteTcpFrontend]] = defaultdict(list)
+        for frontend in self.tcp_frontends:
+            for port in frontend.all_ports:
+                port_to_frontends[port].append(frontend)
+
+        self._check_tcp_tcp_overlaps(port_to_frontends)
         if has_http_backends:
-            for standard_port in standard_ports:
-                if standard_port in tcp_ports:
-                    logger.error(
-                        f"TCP backend conflicts with HTTP backends on external port {standard_port}."
-                    )
-                    self.relation_ids_with_invalid_data_tcp.update(
-                        {backend.relation_id for backend in tcp_ports[standard_port].backends}
-                    )
-                    self.ports_with_conflicts.add(standard_port)
-                if standard_port in grpc_ports:
-                    logger.error(
-                        f"gRPC backend conflicts with HTTP backends on external port {standard_port}."
-                    )
-                    self.relation_ids_with_invalid_data.add(grpc_ports[standard_port].relation_id)
-                    self.ports_with_conflicts.add(standard_port)
-
-        # Check for conflicts between gRPC and TCP ports
-        for port in grpc_ports.keys() & tcp_ports.keys():
-            logger.error(f"Conflicting TCP backend and gRPC backend on external port {port}.")
-            self.relation_ids_with_invalid_data_tcp.update(
-                {backend.relation_id for backend in tcp_ports[port].backends}
-            )
-            self.relation_ids_with_invalid_data.add(grpc_ports[port].relation_id)
-            self.ports_with_conflicts.add(port)
+            self._check_http_vs_tcp_grpc(standard_ports, port_to_frontends, grpc_ports)
+        self._check_grpc_vs_tcp(port_to_frontends, grpc_ports)
 
         if self.ports_with_conflicts:
             logger.warning(f"The following ports have conflicts: {self.ports_with_conflicts}")
@@ -680,13 +712,16 @@ class HaproxyRouteRequirersInformation:
     def valid_tcp_frontends(self) -> list[HAProxyRouteTcpFrontend]:
         """Get the list of valid TCP endpoints (not in the invalid list).
 
+        For port-range frontends, a frontend is invalid if any port in its range
+        conflicts with another frontend or HTTP/gRPC backend.
+
         Returns:
             list[HAProxyRouteTcpFrontend]: List of valid TCP endpoints.
         """
         return [
             frontend
             for frontend in self.tcp_frontends
-            if frontend.port not in self.ports_with_conflicts
+            if not any(port in self.ports_with_conflicts for port in frontend.all_ports)
         ]
 
     @property
@@ -787,14 +822,24 @@ def parse_haproxy_route_tcp_requirers_data(
 ) -> list[HAProxyRouteTcpFrontend]:
     """Parse HAProxyRouteTcpFrontend data from requirers into frontend objects.
 
+    Port-range backends are always standalone frontends. Single-port backends
+    are grouped by port to allow SNI-based merging via HAProxyRouteTcpFrontend.from_backends.
+
     Returns:
         list[HAProxyRouteTcpFrontend]: The parsed frontend data.
     """
     port_to_backends_mapping: dict[int, list[HAProxyRouteTcpBackend]] = defaultdict(list)
+    port_range_backends: list[HAProxyRouteTcpBackend] = []
+
     for requirer in tcp_requirers.requirers_data:
         endpoint = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(requirer)
-        port_to_backends_mapping[endpoint.application_data.port].append(endpoint)
+        if endpoint.application_data.port_range:
+            port_range_backends.append(endpoint)
+        else:
+            port_to_backends_mapping[cast(int, endpoint.application_data.port)].append(endpoint)
+
     tcp_frontends: list[HAProxyRouteTcpFrontend] = []
+
     for backends in port_to_backends_mapping.values():
         try:
             frontend = HAProxyRouteTcpFrontend.from_backends(backends)
@@ -802,6 +847,15 @@ def parse_haproxy_route_tcp_requirers_data(
         except HAProxyRouteTcpFrontendValidationError as exc:
             logger.error(f"Failed to parse TCP frontend: {exc}")
             continue
+
+    for backend in port_range_backends:
+        try:
+            frontend = HAProxyRouteTcpFrontend.from_backends([backend])
+            tcp_frontends.append(frontend)
+        except HAProxyRouteTcpFrontendValidationError as exc:
+            logger.error(f"Failed to parse TCP port-range frontend: {exc}")
+            continue
+
     return tcp_frontends
 
 
