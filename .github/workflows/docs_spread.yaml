@@ -17,23 +17,14 @@ jobs:
       actions: read
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
-      opcli-sha: ${{ steps.workflow-version.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Get workflow version
-        id: workflow-version
-        uses: canonical/get-workflow-version-action@v1
-        with:
-          repository-name: canonical/charm-ci
-          file-name: integration-test.yml
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install uv
         run: sudo snap install astral-uv --classic
 
       - name: Install opcli
-        run: uv tool install "git+https://github.com/canonical/charm-ci.git@${{ steps.workflow-version.outputs.sha }}"
+        run: uv tool install "git+https://github.com/canonical/charm-ci.git@main"
 
       - name: Install spread
         run: |
@@ -65,7 +56,7 @@ jobs:
         run: sudo snap install astral-uv --classic
 
       - name: Install opcli
-        run: uv tool install "git+https://github.com/canonical/charm-ci.git@${{ needs.test-matrix.outputs.opcli-sha }}"
+        run: uv tool install "git+https://github.com/canonical/charm-ci.git@main"
 
       - name: Install spread
         run: |
@@ -74,6 +65,4 @@ jobs:
           sudo ln -sf ~/go/bin/spread /usr/local/bin/spread
 
       - name: Run spread task
-        env:
-          OPCLI_GIT_REF: ${{ needs.test-matrix.outputs.opcli-sha }}
         run: opcli spread run -- -vv ${{ matrix.selector }}
