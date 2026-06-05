@@ -113,7 +113,11 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
         if not backend_addresses:
             backend_addresses = [unit_data.address for unit_data in self.units_data]
 
-        port = None if self.application_data.port_range else cast(int, self.application_data.backend_port)
+        port = (
+            None
+            if self.application_data.port_range
+            else cast(int, self.application_data.backend_port)
+        )
 
         for i, address in enumerate(backend_addresses):
             servers.append(

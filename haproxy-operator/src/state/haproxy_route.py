@@ -810,9 +810,9 @@ def parse_haproxy_route_tcp_requirers_data(
     Returns:
         list[HAProxyRouteTcpFrontend]: The parsed frontend data.
     """
-    port_key_to_backends_mapping: dict[
-        tuple[int, int | None], list[HAProxyRouteTcpBackend]
-    ] = defaultdict(list)
+    port_key_to_backends_mapping: dict[tuple[int, int | None], list[HAProxyRouteTcpBackend]] = (
+        defaultdict(list)
+    )
     for requirer in tcp_requirers.requirers_data:
         endpoint = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(requirer)
         app_data = endpoint.application_data

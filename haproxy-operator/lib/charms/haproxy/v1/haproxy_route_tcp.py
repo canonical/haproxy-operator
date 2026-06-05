@@ -710,11 +710,15 @@ class TcpRequirerApplicationData(_DatabagModel):
         Returns:
             The validated model.
         """
-        if self.port_range is not None and self.backend_port is not None and self.backend_port != self.port_range[0]:
-                raise ValueError(
-                    "backend_port cannot differ from port_range start: "
-                    "port_range requires 1-to-1 port mapping."
-                )
+        if (
+            self.port_range is not None
+            and self.backend_port is not None
+            and self.backend_port != self.port_range[0]
+        ):
+            raise ValueError(
+                "backend_port cannot differ from port_range start: "
+                "port_range requires 1-to-1 port mapping."
+            )
         return self
 
     @model_validator(mode="after")
@@ -1520,9 +1524,7 @@ class HaproxyRouteTcpRequirer(Object):
 
     def update_relation_data(self) -> None:
         """Update both application and unit data in the relation."""
-        if not self._application_data.get("port") and not self._application_data.get(
-            "port_range"
-        ):
+        if not self._application_data.get("port") and not self._application_data.get("port_range"):
             logger.warning("port or port_range must be set, skipping update.")
             return
 
