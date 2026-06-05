@@ -34,7 +34,7 @@ integration-suites:
     working-dir: haproxy-operator/
     backends:
     - integration-test
-    pytest-arguments-template: |
+    pytest-arguments-template: &default-pytest-args |
       --model testing
       --keep-models
   haproxy-spoe-auth-operator/tests/integration/:
@@ -42,25 +42,19 @@ integration-suites:
     working-dir: haproxy-spoe-auth-operator/
     backends:
     - integration-test
-    pytest-arguments-template: |
-      --model testing
-      --keep-models
+    pytest-arguments-template: *default-pytest-args
   haproxy-ddos-protection-configurator/tests/integration/:
     summary: haproxy-ddos-protection-configurator integration tests
     working-dir: haproxy-ddos-protection-configurator/
     backends:
     - integration-test
-    pytest-arguments-template: |
-      --model testing
-      --keep-models
+    pytest-arguments-template: *default-pytest-args
   haproxy-route-policy-operator/tests/integration/:
     summary: haproxy-route-policy-operator integration tests
     working-dir: haproxy-route-policy-operator/
     backends:
     - integration-test
-    pytest-arguments-template: |
-      --model testing
-      --keep-models
+    pytest-arguments-template: *default-pytest-args
   tests/integration/:
     summary: global integration tests (cross-charm, requires LXD + canonical-k8s)
     working-dir: ./
@@ -68,6 +62,4 @@ integration-suites:
     - integration-test
     environment:
       CONCIERGE: concierge-ck8s.yaml
-    pytest-arguments-template: |
-      --model testing
-      --keep-models
+    pytest-arguments-template: *default-pytest-args
