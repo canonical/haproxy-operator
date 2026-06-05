@@ -345,7 +345,9 @@ def test_parse_tcp_requirers_data_range_and_single():
     """
     r1 = _make_requirer(1, port_range=(10500, 10600))
     r2 = _make_requirer(2, port=8080)
-    data = HaproxyRouteTcpRequirersData(requirers_data=[r1, r2], relation_ids_with_invalid_data=set())
+    data = HaproxyRouteTcpRequirersData(
+        requirers_data=[r1, r2], relation_ids_with_invalid_data=set()
+    )
 
     frontends = parse_haproxy_route_tcp_requirers_data(data)
     assert len(frontends) == 2

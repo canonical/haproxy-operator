@@ -1,0 +1,23 @@
+version_schema: 2
+
+changes:
+  - title: Add port_range attribute to haproxy-route-tcp interface for 1-to-1 port range mapping
+    author: javierdelapuente
+    type: minor
+    description: >
+      Extended the haproxy-route-tcp charm library (v1, LIBPATCH 4) with a
+      new optional port_range attribute that allows requirers to expose a
+      contiguous range of frontend ports with 1-to-1 backend port mapping
+      (e.g. haproxy:10500-10600 → backend:10500-10600). The existing port
+      field remains supported for single-port routes. Backends in range mode
+      omit the server port so HAProxy uses dst_port for pass-through
+      forwarding. Conflict detection was extended to handle overlapping
+      intervals across both single-port and range-based frontends.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/539
+      related_doc:
+      related_issue:
+        - https://github.com/canonical/haproxy-operator/issues/525
+    visibility: public
+    highlight: false
