@@ -5,7 +5,9 @@ myst:
 ---
 # HAProxy operator
 
-The HAProxy operator is an open-source software operator that deploys and operates HAProxy on Juju 3.3 and above.
+The HAProxy operator is an open-source software operator that deploys and operates HAProxy 2.8 on Juju 3.3 and above.
+HAProxy is an open-source reverse proxy that provides fast, efficient, and reliable proxying for TCP
+and HTTP-based applications. 
 
 The charm provides a managed ingress entry point for backend applications, handling secure traffic routing and load balancing. It also offers advanced features such as TLS, monitoring and high-availability.
 
@@ -15,7 +17,7 @@ This operator is built for **IaaS/VM** and is not supported in **Kubernetes** en
 
 ```{list-table}
    :header-rows: 1
-   :widths: 10 25
+   :widths: 15 30
 
 * - 
   - 
@@ -25,7 +27,7 @@ This operator is built for **IaaS/VM** and is not supported in **Kubernetes** en
   - {ref}`Configure high availability <how_to_configure_high_availability>` | {ref}`Control backend routing <how_to_control_haproxy_route_relation_data>` | {ref}`Create OpenStack virtual IP <how_to_configure_virtual_ip_on_openstack>`
 * - **Integrations**
   - {ref}`Relation endpoints <reference_relation_endpoints>` | {ref}`Integrate with non-charmed workloads <how_to_integrate_with_non_charm_workload>` | {ref}`Configure ingress requirers <how_to_provide_extra_configurations_for_ingress_requirer_charms>`
-* - **Supported protocols** 
+* - **Other supported protocols** 
   - {ref}`FTP <how_to_loadbalancing_for_an_ftp_server>` | {ref}`gRPC <how_to_loadbalancing_for_a_grpc_server>` | {ref}`HTTP/2 <reference_http2_support>`
 * - **Security**
   - {ref}`Overview <explanation_security>` | {ref}`Enable DDoS protection <how_to_enable_ddos_protection>` | {ref}`Protect a hostname <how_to_protect_hostname_spoe_auth>`
