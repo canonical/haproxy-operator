@@ -271,14 +271,10 @@ def _validate_port_range(port_range: Optional[str]) -> Optional[str]:
     start, end = int(match.group(1)), int(match.group(2))
 
     if start < 1 or end < 1 or start > 65535 or end > 65535:
-        raise ValueError(
-            f"Port range values must be between 1 and 65535, got '{port_range}'."
-        )
+        raise ValueError(f"Port range values must be between 1 and 65535, got '{port_range}'.")
 
     if start >= end:
-        raise ValueError(
-            f"Port range start must be less than end, got '{port_range}'."
-        )
+        raise ValueError(f"Port range start must be less than end, got '{port_range}'.")
 
     if (end - start + 1) > PORT_RANGE_MAX_SIZE:
         raise ValueError(

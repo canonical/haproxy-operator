@@ -161,12 +161,16 @@ class AnyCharm(AnyCharmBase):
         Writes a small Python TCP server script and starts it as a
         background process via nohup.
         """
+        import tempfile
+
+        tmpdir = tempfile.gettempdir()
         server_script = textwrap.dedent("""\
             import socket
             import threading
             import time
             import os
             import signal
+            import tempfile
 
             def handle_client(conn):
                 try:
@@ -193,7 +197,8 @@ class AnyCharm(AnyCharmBase):
             PORT_RANGE_END = 10502
 
             # Write PID file so we can kill the process later
-            with open("/tmp/port_range_server.pid", "w") as f:
+            pid_path = os.path.join(tempfile.gettempdir(), "port_range_server.pid")
+            with open(pid_path, "w") as f:
                 f.write(str(os.getpid()))
 
             for port in range(PORT_RANGE_START, PORT_RANGE_END + 1):
@@ -203,10 +208,11 @@ class AnyCharm(AnyCharmBase):
             # Keep main thread alive
             signal.pause()
         """)
-        Path("/tmp/port_range_server.py").write_text(server_script, "utf-8")
+        script_path = os.path.join(tmpdir, "port_range_server.py")
+        Path(script_path).write_text(server_script, "utf-8")
         # Start as background process
         subprocess.Popen(  # nosec
-            ["nohup", "python3", "/tmp/port_range_server.py"],
+            ["nohup", "python3", script_path],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
@@ -216,7 +222,10 @@ class AnyCharm(AnyCharmBase):
 
     def stop_port_range_servers(self):
         """Stop the background TCP echo servers started for port_range testing."""
-        pid_file = Path("/tmp/port_range_server.pid")
+        import tempfile
+
+        pid_path = os.path.join(tempfile.gettempdir(), "port_range_server.pid")
+        pid_file = Path(pid_path)
         if pid_file.exists():
             pid = int(pid_file.read_text().strip())
             try:

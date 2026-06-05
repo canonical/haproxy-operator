@@ -150,7 +150,9 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
             servers.append(
                 HaproxyRouteTcpServer(
                     server_name=f"{self.application}-{i}",
-                    port=cast(int, self.application_data.backend_port) if not self.is_port_range else None,
+                    port=cast(int, self.application_data.backend_port)
+                    if not self.is_port_range
+                    else None,
                     address=address,
                     check=self.application_data.check,
                     maxconn=self.application_data.server_maxconn,

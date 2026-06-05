@@ -526,14 +526,14 @@ def test_tcp_requirer_application_data_port_range_invalid_format():
     assert: Validation raises an error.
     """
     invalid_ranges = [
-        "10500",           # not a range
-        "10500-10600-1",   # too many parts
-        "abc-def",         # non-numeric
-        "10500:10600",     # wrong separator
-        "60000-50000",     # start > end
-        "0-100",           # start < 1
-        "1-70000",         # end > 65535
-        "1-1002",          # range too large (> 1001 ports)
+        "10500",  # not a range
+        "10500-10600-1",  # too many parts
+        "abc-def",  # non-numeric
+        "10500:10600",  # wrong separator
+        "60000-50000",  # start > end
+        "0-100",  # start < 1
+        "1-70000",  # end > 65535
+        "1-1002",  # range too large (> 1001 ports)
     ]
     for invalid_range in invalid_ranges:
         with pytest.raises(ValidationError):
