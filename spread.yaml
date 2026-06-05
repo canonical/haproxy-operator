@@ -16,7 +16,7 @@ backends:
     - ubuntu-24.04
 environment:
   CONCIERGE: '$(HOST: echo "${CONCIERGE:-concierge.yaml}")'
-  OPCLI_GIT_REF: '$(HOST: echo "${OPCLI_GIT_REF:-main}")'
+  OPCLI_GIT_REF: feat/pytest-opcli
   TUTORIAL: docs/tutorial/getting-started.md
 suites:
   tests/spread/tutorial/:
