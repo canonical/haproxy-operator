@@ -418,8 +418,9 @@ class HAProxyCharm(ops.CharmBase):
             80,
             443,
             *(
-                frontend.port
+                Port(protocol="tcp", port=p)
                 for frontend in haproxy_route_requirers_information.valid_tcp_frontends()
+                for p in frontend.all_ports
             ),
             *(
                 backend.application_data.external_grpc_port
@@ -714,19 +715,25 @@ class HAProxyCharm(ops.CharmBase):
                         "The haproxy-route-tcp relation does not exist for this backend, skipping."
                     )
                     continue
-                if frontend.is_sni_routing_enabled:
+                if frontend.port_range is not None:
+                    start, end = frontend.port_range
+                    port_str = f"{start}-{end}"
+                elif frontend.is_sni_routing_enabled:
                     self.haproxy_route_tcp_provider.publish_proxied_endpoints(
                         [f"{backend.application_data.sni}:{frontend.port}"], relation
                     )
                     continue
+                else:
+                    port_str = str(frontend.port)
+
                 if ha_information.ha_integration_ready:
                     self.haproxy_route_tcp_provider.publish_proxied_endpoints(
-                        [f"{ha_information.vip}:{frontend.port}"], relation
+                        [f"{ha_information.vip}:{port_str}"], relation
                     )
                     continue
                 self.haproxy_route_tcp_provider.publish_proxied_endpoints(
                     [
-                        f"{unit_address}:{frontend.port}"
+                        f"{unit_address}:{port_str}"
                         for unit_address in self._get_peer_units_address()
                     ],
                     relation,

@@ -631,7 +631,12 @@ class HaproxyRouteRequirersInformation:
             for backend in valid_backends
             if backend.application_data.external_grpc_port
         }
-        tcp_ports = {frontend.port: frontend for frontend in self.tcp_frontends}
+
+        # Build a port -> frontend map that expands port ranges
+        tcp_ports: dict[int, HAProxyRouteTcpFrontend] = {}
+        for frontend in self.tcp_frontends:
+            for p in frontend.all_ports:
+                tcp_ports[p] = frontend
 
         # Check for conflicts between standard HTTP and TCP/gRPC ports
         if has_http_backends:
@@ -686,7 +691,7 @@ class HaproxyRouteRequirersInformation:
         return [
             frontend
             for frontend in self.tcp_frontends
-            if frontend.port not in self.ports_with_conflicts
+            if not any(p in self.ports_with_conflicts for p in frontend.all_ports)
         ]
 
     @property
@@ -790,12 +795,14 @@ def parse_haproxy_route_tcp_requirers_data(
     Returns:
         list[HAProxyRouteTcpFrontend]: The parsed frontend data.
     """
-    port_to_backends_mapping: dict[int, list[HAProxyRouteTcpBackend]] = defaultdict(list)
+    frontend_key_to_backends_mapping: dict[str, list[HAProxyRouteTcpBackend]] = defaultdict(list)
     for requirer in tcp_requirers.requirers_data:
         endpoint = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(requirer)
-        port_to_backends_mapping[endpoint.application_data.port].append(endpoint)
+        app_data = endpoint.application_data
+        key = app_data.port_range if app_data.port_range is not None else str(app_data.port)
+        frontend_key_to_backends_mapping[key].append(endpoint)
     tcp_frontends: list[HAProxyRouteTcpFrontend] = []
-    for backends in port_to_backends_mapping.values():
+    for backends in frontend_key_to_backends_mapping.values():
         try:
             frontend = HAProxyRouteTcpFrontend.from_backends(backends)
             tcp_frontends.append(frontend)

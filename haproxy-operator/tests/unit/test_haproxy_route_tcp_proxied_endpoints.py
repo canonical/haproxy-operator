@@ -291,3 +291,57 @@ def test_tcp_proxied_endpoints_sni_takes_priority_over_ha(
     out_tcp_relation = out.get_relation(tcp_relation.id)
     endpoints = json.loads(out_tcp_relation.local_app_data["endpoints"])
     assert endpoints == ["api.example.com:4000"]
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_tcp_proxied_endpoints_port_range(tcp_reconcile_context, peer_relation) -> None:
+    """
+    arrange: Create a haproxy-route-tcp relation with port_range configured.
+    act: Trigger config_changed as leader.
+    assert: Proxied endpoints are published as "{unit_address}:start-end".
+    """
+    context, _ = tcp_reconcile_context
+    tcp_relation = build_haproxy_route_tcp_relation(
+        port_range="10500-10600",
+        enforce_tls=False,
+    )
+
+    state = ops.testing.State(
+        relations=[peer_relation, tcp_relation],
+        leader=True,
+    )
+    out = context.run(context.on.config_changed(), state)
+
+    out_tcp_relation = out.get_relation(tcp_relation.id)
+    endpoints = json.loads(out_tcp_relation.local_app_data["endpoints"])
+    assert endpoints == ["10.0.0.1:10500-10600"]
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_tcp_proxied_endpoints_port_range_with_ha(tcp_reconcile_context, peer_relation) -> None:
+    """
+    arrange: Create a haproxy-route-tcp relation with port_range and HA configured.
+    act: Trigger config_changed as leader.
+    assert: Proxied endpoints are published as "{vip}:start-end".
+    """
+    context, _ = tcp_reconcile_context
+    tcp_relation = build_haproxy_route_tcp_relation(
+        port_range="10500-10600",
+        enforce_tls=False,
+    )
+    ha_relation = ops.testing.Relation(
+        endpoint="ha",
+        interface="hacluster",
+        remote_app_name="hacluster",
+    )
+
+    state = ops.testing.State(
+        relations=[peer_relation, tcp_relation, ha_relation],
+        config={"vip": "10.10.10.10"},
+        leader=True,
+    )
+    out = context.run(context.on.config_changed(), state)
+
+    out_tcp_relation = out.get_relation(tcp_relation.id)
+    endpoints = json.loads(out_tcp_relation.local_app_data["endpoints"])
+    assert endpoints == ["10.10.10.10:10500-10600"]
