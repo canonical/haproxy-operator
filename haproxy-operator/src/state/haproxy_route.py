@@ -787,13 +787,24 @@ def parse_haproxy_route_tcp_requirers_data(
 ) -> list[HAProxyRouteTcpFrontend]:
     """Parse HAProxyRouteTcpFrontend data from requirers into frontend objects.
 
+    For port_range requirers, the range is expanded into individual backends,
+    one per port in the range, each with a specific effective_port.
+
     Returns:
         list[HAProxyRouteTcpFrontend]: The parsed frontend data.
     """
     port_to_backends_mapping: dict[int, list[HAProxyRouteTcpBackend]] = defaultdict(list)
     for requirer in tcp_requirers.requirers_data:
         endpoint = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(requirer)
-        port_to_backends_mapping[endpoint.application_data.port].append(endpoint)
+        if endpoint.application_data.port_range:
+            # Expand port range: create one backend per port in the range
+            for port in endpoint.application_data.ports:
+                expanded = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+                    requirer, effective_port=port
+                )
+                port_to_backends_mapping[port].append(expanded)
+        else:
+            port_to_backends_mapping[endpoint.effective_port_or_port].append(endpoint)
     tcp_frontends: list[HAProxyRouteTcpFrontend] = []
     for backends in port_to_backends_mapping.values():
         try:

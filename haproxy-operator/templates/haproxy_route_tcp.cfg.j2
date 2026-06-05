@@ -1,7 +1,7 @@
 {% macro render_tcp_server(server) -%}
     server
 {{ server.server_name }}
-{{ server.address }}:{{ server.port }}
+{% if server.port is not none %}{{ server.address }}:{{ server.port }}{% else %}{{ server.address }}{% endif %}
 {% if server.check %}
 check
 inter {{ server.check.interval }}s

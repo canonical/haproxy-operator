@@ -1827,3 +1827,181 @@ def test_haproxy_route_tcp_backend_servers_send_proxy_default(
     backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(haproxy_route_tcp)
 
     assert all(server.send_proxy is False for server in backend.servers)
+
+
+def test_haproxy_route_tcp_backend_is_port_range(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Generate TCP relation data with port_range and single port.
+    act: Initialize the HAProxyRouteTcpBackend class with both types.
+    assert: is_port_range is True for port_range backend and False for single-port backend.
+    """
+    # Port range backend
+    port_range_backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(port_range="10500-10502")
+    )
+    assert port_range_backend.is_port_range is True
+
+    # Single port backend
+    single_port_backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(port=4000)
+    )
+    assert single_port_backend.is_port_range is False
+
+
+def test_haproxy_route_tcp_backend_name_with_port_range(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Generate TCP relation data with port_range.
+    act: Initialize the HAProxyRouteTcpBackend class with port_range.
+    assert: The name property uses the port_range string, not the port.
+    """
+    port_range_backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(port_range="10500-10502")
+    )
+    assert port_range_backend.name == "tcp-route-requirer_10500-10502"
+
+
+def test_haproxy_route_tcp_backend_name_with_single_port(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Generate TCP relation data with a single port.
+    act: Initialize the HAProxyRouteTcpBackend class with a single port.
+    assert: The name property uses the port number (existing behavior unchanged).
+    """
+    single_port_backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(port=4000)
+    )
+    assert single_port_backend.name == "tcp-route-requirer_4000"
+
+
+def test_haproxy_route_tcp_backend_effective_port_or_port(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Generate TCP backends with single port, port_range (no effective_port),
+        and port_range with effective_port override.
+    act: Check effective_port_or_port property.
+    assert: Returns application_data.port for single-port, effective_port for expanded range.
+    """
+    # Single port: effective_port_or_port = application_data.port
+    single_port_backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(port=4000)
+    )
+    assert single_port_backend.effective_port_or_port == 4000
+
+    # Port range with effective_port override: effective_port_or_port = effective_port
+    expanded_backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(port_range="10500-10502"),
+        effective_port=10501,
+    )
+    assert expanded_backend.effective_port_or_port == 10501
+
+
+def test_haproxy_route_tcp_backend_servers_port_none_when_port_range(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Generate TCP relation data with port_range.
+    act: Initialize the HAProxyRouteTcpBackend class with port_range and get servers.
+    assert: Each server has port=None (1-to-1 frontend/backend mapping).
+    """
+    port_range_backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(port_range="10500-10502")
+    )
+    assert all(server.port is None for server in port_range_backend.servers)
+
+
+def test_haproxy_route_tcp_backend_servers_port_set_when_single_port(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Generate TCP relation data with a single port.
+    act: Initialize the HAProxyRouteTcpBackend class with single port and get servers.
+    assert: Each server has port=backend_port (existing behavior unchanged).
+    """
+    single_port_backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(port=4000, backend_port=5000)
+    )
+    assert all(server.port == 5000 for server in single_port_backend.servers)
+
+
+def test_parse_haproxy_route_tcp_requirers_data_port_range_expansion(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Create TCP requirers data with a port_range (10500-10502).
+    act: Call parse_haproxy_route_tcp_requirers_data.
+    assert: The port_range is expanded into 3 frontends, one per port.
+        Each frontend's backend has effective_port set to the specific port.
+        Each backend's server has port=None (1-to-1 mapping).
+    """
+    requirers_data = HaproxyRouteTcpRequirersData(
+        requirers_data=[
+            haproxy_route_tcp_relation_data(
+                relation_id=0,
+                port_range="10500-10502",
+            ),
+        ],
+        relation_ids_with_invalid_data=set(),
+    )
+
+    frontends = parse_haproxy_route_tcp_requirers_data(requirers_data)
+
+    assert len(frontends) == 3
+    ports = sorted(frontend.port for frontend in frontends)
+    assert ports == [10500, 10501, 10502]
+
+    # Each frontend has one backend with effective_port set
+    for frontend in frontends:
+        assert len(frontend.backends) == 1
+        backend = frontend.backends[0]
+        assert backend.effective_port == frontend.port
+        assert backend.effective_port_or_port == frontend.port
+        assert backend.is_port_range is True
+        # Servers have port=None in port_range mode
+        assert all(server.port is None for server in backend.servers)
+
+
+def test_haproxy_route_tcp_frontend_from_backends_port_range(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Create a TCP backend with port_range and effective_port override.
+    act: Call HAProxyRouteTcpFrontend.from_backends.
+    assert: Frontend port is set to the effective_port value.
+    """
+    expanded_backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(
+            relation_id=0,
+            port_range="10500-10502",
+        ),
+        effective_port=10501,
+    )
+
+    frontend = HAProxyRouteTcpFrontend.from_backends([expanded_backend])
+
+    assert frontend.port == 10501
+    assert len(frontend.backends) == 1
+    assert frontend.backends[0] == expanded_backend
+
+
+def test_haproxy_route_tcp_backend_name_with_effective_port(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Create a TCP backend with port_range and effective_port.
+    act: Get the name property.
+    assert: The name uses port_range string, not effective_port.
+        (The name is always based on port_range for port_range backends,
+        which provides a consistent name across all expanded ports.)
+    """
+    expanded_backend = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(
+        haproxy_route_tcp_relation_data(port_range="10500-10502"),
+        effective_port=10501,
+    )
+    # For port_range backends, name uses port_range string for consistency
+    assert expanded_backend.name == "tcp-route-requirer_10500-10502"

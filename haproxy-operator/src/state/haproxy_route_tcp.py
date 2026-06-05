@@ -41,6 +41,8 @@ class HaproxyRouteTcpServer:
         server_name: The name of the unit with invalid characters replaced.
         address: The IP address of the requirer unit.
         port: The port that the requirer application wishes to be exposed.
+            When None (port_range mode), the backend connects on the same
+            port as the frontend (1-to-1 mapping).
         check: Health check configuration.
         maxconn: Maximum allowed connections before requests are queued.
         send_proxy: Whether to enable PROXY protocol for this server.
@@ -48,7 +50,7 @@ class HaproxyRouteTcpServer:
 
     server_name: str
     address: IPvAnyAddress
-    port: int
+    port: Optional[int]
     check: Optional[TCPServerHealthCheck]
     maxconn: Optional[int]
     send_proxy: bool = False
@@ -59,18 +61,27 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
     """Represent an endpoint for haproxy-route-tcp.
 
     Attrs:
+        effective_port: Override port used when expanding a port_range.
+            For single-port mode, this is None and application_data.port is used.
         consistent_hashing: Whether consistent hashing should be applied for this backend.
         servers: List of backend servers for this TCP endpoint.
         name: Unique name for this TCP endpoint.
         tcp_check_options: TCP health check options for HAProxy configuration.
     """
 
+    effective_port: Optional[int] = None
+
     @classmethod
-    def from_haproxy_route_tcp_requirer_data(cls, provider: HaproxyRouteTcpRequirerData) -> "Self":
+    def from_haproxy_route_tcp_requirer_data(
+        cls, provider: HaproxyRouteTcpRequirerData, *, effective_port: Optional[int] = None
+    ) -> "Self":
         """Instantiate a HAProxyRouteTcpBackend class from the parent class.
 
         Args:
             provider: parent class.
+            effective_port: Optional port override for port_range expansion.
+                When provided, this is the specific frontend port for this
+                backend entry in a port_range expansion.
 
         Returns:
             Self: The instantiated HAProxyRouteTcpBackend class.
@@ -80,7 +91,31 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
             application_data=provider.application_data,
             application=provider.application,
             units_data=provider.units_data,
+            effective_port=effective_port,
         )
+
+    @property
+    def effective_port_or_port(self) -> int:
+        """Return the effective port for this backend entry.
+
+        For single-port mode, this is application_data.port.
+        For port_range mode (after expansion), this is effective_port.
+
+        Returns:
+            int: The specific port for this backend.
+        """
+        if self.effective_port is not None:
+            return self.effective_port
+        return self.application_data.port
+
+    @property
+    def is_port_range(self) -> bool:
+        """Whether this backend uses a port range instead of a single port.
+
+        Returns:
+            bool: True if port_range is set, False otherwise.
+        """
+        return self.application_data.port_range is not None
 
     @property
     def consistent_hashing(self) -> bool:
@@ -115,7 +150,7 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
             servers.append(
                 HaproxyRouteTcpServer(
                     server_name=f"{self.application}-{i}",
-                    port=cast(int, self.application_data.backend_port),
+                    port=cast(int, self.application_data.backend_port) if not self.is_port_range else None,
                     address=address,
                     check=self.application_data.check,
                     maxconn=self.application_data.server_maxconn,
@@ -128,13 +163,17 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
     def name(self) -> str:
         """Get the unique name for this TCP endpoint.
 
-        Combines the application name and frontend port to create a unique
-        identifier for the HAProxy configuration section.
+        Combines the application name and the effective port (or port_range)
+        to create a unique identifier for the HAProxy configuration section.
+        For port_range mode, uses the port_range string in the name.
 
         Returns:
-            str: The endpoint name in format "{application}_{port}".
+            str: The endpoint name in format "{application}_{port}" or
+                "{application}_{port_range}".
         """
-        return f"{self.application}_{self.application_data.port}"
+        if self.application_data.port_range:
+            return f"{self.application}_{self.application_data.port_range}"
+        return f"{self.application}_{self.effective_port_or_port}"
 
     @property
     def tcp_check_options(self) -> list[str]:
@@ -224,7 +263,7 @@ class HAProxyRouteTcpFrontend:
         # If there's only one backend, return the class directly with values from the backend
         if len(backends) == 1:
             return cls(
-                port=backends[0].application_data.port,
+                port=backends[0].effective_port_or_port,
                 backends=backends,
                 enforce_tls=backends[0].application_data.enforce_tls,
                 tls_terminate=backends[0].application_data.tls_terminate,
@@ -262,7 +301,7 @@ class HAProxyRouteTcpFrontend:
                 "Cannot create HAProxyRouteTcpFrontend from empty backends list"
             )
         return cls(
-            port=rendered_backends[0].application_data.port,
+            port=rendered_backends[0].effective_port_or_port,
             backends=rendered_backends,
             enforce_tls=rendered_backends[0].application_data.enforce_tls,
             tls_terminate=rendered_backends[0].application_data.tls_terminate,

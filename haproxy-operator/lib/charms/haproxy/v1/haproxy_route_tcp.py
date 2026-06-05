@@ -45,7 +45,9 @@ class SomeCharm(CharmBase):
     self.haproxy_route_tcp_requirer = HaproxyRouteTcpRequirer(
         self,
         relation_name="haproxy-route-tcp"
-        port=<optional>  # The port exposed on the provider.
+        port=<optional>  # The port exposed on the provider. Mutually exclusive with port_range.
+        port_range=<optional>  # A range of ports (e.g. "10500-10600") for 1-to-1 frontend-to-backend
+            mapping. Mutually exclusive with port.
         backend_port=<optional>  # The port where the backend service is listening.
         hosts=<optional>  # List of backend server addresses. Currently only support IP addresses.
         sni=<optional>  # Server name identification. Used to route traffic to the service.
@@ -157,6 +159,7 @@ class SomeCharm(CharmBase):
 
 import json
 import logging
+import re
 from collections import defaultdict
 from enum import Enum
 from typing import Annotated, Any, MutableMapping, Optional, cast
@@ -186,11 +189,13 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 4
+LIBPATCH = 5
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_TCP_RELATION_NAME = "haproxy-route-tcp"
 HAPROXY_CONFIG_INVALID_CHARACTERS = "\n\t#\\'\"\r$ "
+PORT_RANGE_PATTERN = re.compile(r"^(\d+)-(\d+)$")
+PORT_RANGE_MAX_SIZE = 1001
 
 
 def value_contains_invalid_characters(value: Optional[str]) -> Optional[str]:
@@ -235,6 +240,53 @@ def valid_domain_with_wildcard(value: str) -> str:
 
 
 VALIDSTR = Annotated[str, BeforeValidator(value_contains_invalid_characters)]
+
+
+def _validate_port_range(port_range: Optional[str]) -> Optional[str]:
+    """Validate the port_range string format.
+
+    The port_range must be in the format "start-end" where:
+    - start and end are valid port numbers (1-65535)
+    - start < end
+    - the range contains at most PORT_RANGE_MAX_SIZE ports
+
+    Args:
+        port_range: The port range string to validate (e.g. "10500-10600").
+
+    Raises:
+        ValueError: When the port range format is invalid.
+
+    Returns:
+        The validated port range string.
+    """
+    if port_range is None:
+        return None
+
+    match = PORT_RANGE_PATTERN.match(port_range)
+    if not match:
+        raise ValueError(
+            f"Invalid port_range format: '{port_range}'. Expected 'start-end' (e.g. '10500-10600')."
+        )
+
+    start, end = int(match.group(1)), int(match.group(2))
+
+    if start < 1 or end < 1 or start > 65535 or end > 65535:
+        raise ValueError(
+            f"Port range values must be between 1 and 65535, got '{port_range}'."
+        )
+
+    if start >= end:
+        raise ValueError(
+            f"Port range start must be less than end, got '{port_range}'."
+        )
+
+    if (end - start + 1) > PORT_RANGE_MAX_SIZE:
+        raise ValueError(
+            f"Port range too large: '{port_range}' contains {end - start + 1} ports, "
+            f"maximum is {PORT_RANGE_MAX_SIZE}."
+        )
+
+    return port_range
 
 
 class DataValidationError(Exception):
@@ -592,6 +644,8 @@ class TcpRequirerApplicationData(_DatabagModel):
 
     Attributes:
         port: The port exposed on the provider.
+        port_range: A range of ports in "start-end" format (e.g. "10500-10600").
+            Mutually exclusive with port.
         backend_port: The port where the backend service is listening. Defaults to the
             provider port.
         hosts: List of backend server addresses. Currently only support IP addresses.
@@ -609,7 +663,19 @@ class TcpRequirerApplicationData(_DatabagModel):
         proxy_protocol: Whether to enable PROXY protocol when connecting to backend servers.
     """
 
-    port: int = Field(description="The port exposed on the provider.", gt=0, le=65535)
+    port: Optional[int] = Field(
+        description="The port exposed on the provider. Mutually exclusive with port_range.",
+        default=None,
+        gt=0,
+        le=65535,
+    )
+    port_range: Optional[Annotated[VALIDSTR, BeforeValidator(_validate_port_range)]] = Field(
+        description=(
+            "A range of ports in 'start-end' format (e.g. '10500-10600'). "
+            "Mutually exclusive with port."
+        ),
+        default=None,
+    )
     backend_port: Optional[int] = Field(
         description=(
             "The port where the backend service is listening. Defaults to the provider port."
@@ -663,15 +729,32 @@ class TcpRequirerApplicationData(_DatabagModel):
     )
 
     @model_validator(mode="after")
+    def check_port_or_port_range_set(self) -> "Self":
+        """Check that exactly one of port or port_range is set.
+
+        Raises:
+            ValueError: When both port and port_range are set, or neither is set.
+
+        Returns:
+            The validated model.
+        """
+        if self.port is not None and self.port_range is not None:
+            raise ValueError("port and port_range are mutually exclusive; set one, not both.")
+        if self.port is None and self.port_range is None:
+            raise ValueError("Either port or port_range must be set.")
+        return self
+
+    @model_validator(mode="after")
     def assign_default_backend_port(self) -> "Self":
         """Assign a default value to backend_port if not set.
 
-        The value is equal to the provider port.
+        The value is equal to the provider port. When port_range is set,
+        backend_port is not meaningful and the default assignment is skipped.
 
         Returns:
             The model with backend_port default value applied.
         """
-        if self.backend_port is None:
+        if self.backend_port is None and self.port is not None:
             self.backend_port = self.port
         return self
 
@@ -688,6 +771,25 @@ class TcpRequirerApplicationData(_DatabagModel):
         if not self.enforce_tls and self.sni is not None:
             raise ValueError("You can't set SNI and disable TLS at the same time.")
         return self
+
+    @property
+    def ports(self) -> list[int]:
+        """Return the list of ports for this configuration.
+
+        If a single port is set, returns [port].
+        If a port_range is set, returns the expanded range of ports.
+
+        Returns:
+            A list of integer port numbers.
+        """
+        if self.port is not None:
+            return [self.port]
+        if self.port_range is not None:
+            match = PORT_RANGE_PATTERN.match(self.port_range)
+            if match:
+                start, end = int(match.group(1)), int(match.group(2))
+                return list(range(start, end + 1))
+        return []
 
 
 class HaproxyRouteTcpProviderAppData(_DatabagModel):
@@ -983,6 +1085,7 @@ class HaproxyRouteTcpRequirer(Object):
         relation_name: str,
         *,
         port: Optional[int] = None,
+        port_range: Optional[str] = None,
         backend_port: Optional[int] = None,
         hosts: Optional[list[IPvAnyAddress]] = None,
         sni: Optional[str] = None,
@@ -1016,10 +1119,12 @@ class HaproxyRouteTcpRequirer(Object):
         Args:
             charm: The charm that is instantiating the library.
             relation_name: The name of the relation to bind to.
-            port: The provider port.
-            backend_port: List of ports the service is listening on.
+            port: The provider port. Mutually exclusive with port_range.
+            port_range: A range of ports in "start-end" format (e.g. "10500-10600").
+                Mutually exclusive with port.
+            backend_port: The port the backend service is listening on. Defaults to the provider port.
             hosts: List of backend server addresses. Currently only support IP addresses.
-            sni: List of URL paths to route to this service.
+            sni: Server name identification. Used to route traffic to the service.
             check_interval: Interval between health checks in seconds.
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
@@ -1059,6 +1164,7 @@ class HaproxyRouteTcpRequirer(Object):
         # build the full application data
         self._application_data = self._generate_application_data(
             port=port,
+            port_range=port_range,
             backend_port=backend_port,
             hosts=hosts,
             sni=sni,
@@ -1111,7 +1217,8 @@ class HaproxyRouteTcpRequirer(Object):
     def provide_haproxy_route_tcp_requirements(
         self,
         *,
-        port: int,
+        port: Optional[int] = None,
+        port_range: Optional[str] = None,
         backend_port: Optional[int] = None,
         hosts: Optional[list[IPvAnyAddress]] = None,
         sni: Optional[str] = None,
@@ -1143,10 +1250,12 @@ class HaproxyRouteTcpRequirer(Object):
         """Update haproxy-route requirements data in the relation.
 
         Args:
-            port: The provider port.
-            backend_port: List of ports the service is listening on.
+            port: The provider port. Mutually exclusive with port_range.
+            port_range: A range of ports in "start-end" format (e.g. "10500-10600").
+                Mutually exclusive with port.
+            backend_port: The port the backend service is listening on. Defaults to the provider port.
             hosts: List of backend server addresses. Currently only support IP addresses.
-            sni: List of URL paths to route to this service.
+            sni: Server name identification. Used to route traffic to the service.
             check_interval: Interval between health checks in seconds.
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
@@ -1179,6 +1288,7 @@ class HaproxyRouteTcpRequirer(Object):
         self._unit_address = unit_address
         self._application_data = self._generate_application_data(
             port=port,
+            port_range=port_range,
             backend_port=backend_port,
             hosts=hosts,
             sni=sni,
@@ -1213,6 +1323,7 @@ class HaproxyRouteTcpRequirer(Object):
         self,
         *,
         port: Optional[int] = None,
+        port_range: Optional[str] = None,
         backend_port: Optional[int] = None,
         hosts: Optional[list[IPvAnyAddress]] = None,
         sni: Optional[str] = None,
@@ -1243,10 +1354,12 @@ class HaproxyRouteTcpRequirer(Object):
         """Generate the complete application data structure.
 
         Args:
-            port: The provider port.
-            backend_port: List of ports the service is listening on.
+            port: The provider port. Mutually exclusive with port_range.
+            port_range: A range of ports in "start-end" format (e.g. "10500-10600").
+                Mutually exclusive with port.
+            backend_port: The port the backend service is listening on. Defaults to the provider port.
             hosts: List of backend server addresses. Currently only support IP addresses.
-            sni: List of URL paths to route to this service.
+            sni: Server name identification. Used to route traffic to the service.
             check_interval: Interval between health checks in seconds.
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
@@ -1286,6 +1399,7 @@ class HaproxyRouteTcpRequirer(Object):
 
         application_data: dict[str, Any] = {
             "port": port,
+            "port_range": port_range,
             "backend_port": backend_port,
             "hosts": hosts,
             "sni": sni,
@@ -1452,8 +1566,8 @@ class HaproxyRouteTcpRequirer(Object):
 
     def update_relation_data(self) -> None:
         """Update both application and unit data in the relation."""
-        if not self._application_data.get("port"):
-            logger.warning("port must be set, skipping update.")
+        if not self._application_data.get("port") and not self._application_data.get("port_range"):
+            logger.warning("port or port_range must be set, skipping update.")
             return
 
         if relation := self.relation:
@@ -1561,6 +1675,21 @@ class HaproxyRouteTcpRequirer(Object):
             Self: The HaproxyRouteTcpRequirer class
         """
         self._application_data["port"] = port
+        self._application_data["port_range"] = None
+        return self
+
+    def configure_port_range(self, port_range: str) -> "Self":
+        """Set the provider port range.
+
+        Args:
+            port_range: The port range in "start-end" format (e.g. "10500-10600").
+                Mutually exclusive with port.
+
+        Returns:
+            Self: The HaproxyRouteTcpRequirer class
+        """
+        self._application_data["port_range"] = port_range
+        self._application_data["port"] = None
         return self
 
     def configure_backend_port(self, backend_port: int) -> "Self":

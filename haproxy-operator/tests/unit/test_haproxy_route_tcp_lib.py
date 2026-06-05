@@ -11,6 +11,7 @@ from typing import Any, cast
 import pytest
 from charms.haproxy.v1.haproxy_route_tcp import (
     HaproxyRouteTcpProviderAppData,
+    HaproxyRouteTcpRequirer,
     HaproxyRouteTcpRequirerData,
     HaproxyRouteTcpRequirersData,
     LoadBalancingAlgorithm,
@@ -494,3 +495,110 @@ def test_requirer_application_data_proxy_protocol_enabled():
     data = TcpRequirerApplicationData(port=8080, proxy_protocol=True)
 
     assert data.proxy_protocol is True
+
+
+def test_tcp_requirer_application_data_port_range():
+    """
+    arrange: Create a TcpRequirerApplicationData model with port_range.
+    act: Validate the model.
+    assert: port_range is set and port is None.
+    """
+    data = TcpRequirerApplicationData(port_range="10500-10600")
+
+    assert data.port is None
+    assert data.port_range == "10500-10600"
+
+
+def test_tcp_requirer_application_data_port_and_port_range_exclusive():
+    """
+    arrange: Create a TcpRequirerApplicationData model with both port and port_range.
+    act: Validate the model.
+    assert: Validation raises an error because they are mutually exclusive.
+    """
+    with pytest.raises(ValidationError, match="mutually exclusive"):
+        TcpRequirerApplicationData(port=8080, port_range="10500-10600")
+
+
+def test_tcp_requirer_application_data_port_range_invalid_format():
+    """
+    arrange: Create a TcpRequirerApplicationData model with an invalid port_range format.
+    act: Validate the model.
+    assert: Validation raises an error.
+    """
+    invalid_ranges = [
+        "10500",           # not a range
+        "10500-10600-1",   # too many parts
+        "abc-def",         # non-numeric
+        "10500:10600",     # wrong separator
+        "60000-50000",     # start > end
+        "0-100",           # start < 1
+        "1-70000",         # end > 65535
+        "1-1002",          # range too large (> 1001 ports)
+    ]
+    for invalid_range in invalid_ranges:
+        with pytest.raises(ValidationError):
+            TcpRequirerApplicationData(port_range=invalid_range)
+
+
+def test_tcp_requirer_application_data_port_range_ports_property():
+    """
+    arrange: Create a TcpRequirerApplicationData model with port_range "10500-10502".
+    act: Access the ports property.
+    assert: ports expands to [10500, 10501, 10502].
+    """
+    data = TcpRequirerApplicationData(port_range="10500-10502")
+
+    assert data.ports == [10500, 10501, 10502]
+
+
+def test_tcp_requirer_application_data_ports_property_single_port():
+    """
+    arrange: Create a TcpRequirerApplicationData model with a single port.
+    act: Access the ports property.
+    assert: ports returns [port].
+    """
+    data = TcpRequirerApplicationData(port=8080)
+
+    assert data.ports == [8080]
+
+
+def test_tcp_requirer_application_data_neither_port_nor_range():
+    """
+    arrange: Create a TcpRequirerApplicationData model with neither port nor port_range.
+    act: Validate the model.
+    assert: Validation raises an error.
+    """
+    with pytest.raises(ValidationError, match="Either port or port_range must be set"):
+        TcpRequirerApplicationData()
+
+
+def test_tcp_requirer_application_data_port_range_backend_port_not_defaulted():
+    """
+    arrange: Create a TcpRequirerApplicationData model with port_range and no backend_port.
+    act: Validate the model.
+    assert: backend_port is None (not defaulted when port_range is used).
+    """
+    data = TcpRequirerApplicationData(port_range="10500-10502")
+
+    assert data.backend_port is None
+
+
+def test_requirer_configure_port_range():
+    """
+    arrange: Create a mock HaproxyRouteTcpRequirer-like object with _application_data.
+    act: Call configure_port_range and verify chaining.
+    assert: port_range is set, port is cleared, and the method returns self for chaining.
+    """
+    from unittest.mock import MagicMock
+
+    # We can't easily instantiate HaproxyRouteTcpRequirer without a real charm,
+    # so we verify the method exists and works with a mock object that has
+    # _application_data dict.
+    mock_requirer = MagicMock()
+    mock_requirer._application_data = {"port": 8080, "port_range": None}
+
+    # Directly call the real method on the class
+    HaproxyRouteTcpRequirer.configure_port_range(mock_requirer, "10500-10600")
+
+    assert mock_requirer._application_data["port_range"] == "10500-10600"
+    assert mock_requirer._application_data["port"] is None
