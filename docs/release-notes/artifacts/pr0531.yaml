@@ -7,10 +7,12 @@ changes:
     description: >
       Replaced the canonical/operator-workflows-based integration test workflow
       with the canonical/charm-ci reusable workflow. Added artifacts.yaml for
-      opcli artifact declarations, concierge.yaml for LXD-based Juju test
-      environment provisioning, and updated spread.yaml to use the
-      integration-test virtual backend with integration-suites for all
-      sub-charm test directories.
+      opcli artifact declarations, concierge.yaml (LXD) and concierge-ck8s.yaml
+      (canonical-k8s) for test environment provisioning, and updated spread.yaml
+      to use the integration-test virtual backend with the pytest-opcli plugin
+      for all sub-charm test directories. Added a separate docs_spread.yaml
+      workflow for tutorial/docs spread tests, with integration tests filtered
+      via spread-jobs-include to run independently.
     urls:
       pr:
         - https://github.com/canonical/haproxy-operator/pull/531
