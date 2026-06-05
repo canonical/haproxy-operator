@@ -137,3 +137,22 @@ class AnyCharm(AnyCharmBase):
             proxy_protocol=True,
             sni=CNAME,
         )
+
+    def update_relation_with_port_range(self):
+        """Configure ping-pong-tcp on port 4500 (plaintext) and set a port range in the relation.
+
+        HAProxy will expose ports 4500-4510 and forward each connection to the backend
+        on the same port (dst_port passthrough), so connecting to haproxy:4500 reaches
+        the backend listening on 4500.
+        """
+        subprocess.check_output(  # nosec
+            ["/bin/bash", "-c", "snap set ping-pong-tcp port=4500 host=0.0.0.0"]
+        )
+        subprocess.check_output(  # nosec
+            ["/bin/bash", "-c", "snap unset ping-pong-tcp tls.cert tls.key"]
+        )
+        self._haproxy_route_tcp.provide_haproxy_route_tcp_requirements(
+            port_range=(4500, 4510),
+            tls_terminate=False,
+            enforce_tls=False,
+        )

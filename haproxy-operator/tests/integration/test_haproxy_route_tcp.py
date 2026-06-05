@@ -114,3 +114,25 @@ def test_haproxy_route_tcp(
         f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
     )
     assert "send-proxy" in haproxy_config
+
+    # Test with port_range (1-to-1 port mapping, plaintext)
+    juju.run(
+        f"{any_charm_haproxy_route_tcp_requirer}/0",
+        "rpc",
+        {"method": "update_relation_with_port_range"},
+    )
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, any_charm_haproxy_route_tcp_requirer
+        )
+    )
+
+    haproxy_config = juju.ssh(
+        f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
+    )
+    assert "4500-4510" in haproxy_config
+
+    with socket.create_connection((str(haproxy_ip_address), 4500)) as sock:
+        sock.sendall(b"ping\r\n")
+        server_response = sock.recv(1024)
+        assert "pong" in str(server_response)
