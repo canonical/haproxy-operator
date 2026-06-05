@@ -562,10 +562,12 @@ def test_requirer_application_data_neither_port_nor_port_range():
     """
     arrange: Attempt to create data without port or port_range.
     act: Validate the model.
-    assert: ValidationError is raised.
+    assert: Model is created successfully with both port and port_range as None.
+        The provider is responsible for detecting this empty-databag state.
     """
-    with pytest.raises(ValidationError):
-        TcpRequirerApplicationData()
+    data = TcpRequirerApplicationData()
+    assert data.port is None
+    assert data.port_range is None
 
 
 def test_requirer_application_data_port_range_invalid_format():

@@ -708,10 +708,10 @@ class TcpRequirerApplicationData(_DatabagModel):
 
     @model_validator(mode="after")
     def validate_port_xor_port_range(self) -> "Self":
-        """Ensure exactly one of port or port_range is set.
+        """Ensure port and port_range are not both set.
 
         Raises:
-            ValueError: When neither or both port and port_range are set,
+            ValueError: When both port and port_range are set simultaneously,
                 or when port_range has an invalid format.
 
         Returns:
@@ -719,8 +719,8 @@ class TcpRequirerApplicationData(_DatabagModel):
         """
         port_set = self.port is not None
         port_range_set = self.port_range is not None
-        if port_set == port_range_set:
-            raise ValueError("Exactly one of 'port' or 'port_range' must be set.")
+        if port_set and port_range_set:
+            raise ValueError("Both 'port' and 'port_range' cannot be set simultaneously.")
         if self.port_range is not None:
             parse_port_range(self.port_range)
         return self
@@ -1000,13 +1000,18 @@ class HaproxyRouteTcpProvider(Object):
             RequirerApplicationData: Validated application data from the requirer.
         """
         try:
-            return cast(
+            data = cast(
                 TcpRequirerApplicationData,
                 TcpRequirerApplicationData.load(relation.data[relation.app]),
             )
         except DataValidationError:
             logger.error("Invalid requirer application data for %s", relation.app.name)
             raise
+        if data.port is None and data.port_range is None:
+            raise DataValidationError(
+                f"Requirer application data for {relation.app.name} has neither port nor port_range set."
+            )
+        return data
 
     def publish_proxied_endpoints(self, endpoints: list[str], relation: Relation) -> None:
         """Publish to the app databag the proxied endpoints.

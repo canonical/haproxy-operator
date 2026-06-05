@@ -1,0 +1,14 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+changes:
+  - title: Added port_range support to haproxy-route-tcp interface
+    author: github-actions[bot]
+    type: feature
+    description: The haproxy-route-tcp interface now supports a port_range attribute (e.g. "10500-10600") for 1-to-1 port mapping using HAProxy's bind range syntax.
+    urls:
+      pr: https://github.com/canonical/haproxy-operator/pull/538
+      related_doc:
+      related_issue: https://github.com/canonical/haproxy-operator/issues/525
+    visibility: public
+    highlight: false
