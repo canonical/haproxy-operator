@@ -631,19 +631,20 @@ class HaproxyRouteRequirersInformation:
             for backend in valid_backends
             if backend.application_data.external_grpc_port
         }
-        tcp_ports = {frontend.port: frontend for frontend in self.tcp_frontends}
 
         # Check for conflicts between standard HTTP and TCP/gRPC ports
         if has_http_backends:
             for standard_port in standard_ports:
-                if standard_port in tcp_ports:
-                    logger.error(
-                        f"TCP backend conflicts with HTTP backends on external port {standard_port}."
-                    )
-                    self.relation_ids_with_invalid_data_tcp.update(
-                        {backend.relation_id for backend in tcp_ports[standard_port].backends}
-                    )
-                    self.ports_with_conflicts.add(standard_port)
+                for frontend in self.tcp_frontends:
+                    start, end = _get_frontend_port_interval(frontend)
+                    if start <= standard_port <= end:
+                        logger.error(
+                            f"TCP backend conflicts with HTTP backends on external port {standard_port}."
+                        )
+                        self.relation_ids_with_invalid_data_tcp.update(
+                            {backend.relation_id for backend in frontend.backends}
+                        )
+                        self.ports_with_conflicts.update(range(start, end + 1))
                 if standard_port in grpc_ports:
                     logger.error(
                         f"gRPC backend conflicts with HTTP backends on external port {standard_port}."
@@ -652,13 +653,18 @@ class HaproxyRouteRequirersInformation:
                     self.ports_with_conflicts.add(standard_port)
 
         # Check for conflicts between gRPC and TCP ports
-        for port in grpc_ports.keys() & tcp_ports.keys():
-            logger.error(f"Conflicting TCP backend and gRPC backend on external port {port}.")
-            self.relation_ids_with_invalid_data_tcp.update(
-                {backend.relation_id for backend in tcp_ports[port].backends}
-            )
-            self.relation_ids_with_invalid_data.add(grpc_ports[port].relation_id)
-            self.ports_with_conflicts.add(port)
+        for grpc_port, grpc_backend in grpc_ports.items():
+            for frontend in self.tcp_frontends:
+                start, end = _get_frontend_port_interval(frontend)
+                if start <= grpc_port <= end:
+                    logger.error(
+                        f"Conflicting TCP backend and gRPC backend on external port {grpc_port}."
+                    )
+                    self.relation_ids_with_invalid_data_tcp.update(
+                        {backend.relation_id for backend in frontend.backends}
+                    )
+                    self.relation_ids_with_invalid_data.add(grpc_backend.relation_id)
+                    self.ports_with_conflicts.update(range(start, end + 1))
 
         if self.ports_with_conflicts:
             logger.warning(f"The following ports have conflicts: {self.ports_with_conflicts}")
@@ -686,7 +692,7 @@ class HaproxyRouteRequirersInformation:
         return [
             frontend
             for frontend in self.tcp_frontends
-            if frontend.port not in self.ports_with_conflicts
+            if not self.ports_with_conflicts.intersection(frontend.all_ports)
         ]
 
     @property
@@ -782,6 +788,20 @@ def generate_hostname_acls(
     return {application_data.hostname, *application_data.additional_hostnames}
 
 
+def _get_frontend_port_interval(frontend: HAProxyRouteTcpFrontend) -> tuple[int, int]:
+    """Get the port interval for a TCP frontend.
+
+    Args:
+        frontend: The TCP frontend.
+
+    Returns:
+        tuple[int, int]: The (start, end) port interval (inclusive).
+    """
+    if frontend.port_range:
+        return frontend.port_range
+    return (frontend.port, frontend.port)
+
+
 def parse_haproxy_route_tcp_requirers_data(
     tcp_requirers: HaproxyRouteTcpRequirersData,
 ) -> list[HAProxyRouteTcpFrontend]:
@@ -790,12 +810,19 @@ def parse_haproxy_route_tcp_requirers_data(
     Returns:
         list[HAProxyRouteTcpFrontend]: The parsed frontend data.
     """
-    port_to_backends_mapping: dict[int, list[HAProxyRouteTcpBackend]] = defaultdict(list)
+    port_key_to_backends_mapping: dict[
+        tuple[int, int | None], list[HAProxyRouteTcpBackend]
+    ] = defaultdict(list)
     for requirer in tcp_requirers.requirers_data:
         endpoint = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(requirer)
-        port_to_backends_mapping[endpoint.application_data.port].append(endpoint)
+        app_data = endpoint.application_data
+        if app_data.port_range:
+            key: tuple[int, int | None] = app_data.port_range
+        else:
+            key = (cast(int, app_data.port), None)
+        port_key_to_backends_mapping[key].append(endpoint)
     tcp_frontends: list[HAProxyRouteTcpFrontend] = []
-    for backends in port_to_backends_mapping.values():
+    for backends in port_key_to_backends_mapping.values():
         try:
             frontend = HAProxyRouteTcpFrontend.from_backends(backends)
             tcp_frontends.append(frontend)

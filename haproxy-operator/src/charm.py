@@ -402,8 +402,9 @@ class HAProxyCharm(ops.CharmBase):
             80,
             443,
             *(
-                frontend.port
+                port
                 for frontend in haproxy_route_requirers_information.valid_tcp_frontends()
+                for port in frontend.all_ports
             ),
             *(
                 backend.application_data.external_grpc_port
@@ -699,18 +700,20 @@ class HAProxyCharm(ops.CharmBase):
                     continue
                 if frontend.is_sni_routing_enabled:
                     self.haproxy_route_tcp_provider.publish_proxied_endpoints(
-                        [f"{backend.application_data.sni}:{frontend.port}"], relation
+                        [f"{backend.application_data.sni}:{port}" for port in frontend.all_ports],
+                        relation,
                     )
                     continue
                 if ha_information.ha_integration_ready:
                     self.haproxy_route_tcp_provider.publish_proxied_endpoints(
-                        [f"{ha_information.vip}:{frontend.port}"], relation
+                        [f"{ha_information.vip}:{port}" for port in frontend.all_ports], relation
                     )
                     continue
                 self.haproxy_route_tcp_provider.publish_proxied_endpoints(
                     [
-                        f"{unit_address}:{frontend.port}"
+                        f"{unit_address}:{port}"
                         for unit_address in self._get_peer_units_address()
+                        for port in frontend.all_ports
                     ],
                     relation,
                 )

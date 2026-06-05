@@ -157,7 +157,6 @@ class SomeCharm(CharmBase):
 
 import json
 import logging
-from collections import defaultdict
 from enum import Enum
 from typing import Annotated, Any, MutableMapping, Optional, cast
 
@@ -186,7 +185,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 3
+LIBPATCH = 4
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_TCP_RELATION_NAME = "haproxy-route-tcp"
@@ -588,9 +587,12 @@ class TcpRequirerApplicationData(_DatabagModel):
     """Configuration model for HAProxy route requirer application data.
 
     Attributes:
-        port: The port exposed on the provider.
+        port: The port exposed on the provider. Mutually exclusive with port_range.
+        port_range: A range of ports to expose as a (start, end) tuple (inclusive).
+            When set, each port in the range maps 1-to-1 to the same port on the backend.
+            Mutually exclusive with port.
         backend_port: The port where the backend service is listening. Defaults to the
-            provider port.
+            provider port. Not applicable when port_range is set.
         hosts: List of backend server addresses. Currently only support IP addresses.
         sni: Server name identification. Used to route traffic to the service.
         check: TCP health check configuration
@@ -606,7 +608,20 @@ class TcpRequirerApplicationData(_DatabagModel):
         proxy_protocol: Whether to enable PROXY protocol when connecting to backend servers.
     """
 
-    port: int = Field(description="The port exposed on the provider.", gt=0, le=65535)
+    port: Optional[int] = Field(
+        description="The port exposed on the provider. Mutually exclusive with port_range.",
+        default=None,
+        gt=0,
+        le=65535,
+    )
+    port_range: Optional[tuple[int, int]] = Field(
+        description=(
+            "A range of ports to expose as a (start, end) tuple (inclusive). "
+            "When set, each port maps 1-to-1 to the same port on the backend. "
+            "Mutually exclusive with port."
+        ),
+        default=None,
+    )
     backend_port: Optional[int] = Field(
         description=(
             "The port where the backend service is listening. Defaults to the provider port."
@@ -660,14 +675,57 @@ class TcpRequirerApplicationData(_DatabagModel):
     )
 
     @model_validator(mode="after")
+    def validate_port_or_port_range(self) -> "Self":
+        """Validate that exactly one of port or port_range is set.
+
+        Raises:
+            ValueError: If neither or both of port and port_range are set.
+            ValueError: If port_range values are invalid.
+
+        Returns:
+            The validated model.
+        """
+        if self.port is None and self.port_range is None:
+            raise ValueError("Either port or port_range must be set.")
+        if self.port is not None and self.port_range is not None:
+            raise ValueError("port and port_range are mutually exclusive.")
+        if self.port_range is not None:
+            start, end = self.port_range
+            if start <= 0 or end > 65535:
+                raise ValueError("port_range values must be between 1 and 65535.")
+            if end <= start:
+                raise ValueError("port_range end must be greater than start.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_backend_port_with_port_range(self) -> "Self":
+        """Validate backend_port is not a shifted mapping when port_range is set.
+
+        Raises:
+            ValueError: If backend_port shifts the port range (1-to-1 mapping is required).
+
+        Returns:
+            The validated model.
+        """
+        if self.port_range is not None and self.backend_port is not None and self.backend_port != self.port_range[0]:
+                raise ValueError(
+                    "backend_port cannot differ from port_range start: "
+                    "port_range requires 1-to-1 port mapping."
+                )
+        return self
+
+    @model_validator(mode="after")
     def assign_default_backend_port(self) -> "Self":
         """Assign a default value to backend_port if not set.
 
-        The value is equal to the provider port.
+        The value is equal to the provider port. Skipped when port_range is set
+        since port_range mode uses 1-to-1 mapping (frontend port = backend port).
 
         Returns:
             The model with backend_port default value applied.
         """
+        if self.port_range is not None:
+            return self
         if self.backend_port is None:
             self.backend_port = self.port
         return self
@@ -738,24 +796,25 @@ class HaproxyRouteTcpRequirersData:
 
     @model_validator(mode="after")
     def check_ports_unique(self) -> Self:
-        """Check that requirers define unique ports.
+        """Check that requirers define non-overlapping port intervals.
 
         Returns:
             The validated model, with invalid relation IDs updated in
                 `self.relation_ids_with_invalid_data`
         """
-        # Maybe the logic here can be optimized, we want to keep track of
-        # the relation IDs that request overlapping ports to ignore them during
-        # rendering of the haproxy configuration.
-        relation_ids_per_port: dict[int, list[int]] = defaultdict(list[int])
+        intervals: list[tuple[int, int, int]] = []
         for requirer_data in self.requirers_data:
-            relation_ids_per_port[requirer_data.application_data.port].append(
-                requirer_data.relation_id
-            )
+            app_data = requirer_data.application_data
+            if app_data.port_range is not None:
+                start, end = app_data.port_range
+            else:
+                start = end = cast(int, app_data.port)
+            intervals.append((start, end, requirer_data.relation_id))
 
-        for relation_ids in relation_ids_per_port.values():
-            if len(relation_ids) > 1:
-                self.relation_ids_with_invalid_data.update(relation_ids)
+        for i, (start_a, end_a, rid_a) in enumerate(intervals):
+            for start_b, end_b, rid_b in intervals[i + 1 :]:
+                if start_a <= end_b and start_b <= end_a:
+                    self.relation_ids_with_invalid_data.update([rid_a, rid_b])
         return self
 
 
@@ -980,6 +1039,7 @@ class HaproxyRouteTcpRequirer(Object):
         relation_name: str,
         *,
         port: Optional[int] = None,
+        port_range: Optional[tuple[int, int]] = None,
         backend_port: Optional[int] = None,
         hosts: Optional[list[IPvAnyAddress]] = None,
         sni: Optional[str] = None,
@@ -1013,7 +1073,8 @@ class HaproxyRouteTcpRequirer(Object):
         Args:
             charm: The charm that is instantiating the library.
             relation_name: The name of the relation to bind to.
-            port: The provider port.
+            port: The provider port. Mutually exclusive with port_range.
+            port_range: A range of ports as (start, end) inclusive. Mutually exclusive with port.
             backend_port: List of ports the service is listening on.
             hosts: List of backend server addresses. Currently only support IP addresses.
             sni: List of URL paths to route to this service.
@@ -1021,7 +1082,7 @@ class HaproxyRouteTcpRequirer(Object):
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
             check_type: Health check type,
-                Can be “generic”, “mysql”, “postgres”, “redis” or “smtp”.
+                Can be "generic", "mysql", "postgres", "redis" or "smtp".
             check_send: Only used in generic health checks,
                 specify a string to send in the health check request.
             check_expect: Only used in generic health checks,
@@ -1056,6 +1117,7 @@ class HaproxyRouteTcpRequirer(Object):
         # build the full application data
         self._application_data = self._generate_application_data(
             port=port,
+            port_range=port_range,
             backend_port=backend_port,
             hosts=hosts,
             sni=sni,
@@ -1108,7 +1170,8 @@ class HaproxyRouteTcpRequirer(Object):
     def provide_haproxy_route_tcp_requirements(
         self,
         *,
-        port: int,
+        port: Optional[int] = None,
+        port_range: Optional[tuple[int, int]] = None,
         backend_port: Optional[int] = None,
         hosts: Optional[list[IPvAnyAddress]] = None,
         sni: Optional[str] = None,
@@ -1140,7 +1203,8 @@ class HaproxyRouteTcpRequirer(Object):
         """Update haproxy-route requirements data in the relation.
 
         Args:
-            port: The provider port.
+            port: The provider port. Mutually exclusive with port_range.
+            port_range: A range of ports as (start, end) inclusive. Mutually exclusive with port.
             backend_port: List of ports the service is listening on.
             hosts: List of backend server addresses. Currently only support IP addresses.
             sni: List of URL paths to route to this service.
@@ -1148,7 +1212,7 @@ class HaproxyRouteTcpRequirer(Object):
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
             check_type: Health check type,
-                Can be “generic”, “mysql”, “postgres”, “redis” or “smtp”.
+                Can be "generic", "mysql", "postgres", "redis" or "smtp".
             check_send: Only used in generic health checks,
                 specify a string to send in the health check request.
             check_expect: Only used in generic health checks,
@@ -1176,6 +1240,7 @@ class HaproxyRouteTcpRequirer(Object):
         self._unit_address = unit_address
         self._application_data = self._generate_application_data(
             port=port,
+            port_range=port_range,
             backend_port=backend_port,
             hosts=hosts,
             sni=sni,
@@ -1210,6 +1275,7 @@ class HaproxyRouteTcpRequirer(Object):
         self,
         *,
         port: Optional[int] = None,
+        port_range: Optional[tuple[int, int]] = None,
         backend_port: Optional[int] = None,
         hosts: Optional[list[IPvAnyAddress]] = None,
         sni: Optional[str] = None,
@@ -1240,7 +1306,8 @@ class HaproxyRouteTcpRequirer(Object):
         """Generate the complete application data structure.
 
         Args:
-            port: The provider port.
+            port: The provider port. Mutually exclusive with port_range.
+            port_range: A range of ports as (start, end) inclusive. Mutually exclusive with port.
             backend_port: List of ports the service is listening on.
             hosts: List of backend server addresses. Currently only support IP addresses.
             sni: List of URL paths to route to this service.
@@ -1248,7 +1315,7 @@ class HaproxyRouteTcpRequirer(Object):
             check_rise: Number of successful health checks before server is considered up.
             check_fall: Number of failed health checks before server is considered down.
             check_type: Health check type,
-                Can be “generic”, “mysql”, “postgres”, “redis” or “smtp”.
+                Can be "generic", "mysql", "postgres", "redis" or "smtp".
             check_send: Only used in generic health checks,
                 specify a string to send in the health check request.
             check_expect: Only used in generic health checks,
@@ -1283,6 +1350,7 @@ class HaproxyRouteTcpRequirer(Object):
 
         application_data: dict[str, Any] = {
             "port": port,
+            "port_range": list(port_range) if port_range else None,
             "backend_port": backend_port,
             "hosts": hosts,
             "sni": sni,
@@ -1449,8 +1517,10 @@ class HaproxyRouteTcpRequirer(Object):
 
     def update_relation_data(self) -> None:
         """Update both application and unit data in the relation."""
-        if not self._application_data.get("port"):
-            logger.warning("port must be set, skipping update.")
+        if not self._application_data.get("port") and not self._application_data.get(
+            "port_range"
+        ):
+            logger.warning("port or port_range must be set, skipping update.")
             return
 
         if relation := self.relation:
@@ -1558,6 +1628,20 @@ class HaproxyRouteTcpRequirer(Object):
             Self: The HaproxyRouteTcpRequirer class
         """
         self._application_data["port"] = port
+        return self
+
+    def configure_port_range(self, start: int, end: int) -> "Self":
+        """Set a port range. Mutually exclusive with configure_port.
+
+        Args:
+            start: The start of the port range (inclusive).
+            end: The end of the port range (inclusive).
+
+        Returns:
+            Self: The HaproxyRouteTcpRequirer class
+        """
+        self._application_data["port_range"] = [start, end]
+        self._application_data["port"] = None
         return self
 
     def configure_backend_port(self, backend_port: int) -> "Self":
