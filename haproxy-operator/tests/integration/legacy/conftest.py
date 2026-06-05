@@ -6,7 +6,6 @@
 import ipaddress
 import json
 import logging
-import os.path
 import pathlib
 import textwrap
 import typing
