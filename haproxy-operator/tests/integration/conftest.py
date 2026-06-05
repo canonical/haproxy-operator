@@ -38,11 +38,9 @@ GRPC_SERVICE_STUB_SRC = GRPC_SERVER_DIR / "echo_pb2_grpc.py"
 
 
 @pytest.fixture(scope="session", name="charm")
-def charm_fixture(pytestconfig: pytest.Config):
-    """Pytest fixture that packs the charm and returns the filename, or --charm-file if set."""
-    charm = pytestconfig.getoption("--charm-file")
-    assert charm, "--charm-file must be set"
-    return charm
+def charm_fixture(charm_paths: dict[str, list[str]]) -> str:
+    """Pytest fixture that returns the path to the haproxy charm."""
+    return charm_paths["haproxy"][0]
 
 
 @pytest.fixture(scope="module", name="juju")

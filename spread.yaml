@@ -35,40 +35,32 @@ integration-suites:
     backends:
     - integration-test
     pytest-arguments-template: |
-      {% set charm = artifacts.charms | selectattr("name", "equalto", "haproxy") | first %}
-      {% for build in charm.builds | selectattr("arch", "equalto", arch) %}
-      --charm-file={{ build.path | replace('./', '../', 1) }}
-      {% endfor %}
+      --model testing
+      --keep-models
   haproxy-spoe-auth-operator/tests/integration/:
     summary: haproxy-spoe-auth-operator integration tests
     working-dir: haproxy-spoe-auth-operator/
     backends:
     - integration-test
     pytest-arguments-template: |
-      {% set charm = artifacts.charms | selectattr("name", "equalto", "haproxy-spoe-auth") | first %}
-      {% for build in charm.builds | selectattr("arch", "equalto", arch) %}
-      --charm-file={{ build.path | replace('./', '../', 1) }}
-      {% endfor %}
+      --model testing
+      --keep-models
   haproxy-ddos-protection-configurator/tests/integration/:
     summary: haproxy-ddos-protection-configurator integration tests
     working-dir: haproxy-ddos-protection-configurator/
     backends:
     - integration-test
     pytest-arguments-template: |
-      {% set charm = artifacts.charms | selectattr("name", "equalto", "haproxy-ddos-protection-configurator") | first %}
-      {% for build in charm.builds | selectattr("arch", "equalto", arch) %}
-      --charm-file={{ build.path | replace('./', '../', 1) }}
-      {% endfor %}
+      --model testing
+      --keep-models
   haproxy-route-policy-operator/tests/integration/:
     summary: haproxy-route-policy-operator integration tests
     working-dir: haproxy-route-policy-operator/
     backends:
     - integration-test
     pytest-arguments-template: |
-      {% set charm = artifacts.charms | selectattr("name", "equalto", "haproxy-route-policy") | first %}
-      {% for build in charm.builds | selectattr("arch", "equalto", arch) %}
-      --charm-file={{ build.path | replace('./', '../', 1) }}
-      {% endfor %}
+      --model testing
+      --keep-models
   tests/integration/:
     summary: global integration tests (cross-charm, requires LXD + canonical-k8s)
     working-dir: ./
@@ -76,3 +68,6 @@ integration-suites:
     - integration-test
     environment:
       CONCIERGE: concierge-ck8s.yaml
+    pytest-arguments-template: |
+      --model testing
+      --keep-models
