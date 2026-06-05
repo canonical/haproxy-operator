@@ -1,0 +1,20 @@
+version_schema: 2
+
+changes:
+  - title: Adapted CI to canonical/charm-ci reusable workflows
+    author: javierdelapuente
+    type: minor
+    description: >
+      Replaced the canonical/operator-workflows-based integration test workflow
+      with the canonical/charm-ci reusable workflow. Added artifacts.yaml for
+      opcli artifact declarations, concierge.yaml for LXD-based Juju test
+      environment provisioning, and updated spread.yaml to use the
+      integration-test virtual backend with integration-suites for all
+      sub-charm test directories.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/531
+      related_doc:
+      related_issue:
+    visibility: hidden
+    highlight: false
