@@ -124,12 +124,22 @@ def test_haproxy_route_tcp_port_range(
 ):
     """Deploy the charm with anycharm TCP requirer using port_range.
 
-    Assert that HAProxy config contains separate frontends for each port
-    in the range and that backend server lines omit the port (1-to-1 mapping).
+    Asserts:
+    - HAProxy config contains separate frontends for each port in the range
+    - Backend server lines omit the port (1-to-1 mapping)
+    - End-to-end connectivity works on every port in the range
     """
     juju.integrate(
         f"{configured_application_with_tls}:haproxy-route-tcp",
         any_charm_haproxy_route_tcp_requirer,
+    )
+
+    # Start TCP echo servers on each port in the range on the requirer unit,
+    # then configure the relation with port_range.
+    juju.run(
+        f"{any_charm_haproxy_route_tcp_requirer}/0",
+        "rpc",
+        {"method": "start_port_range_servers"},
     )
     juju.run(
         f"{any_charm_haproxy_route_tcp_requirer}/0",
@@ -142,11 +152,13 @@ def test_haproxy_route_tcp_port_range(
         )
     )
 
+    haproxy_ip_address = get_unit_ip_address(juju, configured_application_with_tls)
+
+    # Verify HAProxy config structure
     haproxy_config = juju.ssh(
         f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
     )
 
-    # Verify that separate frontends exist for each port in the range
     for port in range(10500, 10503):
         assert f"bind *:{port}" in haproxy_config, (
             f"Expected frontend bind for port {port} in HAProxy config"
@@ -155,6 +167,20 @@ def test_haproxy_route_tcp_port_range(
     # Verify that backend server lines do NOT include explicit port
     # (in port_range mode, the backend connects on the same port as the frontend)
     assert "server " in haproxy_config, "Expected server line in HAProxy config"
-    # Server lines should not have ":port" suffix when port_range is active
-    # They should have just the address, e.g., "server tcp-route-requirer 10.0.0.1"
-    # not "server tcp-route-requirer 10.0.0.1:4000"
+
+    # End-to-end connectivity: connect through HAProxy on each port in the range
+    # and verify the TCP echo server responds with "pong" when sent "ping"
+    for port in range(10500, 10503):
+        with socket.create_connection((str(haproxy_ip_address), port), timeout=5) as sock:
+            sock.sendall(b"ping\n")
+            response = sock.recv(1024)
+            assert b"pong" in response.lower(), (
+                f"Expected 'pong' response on port {port}, got: {response!r}"
+            )
+
+    # Clean up the background servers
+    juju.run(
+        f"{any_charm_haproxy_route_tcp_requirer}/0",
+        "rpc",
+        {"method": "stop_port_range_servers"},
+    )

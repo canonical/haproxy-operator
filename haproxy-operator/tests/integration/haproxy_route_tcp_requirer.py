@@ -5,10 +5,13 @@
 """haproxy-route requirer source."""
 
 import logging
+import os
+import signal
 
 # Ignoring import subprocess warning as we're using it with no user inputs
 import subprocess  # nosec
 import textwrap
+import time
 from pathlib import Path
 
 import ops
@@ -142,9 +145,83 @@ class AnyCharm(AnyCharmBase):
         """Update haproxy-route-tcp relation data with port_range.
 
         Uses port_range for 1-to-1 frontend-to-backend port mapping.
-        The ping-pong-tcp snap listens on port 4000, so we use a
-        small range (10500-10502) to verify range expansion works.
+        Uses a small range (10500-10502) to verify range expansion works.
         """
         self._haproxy_route_tcp.provide_haproxy_route_tcp_requirements(
             port_range="10500-10502",
         )
+
+    def start_port_range_servers(self):
+        """Start TCP echo servers on each port in the port_range.
+
+        For port_range mode, HAProxy connects to the backend on the same
+        port as the frontend (1-to-1 mapping). We need a listener on each
+        port in the range so that end-to-end connectivity can be verified.
+
+        Writes a small Python TCP server script and starts it as a
+        background process via nohup.
+        """
+        server_script = textwrap.dedent("""\
+            import socket
+            import threading
+            import time
+            import os
+            import signal
+
+            def handle_client(conn):
+                try:
+                    data = conn.recv(1024)
+                    if b"ping" in data.lower():
+                        conn.sendall(b"pong\\n")
+                    else:
+                        conn.sendall(b"echo: " + data)
+                except Exception:
+                    pass
+                finally:
+                    conn.close()
+
+            def start_server(port):
+                srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                srv.bind(("0.0.0.0", port))
+                srv.listen(5)
+                while True:
+                    conn, _ = srv.accept()
+                    threading.Thread(target=handle_client, args=(conn,), daemon=True).start()
+
+            PORT_RANGE_START = 10500
+            PORT_RANGE_END = 10502
+
+            # Write PID file so we can kill the process later
+            with open("/tmp/port_range_server.pid", "w") as f:
+                f.write(str(os.getpid()))
+
+            for port in range(PORT_RANGE_START, PORT_RANGE_END + 1):
+                t = threading.Thread(target=start_server, args=(port,), daemon=True)
+                t.start()
+
+            # Keep main thread alive
+            signal.pause()
+        """)
+        Path("/tmp/port_range_server.py").write_text(server_script, "utf-8")
+        # Start as background process
+        subprocess.Popen(  # nosec
+            ["nohup", "python3", "/tmp/port_range_server.py"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        # Give servers a moment to bind
+        time.sleep(1)
+        self.unit.status = ops.ActiveStatus("TCP servers ready (port range).")
+
+    def stop_port_range_servers(self):
+        """Stop the background TCP echo servers started for port_range testing."""
+        pid_file = Path("/tmp/port_range_server.pid")
+        if pid_file.exists():
+            pid = int(pid_file.read_text().strip())
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            pid_file.unlink()
+        self.unit.status = ops.ActiveStatus("TCP server ready.")
