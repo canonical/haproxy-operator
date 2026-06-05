@@ -114,3 +114,47 @@ def test_haproxy_route_tcp(
         f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
     )
     assert "send-proxy" in haproxy_config
+
+
+@pytest.mark.abort_on_fail
+def test_haproxy_route_tcp_port_range(
+    configured_application_with_tls: str,
+    any_charm_haproxy_route_tcp_requirer: str,
+    juju: jubilant.Juju,
+):
+    """Deploy the charm with anycharm TCP requirer using port_range.
+
+    Assert that HAProxy config contains separate frontends for each port
+    in the range and that backend server lines omit the port (1-to-1 mapping).
+    """
+    juju.integrate(
+        f"{configured_application_with_tls}:haproxy-route-tcp",
+        any_charm_haproxy_route_tcp_requirer,
+    )
+    juju.run(
+        f"{any_charm_haproxy_route_tcp_requirer}/0",
+        "rpc",
+        {"method": "update_relation_with_port_range"},
+    )
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, any_charm_haproxy_route_tcp_requirer
+        )
+    )
+
+    haproxy_config = juju.ssh(
+        f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
+    )
+
+    # Verify that separate frontends exist for each port in the range
+    for port in range(10500, 10503):
+        assert f"bind *:{port}" in haproxy_config, (
+            f"Expected frontend bind for port {port} in HAProxy config"
+        )
+
+    # Verify that backend server lines do NOT include explicit port
+    # (in port_range mode, the backend connects on the same port as the frontend)
+    assert "server " in haproxy_config, "Expected server line in HAProxy config"
+    # Server lines should not have ":port" suffix when port_range is active
+    # They should have just the address, e.g., "server tcp-route-requirer 10.0.0.1"
+    # not "server tcp-route-requirer 10.0.0.1:4000"

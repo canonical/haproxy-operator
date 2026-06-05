@@ -137,3 +137,14 @@ class AnyCharm(AnyCharmBase):
             proxy_protocol=True,
             sni=CNAME,
         )
+
+    def update_relation_with_port_range(self):
+        """Update haproxy-route-tcp relation data with port_range.
+
+        Uses port_range for 1-to-1 frontend-to-backend port mapping.
+        The ping-pong-tcp snap listens on port 4000, so we use a
+        small range (10500-10502) to verify range expansion works.
+        """
+        self._haproxy_route_tcp.provide_haproxy_route_tcp_requirements(
+            port_range="10500-10502",
+        )
