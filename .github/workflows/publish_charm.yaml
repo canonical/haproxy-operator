@@ -4,35 +4,16 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
+    - main
 
 jobs:
   publish-to-edge:
     strategy:
       matrix:
-        configuration:
-          [
-            {
-              working-directory: "./haproxy-operator",
-              channel: "2.8/edge",
-              tag-prefix: "haproxy",
-            },
-            {
-              working-directory: "./haproxy-spoe-auth-operator",
-              channel: "latest/edge",
-              tag-prefix: "haproxy-spoe-auth",
-            },
-            {
-              working-directory: "./haproxy-ddos-protection-configurator",
-              channel: "latest/edge",
-              tag-prefix: "haproxy-ddos-protection-configurator",
-            },
-            {
-              working-directory: "./haproxy-route-policy-operator",
-              channel: "latest/edge",
-              tag-prefix: "haproxy-route-policy",
-            },
-          ]
+        configuration: [{working-directory: "./haproxy-operator", channel: "2.8/edge", tag-prefix: "haproxy"}, {working-directory: "./haproxy-spoe-auth-operator", channel: "latest/edge", tag-prefix: "haproxy-spoe-auth"}, {working-directory: "./haproxy-ddos-protection-configurator", channel: "latest/edge", tag-prefix: "haproxy-ddos-protection-configurator"}, {working-directory: "./haproxy-route-policy-operator", channel: "latest/edge", tag-prefix: "haproxy-route-policy"}]
+    permissions:
+      actions: read
+      contents: write
     uses: canonical/operator-workflows/.github/workflows/publish_charm.yaml@main
     secrets: inherit
     with:

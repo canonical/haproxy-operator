@@ -37,6 +37,23 @@ def test_install(context_with_install_mock, base_state):
     reconcile_default_mock.assert_called_once()
 
 
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_non_leader_waiting_for_peer_data(peer_relation, certificates_integration):
+    """
+    arrange: prepare state as non-leader with peer relation but no cert data in databag.
+    act: trigger config changed.
+    assert: unit status is WaitingStatus because peer cert data is not available yet.
+    """
+    ctx = ops.testing.Context(HAProxyCharm)
+    state = ops.testing.State(
+        relations=[peer_relation, certificates_integration],
+        leader=False,
+        config={"external-hostname": "haproxy.internal"},
+    )
+    out = ctx.run(ctx.on.config_changed(), state)
+    assert out.unit_status.name == ops.testing.WaitingStatus.name
+
+
 def test_ingress_per_unit_mode_success(
     context_with_install_mock, base_state_with_ingress_per_unit
 ):
@@ -327,7 +344,7 @@ def test_spoe_auth(monkeypatch: pytest.MonkeyPatch, certificates_integration):
     assert: The haproxy.conf and spoe_auth.conf files are writtern with the relevant lines.
     """
     monkeypatch.setattr(
-        "charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.private_key",
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4.private_key",
         MagicMock(),
     )
     render_file_mock = MagicMock()
@@ -338,7 +355,8 @@ def test_spoe_auth(monkeypatch: pytest.MonkeyPatch, certificates_integration):
 
     ctx = ops.testing.Context(HAProxyCharm)
     state = ops.testing.State(
-        relations=[certificates_integration, spoe_auth_relation, haproxy_route_relation]
+        relations=[certificates_integration, spoe_auth_relation, haproxy_route_relation],
+        leader=True,
     )
     out = ctx.run(
         ctx.on.relation_changed(spoe_auth_relation),
@@ -370,7 +388,7 @@ def test_two_spoe_auth(monkeypatch: pytest.MonkeyPatch, certificates_integration
     assert: The haproxy.conf and spoe_auth.conf files are writtern with the relevant lines.
     """
     monkeypatch.setattr(
-        "charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.private_key",
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4.private_key",
         MagicMock(),
     )
     render_file_mock = MagicMock()
@@ -393,7 +411,8 @@ def test_two_spoe_auth(monkeypatch: pytest.MonkeyPatch, certificates_integration
             spoe_auth_relation_2,
             haproxy_route_relation_1,
             haproxy_route_relation_2,
-        ]
+        ],
+        leader=True,
     )
     out = ctx.run(
         ctx.on.relation_changed(spoe_auth_relation_1),
@@ -429,7 +448,7 @@ def test_spoe_auth_invalid_data(monkeypatch: pytest.MonkeyPatch, certificates_in
     assert: No file should be updated and the charm should be blocked.
     """
     monkeypatch.setattr(
-        "charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.private_key",
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4.private_key",
         MagicMock(),
     )
     render_file_mock = MagicMock()
@@ -441,7 +460,8 @@ def test_spoe_auth_invalid_data(monkeypatch: pytest.MonkeyPatch, certificates_in
 
     ctx = ops.testing.Context(HAProxyCharm)
     state = ops.testing.State(
-        relations=[certificates_integration, spoe_auth_relation, haproxy_route_relation]
+        relations=[certificates_integration, spoe_auth_relation, haproxy_route_relation],
+        leader=True,
     )
     out = ctx.run(
         ctx.on.relation_changed(spoe_auth_relation),
