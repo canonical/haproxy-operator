@@ -526,7 +526,7 @@ fmt = [{ name = "ruff" }]
 integration = [
     { name = "jubilant", specifier = "==1.10.0" },
     { name = "juju", specifier = "==3.6.1.3" },
-    { name = "opcli", git = "https://github.com/canonical/charm-ci.git?rev=main" },
+    { name = "opcli", git = "https://github.com/canonical/charm-ci.git?rev=v0.0.1-alpha.1" },
     { name = "pytest" },
     { name = "pytest-operator" },
 ]
@@ -950,7 +950,7 @@ wheels = [
 [[package]]
 name = "opcli"
 version = "0.0.1a1"
-source = { git = "https://github.com/canonical/charm-ci.git?rev=main#51abd78efc852c71aaacd2ae865c493dd3766856" }
+source = { git = "https://github.com/canonical/charm-ci.git?rev=v0.0.1-alpha.1#51abd78efc852c71aaacd2ae865c493dd3766856" }
 dependencies = [
     { name = "jinja2" },
     { name = "pydantic" },
