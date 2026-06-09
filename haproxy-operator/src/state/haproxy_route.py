@@ -793,36 +793,20 @@ def parse_haproxy_route_tcp_requirers_data(
     Returns:
         list[HAProxyRouteTcpFrontend]: The parsed frontend data.
     """
-    port_to_backends_mapping: dict[int, list[HAProxyRouteTcpBackend]] = defaultdict(list)
-    port_range_backends: list[HAProxyRouteTcpBackend] = []
+    port_range_to_backends_mapping: dict[str, list[HAProxyRouteTcpBackend]] = defaultdict(list)
     for requirer in tcp_requirers.requirers_data:
         endpoint = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(requirer)
-        if endpoint.application_data.backend_port_range:
-            port_range_backends.append(endpoint)
-        elif endpoint.application_data.port is not None:
-            port_to_backends_mapping[endpoint.application_data.port].append(endpoint)
+        port_range_to_backends_mapping[str(endpoint.application_data.port_range)].append(endpoint)
     tcp_frontends: list[HAProxyRouteTcpFrontend] = []
 
-    # Create frontends for port-range backends (one frontend per range)
-    for endpoint in port_range_backends:
-        ports = endpoint.application_data.requested_ports_in_range
-        if ports:
-            try:
-                frontend = HAProxyRouteTcpFrontend.from_backends(
-                    [endpoint], port=ports[0]
-                )
-                tcp_frontends.append(frontend)
-            except HAProxyRouteTcpFrontendValidationError as exc:
-                logger.error(f"Failed to parse TCP frontend: {exc}")
-
     # Create frontends for single-port backends
-    for port, backends in port_to_backends_mapping.items():
+    for _key, backends in port_range_to_backends_mapping.items():
         try:
-            frontend = HAProxyRouteTcpFrontend.from_backends(backends, port=port)
+            frontend = HAProxyRouteTcpFrontend.from_backends(backends)
             tcp_frontends.append(frontend)
         except HAProxyRouteTcpFrontendValidationError as exc:
             logger.error(f"Failed to parse TCP frontend: {exc}")
-            continue
+
     return tcp_frontends
 
 

@@ -157,7 +157,6 @@ class SomeCharm(CharmBase):
 
 import json
 import logging
-from collections import defaultdict
 from enum import Enum
 from typing import Annotated, Any, MutableMapping, Optional, cast
 
@@ -584,11 +583,68 @@ class TimeoutConfiguration(BaseModel):
     )
 
 
+@dataclass(frozen=True)
+class PortRange:
+    """Represents a range of TCP ports.
+
+    Attributes:
+        start: The starting port of the range (1-65535).
+        end: The ending port of the range (1-65535).
+    """
+
+    start: int = Field(gt=0, le=65535)
+    end: int = Field(gt=0, le=65535)
+
+    def __str__(self) -> str:
+        """Return a string representation of the port range.
+
+        This is used to merge backends that request for the same range into the same frontend.
+        """
+        if self.end == self.start:
+            return f"{self.start}"
+        return f"{self.start}-{self.end}"
+
+    def __eq__(self, other: object) -> bool:
+        """Check if this port range is the same as another port range."""
+        if isinstance(other, PortRange):
+            return self.start == other.start and self.end == other.end
+        return False
+
+    def overlaps_with(self, other: "PortRange") -> bool:
+        """Check if this port range overlaps with another port range.
+
+        Args:
+            other: The other PortRange to check overlap with.
+
+        Returns:
+            bool: True if the port ranges overlap, False otherwise.
+        """
+        return self.start <= other.end and other.start <= self.end
+
+    def conflicts_with(self, other: "PortRange") -> bool:
+        """Check if this port range conflicts with another port range.
+
+        Two port ranges conflict if they overlap and are not exactly the same range.
+        This is because requirers that request for the same port range can be merged into the same frontend.
+
+        Args:
+            other: The other PortRange to check conflict with.
+
+        Returns:
+            bool: True if the port ranges conflict, False otherwise.
+        """
+        return self.overlaps_with(other) and self != other
+
+
 class TcpRequirerApplicationData(_DatabagModel):
     """Configuration model for HAProxy route requirer application data.
 
     Attributes:
         port: The port exposed on the provider.
+        backend_port_range: An optional port range for the backend.
+            If this is set, the provider will run in port range mode
+            and traffic will be routed as a 1-to-1 mapping across the port range.
+            Setting `backend_port` and `backend_port_range` at the same time is not allowed.
         backend_port: The port where the backend service is listening. Defaults to the
             provider port.
         backend_port_range: A port range in the form of "{start_port}-{end_port}".
@@ -608,9 +664,7 @@ class TcpRequirerApplicationData(_DatabagModel):
         proxy_protocol: Whether to enable PROXY protocol when connecting to backend servers.
     """
 
-    port: Optional[int] = Field(
-        description="The port exposed on the provider.", default=None, gt=0, le=65535
-    )
+    port: int = Field(description="The port exposed on the provider.", gt=0, le=65535)
     backend_port: Optional[int] = Field(
         description=(
             "The port where the backend service is listening. Defaults to the provider port."
@@ -619,11 +673,13 @@ class TcpRequirerApplicationData(_DatabagModel):
         gt=0,
         le=65525,
     )
-    backend_port_range: Optional[str] = Field(
+    port_range_end: int | None = Field(
         description=(
-            "A port range in the form of '{start_port}-{end_port}'. "
+            "End port if the requirer wants to proxy a range of ports via the same relation."
             "Cannot be set at the same time as port or backend_port."
         ),
+        gt=0,
+        le=65535,
         default=None,
     )
     sni: Optional[Annotated[VALIDSTR, BeforeValidator(valid_domain_with_wildcard)]] = Field(
@@ -671,39 +727,7 @@ class TcpRequirerApplicationData(_DatabagModel):
     )
 
     @model_validator(mode="after")
-    def validate_backend_port_range_format(self) -> "Self":
-        """Validate backend_port_range format and values.
-
-        Raises:
-            ValueError: If backend_port_range has invalid format or values.
-
-        Returns:
-            The validated model.
-        """
-        if self.backend_port_range is None:
-            return self
-        parts = self.backend_port_range.split("-")
-        if len(parts) != 2:
-            raise ValueError(
-                "backend_port_range must be in the format '{start_port}-{end_port}'."
-            )
-        try:
-            start_port = int(parts[0])
-            end_port = int(parts[1])
-        except ValueError as exc:
-            raise ValueError(
-                "backend_port_range must contain valid port numbers."
-            ) from exc
-        if not (1 <= start_port <= 65535 and 1 <= end_port <= 65535):
-            raise ValueError("Ports in backend_port_range must be between 1 and 65535.")
-        if start_port >= end_port:
-            raise ValueError(
-                "start_port must be less than end_port in backend_port_range."
-            )
-        return self
-
-    @model_validator(mode="after")
-    def validate_port_range_exclusivity(self) -> "Self":
+    def validate_port_and_backend_port_range_not_set_together(self) -> "Self":
         """Validate that backend_port_range is not set with port or backend_port.
 
         Raises:
@@ -712,38 +736,21 @@ class TcpRequirerApplicationData(_DatabagModel):
         Returns:
             The validated model.
         """
-        if self.backend_port_range is not None and (
-            self.port is not None or self.backend_port is not None
-        ):
-            raise ValueError(
-                "backend_port_range cannot be set at the same time as port or backend_port."
-            )
-        return self
-
-    @model_validator(mode="after")
-    def validate_port_or_range_required(self) -> "Self":
-        """Validate that either port or backend_port_range is set.
-
-        Raises:
-            ValueError: If neither port nor backend_port_range is set.
-
-        Returns:
-            The validated model.
-        """
-        if self.port is None and self.backend_port_range is None:
-            raise ValueError("Either port or backend_port_range must be set.")
+        if self.port_range_end is not None and self.backend_port is not None:
+            raise ValueError("port_range_end cannot be set at the same time as backend_port.")
         return self
 
     @model_validator(mode="after")
     def assign_default_backend_port(self) -> "Self":
         """Assign a default value to backend_port if not set.
 
-        The value is equal to the provider port.
+        The value is equal to the provider port. When port_range_end is set the
+        requirer is in port-range mode and backend_port does not apply.
 
         Returns:
             The model with backend_port default value applied.
         """
-        if self.backend_port is None and self.port is not None:
+        if self.backend_port is None and self.port is not None and self.port_range_end is None:
             self.backend_port = self.port
         return self
 
@@ -762,16 +769,15 @@ class TcpRequirerApplicationData(_DatabagModel):
         return self
 
     @property
-    def requested_ports_in_range(self) -> list[int]:
-        """Get the list of ports from the backend_port_range.
+    def port_range(self) -> PortRange:
+        """Get the starting port of the port range.
 
         Returns:
-            list[int]: List of ports in the range, or empty if not set.
+            The starting port of the port range.
         """
-        if self.backend_port_range is None:
-            return []
-        start_port, end_port = (int(p) for p in self.backend_port_range.split("-"))
-        return list(range(start_port, end_port + 1))
+        # ValidationError won't raise here since port and port_range_end are already validated
+        # in the current model.
+        return PortRange(self.port, self.port_range_end or self.port)
 
 
 class HaproxyRouteTcpProviderAppData(_DatabagModel):
@@ -820,31 +826,10 @@ class HaproxyRouteTcpRequirersData:
         relation_ids_with_invalid_data: Set of relation ids that contains invalid data.
     """
 
+    # We don't do any conflict validation at this level because the provider can potentially merge
+    # requirers that request for the same port into the same frontend.
     requirers_data: list[HaproxyRouteTcpRequirerData]
     relation_ids_with_invalid_data: set[int]
-
-    @model_validator(mode="after")
-    def check_ports_unique(self) -> Self:
-        """Check that requirers define unique ports.
-
-        Returns:
-            The validated model, with invalid relation IDs updated in
-                `self.relation_ids_with_invalid_data`
-        """
-        relation_ids_per_port: dict[int, list[int]] = defaultdict(list[int])
-        for requirer_data in self.requirers_data:
-            if requirer_data.application_data.backend_port_range:
-                for port in requirer_data.application_data.requested_ports_in_range:
-                    relation_ids_per_port[port].append(requirer_data.relation_id)
-            elif requirer_data.application_data.port is not None:
-                relation_ids_per_port[requirer_data.application_data.port].append(
-                    requirer_data.relation_id
-                )
-
-        for relation_ids in relation_ids_per_port.values():
-            if len(relation_ids) > 1:
-                self.relation_ids_with_invalid_data.update(relation_ids)
-        return self
 
 
 class HaproxyRouteTcpDataAvailableEvent(EventBase):
@@ -882,7 +867,7 @@ class HaproxyRouteTcpProvider(Object):
         relations: Related appliations.
     """
 
-    on = HaproxyRouteTcpProviderEvents()
+    on = HaproxyRouteTcpProviderEvents()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
 
     def __init__(
         self,
@@ -965,6 +950,11 @@ class HaproxyRouteTcpProvider(Object):
                     ) from exc
                 relation_ids_with_invalid_data.add(relation.id)
                 continue
+
+        relation_ids_with_invalid_data.update(
+            self._detect_port_range_conflicts(requirers_data)
+        )
+
         return HaproxyRouteTcpRequirersData(
             requirers_data=requirers_data,
             relation_ids_with_invalid_data=relation_ids_with_invalid_data,
@@ -1031,6 +1021,64 @@ class HaproxyRouteTcpProvider(Object):
             relation.data[self.charm.app], clear=True
         )
 
+    @staticmethod
+    def _detect_port_range_conflicts(
+        requirers_data: list["HaproxyRouteTcpRequirerData"],
+    ) -> set[int]:
+        """Detect relation IDs whose port ranges conflict with another requirer.
+
+        Two port ranges *conflict* when they overlap but are not exactly equal.
+        Requirers with the same range are considered mergeable into a single HAProxy
+        frontend and are therefore **not** conflicting.
+
+        The algorithm sorts requirers by start port (O(n log n)) and maintains a
+        "reference" range — the range that currently extends the furthest.  Any
+        requirer whose range partially overlaps the reference is flagged, along with
+        all members of the current reference group.  When a requirer starts a new,
+        non-overlapping interval it becomes the new reference.
+
+        Args:
+            requirers_data: List of validated requirer data to inspect.
+
+        Returns:
+            set[int]: Relation IDs that have at least one port-range conflict.
+        """
+        if len(requirers_data) <= 1:
+            return set()
+
+        sorted_requirers = sorted(
+            requirers_data, key=lambda r: r.application_data.port_range.start
+        )
+
+        conflicting_ids: set[int] = set()
+        # The current "reference group": requirers that all share the same range and
+        # can be merged together.
+        current_ref_ids: list[int] = [sorted_requirers[0].relation_id]
+        current_ref_range: PortRange = sorted_requirers[0].application_data.port_range
+        highest_end_port: int = sorted_requirers[0].application_data.port_range.end
+
+        for requirer_data in sorted_requirers[1:]:
+            candidate_range = requirer_data.application_data.port_range
+
+            # Same range → can be merged; add to reference group and continue.
+            if candidate_range == current_ref_range:
+                current_ref_ids.append(requirer_data.relation_id)
+                continue
+
+            # Partial overlap → conflict; flag the whole reference group plus this one.
+            if candidate_range.conflicts_with(current_ref_range):
+                conflicting_ids.update([*current_ref_ids, requirer_data.relation_id])
+
+            # When the candidate extends beyond the current high-water mark, it
+            # becomes the new reference so that subsequent requirers are compared
+            # against the widest range seen so far.
+            if candidate_range.end > highest_end_port:
+                highest_end_port = candidate_range.end
+                current_ref_range = candidate_range
+                current_ref_ids = [requirer_data.relation_id]
+
+        return conflicting_ids
+
 
 class HaproxyRouteTcpEnpointsReadyEvent(EventBase):
     """HaproxyRouteTcpEnpointsReadyEvent custom event."""
@@ -1059,7 +1107,7 @@ class HaproxyRouteTcpRequirer(Object):
         on: Custom events of the requirer.
     """
 
-    on = HaproxyRouteTcpRequirerEvents()
+    on = HaproxyRouteTcpRequirerEvents()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
 
     # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
     def __init__(
