@@ -54,15 +54,19 @@ requires:
     interface: hacluster
   receive-ca-certs:
     interface: certificate_transfer
+    optional: true
     description: Receive a CA certs for haproxy to trust.
   spoe-auth:
     interface: spoe-auth
+    optional: true
     description: Relation to provide authentication proxy to HAProxy.
   ddos-protection:
     interface: ddos_protection
+    optional: true
     limit: 1
   haproxy-route-policy:
     interface: haproxy-route-policy
+    optional: true
     limit: 1
   dns-record:
     interface: dns_record
@@ -75,8 +79,10 @@ provides:
     interface: ingress_per_unit
   cos-agent:
     interface: cos_agent
+    optional: true
   website:
     interface: http
+    optional: true
   haproxy-route:
     interface: haproxy-route
   haproxy-route-tcp:
