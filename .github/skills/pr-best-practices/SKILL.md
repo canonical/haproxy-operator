@@ -5,9 +5,9 @@ description: >
   with the final merged state (after human reviews and code changes), then synthesizes do's
   and don'ts into .github/instructions/best-practices.instructions.md so Copilot automatically
   uses these lessons in future sessions. Use this skill whenever the user wants to learn from a PR's
-  review cycle, extract patterns from AI-generated code revisions, update best practices
-  based on reviewer feedback, or says anything like "analyze PR #N", "extract lessons from
-  this PR", "update best practices", or "what did reviewers change in this PR".
+  review cycle, extract project philosophy or coding style from AI-generated code revisions, update
+  best practices based on reviewer feedback, or says anything like "analyze PR #N", "extract lessons
+  from this PR", "update best practices", or "what did reviewers change in this PR".
 ---
 
 # PR Best Practices Extractor
@@ -15,6 +15,21 @@ description: >
 Extracts coding lessons from the gap between what an LLM initially generated in a PR and what
 reviewers changed before merging. The result is a growing `.github/instructions/best-practices.instructions.md`
 file that Copilot automatically picks up in every future session.
+
+When the review comments reveal a broader design rule, phrase it as a reusable project principle
+rather than only describing the local fix. For example, if reviewers move branching or computed
+values out of a Jinja2 template, turn that into a rule about keeping templates declarative and
+computing rendered values in charm-state dataclasses or helper builders first.
+
+Use a plain reminder when the advice is already obvious on its face, like library version bumps or
+adding unit tests. Reserve Do/Don't pairs for cases where the contrast itself teaches something;
+when you do use them, keep both sides centered on the same idea and put extra explanation in the
+section intro instead of padding the bullets.
+
+Bundle reusable deterministic helpers as scripts under the skill directory. Call them from the
+skill instructions when they remove repeated parsing, fetching, or validation work from the model.
+Keep scripts small, single-purpose, and easy to reuse across iterations; leave one-off reasoning in
+the skill body instead of turning every step into code.
 
 ## Input
 
@@ -35,6 +50,8 @@ Retrieve the PR's title, URL, base branch, merged status, and the list of all co
 
 Use the GitHub API or `git` to get the full unified diff between the tree at the first
 commit and the tree at the final commit. Focus on source files and not generated or lock files.
+Also read review comments on the PR, because they often reveal the broader architectural pattern
+behind a change even when the final diff only shows the end result.
 
 For **test files only** (`**/tests/**/*.py`), also compute:
 - Diff A: `base_branch_sha -> first_commit_sha`
@@ -42,8 +59,7 @@ For **test files only** (`**/tests/**/*.py`), also compute:
 
 Only derive test-specific rules from Diff B hunks that correspond to test files that already
 had meaningful changes in Diff A. If a test file appears only in Diff B (i.e., no meaningful
-test diff in Diff A), treat that as "tests were added later" and do not infer detailed testing
-heuristics from it.
+test diff in Diff A), treat that simply as "tests were added later".
 
 The most important source files present in this repo are:
 - `**/*.py`: Charm code and test code
@@ -69,6 +85,10 @@ For each significant change, determine:
 - **What it became** — the corrected or improved version after review
 - **Why it changed** — the underlying principle or best practice being applied
 
+Use review comments alongside the diff when the comments explain a deeper architectural preference
+or layering boundary that is not obvious from code changes alone.
+The review-comment helper is the source of truth for pulling that discussion into the analysis.
+
 Group changes by theme. Common themes for this codebase include:
 - Testing patterns (unit vs integration, fixtures, mocking)
 - Error handling and defensive coding
@@ -77,6 +97,8 @@ Group changes by theme. Common themes for this codebase include:
 - Naming and readability
 - Security and input validation
 - Documentation and type hints
+- Project philosophy and layering boundaries
+- Rendering boundaries between state objects and Jinja2 templates
 
 ### Step 5: Synthesize rules with code examples
 
@@ -89,6 +111,16 @@ Rules must be:
 - Specific enough to be actionable (not "write good code")
 - Grounded in the actual diff — if you can't point to the evidence, don't include the rule
 - Generalizable beyond this specific PR
+- High-level enough to be useful across multiple PRs — avoid rules that are essentially a description of one implementation detail (e.g. "use `is_allow_http` as the ACL name"). Ask yourself: would a developer writing a different feature in this codebase benefit from this rule? If the rule only makes sense in the exact context of the diff, it is too narrow.
+
+When the diff suggests an architectural preference, spell it out. For example: "Keep Jinja2
+templates declarative; compute derived values in charm-state dataclasses or helper builders before
+rendering." The example should show the logic moving into state and the template becoming a pure
+renderer.
+
+Keep each Do/Don't pair focused on the same underlying idea. Put any extra explanation in the
+theme or subsection intro, then keep the Do and Don't bullets themselves mostly to the concrete
+example so the output stays easy to scan.
 
 **Every rule must include a code example drawn directly from the diff.** Show the before
 (what the LLM wrote) and after (what the reviewer changed it to). Use the actual variable
@@ -102,11 +134,57 @@ Special case for tests added only after the first commit:
 - In this case, include one concrete "after" snippet from the added tests as evidence, and
   explicitly note that there was no corresponding first-commit test implementation to compare.
 
-### Step 6: Update `.github/instructions/best-practices.instructions.md`
+### Step 6: Propose changes to `.github/instructions/best-practices.instructions.md`
 
-Check whether `.github/instructions/best-practices.instructions.md` exists:
+After synthesizing all rules, do **not** write directly to the file. Instead, present each
+proposed change to the user one at a time for review before applying anything.
 
-**If it does not exist**, create it with this exact structure:
+For each proposed change, show:
+- **What**: the rule or section being added or modified
+- **Why**: the evidence from the diff or review comments that justifies it
+- **Format**: the exact text as it would appear in the file
+
+Then wait for the user to confirm ("yes", "accept", "looks good") or reject/modify before moving to
+the next proposal. Only apply the change to the file once the user has confirmed it.
+
+Once all proposals have been reviewed and confirmed, apply all accepted changes in a single edit.
+
+The accepted formats are:
+
+1. **Plain reminder** for obvious guidance:
+
+```markdown
+## [Theme Name]
+
+[Short reminder sentence.]
+```
+
+2. **Lean Do/Don't pair** when the contrast teaches something:
+
+```markdown
+## [Theme Name]
+
+[Short context sentence explaining the underlying idea.]
+
+### Do
+- [Concise positive rule] ([PR #N](url))
+
+  ```python
+  [concrete code from the diff]
+  ```
+
+### Don't
+- [Concise anti-pattern] ([PR #N](url))
+
+  ```python
+  [concrete code from the diff]
+  ```
+```
+
+Keep Do/Don't bullets focused on the same idea. Put extra explanation in the section intro, and
+use a Do/Don't pair only when it adds value over a plain reminder.
+
+**If the file does not exist**, propose creating it with this skeleton as the first proposal:
 
 ```markdown
 ---
@@ -121,38 +199,6 @@ Each rule is linked to the PR where the pattern was first observed.
 
 <!-- Add new themes and rules below this line -->
 ```
-
-**If it already exists**, read it first and then merge the new findings:
-- Add new rules under existing themes if they fit
-- Create a new `##` section for themes not yet present
-- Do not duplicate rules that are already present (even if worded differently)
-- Preserve all existing content unchanged
-
-Append new rules in this format under each theme heading:
-
-```markdown
-## [Theme Name]
-
-### Do
-- [Actionable rule] — *[brief rationale]* ([PR #N](url))
-
-  ```python
-  # After review — what the code became
-  [concrete code from the diff]
-  ```
-
-### Don't
-- [Anti-pattern to avoid] — *[brief rationale]* ([PR #N](url))
-
-  ```python
-  # Before review — what the LLM originally wrote
-  [concrete code from the diff]
-  ```
-```
-
-The language tag on the code block should match the file type (e.g. `python`, `yaml`, `shell`).
-If a rule applies equally to a Do and a Don't, show both blocks together under the Do rule
-as a before/after pair rather than splitting them across sections.
 
 ### Step 7: Report
 
