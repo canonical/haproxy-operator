@@ -30,6 +30,7 @@ def test_hsts_disabled(monkeypatch: pytest.MonkeyPatch, certificates_integration
     ctx = ops.testing.Context(HAProxyCharm)
     state = ops.testing.State(
         relations=[certificates_integration, haproxy_route_relation],
+        leader=True,
     )
     out = ctx.run(
         ctx.on.relation_changed(haproxy_route_relation),
@@ -58,6 +59,7 @@ def test_hsts_enabled(monkeypatch: pytest.MonkeyPatch, certificates_integration)
     state = ops.testing.State(
         relations=[certificates_integration, haproxy_route_relation],
         config={"enable-hsts": True},
+        leader=True,
     )
     out = ctx.run(
         ctx.on.relation_changed(haproxy_route_relation),
@@ -90,6 +92,7 @@ def test_hsts_disabled_allow_http(monkeypatch: pytest.MonkeyPatch, certificates_
     state = ops.testing.State(
         relations=[certificates_integration, haproxy_route_relation],
         config={"enable-hsts": True},
+        leader=True,
     )
     out = ctx.run(
         ctx.on.relation_changed(haproxy_route_relation),
@@ -128,6 +131,7 @@ def test_redirect_without_allow_http_uses_named_acl(
     ctx = ops.testing.Context(HAProxyCharm)
     state = ops.testing.State(
         relations=[certificates_integration, haproxy_route_relation],
+        leader=True,
     )
     out = ctx.run(
         ctx.on.relation_changed(haproxy_route_relation),
@@ -157,6 +161,7 @@ def test_redirect_allow_http_uses_named_acl(
     ctx = ops.testing.Context(HAProxyCharm)
     state = ops.testing.State(
         relations=[certificates_integration, haproxy_route_relation],
+        leader=True,
     )
     out = ctx.run(
         ctx.on.relation_changed(haproxy_route_relation),
