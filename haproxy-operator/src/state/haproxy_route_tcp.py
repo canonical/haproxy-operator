@@ -43,6 +43,7 @@ class HaproxyRouteTcpServer:
         port: The port that the requirer application wishes to be exposed.
         check: Health check configuration.
         maxconn: Maximum allowed connections before requests are queued.
+        send_proxy: Whether to enable PROXY protocol for this server.
     """
 
     server_name: str
@@ -50,6 +51,7 @@ class HaproxyRouteTcpServer:
     port: int
     check: Optional[TCPServerHealthCheck]
     maxconn: Optional[int]
+    send_proxy: bool = False
 
 
 @dataclass
@@ -117,6 +119,7 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
                     address=address,
                     check=self.application_data.check,
                     maxconn=self.application_data.server_maxconn,
+                    send_proxy=self.application_data.proxy_protocol,
                 )
             )
         return servers

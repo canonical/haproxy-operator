@@ -98,17 +98,19 @@ def test_haproxy_route_tcp(
         ]
     )
 
-    assert all(
-        entry in haproxy_config
-        for entry in [
-            "backend haproxy_route_tcp_4444_default_backend",
-            "default_backend haproxy_route_tcp_4444_default_backend",
-        ]
+    # Test with PROXY PROTOCOL enabled
+    juju.run(
+        f"{any_charm_haproxy_route_tcp_requirer}/0",
+        "rpc",
+        {"method": "update_relation_with_proxy_protocol"},
     )
-    assert all(
-        entry not in haproxy_config
-        for entry in [
-            f"{any_charm_haproxy_route_tcp_requirer}_4444",
-            f"default_backend {any_charm_haproxy_route_tcp_requirer}_4444",
-        ]
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, any_charm_haproxy_route_tcp_requirer
+        )
     )
+
+    haproxy_config = juju.ssh(
+        f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
+    )
+    assert "send-proxy" in haproxy_config
