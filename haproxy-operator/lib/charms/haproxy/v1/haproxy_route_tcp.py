@@ -574,12 +574,15 @@ class TimeoutConfiguration(BaseModel):
 
     server: Optional[int] = Field(
         description="Timeout (in seconds) for requests from haproxy to backend servers.",
+        gt=0,
     )
     connect: Optional[int] = Field(
         description="Timeout (in seconds) for client requests to haproxy.",
+        gt=0,
     )
     queue: Optional[int] = Field(
         description="Timeout (in seconds) for requests in the queue.",
+        gt=0,
     )
 
 

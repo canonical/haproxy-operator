@@ -8,9 +8,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-06-05
+
+- docs: Updated home page with additional information about HAProxy.
+
+## 2026-05-28
+
+- Added relation endpoints reference page.
+
 ## 2026-05-26
 
 - Added `backend_port_range` attribute to `haproxy-route-tcp` relation to allow mapping from multiple frontend ports to multiple backend ports.
+
+## 2026-05-25
+
+- docs: Updated the home page to implement the new pattern for the "In this documentation" section.
+- docs: Reorganized two tutorials to how-to section; expanded the upgrade guide
 
 ## 2026-04-17
 
