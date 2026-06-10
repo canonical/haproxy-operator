@@ -181,11 +181,11 @@ def test_requirer_unit_data_validation():
     assert str(data.address) == str(MOCK_ADDRESS)
 
 
-def test_tcp_requirers_data_duplicate_ports():
+def test_tcp_requirers_data_duplicate_ports_are_mergeable():
     """
     arrange: Create HaproxyRouteTcpRequirersData with duplicate port numbers.
-    act: Validate the model.
-    assert: Validation updates relation_ids_with_invalid_data.
+    act: Check conflict detection.
+    assert: Same ports are not conflicting (they are mergeable into one frontend).
     """
     app_data1 = TcpRequirerApplicationData(port=8080)
     app_data2 = TcpRequirerApplicationData(port=8080)  # Same port
@@ -204,13 +204,11 @@ def test_tcp_requirers_data_duplicate_ports():
         units_data=[TcpRequirerUnitData(address=ANOTHER_MOCK_ADDRESS)],
     )
 
-    requirers_data = HaproxyRouteTcpRequirersData(
-        requirers_data=[tcp_requirer_data1, tcp_requirer_data2],
-        relation_ids_with_invalid_data=set(),
+    # Same port ranges are not conflicts — they are mergeable into one frontend
+    conflicting = HaproxyRouteTcpProvider._detect_port_range_conflicts(
+        [tcp_requirer_data1, tcp_requirer_data2]
     )
-
-    # The validator should detect duplicate ports and add relation IDs to invalid list
-    assert len(requirers_data.relation_ids_with_invalid_data) == 2
+    assert len(conflicting) == 0
 
 
 def test_load_requirer_application_data(mock_relation_data):
@@ -500,7 +498,7 @@ def test_requirer_application_data_proxy_protocol_enabled():
 
 def test_requirer_application_data_neither_port_nor_range():
     """
-    arrange: Create a TcpRequirerApplicationData model without port or backend_port_range.
+    arrange: Create a TcpRequirerApplicationData model without port or port_range_end.
     act: Validate the model.
     assert: Validation fails.
     """

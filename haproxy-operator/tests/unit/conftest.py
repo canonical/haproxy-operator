@@ -463,7 +463,7 @@ def build_haproxy_route_tcp_relation(
     *,
     port: int | None = 4000,
     backend_port: int | None = None,
-    backend_port_range: str | None = None,
+    port_range_end: int | None = None,
     sni: str | None = None,
     enforce_tls: bool = True,
     tls_terminate: bool = False,
@@ -472,9 +472,9 @@ def build_haproxy_route_tcp_relation(
     """Build a scenario Relation for haproxy-route-tcp.
 
     Args:
-        port: Frontend port.
+        port: Frontend port (start of range when port_range_end is set).
         backend_port: Backend port (defaults to port).
-        backend_port_range: Port range in the form "{start_port}-{end_port}".
+        port_range_end: End port for port range mode.
         sni: Server Name Indication value.
         enforce_tls: Whether to enforce TLS.
         tls_terminate: Whether to terminate TLS.
@@ -491,8 +491,8 @@ def build_haproxy_route_tcp_relation(
         app_data["port"] = port
     if backend_port is not None:
         app_data["backend_port"] = backend_port
-    if backend_port_range is not None:
-        app_data["backend_port_range"] = backend_port_range
+    if port_range_end is not None:
+        app_data["port_range_end"] = port_range_end
     if sni is not None:
         app_data["sni"] = sni
 

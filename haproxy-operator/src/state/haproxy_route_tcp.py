@@ -373,6 +373,24 @@ class HAProxyRouteTcpFrontend:
         return None
 
     @property
+    def port(self) -> int:
+        """Get the start port of this frontend.
+
+        Returns:
+            int: The start port.
+        """
+        return self.port_range.start
+
+    @property
+    def covered_ports(self) -> list[int]:
+        """Get all individual ports covered by this frontend's port range.
+
+        Returns:
+            list[int]: List of ports from start to end (inclusive).
+        """
+        return list(range(self.port_range.start, self.port_range.end + 1))
+
+    @property
     def bind_port(self) -> str:
         """Get the frontend bind port configuration.
 

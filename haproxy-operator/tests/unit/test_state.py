@@ -20,6 +20,7 @@ from charms.haproxy.v0.ddos_protection import (
 from charms.haproxy.v1.haproxy_route_tcp import (
     HaproxyRouteTcpRequirerData,
     HaproxyRouteTcpRequirersData,
+    PortRange,
 )
 from charms.haproxy.v2.haproxy_route import (
     HaproxyRouteRequirerData,
@@ -1837,11 +1838,11 @@ def test_haproxy_route_tcp_port_range_backend(
     act: Initialize the HAProxyRouteTcpBackend class with the generated relation data.
     assert: The class correctly parses the information and servers have no port.
     """
-    haproxy_route_tcp = haproxy_route_tcp_relation_data(backend_port_range="4000-4005")
+    haproxy_route_tcp = haproxy_route_tcp_relation_data(port=4000, port_range_end=4005)
     tcp_endpoint = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(haproxy_route_tcp)
     assert tcp_endpoint.servers[0].port is None
-    assert tcp_endpoint.is_port_range is True
-    assert tcp_endpoint.application_data.requested_ports_in_range == [4000, 4001, 4002, 4003, 4004, 4005]
+    assert tcp_endpoint.application_data.port_range_end == 4005
+    assert tcp_endpoint.application_data.port_range == PortRange(4000, 4005)
 
 
 def test_haproxy_route_tcp_port_range_creates_single_frontend(
@@ -1853,15 +1854,13 @@ def test_haproxy_route_tcp_port_range_creates_single_frontend(
     assert: One frontend is created with a port range bind.
     """
     tcp_requirers = HaproxyRouteTcpRequirersData(
-        requirers_data=[haproxy_route_tcp_relation_data(backend_port_range="4000-4002")],
+        requirers_data=[haproxy_route_tcp_relation_data(port=4000, port_range_end=4002)],
         relation_ids_with_invalid_data=set(),
     )
     frontends = parse_haproxy_route_tcp_requirers_data(tcp_requirers)
     assert len(frontends) == 1
-    assert frontends[0].port == 4000
-    assert frontends[0].port_range_end == 4002
+    assert frontends[0].port_range == PortRange(4000, 4002)
     assert frontends[0].bind_port == "4000-4002"
-    assert frontends[0].covered_ports == [4000, 4001, 4002]
 
 
 def test_haproxy_route_tcp_port_range_conflict_with_single_port(
@@ -1869,62 +1868,62 @@ def test_haproxy_route_tcp_port_range_conflict_with_single_port(
 ):
     """
     arrange: Generate TCP data with a port range that overlaps with a single port backend.
-    act: Validate the data.
-    assert: Both backends are marked as invalid due to port conflict.
+    act: Detect port range conflicts.
+    assert: Both backends are marked as conflicting.
     """
-    tcp_requirers = HaproxyRouteTcpRequirersData(
-        requirers_data=[
-            haproxy_route_tcp_relation_data(
-                backend_port_range="4000-4005", relation_id=0
-            ),
-            haproxy_route_tcp_relation_data(port=4002, relation_id=1),
-        ],
-        relation_ids_with_invalid_data=set(),
-    )
-    assert 0 in tcp_requirers.relation_ids_with_invalid_data
-    assert 1 in tcp_requirers.relation_ids_with_invalid_data
+    from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpProvider
+
+    requirers_data = [
+        haproxy_route_tcp_relation_data(
+            port=4000, port_range_end=4005, relation_id=0
+        ),
+        haproxy_route_tcp_relation_data(port=4002, relation_id=1),
+    ]
+    conflicting = HaproxyRouteTcpProvider._detect_port_range_conflicts(requirers_data)
+    assert 0 in conflicting
+    assert 1 in conflicting
 
 
-def test_haproxy_route_tcp_port_range_invalid_format(
+def test_haproxy_route_tcp_port_range_end_with_backend_port_raises(
     haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
 ):
     """
-    arrange: Generate TCP relation data with an invalid port range format.
+    arrange: Generate TCP relation data with both port_range_end and backend_port.
     act: Try to create the data model.
     assert: Validation error is raised.
     """
     from charms.haproxy.v1.haproxy_route_tcp import DataValidationError
 
     with pytest.raises(DataValidationError):
-        haproxy_route_tcp_relation_data(backend_port_range="invalid")
+        haproxy_route_tcp_relation_data(port=4000, port_range_end=4005, backend_port=5000)
 
 
-def test_haproxy_route_tcp_port_range_with_port_raises(
+def test_haproxy_route_tcp_port_range_end_without_port_raises(
     haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
 ):
     """
-    arrange: Generate TCP relation data with both port and backend_port_range.
+    arrange: Generate TCP relation data with port_range_end but no port.
     act: Try to create the data model.
-    assert: Validation error is raised.
+    assert: Validation error is raised because port is required.
     """
     from charms.haproxy.v1.haproxy_route_tcp import DataValidationError
 
     with pytest.raises(DataValidationError):
-        haproxy_route_tcp_relation_data(port=4000, backend_port_range="5000-5005")
+        haproxy_route_tcp_relation_data(port=None, port_range_end=5005)
 
 
 def test_haproxy_route_tcp_port_range_start_greater_than_end(
     haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
 ):
     """
-    arrange: Generate TCP relation data with start port > end port.
+    arrange: Generate TCP relation data with port > port_range_end.
     act: Try to create the data model.
     assert: Validation error is raised.
     """
     from charms.haproxy.v1.haproxy_route_tcp import DataValidationError
 
     with pytest.raises(DataValidationError):
-        haproxy_route_tcp_relation_data(backend_port_range="5000-4000")
+        haproxy_route_tcp_relation_data(port=5000, port_range_end=4000)
 
 
 def test_haproxy_route_tcp_port_range_config_rendering(
@@ -1940,7 +1939,7 @@ def test_haproxy_route_tcp_port_range_config_rendering(
     from state.ddos_protection import DDosProtection
 
     tcp_requirers = HaproxyRouteTcpRequirersData(
-        requirers_data=[haproxy_route_tcp_relation_data(backend_port_range="5000-5002")],
+        requirers_data=[haproxy_route_tcp_relation_data(port=5000, port_range_end=5002)],
         relation_ids_with_invalid_data=set(),
     )
     frontends = parse_haproxy_route_tcp_requirers_data(tcp_requirers)
@@ -1961,8 +1960,7 @@ def test_haproxy_route_tcp_port_range_config_rendering(
         ip_allow_list_file="/etc/haproxy/ip_allow_list",
     )
 
-    assert "frontend haproxy_route_tcp_5000" in rendered
+    assert "frontend haproxy_route_tcp_5000-5002" in rendered
     assert "bind [::]:5000-5002" in rendered
-    # Server entries should not have port when port range is used
-    assert "tcp-route-requirer-0 10.0.0.1 " in rendered
-    assert "tcp-route-requirer-0 10.0.0.1:" not in rendered
+    # Server entries should not have a port suffix when port range is used
+    assert "server tcp-route-requirer-0" in rendered

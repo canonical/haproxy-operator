@@ -640,15 +640,11 @@ class TcpRequirerApplicationData(_DatabagModel):
     """Configuration model for HAProxy route requirer application data.
 
     Attributes:
-        port: The port exposed on the provider.
-        backend_port_range: An optional port range for the backend.
-            If this is set, the provider will run in port range mode
-            and traffic will be routed as a 1-to-1 mapping across the port range.
-            Setting `backend_port` and `backend_port_range` at the same time is not allowed.
+        port: The port exposed on the provider (start of range when port_range_end is set).
         backend_port: The port where the backend service is listening. Defaults to the
             provider port.
-        backend_port_range: A port range in the form of "{start_port}-{end_port}".
-            Cannot be set at the same time as port or backend_port.
+        port_range_end: End port if the requirer wants to proxy a range of ports.
+            Cannot be set at the same time as backend_port.
         hosts: List of backend server addresses. Currently only support IP addresses.
         sni: Server name identification. Used to route traffic to the service.
         check: TCP health check configuration
@@ -727,17 +723,31 @@ class TcpRequirerApplicationData(_DatabagModel):
     )
 
     @model_validator(mode="after")
-    def validate_port_and_backend_port_range_not_set_together(self) -> "Self":
-        """Validate that backend_port_range is not set with port or backend_port.
+    def validate_port_range_end_not_set_with_backend_port(self) -> "Self":
+        """Validate that port_range_end is not set together with backend_port.
 
         Raises:
-            ValueError: If backend_port_range is set with port or backend_port.
+            ValueError: If port_range_end is set with backend_port.
 
         Returns:
             The validated model.
         """
         if self.port_range_end is not None and self.backend_port is not None:
             raise ValueError("port_range_end cannot be set at the same time as backend_port.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_port_range_end_greater_than_port(self) -> "Self":
+        """Validate that port_range_end is greater than or equal to port.
+
+        Raises:
+            ValueError: If port_range_end is less than port.
+
+        Returns:
+            The validated model.
+        """
+        if self.port_range_end is not None and self.port_range_end < self.port:
+            raise ValueError("port_range_end must be greater than or equal to port.")
         return self
 
     @model_validator(mode="after")
@@ -1117,7 +1127,7 @@ class HaproxyRouteTcpRequirer(Object):
         *,
         port: Optional[int] = None,
         backend_port: Optional[int] = None,
-        backend_port_range: Optional[str] = None,
+        port_range_end: Optional[int] = None,
         hosts: Optional[list[IPvAnyAddress]] = None,
         sni: Optional[str] = None,
         check_interval: Optional[int] = None,
@@ -1150,9 +1160,9 @@ class HaproxyRouteTcpRequirer(Object):
         Args:
             charm: The charm that is instantiating the library.
             relation_name: The name of the relation to bind to.
-            port: The provider port.
-            backend_port: List of ports the service is listening on.
-            backend_port_range: Port range in the form "{start_port}-{end_port}".
+            port: The provider port (start of range when port_range_end is set).
+            backend_port: The port where the backend service is listening.
+            port_range_end: End port for port range mode.
             hosts: List of backend server addresses. Currently only support IP addresses.
             sni: List of URL paths to route to this service.
             check_interval: Interval between health checks in seconds.
@@ -1195,7 +1205,7 @@ class HaproxyRouteTcpRequirer(Object):
         self._application_data = self._generate_application_data(
             port=port,
             backend_port=backend_port,
-            backend_port_range=backend_port_range,
+            port_range_end=port_range_end,
             hosts=hosts,
             sni=sni,
             check_interval=check_interval,
@@ -1249,7 +1259,7 @@ class HaproxyRouteTcpRequirer(Object):
         *,
         port: Optional[int] = None,
         backend_port: Optional[int] = None,
-        backend_port_range: Optional[str] = None,
+        port_range_end: Optional[int] = None,
         hosts: Optional[list[IPvAnyAddress]] = None,
         sni: Optional[str] = None,
         check_interval: Optional[int] = None,
@@ -1280,9 +1290,9 @@ class HaproxyRouteTcpRequirer(Object):
         """Update haproxy-route requirements data in the relation.
 
         Args:
-            port: The provider port.
-            backend_port: List of ports the service is listening on.
-            backend_port_range: Port range in the form "{start_port}-{end_port}".
+            port: The provider port (start of range when port_range_end is set).
+            backend_port: The port where the backend service is listening.
+            port_range_end: End port for port range mode.
             hosts: List of backend server addresses. Currently only support IP addresses.
             sni: List of URL paths to route to this service.
             check_interval: Interval between health checks in seconds.
@@ -1318,7 +1328,7 @@ class HaproxyRouteTcpRequirer(Object):
         self._application_data = self._generate_application_data(
             port=port,
             backend_port=backend_port,
-            backend_port_range=backend_port_range,
+            port_range_end=port_range_end,
             hosts=hosts,
             sni=sni,
             check_interval=check_interval,
@@ -1353,7 +1363,7 @@ class HaproxyRouteTcpRequirer(Object):
         *,
         port: Optional[int] = None,
         backend_port: Optional[int] = None,
-        backend_port_range: Optional[str] = None,
+        port_range_end: Optional[int] = None,
         hosts: Optional[list[IPvAnyAddress]] = None,
         sni: Optional[str] = None,
         check_interval: Optional[int] = None,
@@ -1383,9 +1393,9 @@ class HaproxyRouteTcpRequirer(Object):
         """Generate the complete application data structure.
 
         Args:
-            port: The provider port.
-            backend_port: List of ports the service is listening on.
-            backend_port_range: Port range in the form "{start_port}-{end_port}".
+            port: The provider port (start of range when port_range_end is set).
+            backend_port: The port where the backend service is listening.
+            port_range_end: End port for port range mode.
             hosts: List of backend server addresses. Currently only support IP addresses.
             sni: List of URL paths to route to this service.
             check_interval: Interval between health checks in seconds.
@@ -1428,7 +1438,7 @@ class HaproxyRouteTcpRequirer(Object):
         application_data: dict[str, Any] = {
             "port": port,
             "backend_port": backend_port,
-            "backend_port_range": backend_port_range,
+            "port_range_end": port_range_end,
             "hosts": hosts,
             "sni": sni,
             "load_balancing": self._generate_load_balancing_configuration(
@@ -1595,9 +1605,9 @@ class HaproxyRouteTcpRequirer(Object):
     def update_relation_data(self) -> None:
         """Update both application and unit data in the relation."""
         if not self._application_data.get("port") and not self._application_data.get(
-            "backend_port_range"
+            "port_range_end"
         ):
-            logger.warning("port or backend_port_range must be set, skipping update.")
+            logger.warning("port or port_range_end must be set, skipping update.")
             return
 
         if relation := self.relation:
@@ -1719,19 +1729,20 @@ class HaproxyRouteTcpRequirer(Object):
         self._application_data["backend_port"] = backend_port
         return self
 
-    def configure_port_range(self, backend_port_range: str) -> "Self":
-        """Set the backend port range.
+    def configure_port_range(self, port: int, port_range_end: int) -> "Self":
+        """Set the port range.
 
-        When setting a port range, port and backend_port are cleared.
+        When setting a port range, backend_port is cleared.
 
         Args:
-            backend_port_range: The port range in the form "{start_port}-{end_port}"
+            port: The start port of the range.
+            port_range_end: The end port of the range.
 
         Returns:
             Self: The HaproxyRouteTcpRequirer class
         """
-        self._application_data["backend_port_range"] = backend_port_range
-        self._application_data.pop("port", None)
+        self._application_data["port"] = port
+        self._application_data["port_range_end"] = port_range_end
         self._application_data.pop("backend_port", None)
         return self
 
