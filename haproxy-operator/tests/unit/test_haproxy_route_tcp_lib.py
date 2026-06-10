@@ -13,7 +13,6 @@ from charms.haproxy.v1.haproxy_route_tcp import (
     HaproxyRouteTcpProvider,
     HaproxyRouteTcpProviderAppData,
     HaproxyRouteTcpRequirerData,
-    HaproxyRouteTcpRequirersData,
     LoadBalancingAlgorithm,
     PortRange,
     TCPHealthCheckType,
@@ -555,12 +554,8 @@ def test_port_range_str(start, end, expected):
     [
         pytest.param(PortRange(8080, 8080), PortRange(8080, 8080), True, id="same_single_port"),
         pytest.param(PortRange(8080, 8090), PortRange(8080, 8090), True, id="same_range"),
-        pytest.param(
-            PortRange(8079, 8090), PortRange(8080, 8090), False, id="different_start"
-        ),
-        pytest.param(
-            PortRange(8080, 8089), PortRange(8080, 8090), False, id="different_end"
-        ),
+        pytest.param(PortRange(8079, 8090), PortRange(8080, 8090), False, id="different_start"),
+        pytest.param(PortRange(8080, 8089), PortRange(8080, 8090), False, id="different_end"),
     ],
 )
 def test_port_range_equality(a, b, equal):
@@ -591,9 +586,7 @@ def test_port_range_not_equal_to_plain_tuple():
 @pytest.mark.parametrize(
     "a, b, expected",
     [
-        pytest.param(
-            PortRange(8080, 8080), PortRange(8080, 8080), True, id="same_single_port"
-        ),
+        pytest.param(PortRange(8080, 8080), PortRange(8080, 8080), True, id="same_single_port"),
         pytest.param(PortRange(8080, 8090), PortRange(8080, 8090), True, id="same_range"),
         pytest.param(
             PortRange(8080, 8080),
@@ -632,12 +625,8 @@ def test_port_range_not_equal_to_plain_tuple():
             id="single_port_after_range",
         ),
         pytest.param(PortRange(8080, 8090), PortRange(8085, 8095), True, id="partial_overlap"),
-        pytest.param(
-            PortRange(8000, 9000), PortRange(8080, 8090), True, id="one_contains_other"
-        ),
-        pytest.param(
-            PortRange(8080, 8090), PortRange(8090, 8100), True, id="touch_at_boundary"
-        ),
+        pytest.param(PortRange(8000, 9000), PortRange(8080, 8090), True, id="one_contains_other"),
+        pytest.param(PortRange(8080, 8090), PortRange(8090, 8100), True, id="touch_at_boundary"),
         pytest.param(
             PortRange(8080, 8090),
             PortRange(8091, 8100),
@@ -687,9 +676,7 @@ def test_port_range_overlaps_with_is_symmetric():
         pytest.param(
             PortRange(8080, 8090), PortRange(8085, 8085), True, id="single_port_inside_range"
         ),
-        pytest.param(
-            PortRange(8000, 9000), PortRange(8080, 8090), True, id="containing_range"
-        ),
+        pytest.param(PortRange(8000, 9000), PortRange(8080, 8090), True, id="containing_range"),
         pytest.param(
             PortRange(8080, 8090), PortRange(8091, 8100), False, id="no_overlap_no_conflict"
         ),
@@ -699,9 +686,7 @@ def test_port_range_overlaps_with_is_symmetric():
             False,
             id="adjacent_ports_no_conflict",
         ),
-        pytest.param(
-            PortRange(8080, 8090), PortRange(8090, 8100), True, id="boundary_touch"
-        ),
+        pytest.param(PortRange(8080, 8090), PortRange(8090, 8100), True, id="boundary_touch"),
     ],
 )
 def test_port_range_conflicts_with(a, b, expected):

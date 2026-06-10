@@ -964,9 +964,7 @@ class HaproxyRouteTcpProvider(Object):
                 relation_ids_with_invalid_data.add(relation.id)
                 continue
 
-        relation_ids_with_invalid_data.update(
-            self._detect_port_range_conflicts(requirers_data)
-        )
+        relation_ids_with_invalid_data.update(self._detect_port_range_conflicts(requirers_data))
 
         return HaproxyRouteTcpRequirersData(
             requirers_data=requirers_data,

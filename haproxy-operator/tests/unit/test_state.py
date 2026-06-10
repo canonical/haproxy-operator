@@ -18,6 +18,10 @@ from charms.haproxy.v0.ddos_protection import (
     DDoSProtectionRequirer,
 )
 from charms.haproxy.v1.haproxy_route_tcp import (
+    DataValidationError as TcpDataValidationError,
+)
+from charms.haproxy.v1.haproxy_route_tcp import (
+    HaproxyRouteTcpProvider,
     HaproxyRouteTcpRequirerData,
     HaproxyRouteTcpRequirersData,
     PortRange,
@@ -30,6 +34,7 @@ from charms.traefik_k8s.v1.ingress_per_unit import (
     DataValidationError as V1DataValidationError,
 )
 from charms.traefik_k8s.v2.ingress import DataValidationError as V2DataValidationError
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from state.charm_state import CharmState, ProxyMode
 from state.ddos_protection import DDosProtection, DDosProtectionValidationError
@@ -1871,12 +1876,8 @@ def test_haproxy_route_tcp_port_range_conflict_with_single_port(
     act: Detect port range conflicts.
     assert: Both backends are marked as conflicting.
     """
-    from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpProvider
-
     requirers_data = [
-        haproxy_route_tcp_relation_data(
-            port=4000, port_range_end=4005, relation_id=0
-        ),
+        haproxy_route_tcp_relation_data(port=4000, port_range_end=4005, relation_id=0),
         haproxy_route_tcp_relation_data(port=4002, relation_id=1),
     ]
     conflicting = HaproxyRouteTcpProvider._detect_port_range_conflicts(requirers_data)
@@ -1892,9 +1893,7 @@ def test_haproxy_route_tcp_port_range_end_with_backend_port_raises(
     act: Try to create the data model.
     assert: Validation error is raised.
     """
-    from charms.haproxy.v1.haproxy_route_tcp import DataValidationError
-
-    with pytest.raises(DataValidationError):
+    with pytest.raises(TcpDataValidationError):
         haproxy_route_tcp_relation_data(port=4000, port_range_end=4005, backend_port=5000)
 
 
@@ -1906,9 +1905,7 @@ def test_haproxy_route_tcp_port_range_end_without_port_raises(
     act: Try to create the data model.
     assert: Validation error is raised because port is required.
     """
-    from charms.haproxy.v1.haproxy_route_tcp import DataValidationError
-
-    with pytest.raises(DataValidationError):
+    with pytest.raises(TcpDataValidationError):
         haproxy_route_tcp_relation_data(port=None, port_range_end=5005)
 
 
@@ -1920,9 +1917,7 @@ def test_haproxy_route_tcp_port_range_start_greater_than_end(
     act: Try to create the data model.
     assert: Validation error is raised.
     """
-    from charms.haproxy.v1.haproxy_route_tcp import DataValidationError
-
-    with pytest.raises(DataValidationError):
+    with pytest.raises(TcpDataValidationError):
         haproxy_route_tcp_relation_data(port=5000, port_range_end=4000)
 
 
@@ -1934,10 +1929,6 @@ def test_haproxy_route_tcp_port_range_config_rendering(
     act: Render the TCP template.
     assert: The config contains a single frontend with port range bind and servers have no port.
     """
-    from jinja2 import Environment, FileSystemLoader, select_autoescape
-
-    from state.ddos_protection import DDosProtection
-
     tcp_requirers = HaproxyRouteTcpRequirersData(
         requirers_data=[haproxy_route_tcp_relation_data(port=5000, port_range_end=5002)],
         relation_ids_with_invalid_data=set(),
