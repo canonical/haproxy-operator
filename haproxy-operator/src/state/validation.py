@@ -12,7 +12,11 @@ from charms.haproxy.v2.haproxy_route import HaproxyRouteInvalidRelationDataError
 
 from haproxy import HaproxyValidateConfigError
 from state.exception import CharmStateValidationBaseError
-from state.tls import PrivateKeyNotGeneratedError, TLSNotReadyError
+from state.tls import (
+    PeerRelationNotFoundError,
+    SharedTLSInformationNotFoundError,
+    TLSNotReadyError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -75,12 +79,14 @@ def validate_config_and_tls(  # noqa: C901
                 instance.unit.status = ops.BlockedStatus(str(exc))
                 logger.exception("Not ready to handle TLS.")
                 return None
-            except PrivateKeyNotGeneratedError as exc:
+            except (SharedTLSInformationNotFoundError, PeerRelationNotFoundError) as exc:
                 if defer:
                     event, *_ = args
                     event.defer()
                 instance.unit.status = ops.WaitingStatus(str(exc))
-                logger.exception("Waiting for private key to be generated")
+                logger.exception(
+                    "non-leader unit: Waiting for TLS information or peer relation to be available"
+                )
                 return None
             except HaproxyValidateConfigError as exc:
                 if defer:

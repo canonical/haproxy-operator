@@ -11,6 +11,9 @@ fall {{ server.check.fall }}
 {% if server.maxconn %}
 maxconn {{ server.maxconn }}
 {% endif %}
+{% if server.send_proxy %}
+send-proxy
+{% endif %}
 {%- endmacro %}
 
 {% for frontend in tcp_frontends %}

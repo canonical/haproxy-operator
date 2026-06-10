@@ -7,14 +7,14 @@ import typing
 from unittest.mock import MagicMock
 
 import pytest
-from charms.tls_certificates_interface.v4.tls_certificates import (
+from charmlibs.interfaces.tls_certificates import (
     Certificate,
     CertificateRequestAttributes,
     PrivateKey,
 )
 from ops.testing import Harness
 
-from state.tls import TLSInformation, TLSNotReadyError
+from state.tls import HaproxyPeerRelationAppData, TLSInformation, TLSNotReadyError
 from tls_relation import TLSRelationService
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
@@ -94,14 +94,14 @@ def test_certificate_available(
 
     tls_information = TLSInformation(
         hostnames=[TEST_EXTERNAL_HOSTNAME_CONFIG],
-        tls_cert_and_ca_chain={
-            TEST_EXTERNAL_HOSTNAME_CONFIG: (mock_certificate, [mock_certificate])
-        },
-        private_key=mock_private_key,
+        tls_cert_and_ca_chain=HaproxyPeerRelationAppData(
+            shared_certificates=[(mock_certificate, [mock_certificate])]
+        ),
+        private_key=str(mock_private_key),
     )
     tls_relation.certificate_available(tls_information)
     write_cert_mock.assert_called_once_with(
-        certificate=mock_certificate, chain=[mock_certificate], private_key=mock_private_key
+        certificate=mock_certificate, chain=[mock_certificate], private_key=str(mock_private_key)
     )
 
 
@@ -129,7 +129,9 @@ def test_write_certificate_to_unit(
     monkeypatch.setattr("os.chown", MagicMock())
     chain_string = "\n".join([str(cert) for cert in [mock_certificate]])
 
-    tls_relation.write_certificate_to_unit(mock_certificate, [mock_certificate], mock_private_key)
+    tls_relation.write_certificate_to_unit(
+        mock_certificate, [mock_certificate], str(mock_private_key)
+    )
     pem_file_content = f"{mock_certificate!s}\n{chain_string}\n{mock_private_key!s}"
 
     write_text_mock.assert_called_once_with(pem_file_content, encoding="utf-8")

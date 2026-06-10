@@ -14,6 +14,7 @@ The pages in this section contain technical information for topics relevant to t
 :maxdepth: 1
 grpc-support.md
 http2-support.md
-spoe-auth-support.md
+relation-endpoints.md
+SPOE authentication <spoe-auth-support.md>
 Changelog <../changelog.md>
 ```
