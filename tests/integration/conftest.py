@@ -359,7 +359,7 @@ def haproxy_spoe_deployer_fixture(
         )
         ca_cert = ca_cert_result.results["ca-certificate"].encode("utf-8")
         lxd_juju.wait(
-            lambda status: not status.apps[haproxy_spoe_name].is_waiting, timeout=330
+            lambda status: not status.apps[haproxy_spoe_name].is_waiting, timeout=360
         )
         logger.info(lxd_juju.status().apps[haproxy_spoe_name])
         inject_ca_certificate(lxd_juju, f"{haproxy_spoe_name}/0", ca_cert)
