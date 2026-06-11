@@ -6,7 +6,7 @@ name: Docs spread
 on:
   pull_request:
   schedule:
-  - cron: "0 15 * * SAT"
+  - cron: 0 9 * * 1 # At 09:00 UTC on Monday, aligned with the weekly haproxy stable release.
 
 jobs:
   doc-test:
