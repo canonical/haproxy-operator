@@ -610,7 +610,7 @@ integration = [
     { name = "jinja2", specifier = "==3.1.6" },
     { name = "jubilant", specifier = "==1.10.0" },
     { name = "juju", specifier = "==3.6.1.3" },
-    { name = "opcli", git = "https://github.com/canonical/charm-ci.git?rev=v0.0.1-alpha.1" },
+    { name = "opcli", git = "https://github.com/canonical/charm-ci.git?rev=v0.0.1-alpha.2" },
     { name = "protobuf", specifier = "==6.33.6" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -1099,8 +1099,8 @@ wheels = [
 
 [[package]]
 name = "opcli"
-version = "0.0.1a1"
-source = { git = "https://github.com/canonical/charm-ci.git?rev=v0.0.1-alpha.1#51abd78efc852c71aaacd2ae865c493dd3766856" }
+version = "0.0.1a2"
+source = { git = "https://github.com/canonical/charm-ci.git?rev=v0.0.1-alpha.2#3399cf26bea25543f961b7f9b3921ba54dcd57d2" }
 dependencies = [
     { name = "jinja2" },
     { name = "pydantic" },
