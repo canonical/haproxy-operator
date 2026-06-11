@@ -14,6 +14,7 @@ from charms.haproxy.v1.haproxy_route_tcp import (
     HaproxyRouteTcpProviderAppData,
     HaproxyRouteTcpRequirerData,
     LoadBalancingAlgorithm,
+    PortMapping,
     PortRange,
     TCPHealthCheckType,
     TCPLoadBalancingConfiguration,
@@ -495,9 +496,9 @@ def test_requirer_application_data_proxy_protocol_enabled():
     assert data.proxy_protocol is True
 
 
-def test_requirer_application_data_neither_port_nor_range():
+def test_requirer_application_data_neither_port_nor_mapping():
     """
-    arrange: Create a TcpRequirerApplicationData model without port or port_range_end.
+    arrange: Create a TcpRequirerApplicationData model without port or port_mapping.
     act: Validate the model.
     assert: Validation fails.
     """
@@ -511,10 +512,13 @@ def test_requirer_application_data_neither_port_nor_range():
 
 
 def _make_requirer(
-    relation_id: int, port: int, port_range_end: int | None = None
+    relation_id: int, port: int, port_end: int | None = None
 ) -> HaproxyRouteTcpRequirerData:
     """Build a minimal HaproxyRouteTcpRequirerData for a given port (range)."""
-    app_data = TcpRequirerApplicationData(port=port, port_range_end=port_range_end)
+    if port_end is None:
+        app_data = TcpRequirerApplicationData(port=port)
+    else:
+        app_data = TcpRequirerApplicationData(port_mapping=f"{port}-{port_end}:{port}-{port_end}")
     return HaproxyRouteTcpRequirerData(
         relation_id=relation_id,
         application="test-app",
@@ -656,60 +660,6 @@ def test_port_range_overlaps_with_is_symmetric():
 
 
 # ---------------------------------------------------------------------------
-# PortRange.conflicts_with tests
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    "a, b, expected",
-    [
-        pytest.param(
-            PortRange(8080, 8080),
-            PortRange(8080, 8080),
-            False,
-            id="same_single_port_no_conflict",
-        ),
-        pytest.param(
-            PortRange(8080, 8090), PortRange(8080, 8090), False, id="same_range_no_conflict"
-        ),
-        pytest.param(PortRange(8080, 8090), PortRange(8085, 8095), True, id="partial_overlap"),
-        pytest.param(
-            PortRange(8080, 8090), PortRange(8085, 8085), True, id="single_port_inside_range"
-        ),
-        pytest.param(PortRange(8000, 9000), PortRange(8080, 8090), True, id="containing_range"),
-        pytest.param(
-            PortRange(8080, 8090), PortRange(8091, 8100), False, id="no_overlap_no_conflict"
-        ),
-        pytest.param(
-            PortRange(8080, 8080),
-            PortRange(8081, 8081),
-            False,
-            id="adjacent_ports_no_conflict",
-        ),
-        pytest.param(PortRange(8080, 8090), PortRange(8090, 8100), True, id="boundary_touch"),
-    ],
-)
-def test_port_range_conflicts_with(a, b, expected):
-    """
-    arrange: Two PortRanges.
-    act: Check conflicts_with.
-    assert: Returns the expected boolean.
-    """
-    assert a.conflicts_with(b) == expected
-
-
-def test_port_range_conflicts_with_is_symmetric():
-    """
-    arrange: Two partially overlapping PortRanges.
-    act: Check conflicts_with in both directions.
-    assert: Both directions return the same result.
-    """
-    a = PortRange(8080, 8090)
-    b = PortRange(8085, 8095)
-    assert a.conflicts_with(b) == b.conflicts_with(a)
-
-
-# ---------------------------------------------------------------------------
 # HaproxyRouteTcpProvider._detect_port_range_conflicts tests
 # ---------------------------------------------------------------------------
 
@@ -730,8 +680,8 @@ def test_port_range_conflicts_with_is_symmetric():
         ),
         pytest.param(
             [_make_requirer(1, 8080, 8090), _make_requirer(2, 8080, 8090)],
-            set(),
-            id="two_same_range_not_conflicting",
+            {1, 2},
+            id="two_same_range_conflicting",
         ),
         pytest.param(
             [_make_requirer(i, 8080) for i in range(1, 6)],
@@ -760,13 +710,13 @@ def test_port_range_conflicts_with_is_symmetric():
                 _make_requirer(3, 8100, 8110),
                 _make_requirer(4, 8100, 8110),
             ],
-            set(),
-            id="two_groups_same_range_with_gap",
+            {1, 2, 3, 4},
+            id="two_groups_same_range_each_conflict",
         ),
         pytest.param(
             [_make_requirer(1, 8080, 8090), _make_requirer(2, 8085)],
-            {1, 2},
-            id="single_port_inside_range",
+            set(),
+            id="single_port_inside_range_is_mergeable",
         ),
         pytest.param(
             [_make_requirer(1, 8080, 8090), _make_requirer(2, 8085, 8095)],
@@ -795,12 +745,12 @@ def test_port_range_conflicts_with_is_symmetric():
                 _make_requirer(3, 8110),
             ],
             {1, 2},
-            id="first_two_conflict_third_clean",
+            id="first_two_ranges_conflict_single_clean",
         ),
         pytest.param(
             [_make_requirer(1, 8080), _make_requirer(2, 8090, 8100), _make_requirer(3, 8095)],
-            {2, 3},
-            id="first_clean_last_two_conflict",
+            set(),
+            id="single_inside_range_no_conflict",
         ),
         pytest.param(
             [
@@ -818,7 +768,7 @@ def test_port_range_conflicts_with_is_symmetric():
                 _make_requirer(3, 8085, 8100),
             ],
             {1, 2, 3},
-            id="two_same_then_conflicting_all_flagged",
+            id="three_overlapping_ranges_all_flagged",
         ),
         pytest.param(
             [
@@ -849,3 +799,173 @@ def test_detect_port_range_conflicts(requirers, expected):
     assert: The set of conflicting relation IDs matches expected.
     """
     assert HaproxyRouteTcpProvider._detect_port_range_conflicts(requirers) == expected
+
+
+# ---------------------------------------------------------------------------
+# PortMapping tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "value, frontend, backend, offset",
+    [
+        pytest.param(
+            "8080:8080", PortRange(8080, 8080), PortRange(8080, 8080), 0, id="single_no_offset"
+        ),
+        pytest.param(
+            "8080:9090",
+            PortRange(8080, 8080),
+            PortRange(9090, 9090),
+            1010,
+            id="single_positive_offset",
+        ),
+        pytest.param(
+            "9090:8080",
+            PortRange(9090, 9090),
+            PortRange(8080, 8080),
+            -1010,
+            id="single_negative_offset",
+        ),
+        pytest.param(
+            "8080-8090:9080-9090",
+            PortRange(8080, 8090),
+            PortRange(9080, 9090),
+            1000,
+            id="range_positive_offset",
+        ),
+        pytest.param(
+            "9080-9090:8080-8090",
+            PortRange(9080, 9090),
+            PortRange(8080, 8090),
+            -1000,
+            id="range_negative_offset",
+        ),
+        pytest.param(
+            "8080-8090:8080-8090",
+            PortRange(8080, 8090),
+            PortRange(8080, 8090),
+            0,
+            id="range_no_offset",
+        ),
+    ],
+)
+def test_port_mapping_from_string(value, frontend, backend, offset):
+    """
+    arrange: A valid port mapping string.
+    act: Parse it with PortMapping.from_string.
+    assert: The frontend/backend ranges and offset match expectations.
+    """
+    mapping = PortMapping.from_string(value)
+    assert mapping.frontend == frontend
+    assert mapping.backend == backend
+    assert mapping.offset == offset
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param("8080", id="missing_backend"),
+        pytest.param("8080:9090:1010", id="too_many_parts"),
+        pytest.param("8080-8090:9080-9095", id="different_lengths"),
+        pytest.param("8080-:9090", id="malformed_range"),
+        pytest.param("abc:9090", id="non_numeric"),
+        pytest.param("0:9090", id="port_zero"),
+        pytest.param("70000:9090", id="port_out_of_bounds"),
+        pytest.param("8090-8080:9090-9100", id="start_greater_than_end"),
+    ],
+)
+def test_port_mapping_from_string_invalid(value):
+    """
+    arrange: A malformed port mapping string.
+    act: Parse it with PortMapping.from_string.
+    assert: A ValueError is raised.
+    """
+    with pytest.raises(ValueError):
+        PortMapping.from_string(value)
+
+
+def test_port_mapping_str_roundtrip():
+    """
+    arrange: A PortMapping built from a string.
+    act: Convert it back to a string.
+    assert: The canonical string representation is returned.
+    """
+    assert str(PortMapping.from_string("8080-8090:9080-9090")) == "8080-8090:9080-9090"
+    assert str(PortMapping.from_string("8080:9090")) == "8080:9090"
+
+
+# ---------------------------------------------------------------------------
+# TcpRequirerApplicationData port_mapping tests
+# ---------------------------------------------------------------------------
+
+
+def test_requirer_application_data_port_mapping_range():
+    """
+    arrange: Create application data with a port_mapping range.
+    act: Validate the model and read the derived properties.
+    assert: The frontend/backend ranges and offset are derived from the mapping.
+    """
+    data = TcpRequirerApplicationData(port_mapping="8080-8090:9080-9090")
+
+    assert data.port is None
+    assert data.backend_port is None
+    assert data.is_port_range is True
+    assert data.port_range == PortRange(8080, 8090)
+    assert data.backend_port_range == PortRange(9080, 9090)
+    assert data.effective_port_mapping.offset == 1000
+
+
+def test_requirer_application_data_port_builds_mapping():
+    """
+    arrange: Create application data with port and backend_port set.
+    act: Read the derived port mapping.
+    assert: The mapping is built from port and backend_port.
+    """
+    data = TcpRequirerApplicationData(port=8080, backend_port=9090)
+
+    assert data.is_port_range is False
+    assert data.port_range == PortRange(8080, 8080)
+    assert data.backend_port_range == PortRange(9090, 9090)
+    assert data.effective_port_mapping.offset == 1010
+
+
+def test_requirer_application_data_port_only_zero_offset():
+    """
+    arrange: Create application data with only port set.
+    act: Read the derived port mapping.
+    assert: backend_port defaults to port, giving a zero offset.
+    """
+    data = TcpRequirerApplicationData(port=8080)
+
+    assert data.backend_port == 8080
+    assert data.effective_port_mapping.offset == 0
+
+
+def test_requirer_application_data_port_mapping_with_port_raises():
+    """
+    arrange: Create application data with both port_mapping and port.
+    act: Validate the model.
+    assert: Validation fails because they are mutually exclusive.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(port=8080, port_mapping="8080:9090")
+
+
+def test_requirer_application_data_port_mapping_with_backend_port_raises():
+    """
+    arrange: Create application data with both port_mapping and backend_port.
+    act: Validate the model.
+    assert: Validation fails because they are mutually exclusive.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(backend_port=9090, port_mapping="8080:9090")
+
+
+def test_requirer_application_data_invalid_port_mapping_raises():
+    """
+    arrange: Create application data with a malformed port_mapping.
+    act: Validate the model.
+    assert: Validation fails.
+    """
+    with pytest.raises(ValidationError):
+        TcpRequirerApplicationData(port_mapping="8080-8090:9080-9095")

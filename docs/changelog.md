@@ -18,7 +18,7 @@ Each revision is versioned by the date of the revision.
 
 ## 2026-05-26
 
-- Added `backend_port_range` attribute to `haproxy-route-tcp` relation to allow mapping from multiple frontend ports to multiple backend ports.
+- Added `port_mapping` attribute to `haproxy-route-tcp` relation to allow mapping a range of frontend ports to a range of backend ports.
 
 ## 2026-05-25
 

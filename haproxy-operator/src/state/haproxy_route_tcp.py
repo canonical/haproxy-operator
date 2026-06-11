@@ -112,8 +112,10 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
         """Get the list of backend servers for this TCP endpoint.
 
         Creates HaproxyRouteTcpServer instances from the unit data, assigning
-        sequential server names and using the application's backend port and
-        health check configuration.
+        sequential server names and the health check configuration. Servers have
+        no explicit port: the backend destination port is derived from the
+        connection destination port (translated by the port mapping offset when
+        needed), so the same backend can serve a whole port range.
 
         Returns:
             list[HaproxyRouteTcpServer]: List of configured backend servers.
@@ -127,7 +129,7 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
             servers.append(
                 HaproxyRouteTcpServer(
                     server_name=f"{self.application}-{i}",
-                    port=self.application_data.backend_port,
+                    port=None,
                     address=address,
                     check=self.application_data.check,
                     maxconn=self.application_data.server_maxconn,
@@ -137,16 +139,36 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
         return servers
 
     @property
+    def dst_port_translation(self) -> Optional[str]:
+        """Get the HAProxy directive that translates the destination port.
+
+        When the frontend and backend ranges have an offset (e.g. the requirer
+        maps frontend port 8080 to backend port 9090), HAProxy must rewrite the
+        connection destination port before forwarding to the backend servers.
+
+        Returns:
+            Optional[str]: The `tcp-request content set-dst-port` directive, or
+                None when no translation is required (offset is zero).
+        """
+        offset = self.application_data.effective_port_mapping.offset
+        if offset > 0:
+            return f"tcp-request content set-dst-port dst-port,add({offset})"
+        if offset < 0:
+            return f"tcp-request content set-dst-port dst-port,sub({abs(offset)})"
+        return None
+
+    @property
     def name(self) -> str:
         """Get the unique name for this TCP endpoint.
 
-        Combines the application name and frontend port to create a unique
+        Combines the application name and frontend port range to create a unique
         identifier for the HAProxy configuration section.
 
         Returns:
-            str: The endpoint name in format "{application}_{port}".
+            str: The endpoint name in format "{application}_{start}_{end}".
         """
-        return f"{self.application}_{self.application_data.port}"
+        port_range = self.application_data.port_range
+        return f"{self.application}_{port_range.start}_{port_range.end}"
 
     @property
     def tcp_check_options(self) -> list[str]:
@@ -208,67 +230,102 @@ class HAProxyRouteTcpFrontend:
     Attrs:
         port: The port exposed on the provider.
         backends: List of backend endpoints for this frontend.
+        default_backend: The catch-all backend, or None for an empty rejecting backend.
         enforce_tls: Whether to enforce TLS for all traffic.
         tls_terminate: Whether to enable TLS termination.
     """
 
     port_range: PortRange = Field(description="The port(s) exposed on the provider.")
     backends: list[HAProxyRouteTcpBackend] = Field(description="List of backend endpoints.")
+    default_backend: Optional[HAProxyRouteTcpBackend] = Field(
+        description="The catch-all backend, or None for an empty rejecting backend."
+    )
     enforce_tls: bool = Field(description="Whether to enforce TLS for all traffic.", default=True)
     tls_terminate: bool = Field(description="Whether to enable tls termination.", default=True)
     relation_ids_with_invalid_data: set[int] = Field(
         description="List of relation ids with invalid data.", default=set[int]()
     )
 
-    @classmethod
-    def from_backends(cls, backends: list[HAProxyRouteTcpBackend]) -> "Self":
-        """Instantiate a HAProxyRouteTcpFrontend class from a list of backends.
+    @staticmethod
+    def _partition_routable_single_backends(
+        backends: list[HAProxyRouteTcpBackend],
+    ) -> tuple[list[HAProxyRouteTcpBackend], list[HAProxyRouteTcpBackend], set[int]]:
+        """Partition single-port backends by SNI-routability and TLS termination.
+
+        A single-port backend is SNI-routable only if it enforces TLS and declares
+        an sni value. Routable backends are further split by whether they terminate
+        TLS, because a frontend cannot mix terminating and non-terminating backends.
 
         Args:
-            backends: List of backend endpoints.
+            backends: The single-port backends to partition.
+
+        Returns:
+            tuple: (routable backends that terminate TLS, routable backends that
+                don't, relation IDs of backends that are not SNI-routable).
+        """
+        with_tls_terminate: list[HAProxyRouteTcpBackend] = []
+        without_tls_terminate: list[HAProxyRouteTcpBackend] = []
+        non_routable_ids: set[int] = set[int]()
+        for backend in backends:
+            if not backend.application_data.enforce_tls or backend.application_data.sni is None:
+                non_routable_ids.add(backend.relation_id)
+                continue
+            if backend.application_data.tls_terminate:
+                with_tls_terminate.append(backend)
+            else:
+                without_tls_terminate.append(backend)
+        return with_tls_terminate, without_tls_terminate, non_routable_ids
+
+    @classmethod
+    def from_backends_single_port(cls, backends: list[HAProxyRouteTcpBackend]) -> "Self":
+        """Instantiate a frontend that listens on a single port.
+
+        A lone backend becomes the default backend and does not require an SNI.
+        When several single-port backends share the port they are merged and routed
+        by SNI, so each must enforce TLS and declare an sni value. If some backends
+        terminate TLS and others don't, only the terminating ones are merged.
+
+        Args:
+            backends: List of single-port backend endpoints sharing the same port.
 
         Raises:
-            HAProxyRouteTcpFrontendValidationError: When the frontend is initialized with no backends.
+            HAProxyRouteTcpFrontendValidationError: When no routable backend remains.
 
         Returns:
             Self: The instantiated HAProxyRouteTcpFrontend class.
         """
-        # If there's only one backend, return the class directly with values from the backend
+        if not backends:
+            raise HAProxyRouteTcpFrontendValidationError(
+                "Cannot create HAProxyRouteTcpFrontend from empty backends list"
+            )
+
+        # A single backend is always routable on its own (no SNI required).
         if len(backends) == 1:
+            backend = backends[0]
             return cls(
-                port_range=backends[0].application_data.port_range,
+                port_range=backend.application_data.port_range,
                 backends=backends,
-                enforce_tls=backends[0].application_data.enforce_tls,
-                tls_terminate=backends[0].application_data.tls_terminate,
+                # Without an SNI the lone backend serves all traffic; with an SNI it
+                # is routed by the SNI ACL and the default backend rejects the rest.
+                default_backend=backend if backend.sni_match_rule is None else None,
+                enforce_tls=backend.application_data.enforce_tls,
+                tls_terminate=backend.application_data.tls_terminate,
                 relation_ids_with_invalid_data=set[int](),
             )
 
-        # At this point we have more than one backend, all of them need to set enforce_tls=True
-        # and have an sni value for them to be routable and merged.
-        # If there are backends that set tls_terminate=True amongst the routable backends
-        # then only those will be merged.
-        routable_backends_with_tls_terminate: list[HAProxyRouteTcpBackend] = []
-        routable_backends_without_tls_terminate: list[HAProxyRouteTcpBackend] = []
-
-        relation_ids_with_invalid_data: set[int] = set[int]()
-        for backend in backends:
-            if not backend.application_data.enforce_tls or backend.application_data.sni is None:
-                relation_ids_with_invalid_data.add(backend.relation_id)
-                continue
-
-            if backend.application_data.tls_terminate:
-                routable_backends_with_tls_terminate.append(backend)
-            else:
-                routable_backends_without_tls_terminate.append(backend)
-
-        if routable_backends_with_tls_terminate:
-            relation_ids_with_invalid_data.update(
-                backend.relation_id for backend in routable_backends_without_tls_terminate
-            )
-
-        rendered_backends = (
-            routable_backends_with_tls_terminate or routable_backends_without_tls_terminate
+        with_tls_terminate, without_tls_terminate, relation_ids_with_invalid_data = (
+            cls._partition_routable_single_backends(backends)
         )
+        # If there are backends that set tls_terminate=True amongst the routable
+        # backends then only those will be merged.
+        if with_tls_terminate:
+            relation_ids_with_invalid_data.update(
+                backend.relation_id for backend in without_tls_terminate
+            )
+            rendered_backends = with_tls_terminate
+        else:
+            rendered_backends = without_tls_terminate
+
         if not rendered_backends:
             raise HAProxyRouteTcpFrontendValidationError(
                 "Cannot create HAProxyRouteTcpFrontend from empty backends list"
@@ -276,8 +333,59 @@ class HAProxyRouteTcpFrontend:
         return cls(
             port_range=rendered_backends[0].application_data.port_range,
             backends=rendered_backends,
+            # Several backends share the port and are routed by SNI, so the default
+            # backend is empty and rejects traffic that matches no SNI ACL.
+            default_backend=None,
             enforce_tls=rendered_backends[0].application_data.enforce_tls,
             tls_terminate=rendered_backends[0].application_data.tls_terminate,
+            relation_ids_with_invalid_data=relation_ids_with_invalid_data,
+        )
+
+    @classmethod
+    def from_backends_port_range(
+        cls,
+        range_backend: HAProxyRouteTcpBackend,
+        single_backends: list[HAProxyRouteTcpBackend],
+    ) -> "Self":
+        """Instantiate a frontend that binds on a port range.
+
+        The port-range backend acts as the catch-all default backend (no SNI
+        required) and fixes the frontend's TLS termination mode. Single-port backends
+        whose port falls within the range can be merged in and are routed by SNI, so
+        they must enforce TLS, declare an sni value, and match the anchor's TLS
+        termination mode.
+
+        Args:
+            range_backend: The port-range backend anchoring the frontend.
+            single_backends: Single-port backends to merge in, routed by SNI.
+
+        Returns:
+            Self: The instantiated HAProxyRouteTcpFrontend class.
+        """
+        with_tls_terminate, without_tls_terminate, relation_ids_with_invalid_data = (
+            cls._partition_routable_single_backends(single_backends)
+        )
+        # The port-range backend fixes the frontend's TLS termination mode;
+        # single-port backends that don't match it cannot be merged in.
+        if range_backend.application_data.tls_terminate:
+            routable_singles = with_tls_terminate
+            relation_ids_with_invalid_data.update(
+                backend.relation_id for backend in without_tls_terminate
+            )
+        else:
+            routable_singles = without_tls_terminate
+            relation_ids_with_invalid_data.update(
+                backend.relation_id for backend in with_tls_terminate
+            )
+
+        return cls(
+            port_range=range_backend.application_data.port_range,
+            backends=[range_backend, *routable_singles],
+            # The port-range backend is the catch-all default; merged single-port
+            # backends are routed by SNI on top of it.
+            default_backend=range_backend,
+            enforce_tls=range_backend.application_data.enforce_tls,
+            tls_terminate=range_backend.application_data.tls_terminate,
             relation_ids_with_invalid_data=relation_ids_with_invalid_data,
         )
 
@@ -354,23 +462,6 @@ class HAProxyRouteTcpFrontend:
         if not self.is_sni_routing_enabled:
             return "tcp-request content reject unless { req_ssl_hello_type 1 }"
         return "tcp-request content reject"
-
-    @property
-    def default_backend(self) -> HAProxyRouteTcpBackend | None:
-        """Return the backend used as the default backend if it is not empty.
-
-        The default backend is not empty if there is exactly one backend and that
-        backend does not use SNI routing. This means that all traffic coming into
-        the frontend will be routed to that backend.
-
-        An empty default backend will have no servers and reject all TCP connections.
-
-        Returns:
-            HAProxyRouteTcpBackend | None: The default backend if it is not empty, otherwise None.
-        """
-        if len(self.backends) == 1 and not self.is_sni_routing_enabled:
-            return self.backends[0]
-        return None
 
     @property
     def port(self) -> int:

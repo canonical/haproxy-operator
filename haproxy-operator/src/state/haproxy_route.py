@@ -790,20 +790,54 @@ def parse_haproxy_route_tcp_requirers_data(
 ) -> list[HAProxyRouteTcpFrontend]:
     """Parse HAProxyRouteTcpFrontend data from requirers into frontend objects.
 
+    Backends are grouped into frontends following these rules:
+      * Each valid port-range backend anchors its own frontend. Port-range backends
+        are never merged with each other; overlapping ranges are flagged invalid
+        upstream and excluded here.
+      * A single-port backend is merged into a port-range frontend when its port
+        falls within that range, otherwise single-port backends are grouped together
+        by their port (SNI multiplexing).
+
     Returns:
         list[HAProxyRouteTcpFrontend]: The parsed frontend data.
     """
-    port_range_to_backends_mapping: dict[str, list[HAProxyRouteTcpBackend]] = defaultdict(list)
-    for requirer in tcp_requirers.requirers_data:
-        endpoint = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(requirer)
-        port_range_to_backends_mapping[str(endpoint.application_data.port_range)].append(endpoint)
-    tcp_frontends: list[HAProxyRouteTcpFrontend] = []
+    backends = [
+        HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(requirer)
+        for requirer in tcp_requirers.requirers_data
+        if requirer.relation_id not in tcp_requirers.relation_ids_with_invalid_data
+    ]
 
-    # Create frontends for single-port backends
-    for _key, backends in port_range_to_backends_mapping.items():
+    # Each port-range backend anchors its own frontend, paired with the single-port
+    # backends merged into it.
+    range_groups: list[tuple[HAProxyRouteTcpBackend, list[HAProxyRouteTcpBackend]]] = [
+        (backend, []) for backend in backends if backend.application_data.is_port_range
+    ]
+    single_port_groups: dict[int, list[HAProxyRouteTcpBackend]] = defaultdict(list)
+
+    for backend in backends:
+        if backend.application_data.is_port_range:
+            continue
+        port = backend.application_data.port_range.start
+        for range_backend, merged_singles in range_groups:
+            frontend_range = range_backend.application_data.port_range
+            if frontend_range.start <= port <= frontend_range.end:
+                merged_singles.append(backend)
+                break
+        else:
+            # `for...else`: runs only when no `break` was hit, i.e. the port
+            # did not fall within any range group, so it belongs to its own
+            # single-port group.
+            single_port_groups[port].append(backend)
+
+    tcp_frontends: list[HAProxyRouteTcpFrontend] = []
+    for range_backend, merged_singles in range_groups:
+        tcp_frontends.append(
+            HAProxyRouteTcpFrontend.from_backends_port_range(range_backend, merged_singles)
+        )
+
+    for group in single_port_groups.values():
         try:
-            frontend = HAProxyRouteTcpFrontend.from_backends(backends)
-            tcp_frontends.append(frontend)
+            tcp_frontends.append(HAProxyRouteTcpFrontend.from_backends_single_port(group))
         except HAProxyRouteTcpFrontendValidationError as exc:
             logger.error(f"Failed to parse TCP frontend: {exc}")
 
