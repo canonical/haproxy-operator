@@ -152,9 +152,9 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
         """
         offset = self.application_data.effective_port_mapping.offset
         if offset > 0:
-            return f"tcp-request content set-dst-port dst-port,add({offset})"
+            return f"tcp-request content set-dst-port dst_port,add({offset})"
         if offset < 0:
-            return f"tcp-request content set-dst-port dst-port,sub({abs(offset)})"
+            return f"tcp-request content set-dst-port dst_port,sub({abs(offset)})"
         return None
 
     @property

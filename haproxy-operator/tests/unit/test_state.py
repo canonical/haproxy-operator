@@ -1944,7 +1944,7 @@ def test_haproxy_route_tcp_port_range_backend(
     assert tcp_endpoint.application_data.port_range == PortRange(4000, 4005)
     assert tcp_endpoint.application_data.backend_port_range == PortRange(5000, 5005)
     assert (
-        tcp_endpoint.dst_port_translation == "tcp-request content set-dst-port dst-port,add(1000)"
+        tcp_endpoint.dst_port_translation == "tcp-request content set-dst-port dst_port,add(1000)"
     )
 
 
@@ -1960,7 +1960,7 @@ def test_haproxy_route_tcp_single_port_backend_with_offset(
     tcp_endpoint = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(haproxy_route_tcp)
     assert tcp_endpoint.servers[0].port is None
     assert (
-        tcp_endpoint.dst_port_translation == "tcp-request content set-dst-port dst-port,add(1000)"
+        tcp_endpoint.dst_port_translation == "tcp-request content set-dst-port dst_port,add(1000)"
     )
 
 
@@ -1975,7 +1975,7 @@ def test_haproxy_route_tcp_backend_negative_offset(
     haproxy_route_tcp = haproxy_route_tcp_relation_data(port=5000, backend_port=4000)
     tcp_endpoint = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(haproxy_route_tcp)
     assert (
-        tcp_endpoint.dst_port_translation == "tcp-request content set-dst-port dst-port,sub(1000)"
+        tcp_endpoint.dst_port_translation == "tcp-request content set-dst-port dst_port,sub(1000)"
     )
 
 
@@ -2144,6 +2144,6 @@ def test_haproxy_route_tcp_port_range_config_rendering(
 
     assert "frontend haproxy_route_tcp_5000-5002" in rendered
     assert "bind [::]:5000-5002" in rendered
-    assert "set-dst-port dst-port,add(1000)" in rendered
+    assert "set-dst-port dst_port,add(1000)" in rendered
     # Server entries should not have a port suffix when a port range is used
     assert "server tcp-route-requirer-0" in rendered
