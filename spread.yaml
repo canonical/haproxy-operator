@@ -37,8 +37,11 @@ integration-suites:
   haproxy-operator/tests/integration/arm64:
     summary: haproxy-operator integration tests
     working-dir: haproxy-operator/
-    auto-discover: true
-    discover-path: haproxy-operator/tests/integration
+    # auto-discover: true
+    # discover-path: haproxy-operator/tests/integration
+    auto-discover: false
+    environment:
+      MODULE/legacy_test_charm: tests/integration/legacy/test_charm.py
     backends:
     - integration-test
     systems: [ubuntu-24.04-arm64]
