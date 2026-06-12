@@ -262,4 +262,3 @@ def test_grpc_backend(
         in haproxy_conf_contents
     )
     assert out.app_status == ActiveStatus("")
-
