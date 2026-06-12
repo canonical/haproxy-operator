@@ -13,6 +13,7 @@ import typing
 
 import jubilant
 import pytest
+from opcli.pytest_plugin import CharmPathList
 from playwright._impl._driver import compute_driver_executable, get_driver_env
 
 logger = logging.getLogger(__name__)
@@ -26,13 +27,12 @@ APT_LIB_SRC = "haproxy-operator/lib/charms/operator_libs_linux/v0/apt.py"
 HAPROXY_ROUTE_POLICY_APP_NAME = "policy"
 POSTGRESQL_APPLICATION = "db"
 
-
 @pytest.fixture(scope="session", name="lxd_juju")
 def lxd_juju_fixture(request: pytest.FixtureRequest):
     """Bootstrap a new lxd controller and model and return a Juju fixture for it."""
     juju = jubilant.Juju()
 
-    lxd_controller_name = "localhost"
+    lxd_controller_name = "concierge-lxd"
     lxd_cloud_name = "localhost"
     juju.wait_timeout = JUJU_WAIT_TIMEOUT
     try:
@@ -79,14 +79,18 @@ def k8s_juju_fixture(lxd_juju: jubilant.Juju, request: pytest.FixtureRequest):
     )
     k8s_cloud = k8s_clouds[0]
 
-    # Add the k8s cloud to our new controller.
-    lxd_juju.cli(
-        "add-cloud",
-        "--controller",
-        lxd_juju.status().model.controller,
-        k8s_cloud,
-        include_model=False,
-    )
+    # Add the k8s cloud to our new controller (no-op if prepare already did it).
+    try:
+        lxd_juju.cli(
+            "add-cloud",
+            "--controller",
+            lxd_juju.status().model.controller,
+            k8s_cloud,
+            include_model=False,
+        )
+    except jubilant.CLIError as err:
+        if "already exists" not in str(err):
+            raise
 
     new_juju = jubilant.Juju(model=lxd_juju.model)
     new_juju.wait_timeout = JUJU_WAIT_TIMEOUT
@@ -94,7 +98,7 @@ def k8s_juju_fixture(lxd_juju: jubilant.Juju, request: pytest.FixtureRequest):
     try:
         new_juju.add_model(k8s_model_name, k8s_cloud)
     except jubilant.CLIError as err:
-        if not "already exists":
+        if "already exists" not in str(err):
             logger.exception(err)
             raise
         new_juju.model = k8s_model_name
@@ -102,12 +106,14 @@ def k8s_juju_fixture(lxd_juju: jubilant.Juju, request: pytest.FixtureRequest):
 
 
 @pytest.fixture(scope="module", name="application")
-def application_fixture(pytestconfig: pytest.Config, lxd_juju: jubilant.Juju):
+def application_fixture(
+    charm_paths: dict[str, CharmPathList], pytestconfig: pytest.Config, lxd_juju: jubilant.Juju
+):
     """Deploy the haproxy application.
 
     Args:
-        juju: Jubilant juju fixture.
-        charm_file: Path to the packed charm file.
+        charm_paths: Dict of charm name to CharmPathList from the pytest-opcli plugin.
+        lxd_juju: Jubilant juju fixture.
 
     Returns:
         The haproxy app name.
@@ -116,10 +122,7 @@ def application_fixture(pytestconfig: pytest.Config, lxd_juju: jubilant.Juju):
     if pytestconfig.getoption("--no-deploy") and app_name in lxd_juju.status().apps:
         return app_name
 
-    charm_file = next(
-        (f for f in pytestconfig.getoption("--charm-file") if f"{app_name}_" in f), None
-    )
-    assert charm_file, f"--charm-file with  {app_name} charm should be set"
+    charm_file = charm_paths["haproxy"].path
     lxd_juju.deploy(
         charm=charm_file,
         app=app_name,
@@ -130,12 +133,16 @@ def application_fixture(pytestconfig: pytest.Config, lxd_juju: jubilant.Juju):
 
 @pytest.fixture(scope="module", name="ddos_protection_configurator")
 def haproxy_ddos_protection_configurator_fixture(
-    pytestconfig: pytest.Config, lxd_juju: jubilant.Juju, application: str
+    charm_paths: dict[str, CharmPathList],
+    pytestconfig: pytest.Config,
+    lxd_juju: jubilant.Juju,
+    application: str,
 ):
     """Deploy the haproxy-ddos-protection-configurator application.
 
     Args:
-        pytestconfig: Pytest config to get charm files.
+        charm_paths: Dict of charm name to CharmPathList from the pytest-opcli plugin.
+        pytestconfig: Pytest config for --no-deploy flag.
         lxd_juju: Jubilant juju fixture.
         application: The haproxy application name.
 
@@ -150,12 +157,7 @@ def haproxy_ddos_protection_configurator_fixture(
     ):
         return ddos_app_name
 
-    charm_file = next(
-        (f for f in pytestconfig.getoption("--charm-file") if f"{ddos_app_name}_" in f),
-        None,
-    )
-    assert charm_file, f"--charm-file with {ddos_app_name} charm should be set"
-
+    charm_file = charm_paths["haproxy-ddos-protection-configurator"].path
     lxd_juju.deploy(
         charm=charm_file,
         app=ddos_app_name,
@@ -334,6 +336,7 @@ def deploy_any_charm_haproxy_route_requirer(
 
 @pytest.fixture(scope="module", name="haproxy_spoe_auth_deployer")
 def haproxy_spoe_deployer_fixture(
+    charm_paths: dict[str, CharmPathList],
     pytestconfig: pytest.Config,
     lxd_juju: jubilant.Juju,
     application,
@@ -341,10 +344,11 @@ def haproxy_spoe_deployer_fixture(
     iam_bundle,
 ):
     """Return a fixture function to deploy haproxy-spoe charms."""
+    spoe_charm_file = charm_paths["haproxy-spoe-auth"].path
 
     def deployer(haproxy_spoe_name, hostname):
         haproxy_spoe_name = deploy_spoe_auth(
-            pytestconfig, lxd_juju, haproxy_spoe_name, hostname
+            pytestconfig, lxd_juju, haproxy_spoe_name, hostname, spoe_charm_file
         )
         k8s_juju.wait(
             lambda status: status.apps["self-signed-certificates"].is_active,
@@ -355,7 +359,7 @@ def haproxy_spoe_deployer_fixture(
         )
         ca_cert = ca_cert_result.results["ca-certificate"].encode("utf-8")
         lxd_juju.wait(
-            lambda status: not status.apps[haproxy_spoe_name].is_waiting, timeout=5 * 60
+            lambda status: not status.apps[haproxy_spoe_name].is_waiting, timeout=400
         )
         logger.info(lxd_juju.status().apps[haproxy_spoe_name])
         inject_ca_certificate(lxd_juju, f"{haproxy_spoe_name}/0", ca_cert)
@@ -367,18 +371,11 @@ def haproxy_spoe_deployer_fixture(
 
 
 def deploy_spoe_auth(
-    pytestconfig: pytest.Config, lxd_juju: jubilant.Juju, app_name, host_name
+    pytestconfig: pytest.Config, lxd_juju: jubilant.Juju, app_name, host_name, charm_file: str
 ) -> str:
     """Deploy the haproxy-spoe-auth charm."""
-    charm_name = "haproxy-spoe-auth"
     if pytestconfig.getoption("--no-deploy") and app_name in lxd_juju.status().apps:
         return app_name
-
-    charm_file = next(
-        (f for f in pytestconfig.getoption("--charm-file") if f"{charm_name}_" in f),
-        None,
-    )
-    assert charm_file, f"--charm-file with  {charm_name} charm should be set"
 
     lxd_juju.deploy(
         charm=charm_file,
@@ -442,22 +439,16 @@ def postgresql_fixture(pytestconfig: pytest.Config, lxd_juju: jubilant.Juju):
 
 @pytest.fixture(scope="module", name="haproxy_route_policy")
 def haproxy_route_policy_fixture(
-    pytestconfig: pytest.Config, lxd_juju: jubilant.Juju
+    charm_paths: dict[str, CharmPathList], pytestconfig: pytest.Config, lxd_juju: jubilant.Juju
 ) -> str:
     """Deploy the haproxy-route-policy charm."""
-    charm_name = "haproxy-route-policy"
     if (
         pytestconfig.getoption("--no-deploy")
         and HAPROXY_ROUTE_POLICY_APP_NAME in lxd_juju.status().apps
     ):
         return HAPROXY_ROUTE_POLICY_APP_NAME
 
-    charm_file = next(
-        (f for f in pytestconfig.getoption("--charm-file") if f"{charm_name}_" in f),
-        None,
-    )
-    assert charm_file, f"--charm-file with  {charm_name} charm should be set"
-
+    charm_file = charm_paths["haproxy-route-policy"].path
     lxd_juju.deploy(
         charm=charm_file,
         app=HAPROXY_ROUTE_POLICY_APP_NAME,
