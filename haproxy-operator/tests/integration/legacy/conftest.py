@@ -6,7 +6,6 @@
 import ipaddress
 import json
 import logging
-import os.path
 import pathlib
 import textwrap
 import typing
@@ -16,6 +15,7 @@ import pytest_asyncio
 from juju.application import Application
 from juju.client._definitions import FullStatus, UnitStatus
 from juju.model import Model
+from opcli.pytest_plugin import CharmPathList
 from pytest_operator.plugin import OpsTest
 
 logger = logging.getLogger(__name__)
@@ -34,14 +34,9 @@ async def model_fixture(ops_test: OpsTest) -> Model:
 
 
 @pytest_asyncio.fixture(scope="module", name="charm")
-async def charm_fixture(pytestconfig: pytest.Config) -> str:
-    """Get value from parameter charm-file."""
-    charm = pytestconfig.getoption("--charm-file")
-    assert charm, "--charm-file must be set"
-    if not os.path.exists(charm):
-        logger.info("Using parent directory for charm file")
-        charm = os.path.join("..", charm)
-    return charm
+async def charm_fixture(charm_paths: dict[str, CharmPathList]) -> str:
+    """Get path to the haproxy charm."""
+    return charm_paths["haproxy"].path
 
 
 @pytest_asyncio.fixture(scope="module", name="application")
@@ -55,7 +50,7 @@ async def application_fixture(
         yield model.applications[app_name]
         return
     # Deploy the charm and wait for active/idle status
-    application = await model.deploy(f"./{charm}", trust=True)
+    application = await model.deploy(charm, trust=True)
     await model.wait_for_idle(apps=[application.name], status="active", raise_on_error=True)
     yield application
 
