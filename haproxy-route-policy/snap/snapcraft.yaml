@@ -11,8 +11,7 @@ description: |
 confinement: strict
 platforms:
   amd64:
-    build-on: [amd64]
-    build-for: [amd64]
+  arm64:
 
 system-usernames:
   _daemon_: shared
