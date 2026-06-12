@@ -1,22 +1,45 @@
-name: Publish the haproxy-operator charm to edge
+name: Publish
 
 on:
-  workflow_dispatch:
   push:
     branches:
-    - main
+      - main
 
 jobs:
-  publish-to-edge:
-    strategy:
-      matrix:
-        configuration: [{working-directory: "./haproxy-operator", channel: "2.8/edge", tag-prefix: "haproxy"}, {working-directory: "./haproxy-spoe-auth-operator", channel: "latest/edge", tag-prefix: "haproxy-spoe-auth"}, {working-directory: "./haproxy-ddos-protection-configurator", channel: "latest/edge", tag-prefix: "haproxy-ddos-protection-configurator"}, {working-directory: "./haproxy-route-policy-operator", channel: "latest/edge", tag-prefix: "haproxy-route-policy"}]
+  publish:
+    uses: canonical/charm-ci/.github/workflows/publish-artifacts.yml@v0.0.1-alpha.2
     permissions:
       actions: read
       contents: write
-    uses: canonical/operator-workflows/.github/workflows/publish_charm.yaml@main
-    secrets: inherit
     with:
-      channel: ${{ matrix.configuration.channel }}
-      working-directory: ${{ matrix.configuration.working-directory }}
-      tag-prefix: ${{ matrix.configuration.tag-prefix }}
+      channel: latest/edge
+      integration-workflow-name: integration_test.yaml
+    secrets:
+      CHARMHUB_TOKEN: ${{ secrets.CHARMHUB_TOKEN }}
+
+  release-libs:
+    name: Release any bumped charm library
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the source
+        uses: actions/checkout@v6
+        with:
+          path: charm
+      - name: Release libraries
+        env:
+          CHARMCRAFT_AUTH: "${{ secrets.CHARMHUB_TOKEN }}"
+          CHARM_PATH: './haproxy-operator'
+          CHARM_NAME: 'haproxy'
+        run: |
+          sudo snap install charmcraft --classic
+          cd "${GITHUB_WORKSPACE}/charm/${CHARM_PATH}"
+          # Get the charm name
+          if [[ $CHARM_NAME = "" ]]; then echo "Error: empty charm name." && exit 1; fi
+          charmlib_path="${CHARM_NAME//-/_}"
+          # For each library belonging to the charm, publish it
+          if [ -d "lib/charms/${charmlib_path}" ]; then
+            for lib in $(find "lib/charms/${charmlib_path}" -type f | sed 's|lib/||' | sed 's/.py$//' | sed 's|/|.|g'); do
+              charmcraft publish-lib "$lib"
+            done
+          fi

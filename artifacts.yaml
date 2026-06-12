@@ -11,6 +11,7 @@ charms:
   - arch: amd64
   - arch: arm64
     runner: [ubuntu-24.04-arm]
+  channel: latest/edge
 - name: haproxy
   charmcraft-yaml: haproxy-operator/charmcraft.yaml
   resources: {}
@@ -18,16 +19,19 @@ charms:
   - arch: amd64
   - arch: arm64
     runner: [ubuntu-24.04-arm]
+  channel: 2.8/edge
 - name: haproxy-route-policy
   charmcraft-yaml: haproxy-route-policy-operator/charmcraft.yaml
   resources: {}
   platforms:
   - arch: amd64
+  channel: latest/edge
 - name: haproxy-spoe-auth
   charmcraft-yaml: haproxy-spoe-auth-operator/charmcraft.yaml
   resources: {}
   platforms:
   - arch: amd64
+  channel: latest/edge
 snaps:
 - name: haproxy-route-policy
   snapcraft-yaml: haproxy-route-policy/snap/snapcraft.yaml
