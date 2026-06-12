@@ -69,6 +69,7 @@ def test_protocol_https(
         " ssl ca-file /var/lib/haproxy/cas/cas.pem alpn h2,http/1.1 check-alpn h2,http/1.1\n"
         in haproxy_conf_contents
     )
+    assert "option forwardfor" in haproxy_conf_contents
     assert out.app_status == ActiveStatus("")
 
 
@@ -261,52 +262,4 @@ def test_grpc_backend(
         in haproxy_conf_contents
     )
     assert out.app_status == ActiveStatus("")
-
-
-@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
-def test_option_forwardfor(
-    monkeypatch: pytest.MonkeyPatch, certificates_integration, receive_ca_certs_relation
-):
-    """
-    arrange: prepare the state with the haproxy-route relation.
-    act: run relation_changed for the haproxy-route relation.
-    assert: the rendered config contains "option forwardfor" in the backend section.
-    """
-    render_file_mock = MagicMock()
-    monkeypatch.setattr("haproxy.render_file", render_file_mock)
-    haproxy_route_relation = Relation(
-        endpoint="haproxy-route",
-        local_app_data={"endpoints": json.dumps([f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}/"])},
-        remote_app_data={
-            "hostname": f'"{TEST_EXTERNAL_HOSTNAME_CONFIG}"',
-            "hosts": '["10.12.97.153"]',
-            "ports": "[80]",
-            "protocol": '"http"',
-            "service": '"test-service"',
-        },
-        remote_units_data={0: {"address": '"10.75.1.129"'}},
-    )
-    state = State(
-        relations=frozenset(
-            {
-                receive_ca_certs_relation,
-                haproxy_route_relation,
-                certificates_integration,
-            }
-        ),
-        leader=True,
-        model=Model(name="haproxy-tutorial"),
-        app_status=ActiveStatus(""),
-        unit_status=ActiveStatus(""),
-    )
-
-    ctx = Context(HAProxyCharm, juju_version="3.6.8")
-    ctx.run(
-        ctx.on.relation_changed(haproxy_route_relation),
-        state,
-    )
-
-    render_file_mock.assert_called_once()
-    haproxy_conf_contents = render_file_mock.call_args_list[0].args[1]
-    assert "option forwardfor" in haproxy_conf_contents
 
