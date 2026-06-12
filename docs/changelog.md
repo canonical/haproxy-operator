@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
-## Unreleased
+## 2026-06-12
 
 - Added `option forwardfor` by default for `haproxy-route` backends.
 
