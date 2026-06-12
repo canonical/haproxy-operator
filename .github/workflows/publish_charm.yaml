@@ -12,7 +12,6 @@ jobs:
       actions: read
       contents: write
     with:
-      channel: latest/edge
       integration-workflow-name: integration_test.yaml
     secrets:
       CHARMHUB_TOKEN: ${{ secrets.CHARMHUB_TOKEN }}
