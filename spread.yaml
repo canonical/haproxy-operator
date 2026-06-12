@@ -43,9 +43,7 @@ integration-suites:
     backends:
     - integration-test
     systems: [ubuntu-24.04-arm64]
-    pytest-arguments-template: &default-pytest-args |
-      --model testing
-      --keep-models
+    pytest-arguments-template: *default-pytest-args
   haproxy-spoe-auth-operator/tests/integration/:
     summary: haproxy-spoe-auth-operator integration tests
     working-dir: haproxy-spoe-auth-operator/
