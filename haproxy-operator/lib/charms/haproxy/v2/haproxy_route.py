@@ -974,22 +974,9 @@ class HaproxyRouteProvider(Object):
             endpoints: The list of proxied endpoints to publish.
             relation: The relation with the requirer application.
         """
-        # Skip the write if the databag already contains identical endpoints.
-        # Any relation-set call — even with an unchanged value — triggers a
-        # relation-changed event on the requirer side, which can create an
-        # infinite reconciliation loop when provider and requirer both react
-        # to each other's writes.
-        new_data = HaproxyRouteProviderAppData(endpoints=[cast(AnyHttpUrl, e) for e in endpoints])
-        try:
-            current = cast(
-                HaproxyRouteProviderAppData,
-                HaproxyRouteProviderAppData.load(relation.data[self.charm.app]),
-            )
-            if current.endpoints == new_data.endpoints:
-                return
-        except DataValidationError:
-            pass
-        new_data.dump(relation.data[self.charm.app], clear=True)
+        HaproxyRouteProviderAppData(endpoints=[cast(AnyHttpUrl, e) for e in endpoints]).dump(
+            relation.data[self.charm.app], clear=True
+        )
 
 
 class HaproxyRouteEnpointsReadyEvent(EventBase):
