@@ -34,6 +34,17 @@ integration-suites:
     pytest-arguments-template: &default-pytest-args |
       --model testing
       --keep-models
+  haproxy-operator/tests/integration/arm64:
+    summary: haproxy-operator integration tests
+    working-dir: haproxy-operator/
+    auto-discover: true
+    discover-path: haproxy-operator/tests/integration
+    backends:
+    - integration-test
+    systems: [ubuntu-24.04-arm64]
+    pytest-arguments-template: &default-pytest-args |
+      --model testing
+      --keep-models
   haproxy-spoe-auth-operator/tests/integration/:
     summary: haproxy-spoe-auth-operator integration tests
     working-dir: haproxy-spoe-auth-operator/
