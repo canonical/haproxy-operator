@@ -9,28 +9,40 @@ charms:
   resources: {}
   platforms:
   - arch: amd64
+  - arch: arm64
+    runner: [ubuntu-24.04-arm]
 - name: haproxy
   charmcraft-yaml: haproxy-operator/charmcraft.yaml
   resources: {}
   platforms:
   - arch: amd64
+  - arch: arm64
+    runner: [ubuntu-24.04-arm]
 - name: haproxy-route-policy
   charmcraft-yaml: haproxy-route-policy-operator/charmcraft.yaml
   resources: {}
   platforms:
   - arch: amd64
+  - arch: arm64
+    runner: [ubuntu-24.04-arm]
 - name: haproxy-spoe-auth
   charmcraft-yaml: haproxy-spoe-auth-operator/charmcraft.yaml
   resources: {}
   platforms:
   - arch: amd64
+  - arch: arm64
+    runner: [ubuntu-24.04-arm]
 snaps:
 - name: haproxy-route-policy
   snapcraft-yaml: haproxy-route-policy/snap/snapcraft.yaml
   pack-dir: haproxy-route-policy
   platforms:
   - arch: amd64
+  - arch: arm64
+    runner: [ubuntu-24.04-arm]
 - name: haproxy-spoe-auth
   snapcraft-yaml: haproxy-spoe-auth-snap/snapcraft.yaml
   platforms:
   - arch: amd64
+  - arch: arm64
+    runner: [ubuntu-24.04-arm]
