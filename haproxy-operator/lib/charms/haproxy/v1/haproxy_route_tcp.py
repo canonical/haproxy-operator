@@ -952,10 +952,13 @@ class HaproxyRouteTcpProvider(Object):
                 HaproxyRouteTcpProviderAppData,
                 HaproxyRouteTcpProviderAppData.load(relation.data[self.charm.app]),
             )
-            if current.endpoints == endpoints:
+            if set(current.endpoints) == set(endpoints):
                 return
         except DataValidationError:
-            pass
+            logger.error(
+                "Invalid data in provider databag for relation %s, overwriting.",
+                relation,
+            )
         HaproxyRouteTcpProviderAppData(endpoints=endpoints).dump(
             relation.data[self.charm.app], clear=True
         )
