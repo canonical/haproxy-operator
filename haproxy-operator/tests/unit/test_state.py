@@ -278,7 +278,8 @@ def test_haproxy_route_tcp_endpoint(
     assert tcp_endpoint.application == haproxy_route_tcp.application
     assert tcp_endpoint.servers[0].address == haproxy_route_tcp.units_data[0].address
     assert tcp_endpoint.servers[0].server_name == f"{haproxy_route_tcp.application}-0"
-    assert tcp_endpoint.servers[0].port is None
+    # Single-port backends render an explicit backend port (here defaulting to the port).
+    assert tcp_endpoint.servers[0].port == 4000
     assert tcp_endpoint.dst_port_translation is None
 
 
@@ -1954,14 +1955,12 @@ def test_haproxy_route_tcp_single_port_backend_with_offset(
     """
     arrange: Generate TCP relation data with port and a different backend_port.
     act: Initialize the HAProxyRouteTcpBackend class.
-    assert: The dst-port translation reflects the offset between port and backend_port.
+    assert: The server renders the explicit backend port and no dst-port translation.
     """
     haproxy_route_tcp = haproxy_route_tcp_relation_data(port=4000, backend_port=5000)
     tcp_endpoint = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(haproxy_route_tcp)
-    assert tcp_endpoint.servers[0].port is None
-    assert (
-        tcp_endpoint.dst_port_translation == "tcp-request content set-dst-port dst_port,add(1000)"
-    )
+    assert tcp_endpoint.servers[0].port == 5000
+    assert tcp_endpoint.dst_port_translation is None
 
 
 def test_haproxy_route_tcp_backend_negative_offset(
@@ -1970,13 +1969,12 @@ def test_haproxy_route_tcp_backend_negative_offset(
     """
     arrange: Generate TCP relation data with a backend port lower than the frontend port.
     act: Initialize the HAProxyRouteTcpBackend class.
-    assert: The dst-port translation uses sub() with the absolute offset.
+    assert: The server renders the explicit backend port and no dst-port translation.
     """
     haproxy_route_tcp = haproxy_route_tcp_relation_data(port=5000, backend_port=4000)
     tcp_endpoint = HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(haproxy_route_tcp)
-    assert (
-        tcp_endpoint.dst_port_translation == "tcp-request content set-dst-port dst_port,sub(1000)"
-    )
+    assert tcp_endpoint.servers[0].port == 4000
+    assert tcp_endpoint.dst_port_translation is None
 
 
 def test_haproxy_route_tcp_port_range_creates_single_frontend(
@@ -2029,6 +2027,14 @@ def test_haproxy_route_tcp_single_port_merges_into_range_frontend(
     assert frontend.default_backend is not None
     assert frontend.default_backend.application_data.is_port_range is True
     assert frontend.is_sni_routing_enabled is True
+
+    # The merged single-port backend must connect to its explicit backend port,
+    # because the connection's destination port within the frontend range is arbitrary.
+    merged_single = next(
+        backend for backend in frontend.backends if not backend.application_data.is_port_range
+    )
+    assert merged_single.servers[0].port == 4002
+    assert merged_single.dst_port_translation is None
 
 
 def test_haproxy_route_tcp_overlapping_ranges_conflict(

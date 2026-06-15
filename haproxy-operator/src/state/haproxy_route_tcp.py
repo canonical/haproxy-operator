@@ -112,10 +112,13 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
         """Get the list of backend servers for this TCP endpoint.
 
         Creates HaproxyRouteTcpServer instances from the unit data, assigning
-        sequential server names and the health check configuration. Servers have
-        no explicit port: the backend destination port is derived from the
-        connection destination port (translated by the port mapping offset when
-        needed), so the same backend can serve a whole port range.
+        sequential server names and the health check configuration.
+
+        Single-port backends render an explicit backend port: when merged by SNI
+        into a wider port-range frontend, the connection's destination port is
+        arbitrary within the range and cannot be reused. Port-range backends instead
+        render no port and rely on `dst_port_translation`, so each port in the range
+        maps to its corresponding backend port.
 
         Returns:
             list[HaproxyRouteTcpServer]: List of configured backend servers.
@@ -125,11 +128,12 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
         if not backend_addresses:
             backend_addresses = [unit_data.address for unit_data in self.units_data]
 
+        port = None if self.application_data.is_port_range else self.backend_port
         for i, address in enumerate(backend_addresses):
             servers.append(
                 HaproxyRouteTcpServer(
                     server_name=f"{self.application}-{i}",
-                    port=None,
+                    port=port,
                     address=address,
                     check=self.application_data.check,
                     maxconn=self.application_data.server_maxconn,
@@ -139,17 +143,28 @@ class HAProxyRouteTcpBackend(HaproxyRouteTcpRequirerData):
         return servers
 
     @property
+    def backend_port(self) -> int:
+        """Get the backend port that single-port servers should connect to.
+
+        Returns:
+            int: The start of the backend port range (the backend port).
+        """
+        return self.application_data.backend_port_range.start
+
+    @property
     def dst_port_translation(self) -> Optional[str]:
         """Get the HAProxy directive that translates the destination port.
 
-        When the frontend and backend ranges have an offset (e.g. the requirer
-        maps frontend port 8080 to backend port 9090), HAProxy must rewrite the
-        connection destination port before forwarding to the backend servers.
+        Only port-range backends need this: each frontend port in the range maps to
+        a distinct backend port, so the connection's destination port is rewritten by
+        the mapping offset. Single-port backends use an explicit server port instead.
 
         Returns:
             Optional[str]: The `tcp-request content set-dst-port` directive, or
-                None when no translation is required (offset is zero).
+                None when no translation is required (single port or zero offset).
         """
+        if not self.application_data.is_port_range:
+            return None
         offset = self.application_data.effective_port_mapping.offset
         if offset > 0:
             return f"tcp-request content set-dst-port dst_port,add({offset})"
