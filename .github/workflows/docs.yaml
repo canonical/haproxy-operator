@@ -10,4 +10,6 @@ jobs:
     uses: canonical/operator-workflows/.github/workflows/docs.yaml@main
     secrets: inherit
     with:
-      vale-files: '[\"README.md\", \"CONTRIBUTING.md\"]'
+      vale-files:
+        - README.md
+        - CONTRIBUTING.md
