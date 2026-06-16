@@ -1148,6 +1148,23 @@ class HaproxyRouteTcpProvider(Object):
             endpoints: The list of proxied endpoints to publish.
             relation: The relation with the requirer application.
         """
+        # Skip the write if the databag already contains identical endpoints.
+        # Any relation-set call — even with an unchanged value — triggers a
+        # relation-changed event on the requirer side, which can create an
+        # infinite reconciliation loop when provider and requirer both react
+        # to each other's writes.
+        try:
+            current = cast(
+                HaproxyRouteTcpProviderAppData,
+                HaproxyRouteTcpProviderAppData.load(relation.data[self.charm.app]),
+            )
+            if set(current.endpoints) == set(endpoints):
+                return
+        except DataValidationError:
+            logger.error(
+                "Invalid data in provider databag for relation %s, overwriting.",
+                relation,
+            )
         HaproxyRouteTcpProviderAppData(endpoints=endpoints).dump(
             relation.data[self.charm.app], clear=True
         )
