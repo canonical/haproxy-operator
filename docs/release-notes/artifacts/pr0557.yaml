@@ -1,0 +1,21 @@
+version_schema: 2
+
+changes:
+  - title: Fixed idempotent publish of proxied endpoints for haproxy-route-tcp
+    author: trung.thanh.phan
+    type: fix
+    description: >
+      Added idempotent handling in `haproxy_route_tcp.py` `publish_proxied_endpoints`
+      method to skip databag writes when endpoints are identical, preventing infinite
+      reconciliation loops caused by Juju's relation-set triggering relation-changed
+      events even for unchanged values. Uses `set()` comparison for order-independent
+      matching. Reverted the same change from `haproxy_route.py` as it is not needed
+      for HTTP routes. Added unit tests using `pytest.mark.parametrize` to verify
+      idempotent behavior with same endpoints, different order, and changed endpoints.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/557
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false
