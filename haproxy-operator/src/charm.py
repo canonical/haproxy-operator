@@ -297,6 +297,7 @@ class HAProxyCharm(ops.CharmBase):
         ha_information = HAInformation.from_charm(self)
         self._reconcile_ha(ha_information)
 
+        status_message = ""
         match proxy_mode:
             case ProxyMode.INGRESS:
                 self._configure_ingress(charm_state, IngressRequirersInformation)
@@ -305,7 +306,7 @@ class HAProxyCharm(ops.CharmBase):
             case ProxyMode.LEGACY:
                 self._configure_legacy(charm_state)
             case ProxyMode.HAPROXY_ROUTE:
-                self._configure_haproxy_route(charm_state, ha_information)
+                status_message = self._configure_haproxy_route(charm_state, ha_information)
             case _:
                 if self.model.get_relation(TLS_CERT_RELATION):
                     # Reconcile certificates in case the certificates relation is present
@@ -314,7 +315,7 @@ class HAProxyCharm(ops.CharmBase):
 
                 self.unit.set_ports(80)
                 self.haproxy_service.reconcile_default(charm_state)
-        self.unit.status = ops.ActiveStatus()
+        self.unit.status = ops.ActiveStatus(status_message)
 
     def _configure_ingress(
         self,
@@ -371,8 +372,12 @@ class HAProxyCharm(ops.CharmBase):
 
     def _configure_haproxy_route(
         self, charm_state: CharmState, ha_information: HAInformation
-    ) -> None:
-        """Configure the haproxy route relation."""
+    ) -> str:
+        """Configure the haproxy route relation.
+
+        Returns:
+            str: A status message indicating valid/total relations.
+        """
         haproxy_route_requirers_information = HaproxyRouteRequirersInformation.from_provider(
             haproxy_route=self.haproxy_route_provider,
             haproxy_route_tcp=self.haproxy_route_tcp_provider,
@@ -433,6 +438,32 @@ class HAProxyCharm(ops.CharmBase):
                 haproxy_route_requirers_information, ha_information
             )
             self._publish_certificate_to_peer_units(tls_information)
+
+        return self._get_haproxy_route_status_message(haproxy_route_requirers_information)
+
+    def _get_haproxy_route_status_message(
+        self, info: HaproxyRouteRequirersInformation
+    ) -> str:
+        """Generate a status message showing valid/total relations.
+
+        Args:
+            info: The haproxy route requirers information.
+
+        Returns:
+            str: A status message indicating valid/total relations.
+        """
+        total_http = len(self.haproxy_route_provider.relations)
+        valid_http = total_http - len(info.relation_ids_with_invalid_data)
+
+        total_tcp = len(self.haproxy_route_tcp_provider.relations)
+        valid_tcp = total_tcp - len(info.relation_ids_with_invalid_data_tcp)
+
+        parts = []
+        if total_http:
+            parts.append(f"{valid_http}/{total_http} haproxy-route")
+        if total_tcp:
+            parts.append(f"{valid_tcp}/{total_tcp} haproxy-route-tcp")
+        return ", ".join(parts)
 
     def _get_certificate_requests(self) -> typing.List[CertificateRequestAttributes]:
         """Get the certificate requests.
