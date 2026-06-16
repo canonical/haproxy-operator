@@ -452,18 +452,17 @@ class HAProxyCharm(ops.CharmBase):
         Returns:
             str: A status message indicating valid/total relations.
         """
-        total_http = len(self.haproxy_route_provider.relations)
-        valid_http = total_http - len(info.relation_ids_with_invalid_data)
-
-        total_tcp = len(self.haproxy_route_tcp_provider.relations)
-        valid_tcp = total_tcp - len(info.relation_ids_with_invalid_data_tcp)
-
-        parts = []
-        if total_http:
-            parts.append(f"{valid_http}/{total_http} haproxy-route")
-        if total_tcp:
-            parts.append(f"{valid_tcp}/{total_tcp} haproxy-route-tcp")
-        return ", ".join(parts)
+        total = (
+            len(self.haproxy_route_provider.relations)
+            + len(self.haproxy_route_tcp_provider.relations)
+        )
+        invalid = len(info.relation_ids_with_invalid_data) + len(
+            info.relation_ids_with_invalid_data_tcp
+        )
+        valid = total - invalid
+        if not total:
+            return ""
+        return f"{valid}/{total} valid relations"
 
     def _get_certificate_requests(self) -> typing.List[CertificateRequestAttributes]:
         """Get the certificate requests.
