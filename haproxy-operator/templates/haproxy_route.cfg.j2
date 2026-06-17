@@ -80,6 +80,7 @@ peers haproxy_peers
 
 {% for backend in http_backends %}
 backend {{ backend.backend_name }}
+    option forwardfor
     balance {{ backend.load_balancing_configuration }}
 {% if backend.consistent_hashing %}
     hash-type consistent

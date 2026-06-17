@@ -942,6 +942,23 @@ class HaproxyRouteTcpProvider(Object):
             endpoints: The list of proxied endpoints to publish.
             relation: The relation with the requirer application.
         """
+        # Skip the write if the databag already contains identical endpoints.
+        # Any relation-set call — even with an unchanged value — triggers a
+        # relation-changed event on the requirer side, which can create an
+        # infinite reconciliation loop when provider and requirer both react
+        # to each other's writes.
+        try:
+            current = cast(
+                HaproxyRouteTcpProviderAppData,
+                HaproxyRouteTcpProviderAppData.load(relation.data[self.charm.app]),
+            )
+            if set(current.endpoints) == set(endpoints):
+                return
+        except DataValidationError:
+            logger.error(
+                "Invalid data in provider databag for relation %s, overwriting.",
+                relation,
+            )
         HaproxyRouteTcpProviderAppData(endpoints=endpoints).dump(
             relation.data[self.charm.app], clear=True
         )
@@ -1017,7 +1034,7 @@ class HaproxyRouteTcpRequirer(Object):
             charm: The charm that is instantiating the library.
             relation_name: The name of the relation to bind to.
             port: The provider port.
-            backend_port: List of ports the service is listening on.
+            backend_port: Optional backend service port. Defaults to the provider port.
             hosts: List of backend server addresses. Currently only support IP addresses.
             sni: List of URL paths to route to this service.
             check_interval: Interval between health checks in seconds.
@@ -1144,7 +1161,7 @@ class HaproxyRouteTcpRequirer(Object):
 
         Args:
             port: The provider port.
-            backend_port: List of ports the service is listening on.
+            backend_port: Optional backend service port. Defaults to the provider port.
             hosts: List of backend server addresses. Currently only support IP addresses.
             sni: List of URL paths to route to this service.
             check_interval: Interval between health checks in seconds.
@@ -1244,7 +1261,7 @@ class HaproxyRouteTcpRequirer(Object):
 
         Args:
             port: The provider port.
-            backend_port: List of ports the service is listening on.
+            backend_port: Optional backend service port. Defaults to the provider port.
             hosts: List of backend server addresses. Currently only support IP addresses.
             sni: List of URL paths to route to this service.
             check_interval: Interval between health checks in seconds.

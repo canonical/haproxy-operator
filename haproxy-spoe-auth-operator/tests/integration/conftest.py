@@ -10,6 +10,7 @@ import typing
 import jubilant
 import pytest
 import yaml
+from opcli.pytest_plugin import CharmPathList
 
 logger = logging.getLogger(__name__)
 
@@ -17,11 +18,9 @@ JUJU_WAIT_TIMEOUT = 10 * 60  # 10 minutes
 
 
 @pytest.fixture(scope="session", name="charm")
-def charm_fixture(pytestconfig: pytest.Config):
-    """Pytest fixture that packs the charm and returns the filename, or --charm-file if set."""
-    charm = pytestconfig.getoption("--charm-file")
-    assert charm, "--charm-file must be set"
-    return charm
+def charm_fixture(charm_paths: dict[str, CharmPathList]) -> str:
+    """Pytest fixture that returns the path to the haproxy-spoe-auth charm."""
+    return charm_paths["haproxy-spoe-auth"].path
 
 
 @pytest.fixture(scope="module", name="juju")
