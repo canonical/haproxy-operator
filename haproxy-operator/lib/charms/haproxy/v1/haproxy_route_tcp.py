@@ -1188,12 +1188,12 @@ class HaproxyRouteTcpProvider(Object):
         Returns:
             set[int]: Relation IDs that have at least one port-range conflict.
         """
-        if len(requirers_data) < 2:
-            return set()
         range_requirers = sorted(
             (requirer for requirer in requirers_data if requirer.application_data.is_port_range),
             key=lambda r: r.application_data.port_range.start,
         )
+        if len(range_requirers) < 2:
+            return set()
 
         conflicting_ids: set[int] = set()
         max_end = range_requirers[0].application_data.port_range.end
