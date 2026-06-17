@@ -818,15 +818,14 @@ def parse_haproxy_route_tcp_requirers_data(
         if backend.application_data.is_port_range:
             continue
         port = backend.application_data.port_range.start
+        merged = False
         for range_backend, merged_singles in range_groups:
             frontend_range = range_backend.application_data.port_range
             if frontend_range.start <= port <= frontend_range.end:
                 merged_singles.append(backend)
+                merged = True
                 break
-        else:
-            # `for...else`: runs only when no `break` was hit, i.e. the port
-            # did not fall within any range group, so it belongs to its own
-            # single-port group.
+        if not merged:
             single_port_groups[port].append(backend)
 
     tcp_frontends: list[HAProxyRouteTcpFrontend] = []
