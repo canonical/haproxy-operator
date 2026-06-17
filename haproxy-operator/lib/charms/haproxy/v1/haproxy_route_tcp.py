@@ -1163,24 +1163,34 @@ class HaproxyRouteTcpProvider(Object):
         Single-port requirers never conflict — they are always mergeable, either
         with each other (SNI multiplexing) or into a containing port-range frontend.
 
+        Uses sort-and-sweep algorithm: O(n log n) sort + O(n) single pass.
+
         Args:
             requirers_data: List of validated requirer data to inspect.
 
         Returns:
             set[int]: Relation IDs that have at least one port-range conflict.
         """
-        range_requirers = [
-            requirer for requirer in requirers_data if requirer.application_data.is_port_range
-        ]
+        if len(requirers_data) < 2:
+            return set()
+        range_requirers = sorted(
+            (requirer for requirer in requirers_data if requirer.application_data.is_port_range),
+            key=lambda r: r.application_data.port_range.start,
+        )
 
         conflicting_ids: set[int] = set()
-        for index, requirer in enumerate(range_requirers):
-            for other in range_requirers[index + 1 :]:
-                if requirer.application_data.port_range.overlaps_with(
-                    other.application_data.port_range
-                ):
-                    conflicting_ids.add(requirer.relation_id)
-                    conflicting_ids.add(other.relation_id)
+        max_end = range_requirers[0].application_data.port_range.end
+        prev_relation_id = range_requirers[0].relation_id
+
+        for requirer in range_requirers[1:]:
+            port_range = requirer.application_data.port_range
+            if port_range.start <= max_end:
+                conflicting_ids.add(prev_relation_id)
+                conflicting_ids.add(requirer.relation_id)
+            if port_range.end > max_end:
+                max_end = port_range.end
+                prev_relation_id = requirer.relation_id
+
         return conflicting_ids
 
 
