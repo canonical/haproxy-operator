@@ -144,6 +144,14 @@ class HAProxyCharm(ops.CharmBase):
                 self.on.config_changed,
                 self.haproxy_route_provider.on.data_available,
                 self.haproxy_route_provider.on.data_removed,
+                self.haproxy_route_tcp_provider.on.data_available,
+                self.haproxy_route_tcp_provider.on.data_removed,
+                # We also need to refresh on spoe-auth and haproxy-route-policy relation changes
+                # as they also contribute to the list of certificate requests.
+                self.on[SPOE_AUTH_RELATION].relation_changed,
+                self.on[SPOE_AUTH_RELATION].relation_broken,
+                self.on[HAPROXY_ROUTE_POLICY_RELATION_NAME].relation_changed,
+                self.on[HAPROXY_ROUTE_POLICY_RELATION_NAME].relation_broken,
             ],
             mode=Mode.APP,
             private_key=self._ensure_private_key(),
