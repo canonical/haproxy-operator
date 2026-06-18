@@ -426,8 +426,9 @@ class HAProxyCharm(ops.CharmBase):
             80,
             443,
             *(
-                frontend.port
+                port
                 for frontend in haproxy_route_requirers_information.valid_tcp_frontends()
+                for port in frontend.covered_ports
             ),
             *(
                 backend.application_data.external_grpc_port
