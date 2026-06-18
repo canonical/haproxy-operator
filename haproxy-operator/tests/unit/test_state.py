@@ -2049,7 +2049,7 @@ def test_haproxy_route_tcp_overlapping_ranges_conflict(
         haproxy_route_tcp_relation_data(port_mapping="4000-4005:4000-4005", relation_id=0),
         haproxy_route_tcp_relation_data(port_mapping="4003-4008:4003-4008", relation_id=1),
     ]
-    conflicting = HaproxyRouteTcpProvider._detect_port_range_conflicts(requirers_data)
+    conflicting = HaproxyRouteTcpProvider._get_invalid_port_range_relations(requirers_data)
     assert conflicting == {0, 1}
 
 
@@ -2065,7 +2065,7 @@ def test_haproxy_route_tcp_single_port_inside_range_not_conflicting(
         haproxy_route_tcp_relation_data(port_mapping="4000-4005:4000-4005", relation_id=0),
         haproxy_route_tcp_relation_data(port=4002, relation_id=1),
     ]
-    conflicting = HaproxyRouteTcpProvider._detect_port_range_conflicts(requirers_data)
+    conflicting = HaproxyRouteTcpProvider._get_invalid_port_range_relations(requirers_data)
     assert conflicting == set()
 
 

@@ -631,10 +631,11 @@ class HaproxyRouteRequirersInformation:
             for backend in valid_backends
             if backend.application_data.external_grpc_port
         }
-        tcp_ports: dict[int, HAProxyRouteTcpFrontend] = {}
-        for frontend in self.tcp_frontends:
-            for covered_port in frontend.covered_ports:
-                tcp_ports[covered_port] = frontend
+        tcp_ports: dict[int, HAProxyRouteTcpFrontend] = {
+            covered_port: frontend
+            for frontend in self.tcp_frontends
+            for covered_port in frontend.covered_ports
+        }
 
         # Check for conflicts between standard HTTP and TCP/gRPC ports
         if has_http_backends:

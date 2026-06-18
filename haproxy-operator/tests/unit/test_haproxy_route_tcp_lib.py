@@ -205,7 +205,7 @@ def test_tcp_requirers_data_duplicate_ports_are_mergeable():
     )
 
     # Same port ranges are not conflicts — they are mergeable into one frontend
-    conflicting = HaproxyRouteTcpProvider._detect_port_range_conflicts(
+    conflicting = HaproxyRouteTcpProvider._get_invalid_port_range_relations(
         [tcp_requirer_data1, tcp_requirer_data2]
     )
     assert len(conflicting) == 0
@@ -660,7 +660,7 @@ def test_port_range_overlaps_with_is_symmetric():
 
 
 # ---------------------------------------------------------------------------
-# HaproxyRouteTcpProvider._detect_port_range_conflicts tests
+# HaproxyRouteTcpProvider._get_invalid_port_range_relations tests
 # ---------------------------------------------------------------------------
 
 
@@ -792,13 +792,13 @@ def test_port_range_overlaps_with_is_symmetric():
         ),
     ],
 )
-def test_detect_port_range_conflicts(requirers, expected):
+def test_get_invalid_port_range_relations(requirers, expected):
     """
     arrange: A list of requirers with given port/range specs.
     act: Run conflict detection.
     assert: The set of conflicting relation IDs matches expected.
     """
-    assert HaproxyRouteTcpProvider._detect_port_range_conflicts(requirers) == expected
+    assert HaproxyRouteTcpProvider._get_invalid_port_range_relations(requirers) == expected
 
 
 # ---------------------------------------------------------------------------

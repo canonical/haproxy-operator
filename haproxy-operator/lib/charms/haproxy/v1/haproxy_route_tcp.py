@@ -1084,7 +1084,9 @@ class HaproxyRouteTcpProvider(Object):
                 relation_ids_with_invalid_data.add(relation.id)
                 continue
 
-        relation_ids_with_invalid_data.update(self._detect_port_range_conflicts(requirers_data))
+        relation_ids_with_invalid_data.update(
+            self._get_invalid_port_range_relations(requirers_data)
+        )
 
         return HaproxyRouteTcpRequirersData(
             requirers_data=requirers_data,
@@ -1170,7 +1172,7 @@ class HaproxyRouteTcpProvider(Object):
         )
 
     @staticmethod
-    def _detect_port_range_conflicts(
+    def _get_invalid_port_range_relations(
         requirers_data: list["HaproxyRouteTcpRequirerData"],
     ) -> set[int]:
         """Detect relation IDs whose port ranges conflict with another requirer.
