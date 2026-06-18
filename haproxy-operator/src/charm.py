@@ -155,6 +155,13 @@ class HAProxyCharm(ops.CharmBase):
                         HAPROXY_ROUTE_POLICY_RELATION_NAME,
                     ]
                 ],
+                *[
+                    self.on[relation].relation_broken
+                    for relation in [
+                        SPOE_AUTH_RELATION,
+                        HAPROXY_ROUTE_POLICY_RELATION_NAME,
+                    ]
+                ],
             ],
             mode=Mode.APP,
             private_key=self._ensure_private_key(),
