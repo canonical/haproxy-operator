@@ -8,9 +8,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-06-12
+
+- Added `option forwardfor` by default for `haproxy-route` backends.
+
+## 2026-06-05
+
+- docs: Updated home page with additional information about HAProxy.
+
 ## 2026-05-28
 
 - Added relation endpoints reference page.
+
+## 2026-05-26
+
+- Added `port_mapping` attribute to `haproxy-route-tcp` relation to allow mapping a range of frontend ports to a range of backend ports.
 
 ## 2026-05-25
 
