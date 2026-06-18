@@ -149,9 +149,9 @@ class HAProxyCharm(ops.CharmBase):
                 # We also need to refresh on spoe-auth and haproxy-route-policy relation changes
                 # as they also contribute to the list of certificate requests.
                 self.on[SPOE_AUTH_RELATION].relation_changed,
-                self.on[SPOE_AUTH_RELATION].broken,
+                self.on[SPOE_AUTH_RELATION].relation_broken,
                 self.on[HAPROXY_ROUTE_POLICY_RELATION_NAME].relation_changed,
-                self.on[HAPROXY_ROUTE_POLICY_RELATION_NAME].broken,
+                self.on[HAPROXY_ROUTE_POLICY_RELATION_NAME].relation_broken,
             ],
             mode=Mode.APP,
             private_key=self._ensure_private_key(),
