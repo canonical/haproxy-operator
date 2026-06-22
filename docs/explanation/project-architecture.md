@@ -67,7 +67,7 @@ The `haproxy` charm can optionally be deployed with the `haproxy-ddos-protection
 
 ## Integrations
 
-The `haproxy` charm integrates with backend application charms via `haproxy-route` (HTTP) and `haproxy-route-tcp` (TCP) relations — these are required for a basic reverse proxy deployment. Optionally, the `haproxy-spoe-auth-operator`, the `haproxy-route-policy-operator`, and the `haproxy-ddos-protection-configurator` can be integrated with the `haproxy` charm to enable OIDC, policy enforcement and DDoS protection respectively.
+The `haproxy` charm integrates with backend application charms via `haproxy-route` (HTTP) and `haproxy-route-tcp` (TCP) relations — these are required for a basic reverse proxy deployment. Optionally, the `haproxy-spoe-auth`, the `haproxy-route-policy`, and the `haproxy-ddos-protection-configurator` can be integrated with the `haproxy` charm to enable OIDC, policy enforcement and DDoS protection respectively.
 
 See the Integrations section on each of the component's Charmhub page for more details:
 
