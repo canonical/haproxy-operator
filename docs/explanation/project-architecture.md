@@ -10,7 +10,7 @@ myst:
 
 HAProxy is a TCP/HTTP reverse proxy which is particularly suited for high availability environments. It features connection persistence through HTTP cookies, load balancing, header addition, modification, and deletion both ways. It has request blocking capabilities and provides interface to display server status.
 
-The HAProxy charm repository is a collection of charms and snaps that manages the deployment and operation of HAProxy:
+The `haproxy-operator` repository is a collection of charms and snaps that manages the deployment and operation of HAProxy:
 
 1. `haproxy`: A machine charm managing HAProxy. See the [`haproxy` README](https://github.com/canonical/haproxy-operator/tree/main/haproxy-operator) for more information.
 2. `haproxy-spoe-auth-operator`: A machine charm deploying an SPOE agent that serves as an authentication proxy. See the [`haproxy-spoe-auth-operator` README](https://github.com/canonical/haproxy-operator/tree/main/haproxy-spoe-auth-operator) for more information.
