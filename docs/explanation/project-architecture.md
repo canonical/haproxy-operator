@@ -13,8 +13,8 @@ HAProxy is a TCP/HTTP reverse proxy which is particularly suited for high availa
 The `haproxy-operator` repository is a collection of charms and snaps that manages the deployment and operation of HAProxy:
 
 1. `haproxy`: A machine charm managing HAProxy. See the [`haproxy` README](https://github.com/canonical/haproxy-operator/tree/main/haproxy-operator) for more information.
-2. `haproxy-spoe-auth-operator`: A machine charm deploying an SPOE agent that serves as an authentication proxy. See the [`haproxy-spoe-auth-operator` README](https://github.com/canonical/haproxy-operator/tree/main/haproxy-spoe-auth-operator) for more information.
-3. `haproxy-route-policy-operator`: A machine charm deploying the `haproxy-route-policy` application for controlling the data from different `haproxy-route` relations. See the [`haproxy-route-policy-operator` README](https://github.com/canonical/haproxy-operator/tree/main/haproxy-route-policy-operator) for more information.
+2. `haproxy-spoe-auth`: A machine charm deploying an SPOE agent that serves as an authentication proxy. See the [`haproxy-spoe-auth-operator` README](https://github.com/canonical/haproxy-operator/tree/main/haproxy-spoe-auth-operator) for more information.
+3. `haproxy-route-policy`: A machine charm deploying the `haproxy-route-policy` application for controlling the data from different `haproxy-route` relations. See the [`haproxy-route-policy-operator` README](https://github.com/canonical/haproxy-operator/tree/main/haproxy-route-policy-operator) for more information.
 
 The repository also contains the snapped workload of some charms:
 
