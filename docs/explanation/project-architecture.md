@@ -72,6 +72,6 @@ The `haproxy` charm integrates with backend application charms via `haproxy-rout
 See the Integrations section on each of the component's Charmhub page for more details:
 
 1. [Integrations for `haproxy`](https://charmhub.io/haproxy/integrations?channel=2.8/edge)
-2. [Integrations for `haproxy-spoe-auth-operator`](https://charmhub.io/haproxy-spoe-auth/integrations?channel=latest/edge)
-3. [Integrations for `haproxy-route-policy-operator`](https://charmhub.io/haproxy-route-policy/integrations?channel=latest/edge)
+2. [Integrations for `haproxy-spoe-auth`](https://charmhub.io/haproxy-spoe-auth/integrations?channel=latest/edge)
+3. [Integrations for `haproxy-route-policy`](https://charmhub.io/haproxy-route-policy/integrations?channel=latest/edge)
 4. [Integrations for `haproxy-ddos-protection-configurator`](https://charmhub.io/haproxy-ddos-protection-configurator/integrations)
