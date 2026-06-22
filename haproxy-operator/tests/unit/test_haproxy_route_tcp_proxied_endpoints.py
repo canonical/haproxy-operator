@@ -291,3 +291,89 @@ def test_tcp_proxied_endpoints_sni_takes_priority_over_ha(
     out_tcp_relation = out.get_relation(tcp_relation.id)
     endpoints = json.loads(out_tcp_relation.local_app_data["endpoints"])
     assert endpoints == ["api.example.com:4000"]
+
+
+@pytest.mark.parametrize(
+    "test_case,port,sni,existing_endpoints,expected_endpoints,peer_data",
+    [
+        pytest.param(
+            "same_endpoints",
+            4000,
+            "api.example.com",
+            ["api.example.com:4000"],
+            ["api.example.com:4000"],
+            {},
+            id="same_endpoints_no_update",
+        ),
+        pytest.param(
+            "different_order",
+            5000,
+            None,
+            ["10.0.0.3:5000", "10.0.0.1:5000", "10.0.0.2:5000"],
+            ["10.0.0.1:5000", "10.0.0.2:5000", "10.0.0.3:5000"],
+            {1: {"private-address": "10.0.0.2"}, 2: {"private-address": "10.0.0.3"}},
+            id="different_order_no_update",
+        ),
+        pytest.param(
+            "endpoints_changed",
+            6000,
+            None,
+            ["10.0.0.1:4000"],
+            ["10.0.0.1:6000"],
+            {},
+            id="endpoints_changed_update",
+        ),
+    ],
+)
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_tcp_proxied_endpoints_idempotent_behavior(
+    tcp_reconcile_context,
+    peer_relation,
+    test_case,
+    port,
+    sni,
+    existing_endpoints,
+    expected_endpoints,
+    peer_data,
+) -> None:
+    """
+    arrange: Create a haproxy-route-tcp relation with existing endpoints.
+    act: Trigger config_changed as leader.
+    assert: Databag is updated only when endpoints differ (idempotent).
+    """
+    context, _ = tcp_reconcile_context
+
+    if peer_data:
+        peer = ops.testing.PeerRelation(
+            endpoint="haproxy-peers",
+            peers_data=peer_data,
+        )
+    else:
+        peer = peer_relation
+
+    tcp_relation = build_haproxy_route_tcp_relation(
+        port=port,
+        sni=sni,
+        enforce_tls=True,
+        tls_terminate=False,
+    )
+
+    tcp_relation_with_existing = ops.testing.Relation(
+        endpoint="haproxy-route-tcp",
+        interface="haproxy-route-tcp",
+        id=tcp_relation.id,
+        remote_app_name="tcp-requirer",
+        remote_app_data=tcp_relation.remote_app_data,
+        remote_units_data=tcp_relation.remote_units_data,
+        local_app_data={"endpoints": json.dumps(existing_endpoints)},
+    )
+
+    state = ops.testing.State(
+        relations=[peer, tcp_relation_with_existing],
+        leader=True,
+    )
+    out = context.run(context.on.config_changed(), state)
+
+    out_tcp_relation = out.get_relation(tcp_relation.id)
+    endpoints = json.loads(out_tcp_relation.local_app_data["endpoints"])
+    assert sorted(endpoints) == sorted(expected_endpoints)
