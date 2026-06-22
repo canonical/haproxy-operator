@@ -35,8 +35,8 @@ Container_Boundary(haproxy, "HAProxy deployment") {
         Component(spoe_auth, "SPOE-auth charm")
         Component(spoe_auth_snap, "SPOE-auth snap")
     }
-    Container_Boundary(ddos, "ddos-configurator") {
-        Component(ddos, "ddos-configurator charm")
+    Container_Boundary(ddos_boundary, "ddos-configurator") {
+        Component(ddos_charm, "ddos-configurator charm")
     }
     Container_Boundary(haproxy_route_policy, "haproxy-route-policy") {
         Component(haproxy_route_policy_charm, "haproxy-route-policy charm")
@@ -46,11 +46,13 @@ Container_Boundary(haproxy, "HAProxy deployment") {
 
 Rel(charm, spoe_auth, "SPOE protocol", "Authentication offload")
 Rel(haproxy_route_policy_charm, charm, "haproxy-route-policy", "Route approval")
+Rel(charm, ddos_charm, "ddos-protection", "DDoS protection (optional)")
 Rel(spoe_auth, spoe_auth_snap, "Manages")
 Rel(haproxy_route_policy_charm, haproxy_route_policy_snap, "Manages")
 
 UpdateRelStyle(haproxy_route_policy_charm, charm, $offsetY="-60", $offsetX="-130")
 UpdateRelStyle(charm, spoe_auth, $offsetY="10", $offsetX="-50")
+UpdateRelStyle(charm, ddos_charm, $offsetY="10", $offsetX="-50")
 UpdateRelStyle(spoe_auth, spoe_auth_snap, $offsetX="10")
 UpdateRelStyle(haproxy_route_policy_charm, haproxy_route_policy_snap, $offsetX="10")
 ```
@@ -61,10 +63,15 @@ The `haproxy` charm can be deployed with the `haproxy-spoe-auth-operator` charm 
 
 The `haproxy` charm can also be deployed with the `haproxy-route-policy-operator` charm to control which backends are permitted to be routed through `haproxy-route` relations. The workload of the `haproxy-route-policy-operator` charm is a Django application packaged as a snap. It evaluates incoming requests against configured rules and accepts or rejects them accordingly. It's deployed together with a PostgreSQL database.
 
+The `haproxy` charm can optionally be deployed with the `haproxy-ddos-protection-configurator` charm to add advanced DDoS protection via the `ddos-protection` interface. The `haproxy-ddos-protection-configurator` charm provides features like rate limiting, connection blocking, and timeout to help protect backend services against distributed denial-of-service attacks.
+
 ## Integrations
+
+The `haproxy` charm integrates with backend application charms via `haproxy-route` (HTTP) and `haproxy-route-tcp` (TCP) relations — these are required for a basic reverse proxy deployment. Optionally, the `haproxy-spoe-auth-operator`, the `haproxy-route-policy-operator`, and the `haproxy-ddos-protection-configurator` can be integrated with the `haproxy` charm to enable OIDC, policy enforcement and DDoS protection respectively.
 
 See the Integrations section on each of the component's Charmhub page for more details:
 
-1. [Integrations for haproxy-operator](https://charmhub.io/haproxy/integrations?channel=2.8/edge)
-2. [Integrations for haproxy-spoe-auth-operator](https://charmhub.io/haproxy-spoe-auth/integrations?channel=latest/edge)
-3. [Integrations for haproxy-route-policy-operator](https://charmhub.io/haproxy-route-policy/integrations?channel=latest/edge)
+1. [Integrations for `haproxy`](https://charmhub.io/haproxy/integrations?channel=2.8/edge)
+2. [Integrations for `haproxy-spoe-auth-operator`](https://charmhub.io/haproxy-spoe-auth/integrations?channel=latest/edge)
+3. [Integrations for `haproxy-route-policy-operator`](https://charmhub.io/haproxy-route-policy/integrations?channel=latest/edge)
+4. [Integrations for `haproxy-ddos-protection-configurator`](https://charmhub.io/haproxy-ddos-protection-configurator/integrations)
