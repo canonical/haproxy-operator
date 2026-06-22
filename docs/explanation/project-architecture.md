@@ -48,6 +48,11 @@ Rel(charm, spoe_auth, "SPOE protocol", "Authentication offload")
 Rel(haproxy_route_policy_charm, charm, "haproxy-route-policy", "Route approval")
 Rel(spoe_auth, spoe_auth_snap, "Manages")
 Rel(haproxy_route_policy_charm, haproxy_route_policy_snap, "Manages")
+
+UpdateRelStyle(haproxy_route_policy_charm, charm, $offsetY="-60", $offsetX="-130")
+UpdateRelStyle(charm, spoe_auth, $offsetY="10", $offsetX="-50")
+UpdateRelStyle(spoe_auth, spoe_auth_snap, $offsetX="10")
+UpdateRelStyle(haproxy_route_policy_charm, haproxy_route_policy_snap, $offsetX="10")
 ```
 
 The `haproxy` charm is the central component, responsible for configuring and running the HAProxy reverse proxy on machine. It receives routing information from related applications via `haproxy-route` (HTTP) and `haproxy-route-tcp` (TCP) relations and generates the appropriate HAProxy configuration.
