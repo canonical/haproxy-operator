@@ -20,6 +20,10 @@ Each revision is versioned by the date of the revision.
 
 - Added relation endpoints reference page.
 
+## 2026-05-26
+
+- Added `port_mapping` attribute to `haproxy-route-tcp` relation to allow mapping a range of frontend ports to a range of backend ports.
+
 ## 2026-05-25
 
 - docs: Updated the home page to implement the new pattern for the "In this documentation" section.
