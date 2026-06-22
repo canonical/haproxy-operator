@@ -8,7 +8,7 @@ myst:
 
 # Project architecture
 
-HAProxy is a TCP/HTTP reverse proxy which is particularly suited for high availability environments. It features connection persistence through HTTP cookies, load balancing, header addition, modification, deletion both ways. It has request blocking capabilities and provides interface to display server status.
+HAProxy is a TCP/HTTP reverse proxy which is particularly suited for high availability environments. It features connection persistence through HTTP cookies, load balancing, header addition, modification, and deletion both ways. It has request blocking capabilities and provides interface to display server status.
 
 The HAProxy charm repository is a collection of charms and snaps that manages the deployment and operation of HAProxy:
 
