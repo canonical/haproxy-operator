@@ -21,7 +21,7 @@ The repository also contains the snapped workload of some charms:
 1. `haproxy-spoe-auth-snap`: A snap of the SPOE agent made for the haproxy-spoe-auth-operator charm. See the [haproxy-spoe-auth-snap README](https://github.com/canonical/haproxy-operator/tree/main/haproxy-spoe-auth-snap) for more information.
 2. `haproxy-route-policy-snap`: A snap of the `haproxy-route-policy` app made for the `haproxy-route-policy-operator` charm. See the [haproxy-route-policy-snap README](https://github.com/canonical/haproxy-operator/tree/main/haproxy-route-policy) for more information.
 
-## Architecture diagram
+## High-level overview of deployment
 
 ```{mermaid}
 C4Component
