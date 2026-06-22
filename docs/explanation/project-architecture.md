@@ -63,7 +63,7 @@ The `haproxy` charm can be deployed with the `haproxy-spoe-auth-operator` charm 
 
 The `haproxy` charm can also be deployed with the `haproxy-route-policy-operator` charm to control which backends are permitted to be routed through `haproxy-route` relations. The workload of the `haproxy-route-policy-operator` charm is a Django application packaged as a snap. It evaluates incoming requests against configured rules and accepts or rejects them accordingly. It's deployed together with a PostgreSQL database.
 
-The `haproxy` charm can optionally be deployed with the `haproxy-ddos-protection-configurator` charm to add advanced DDoS protection via the `ddos-protection` interface. The `haproxy-ddos-protection-configurator` charm provides features like rate limiting, connection blocking, and timeout to help protect backend services against distributed denial-of-service attacks.
+The `haproxy` charm can optionally be deployed with the `haproxy-ddos-protection-configurator` charm to add advanced DDoS protection via the `ddos-protection` interface. The `haproxy-ddos-protection-configurator` charm provides features such as rate limiting, connection blocking, and timeout to help protect backend services against distributed denial-of-service attacks.
 
 ## Integrations
 
