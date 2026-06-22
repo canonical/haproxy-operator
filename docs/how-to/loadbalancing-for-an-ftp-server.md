@@ -60,7 +60,6 @@ sudo systemctl reload vsftpd.service
 EOF
 ```
 
-
 ## Deploy and configure the ingress configurator charms
 
 To expose our FTP server through HAProxy, we need to deploy two instances of the
