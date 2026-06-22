@@ -27,7 +27,7 @@ The repository also contains the snapped workload of some charms:
 C4Component
 title Component diagram for HAProxy Charm
 
-Container_Boundary(haproxy, "HAProxy charm monorepo") {
+Container_Boundary(haproxy, "HAProxy deployment") {
     Container_Boundary(haproxy_charm, "HAProxy") {
         Component(charm, "HAProxy charm")
     }
