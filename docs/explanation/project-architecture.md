@@ -52,7 +52,7 @@ Rel(haproxy_route_policy_charm, haproxy_route_policy_snap, "Manages")
 
 The `haproxy` charm is the central component, responsible for configuring and running the HAProxy reverse proxy on machine. It receives routing information from related applications via `haproxy-route` (HTTP) and `haproxy-route-tcp` (TCP) relations and generates the appropriate HAProxy configuration.
 
-The `haproxy` charm can be deployed with the `haproxy-spoe-auth-operator` charm to add an authentication layer via an SPOE (Stream Processing Offload Engine) agent packaged in `haproxy-spoe-auth-snap`. HAProxy delegates authentication decisions to this agent which is integrated with an OIDC (OpenID Connect) provider charm.
+The `haproxy` charm can be deployed with the `haproxy-spoe-auth-operator` charm to add an authentication layer via a Stream Processing Offload Engine (SPOE) agent packaged in `haproxy-spoe-auth-snap`. HAProxy delegates authentication decisions to this agent which is integrated with an OpenID Connect (OIDC) provider charm.
 
 The `haproxy` charm can also be deployed with the `haproxy-route-policy-operator` charm to control which backends are permitted to be routed through `haproxy-route` relations. The workload of the `haproxy-route-policy-operator` charm is a Django application packaged as a snap. It evaluates incoming requests against configured rules and accepts or rejects them accordingly. It's deployed together with a PostgreSQL database.
 
