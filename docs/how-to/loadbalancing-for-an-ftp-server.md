@@ -52,7 +52,7 @@ sudo apt update; sudo apt install vsftpd -y
 sudo sed -i -e 's/anonymous_enable=NO/anonymous_enable=YES/g' /etc/vsftpd.conf
 cat << EEOF | sudo tee -a /etc/vsftpd.conf
 pasv_enable=Yes
-pasv_max_port=10100
+pasv_max_port=10200
 pasv_min_port=10100
 EEOF
 
@@ -60,9 +60,16 @@ sudo systemctl reload vsftpd.service
 EOF
 ```
 
+The passive data channel uses a range of ports (10100–10200) rather than a single port. FTP
+is a classic example of a protocol that requires a port range: the server advertises a random
+port within the range for each data transfer, so the load balancer must expose the whole range.
+
 ## Deploy and configure the ingress configurator charms
 
-To expose our FTP server through HAProxy, we need to deploy two instance of the [Ingress Configurator charm](https://charmhub.io/ingress-configurator), one to configure the control port and the other to configure the data port. Add a machine to host the two charms:
+To expose our FTP server through HAProxy, we need to deploy two instances of the
+[Ingress Configurator charm](https://charmhub.io/ingress-configurator): one to configure the
+control port and the other to configure the data port range. Add a machine to host the two
+charms:
 
 ```sh
 juju add-machine
@@ -75,16 +82,23 @@ juju deploy ingress-configurator ftp-control --channel=latest/edge --to 2
 juju deploy ingress-configurator ftp-data --channel=latest/edge --to 2
 ```
 
-Once the two charms have settled into an "Active" state, update their configuration and integrate them with HAProxy using the `haproxy-route-tcp` relation:
+Once the two charms have settled into an "Active" state, update their configuration and
+integrate them with HAProxy using the `haproxy-route-tcp` relation:
 
 ```sh
-FTP_SERVER_ADDRESS = $(juju status --format json | jq -r  '.machines."5"."ip-addresses".[0]')
+FTP_SERVER_ADDRESS=$(juju status --format json | jq -r '.machines."1"."ip-addresses".[0]')
 juju config ftp-control tcp-backend-addresses=$FTP_SERVER_ADDRESS tcp-backend-port=21 tcp-frontend-port=2100
-juju config ftp-data tcp-backend-addresses=$FTP_SERVER_ADDRESS tcp-backend-port=10100 tcp-frontend-port=10100
+juju config ftp-data tcp-backend-addresses=$FTP_SERVER_ADDRESS tcp-port-mapping=10100-10200:10100-10200
 
 juju integrate ftp-control:haproxy-route-tcp haproxy
 juju integrate ftp-data:haproxy-route-tcp haproxy
 ```
+
+The `tcp-port-mapping` attribute is designed for protocols like FTP that operate over a range
+of ports. It accepts the format `frontend_start-frontend_end:backend_start-backend_end`,
+mapping each frontend port to the corresponding backend port. In this example,
+`10100-10200:10100-10200` exposes ports 10100–10200 on the HAProxy frontend and forwards each
+port directly to the same port on the FTP server.
 
 ## Verify connection to the FTP server
 
@@ -108,4 +122,3 @@ Using binary mode to transfer files.
 200 Switching to Binary mode.
 ftp>
 ```
-
