@@ -23,8 +23,9 @@ The haproxy-operator project is a member of the Ubuntu family. It is an open sou
 
 ## Documentation
 
-Our documentation is stored in the `docs` directory.
-It is based on the Canonical starter pack
+Our documentation is stored in the `docs` directory
+and can be viewed at https://canonical.com/juju/docs/haproxy-charm/.
+It is based on the Canonical Sphinx Stack
 and hosted on [Read the Docs](https://about.readthedocs.com/). In structuring,
 the documentation employs the [Diátaxis](https://diataxis.fr/) approach.
 
