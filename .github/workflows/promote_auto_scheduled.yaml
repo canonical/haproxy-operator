@@ -16,6 +16,8 @@ jobs:
     needs: [require-approval]
     uses: canonical/operator-workflows/.github/workflows/promote_charm.yaml@main
     secrets: inherit
+    permissions:
+      contents: write
     with:
       origin-channel: 2.8/candidate
       destination-channel: 2.8/stable
@@ -29,6 +31,8 @@ jobs:
     needs: [promote-haproxy-charm-candidate-to-stable]
     uses: canonical/operator-workflows/.github/workflows/promote_charm.yaml@main
     secrets: inherit
+    permissions:
+      contents: write
     with:
       origin-channel: 2.8/edge
       destination-channel: 2.8/candidate
@@ -42,6 +46,8 @@ jobs:
     needs: [require-approval]
     uses: canonical/operator-workflows/.github/workflows/promote_charm.yaml@main
     secrets: inherit
+    permissions:
+      contents: write
     with:
       origin-channel: latest/candidate
       destination-channel: latest/stable
@@ -55,6 +61,8 @@ jobs:
     needs: [promote-haproxy-spoe-auth-charm-candidate-to-stable]
     uses: canonical/operator-workflows/.github/workflows/promote_charm.yaml@main
     secrets: inherit
+    permissions:
+      contents: write
     with:
       origin-channel: latest/edge
       destination-channel: latest/candidate
