@@ -37,5 +37,4 @@ haproxy-route-policy/.python-version
 .spread-run-*/
 artifacts.build.yaml
 
-# Git worktrees
-.worktrees/
+.worktrees
