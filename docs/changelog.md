@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-06-26
+
+- docs: Add docs on the terraform module.
+
 ## 2026-06-18
 
 - docs: Migrated the RTD documentation URL under the Canonical domain.
