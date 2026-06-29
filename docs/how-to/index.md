@@ -44,6 +44,7 @@ against vulnerabilities and attacks.
 :maxdepth: 1
 Enable DDoS Protection <enable-ddos-protection.md>
 Protect a hostname using OpenID Connect <protect-hostname-spoe-auth.md>
+Use self-signed certificates <use-self-signed-certificates.md>
 ```
 
 ## Maintenance and development

@@ -1,3 +1,5 @@
+(how_to_use_self_signed_certificates)=
+
 # How to use self-signed certificates
 
 If you wish HAProxy to serve HTTPS content using a self-signed certificate,
