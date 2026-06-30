@@ -1,0 +1,20 @@
+version_schema: 2
+
+changes:
+  - title: Updated FTP tutorial to use port range via port-mapping attribute
+    author: tphan025
+    type: minor
+    description: >
+      Updated the "How to provide load balancing for an FTP server" guide to
+      configure vsftpd with a passive port range (10100–10200) and to use the
+      new `tcp-port-mapping` configuration option of the ingress-configurator
+      charm instead of a single `tcp-backend-port`/`tcp-frontend-port` pair.
+      Added an explanation that the `port-mapping` attribute is designed for
+      protocols like FTP that operate over a range of ports.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/569
+      related_doc:
+      related_issue:
+    visibility: hidden
+    highlight: false
