@@ -40,3 +40,34 @@ output "haproxy_spoe_auth_app_names_map" {
   description = "Map of hostnames to haproxy-spoe-auth application name."
   value       = { for hostname, spoe_auth in module.haproxy_spoe_auth : hostname => spoe_auth.app_name }
 }
+
+output "models" {
+  description = "Map of model key to its model_uuid and deployed components."
+  value = {
+    haproxy = {
+      model_uuid = var.model_uuid
+      components = merge(
+        {
+          haproxy                              = module.haproxy.application
+          grafana_agent                        = juju_application.grafana_agent
+          haproxy_ddos_protection_configurator = module.haproxy_ddos_protection_configurator.application
+        },
+        {
+          for hostname, spoe_auth in module.haproxy_spoe_auth :
+          "haproxy_spoe_auth_${spoe_auth.app_name}" => spoe_auth.application
+        },
+        {
+          for hostname, idp in juju_application.oauth_external_idp_integrator :
+          "oauth_external_idp_integrator_${idp.name}" => idp
+        }
+      )
+    }
+  }
+}
+
+output "metadata" {
+  description = "Deployment metadata."
+  value = {
+    version = var.metadata_version
+  }
+}

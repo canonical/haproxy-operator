@@ -5,6 +5,11 @@ output "app_name" {
   value = juju_application.haproxy.name
 }
 
+output "application" {
+  description = "The deployed haproxy application object."
+  value       = juju_application.haproxy
+}
+
 output "provides" {
   value = {
     ingress       = "ingress"

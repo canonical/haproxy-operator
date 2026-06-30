@@ -100,3 +100,9 @@ EOF
     }), null)
   }))
 }
+
+variable "metadata_version" {
+  description = "Version string reported in the product module 'metadata' output."
+  type        = string
+  default     = "0.0.0"
+}
