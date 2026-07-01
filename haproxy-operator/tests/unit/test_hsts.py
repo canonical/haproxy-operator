@@ -177,3 +177,34 @@ def test_redirect_allow_http_uses_named_acl(
         in haproxy_conf_contents
     )
     assert out.unit_status.name == ops.testing.ActiveStatus.name
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_x_forwarded_proto_set_by_default(
+    monkeypatch: pytest.MonkeyPatch, certificates_integration
+):
+    """
+    arrange: Prepare a haproxy with haproxy_route.
+    act: trigger relation changed.
+    assert: haproxy.conf sets the X-Forwarded-Proto header based on the connection scheme.
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    haproxy_route_relation = build_haproxy_route_relation()
+
+    ctx = ops.testing.Context(HAProxyCharm)
+    state = ops.testing.State(
+        relations=[certificates_integration, haproxy_route_relation],
+        leader=True,
+    )
+    out = ctx.run(
+        ctx.on.relation_changed(haproxy_route_relation),
+        state,
+    )
+    assert render_file_mock.call_count == 1
+    haproxy_conf_contents = render_file_mock.call_args.args[1]
+    assert (
+        "http-request set-header X-Forwarded-Proto %[ssl_fc,iif(https,http)]"
+        in haproxy_conf_contents
+    )
+    assert out.unit_status.name == ops.testing.ActiveStatus.name
