@@ -5,10 +5,10 @@ changes:
     author: Thanhphan1147
     type: minor
     description: >
-      Added `http-request set-header X-Forwarded-Proto %[ssl_fc,iif(https,http)]`
-      to the haproxy-route frontend so backends receive the client-facing request
-      scheme. The value is derived from `ssl_fc` rather than hardcoded to `https`
-      because the `allow-http` attribute permits plain HTTP requests through.
+      Added `http-request set-header X-Forwarded-Proto` to the haproxy-route
+      frontend so backends receive the client-facing request scheme. The value
+      is derived from `ssl_fc` rather than hardcoded to `https` because the
+      `allow-http` attribute permits plain HTTP requests through.
     urls:
       pr:
         - https://github.com/canonical/haproxy-operator/pull/592
