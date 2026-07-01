@@ -8,7 +8,7 @@ variable "app_name" {
 }
 
 variable "channel" {
-  description = "Revision of the haproxy charm."
+  description = "Channel of the haproxy charm."
   type        = string
   default     = "2.8/edge"
 }
