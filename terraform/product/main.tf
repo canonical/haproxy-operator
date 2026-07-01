@@ -50,7 +50,7 @@ resource "juju_integration" "grafana_agent" {
 
   application {
     name     = module.haproxy.app_name
-    endpoint = module.haproxy.provides.cos_agent
+    endpoint = module.haproxy.provides.cos_agent.endpoint
   }
 
   application {
@@ -77,12 +77,12 @@ resource "juju_integration" "haproxy_haproxy_ddos_protection_configurator" {
 
   application {
     name     = module.haproxy_ddos_protection_configurator.app_name
-    endpoint = module.haproxy_ddos_protection_configurator.provides.ddos_protection
+    endpoint = module.haproxy_ddos_protection_configurator.provides.ddos_protection.endpoint
   }
 
   application {
     name     = module.haproxy.app_name
-    endpoint = module.haproxy.requires.ddos_protection
+    endpoint = module.haproxy.requires.ddos_protection.endpoint
   }
 }
 
@@ -110,12 +110,12 @@ resource "juju_integration" "haproxy_spoe_auth" {
 
   application {
     name     = each.value.app_name
-    endpoint = each.value.provides.spoe_auth
+    endpoint = each.value.provides.spoe_auth.endpoint
   }
 
   application {
     name     = module.haproxy.app_name
-    endpoint = module.haproxy.provides.spoe_auth
+    endpoint = module.haproxy.provides.spoe_auth.endpoint
   }
 }
 
