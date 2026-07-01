@@ -11,13 +11,25 @@ output "application" {
 }
 
 output "provides" {
+  description = "Map of provided endpoints."
   value = {
-    spoe_auth = "spoe-auth"
+    spoe_auth = {
+      kind       = "endpoint"
+      name       = juju_application.haproxy_spoe_auth.name
+      endpoint   = "spoe-auth"
+      controller = null
+    }
   }
 }
 
 output "requires" {
+  description = "Map of required endpoints."
   value = {
-    oauth = "oauth"
+    oauth = {
+      kind       = "endpoint"
+      name       = juju_application.haproxy_spoe_auth.name
+      endpoint   = "oauth"
+      controller = null
+    }
   }
 }
