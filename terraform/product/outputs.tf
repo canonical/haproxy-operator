@@ -11,23 +11,9 @@ output "haproxy_app_name" {
   value       = module.haproxy.app_name
 }
 
-output "provides" {
-  value = {
-    ingress          = "ingress"
-    haproxy_route    = "haproxy-route"
-    logging_provider = "logging-provider"
-  }
-}
-
-output "requires" {
-  value = {
-    reverseproxy                = "reverseproxy"
-    certificates                = "certificates"
-    receive_ca_certs            = "receive-ca-certs"
-    metrics_endpoint            = "metrics-endpoint"
-    send_remote_write           = "send-remote-write"
-    grafana_dashboards_consumer = "grafana-dashboards-consumer"
-  }
+output "haproxy_spoe_auth_app_names_map" {
+  description = "Map of hostnames to haproxy-spoe-auth application name."
+  value       = { for hostname, spoe_auth in module.haproxy_spoe_auth : hostname => spoe_auth.app_name }
 }
 
 output "haproxy_spoe_auth_provides" {
@@ -36,9 +22,11 @@ output "haproxy_spoe_auth_provides" {
   }
 }
 
-output "haproxy_spoe_auth_app_names_map" {
-  description = "Map of hostnames to haproxy-spoe-auth application name."
-  value       = { for hostname, spoe_auth in module.haproxy_spoe_auth : hostname => spoe_auth.app_name }
+output "metadata" {
+  description = "Deployment metadata."
+  value = {
+    version = var.metadata_version
+  }
 }
 
 output "models" {
@@ -65,9 +53,21 @@ output "models" {
   }
 }
 
-output "metadata" {
-  description = "Deployment metadata."
+output "provides" {
   value = {
-    version = var.metadata_version
+    ingress          = "ingress"
+    haproxy_route    = "haproxy-route"
+    logging_provider = "logging-provider"
+  }
+}
+
+output "requires" {
+  value = {
+    reverseproxy                = "reverseproxy"
+    certificates                = "certificates"
+    receive_ca_certs            = "receive-ca-certs"
+    metrics_endpoint            = "metrics-endpoint"
+    send_remote_write           = "send-remote-write"
+    grafana_dashboards_consumer = "grafana-dashboards-consumer"
   }
 }

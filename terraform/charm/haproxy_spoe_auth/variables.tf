@@ -7,6 +7,12 @@ variable "app_name" {
   default     = "haproxy-spoe-auth"
 }
 
+variable "base" {
+  description = "Base of the haproxy-spoe-auth charm."
+  type        = string
+  default     = "ubuntu@24.04"
+}
+
 variable "channel" {
   description = "Channel of the haproxy-spoe-auth charm."
   type        = string
@@ -25,29 +31,6 @@ variable "constraints" {
   default     = "arch=amd64"
 }
 
-variable "model_uuid" {
-  description = "ID of the Juju model to deploy to."
-  type        = string
-}
-
-variable "revision" {
-  description = "Revision of the haproxy-spoe-auth charm."
-  type        = number
-  default     = null
-}
-
-variable "units" {
-  description = "Number of haproxy-spoe-auth units."
-  type        = number
-  default     = 1
-}
-
-variable "base" {
-  description = "Base of the haproxy-spoe-auth charm."
-  type        = string
-  default     = "ubuntu@24.04"
-}
-
 variable "endpoint_bindings" {
   description = "Endpoint bindings for the haproxy-spoe-auth application. Set of objects mapping an endpoint name to a network space. Leave null to use the model's default bindings."
   type = set(object({
@@ -57,10 +40,27 @@ variable "endpoint_bindings" {
   default = null
 }
 
+variable "machines" {
+  description = "Set of existing machines to place the haproxy-spoe-auth units on. Mutually exclusive with units; leave null to let Juju place units according to the units count."
+  type        = set(string)
+  default     = null
+}
+
+variable "model_uuid" {
+  description = "ID of the Juju model to deploy to."
+  type        = string
+}
+
 variable "resources" {
   description = "Charm resources for the haproxy-spoe-auth application. Map of resource name to a CharmHub revision number or a custom OCI image URL."
   type        = map(string)
   default     = {}
+}
+
+variable "revision" {
+  description = "Revision of the haproxy-spoe-auth charm."
+  type        = number
+  default     = null
 }
 
 variable "storage_directives" {
@@ -69,8 +69,8 @@ variable "storage_directives" {
   default     = {}
 }
 
-variable "machines" {
-  description = "Set of existing machines to place the haproxy-spoe-auth units on. Mutually exclusive with units; leave null to let Juju place units according to the units count."
-  type        = set(string)
-  default     = null
+variable "units" {
+  description = "Number of haproxy-spoe-auth units."
+  type        = number
+  default     = 1
 }

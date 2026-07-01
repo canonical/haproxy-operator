@@ -7,6 +7,12 @@ variable "app_name" {
   default     = "haproxy"
 }
 
+variable "base" {
+  description = "Base of the haproxy charm."
+  type        = string
+  default     = "ubuntu@24.04"
+}
+
 variable "channel" {
   description = "Channel of the haproxy charm."
   type        = string
@@ -25,9 +31,88 @@ variable "constraints" {
   default     = "arch=amd64"
 }
 
+variable "endpoint_bindings" {
+  description = "Endpoint bindings for the haproxy application. Set of objects mapping an endpoint name to a network space. Leave null to use the model's default bindings."
+  type = set(object({
+    endpoint = optional(string)
+    space    = string
+  }))
+  default = null
+}
+
+variable "expose" {
+  description = "Expose configuration for the haproxy application. The default of {} reproduces the always-exposed behavior (an empty expose block). Set to null to not expose the application, or set cidrs/endpoints/spaces to restrict access."
+  type = object({
+    cidrs     = optional(string)
+    endpoints = optional(string)
+    spaces    = optional(string)
+  })
+  default = {}
+}
+
+variable "hacluster_app_name" {
+  description = "Application name of the hacluster charm."
+  type        = string
+  default     = "hacluster"
+}
+
+variable "hacluster_charm_channel" {
+  description = "Channel of the hacluster charm."
+  type        = string
+  default     = "2.4/edge"
+}
+
+variable "hacluster_charm_revision" {
+  description = "Revision of the hacluster charm."
+  type        = number
+  default     = null
+}
+
+variable "hacluster_config" {
+  description = "Hacluster charm config."
+  type        = map(string)
+  default     = {}
+}
+
+variable "keepalived_app_name" {
+  description = "Application name of the keepalived charm."
+  type        = string
+  default     = "keepalived"
+}
+
+variable "keepalived_charm_channel" {
+  description = "Channel of the keepalived charm."
+  type        = string
+  default     = "latest/edge"
+}
+
+variable "keepalived_charm_revision" {
+  description = "Revision of the keepalived charm."
+  type        = number
+  default     = null
+}
+
+variable "keepalived_config" {
+  description = "Keepalived charm config."
+  type        = map(string)
+  default     = {}
+}
+
+variable "machines" {
+  description = "Set of existing machines to place the haproxy units on. Mutually exclusive with units; leave null to let Juju place units according to the units count."
+  type        = set(string)
+  default     = null
+}
+
 variable "model_uuid" {
   description = "ID of the Juju model to deploy to."
   type        = string
+}
+
+variable "resources" {
+  description = "Charm resources for the haproxy application. Map of resource name to a CharmHub revision number or a custom OCI image URL."
+  type        = map(string)
+  default     = {}
 }
 
 variable "revision" {
@@ -36,19 +121,18 @@ variable "revision" {
   default     = null
 }
 
+variable "storage_directives" {
+  description = "Storage directives (constraints) for the haproxy application. Map of the storage label defined by the charm to a directive of the form [<pool>,][<count>,][<size>]."
+  type        = map(string)
+  default     = {}
+}
+
 variable "units" {
   description = "Number of haproxy units. If hacluster is enabled, it is recommended to use a value > 3 to ensure a quorum."
   type        = number
   default     = 1
 }
 
-variable "base" {
-  description = "Base of the haproxy charm."
-  type        = string
-  default     = "ubuntu@24.04"
-}
-
-# HA
 variable "use_hacluster" {
   description = "Whether to use hacluster for active/passive."
   type        = bool
@@ -64,89 +148,4 @@ variable "use_keepalived" {
     condition     = (!var.use_hacluster || !var.use_keepalived)
     error_message = "use_hacluster and use_keepalived cannot both be set."
   }
-}
-
-variable "hacluster_app_name" {
-  description = "Application name of the hacluster charm."
-  type        = string
-  default     = "hacluster"
-}
-
-variable "hacluster_charm_revision" {
-  description = "Revision of the hacluster charm."
-  type        = number
-  default     = null
-}
-
-variable "hacluster_charm_channel" {
-  description = "Channel of the hacluster charm."
-  type        = string
-  default     = "2.4/edge"
-}
-
-variable "hacluster_config" {
-  description = "Hacluster charm config."
-  type        = map(string)
-  default     = {}
-}
-
-variable "keepalived_app_name" {
-  description = "Application name of the keepalived charm."
-  type        = string
-  default     = "keepalived"
-}
-
-variable "keepalived_charm_revision" {
-  description = "Revision of the keepalived charm."
-  type        = number
-  default     = null
-}
-
-variable "keepalived_charm_channel" {
-  description = "Channel of the keepalived charm."
-  type        = string
-  default     = "latest/edge"
-}
-
-variable "keepalived_config" {
-  description = "Keepalived charm config."
-  type        = map(string)
-  default     = {}
-}
-
-variable "endpoint_bindings" {
-  description = "Endpoint bindings for the haproxy application. Set of objects mapping an endpoint name to a network space. Leave null to use the model's default bindings."
-  type = set(object({
-    endpoint = optional(string)
-    space    = string
-  }))
-  default = null
-}
-
-variable "resources" {
-  description = "Charm resources for the haproxy application. Map of resource name to a CharmHub revision number or a custom OCI image URL."
-  type        = map(string)
-  default     = {}
-}
-
-variable "storage_directives" {
-  description = "Storage directives (constraints) for the haproxy application. Map of the storage label defined by the charm to a directive of the form [<pool>,][<count>,][<size>]."
-  type        = map(string)
-  default     = {}
-}
-
-variable "machines" {
-  description = "Set of existing machines to place the haproxy units on. Mutually exclusive with units; leave null to let Juju place units according to the units count."
-  type        = set(string)
-  default     = null
-}
-
-variable "expose" {
-  description = "Expose configuration for the haproxy application. The default of {} reproduces the always-exposed behavior (an empty expose block). Set to null to not expose the application, or set cidrs/endpoints/spaces to restrict access."
-  type = object({
-    cidrs     = optional(string)
-    endpoints = optional(string)
-    spaces    = optional(string)
-  })
-  default = {}
 }
