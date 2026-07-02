@@ -31,7 +31,7 @@ module "haproxy_module" {
 
 Replace the `"juju-model-uuid"` with the UUID of the model you want to deploy to. 
 
-Generally it is recommanded to change the `ref=main` to a specific release tag of the HAProxy charm, so the Terraform module will be fixed to a version.
+Generally it is recommended to change the `ref=main` to a specific release tag of the HAProxy charm, so the Terraform module will be fixed to a version.
 
 The [terraform module reference](../reference/terraform.md) has more details about the module and its parameters, which can be added to the module definition to control the deployment.
 
