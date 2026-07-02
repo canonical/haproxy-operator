@@ -25,6 +25,9 @@ jobs:
       pull-requests: write
     secrets: inherit
     with:
+      runs-on-base: ubuntu-24.04
+      python-version: "3.12"
+      self-hosted-runner: false
       working-directory: ${{ matrix.charm.working-directory }}
       with-uv: true
   build-snap-haproxy-route-policy:
