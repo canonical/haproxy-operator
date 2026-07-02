@@ -198,10 +198,10 @@ def get_http_version_from_apache2_logs(
     Returns:
         The extracted HTTP version string.
     """
-    last_httpx_log_entry = juju.ssh(
-        f"{app_name}/0",
+    last_httpx_log_entry = juju.exec(
         f"grep '{request_id}' /var/log/apache2/access.log | tail -n 1",
-    )
+        unit=f"{app_name}/0",
+    ).stdout
 
     match = pattern.search(last_httpx_log_entry)
     if not match:
