@@ -55,5 +55,5 @@ and benefits from ongoing improvements.
 ```{toctree}
 :maxdepth: 1
 Upgrade <upgrade.md>
-Contribute <contribute.md>
+Contribute <contribute.rst>
 ```

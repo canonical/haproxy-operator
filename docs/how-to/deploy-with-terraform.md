@@ -22,7 +22,7 @@ The minimal Terraform module would look like this:
 
 ```hcl
 module "haproxy_module" {
-  source     = "git::https://github.com/canonical/haproxy-operator//terraform/product?ref=main
+  source     = "git::https://github.com/canonical/haproxy-operator//terraform/product?ref=main"
   model_uuid = "juju-model-uuid"
 
   protected_hostnames_configuration = [{hostname = "example.com"}]
