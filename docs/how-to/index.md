@@ -22,7 +22,7 @@ Integrate with non-charm workloads <integrate-with-non-charm-workload.md>
 Provide extra configurations for ingress requirer charms <provide-extra-configurations-for-ingress-requirer-charms.md>
 Control haproxy-route relation data <control-haproxy-route-relation-data.md>
 Configure virtual IP on OpenStack <configure-virtual-ip-on-openstack.md>
-How to add HAProxy charm to existing Terraform project <deploy-with-terraform.md>
+Add to existing Terraform project <deploy-with-terraform.md>
 ```
 
 ## Load balancing

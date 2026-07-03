@@ -9,14 +9,14 @@ myst:
 
 # How to add HAProxy charm to existing Terraform project
 
-Since the HAProxy charm is for providing ingress to another charm you should already have a Terraform project with the definition of the charms you want to integrate with HAProxy charm.
+Since the HAProxy charm provides ingress to another charm, you should already have a Terraform project with the definition of the charms you want to integrate with HAProxy.
 
-The steps of relating the HAProxy charm to an existing charm in Terraform are:
+The steps of integrating the HAProxy charm to an existing charm in Terraform are:
 
 1. Add the HAProxy charm module to your Terraform project.
 2. Add the relation between the HAProxy charm and the other charm.
 
-## Adding the HAProxy charm module to your Terraform project
+## Add the HAProxy charm module to your Terraform project
 
 The minimal Terraform module would look like this:
 
@@ -33,11 +33,11 @@ Replace the `"juju-model-uuid"` with the UUID of the model you want to deploy to
 
 Generally it is recommended to change the `ref=main` to a specific release tag of the HAProxy charm, so the Terraform module will be fixed to a version.
 
-The [terraform module reference](../reference/terraform.md) has more details about the module and its parameters, which can be added to the module definition to control the deployment.
+The {ref}`Terraform module reference <reference_terraform>` has more details about the module and its parameters which can be added to the module definition to control the deployment.
 
-## Adding the relation between the HAProxy charm and the other charm
+## Add the relation between the HAProxy charm and the other charm
 
-The existing charm need to be related to the HAProxy charm with `juju_integration` resource, like the following example:
+The existing charm need to be integrated to the HAProxy charm with the `juju_integration` resource, like the following example:
 
 ```hcl
 resource "juju_integration" "haproxy_route" {
@@ -54,6 +54,6 @@ resource "juju_integration" "haproxy_route" {
 }
 ```
 
-## Conclusion
+## Apply the changes
 
-The Terraform plan should be ready for deployment. Running `terraform apply` will apply the changes and deploy the HAProxy charm and relate it to the other charm.
+The Terraform plan should be ready for deployment. Run `terraform apply` to apply the changes, deploy the HAProxy charm, and integrate it to the other charm.
