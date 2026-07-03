@@ -27,6 +27,7 @@ APT_LIB_SRC = "haproxy-operator/lib/charms/operator_libs_linux/v0/apt.py"
 HAPROXY_ROUTE_POLICY_APP_NAME = "policy"
 POSTGRESQL_APPLICATION = "db"
 
+
 @pytest.fixture(scope="session", name="lxd_juju")
 def lxd_juju_fixture(request: pytest.FixtureRequest):
     """Bootstrap a new lxd controller and model and return a Juju fixture for it."""
@@ -91,7 +92,9 @@ def k8s_juju_fixture(lxd_juju: jubilant.Juju, request: pytest.FixtureRequest):
 
 @pytest.fixture(scope="module", name="application")
 def application_fixture(
-    charm_paths: dict[str, CharmPathList], pytestconfig: pytest.Config, lxd_juju: jubilant.Juju
+    charm_paths: dict[str, CharmPathList],
+    pytestconfig: pytest.Config,
+    lxd_juju: jubilant.Juju,
 ):
     """Deploy the haproxy application.
 
@@ -355,7 +358,11 @@ def haproxy_spoe_deployer_fixture(
 
 
 def deploy_spoe_auth(
-    pytestconfig: pytest.Config, lxd_juju: jubilant.Juju, app_name, host_name, charm_file: str
+    pytestconfig: pytest.Config,
+    lxd_juju: jubilant.Juju,
+    app_name,
+    host_name,
+    charm_file: str,
 ) -> str:
     """Deploy the haproxy-spoe-auth charm."""
     if pytestconfig.getoption("--no-deploy") and app_name in lxd_juju.status().apps:
@@ -423,7 +430,9 @@ def postgresql_fixture(pytestconfig: pytest.Config, lxd_juju: jubilant.Juju):
 
 @pytest.fixture(scope="module", name="haproxy_route_policy")
 def haproxy_route_policy_fixture(
-    charm_paths: dict[str, CharmPathList], pytestconfig: pytest.Config, lxd_juju: jubilant.Juju
+    charm_paths: dict[str, CharmPathList],
+    pytestconfig: pytest.Config,
+    lxd_juju: jubilant.Juju,
 ) -> str:
     """Deploy the haproxy-route-policy charm."""
     if (
