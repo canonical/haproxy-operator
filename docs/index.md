@@ -60,7 +60,6 @@ Thinking about using the HAProxy operator for your next project?
 ```{toctree}
 :hidden:
 :maxdepth: 1
-ADR 001 <adr/001_haproxy_route_tcp_port_range_support.md>
 Tutorial <tutorial/index.md>
 How-to guides <how-to/index.md>
 Reference <reference/index.md>
