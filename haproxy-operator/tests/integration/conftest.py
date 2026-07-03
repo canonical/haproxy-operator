@@ -43,11 +43,10 @@ def charm_fixture(charm_paths: dict[str, CharmPathList]) -> str:
     return charm_paths["haproxy"].path
 
 
-@pytest.fixture(scope="module")
-def juju(juju: jubilant.Juju) -> jubilant.Juju:
-    """Override juju fixture to set wait_timeout."""
+@pytest.fixture(scope="module", autouse=True)
+def _set_juju_timeout(juju: jubilant.Juju) -> None:
+    """Set wait_timeout on the juju fixture."""
     juju.wait_timeout = JUJU_WAIT_TIMEOUT
-    return juju
 
 
 @pytest.fixture(scope="module", name="application")
