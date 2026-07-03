@@ -217,6 +217,7 @@ def certificate_provider_application_fixture(
         "self-signed-certificates",
         app=SELF_SIGNED_CERTIFICATES_APP_NAME,
         channel="1/edge",
+        force=True,
     )
     return SELF_SIGNED_CERTIFICATES_APP_NAME
 
@@ -229,15 +230,16 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
         logger.info("identity-platform is already deployed")
         return
     k8s_juju.deploy(
-        "self-signed-certificates", channel="1/stable", revision=317, trust=True
+        "self-signed-certificates", channel="1/stable", revision=317, trust=True, force=True
     )
-    k8s_juju.deploy("hydra", channel="latest/edge", revision=399, trust=True)
-    k8s_juju.deploy("kratos", channel="latest/edge", revision=567, trust=True)
+    k8s_juju.deploy("hydra", channel="latest/edge", revision=399, trust=True, force=True)
+    k8s_juju.deploy("kratos", channel="latest/edge", revision=567, trust=True, force=True)
     k8s_juju.deploy(
         "identity-platform-login-ui-operator",
         channel="latest/edge",
         revision=200,
         trust=True,
+        force=True,
     )
     k8s_juju.deploy(
         "traefik-k8s",
@@ -245,12 +247,14 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
         channel="latest/edge",
         revision=270,
         trust=True,
+        force=True,
     )
     k8s_juju.deploy(
         "postgresql-k8s",
         channel="14/edge",
         base="ubuntu@22.04",
         trust=True,
+        force=True,
         config={
             "profile": "testing",
             "plugin_hstore_enable": "true",
@@ -429,6 +433,7 @@ def postgresql_fixture(pytestconfig: pytest.Config, lxd_juju: jubilant.Juju):
         app=POSTGRESQL_APPLICATION,
         channel="16/edge",
         base="ubuntu@24.04",
+        force=True,
     )
     lxd_juju.wait(
         lambda status: jubilant.all_active(status, POSTGRESQL_APPLICATION),
