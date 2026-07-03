@@ -1,4 +1,4 @@
-# Copyright 2025 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 # pylint: disable=duplicate-code
 
@@ -8,7 +8,6 @@ import json
 import logging
 import pathlib
 import tempfile
-import typing
 from pathlib import Path
 
 import jubilant
@@ -44,32 +43,11 @@ def charm_fixture(charm_paths: dict[str, CharmPathList]) -> str:
     return charm_paths["haproxy"].path
 
 
-@pytest.fixture(scope="module", name="juju")
-def juju_fixture(request: pytest.FixtureRequest):
-    """Pytest fixture that wraps :meth:`jubilant.with_model`."""
-
-    def show_debug_log(juju: jubilant.Juju):
-        """Show the debug log if tests failed.
-
-        Args:
-            juju: Jubilant juju instance.
-        """
-        if request.session.testsfailed:
-            log = juju.debug_log(limit=1000)
-            print(log, end="")
-
-    model = request.config.getoption("--model")
-    if model:
-        juju = jubilant.Juju(model=model)
-        juju.wait_timeout = JUJU_WAIT_TIMEOUT
-        yield juju
-        show_debug_log(juju)
-        return
-
-    keep_models = typing.cast(bool, request.config.getoption("--keep-models"))
-    with jubilant.temp_model(keep=keep_models) as juju:
-        juju.wait_timeout = JUJU_WAIT_TIMEOUT
-        yield juju
+@pytest.fixture(scope="module")
+def juju(juju: jubilant.Juju) -> jubilant.Juju:
+    """Override juju fixture to set wait_timeout."""
+    juju.wait_timeout = JUJU_WAIT_TIMEOUT
+    return juju
 
 
 @pytest.fixture(scope="module", name="application")

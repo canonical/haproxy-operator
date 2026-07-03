@@ -1,22 +1,19 @@
-# Copyright 2025 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""General configuration module for integration tests."""
+"""General configuration module for legacy integration tests."""
 
 import ipaddress
 import json
 import logging
 import pathlib
 import textwrap
-import typing
+from urllib.parse import ParseResult, urlparse
 
+import jubilant
 import pytest
-import pytest_asyncio
-from juju.application import Application
-from juju.client._definitions import FullStatus, UnitStatus
-from juju.model import Model
 from opcli.pytest_plugin import CharmPathList
-from pytest_operator.plugin import OpsTest
+from requests.adapters import DEFAULT_POOLBLOCK, DEFAULT_POOLSIZE, DEFAULT_RETRIES, HTTPAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -26,110 +23,149 @@ HAPROXY_ROUTE_LIB_SRC = "lib/charms/haproxy/v2/haproxy_route.py"
 APT_LIB_SRC = "lib/charms/operator_libs_linux/v0/apt.py"
 
 
-@pytest_asyncio.fixture(scope="module", name="model")
-async def model_fixture(ops_test: OpsTest) -> Model:
-    """The current test model."""
-    assert ops_test.model
-    return ops_test.model
-
-
-@pytest_asyncio.fixture(scope="module", name="charm")
-async def charm_fixture(charm_paths: dict[str, CharmPathList]) -> str:
+@pytest.fixture(scope="module", name="charm")
+def charm_fixture(charm_paths: dict[str, CharmPathList]) -> str:
     """Get path to the haproxy charm."""
     return charm_paths["haproxy"].path
 
 
-@pytest_asyncio.fixture(scope="module", name="application")
-async def application_fixture(
-    pytestconfig: pytest.Config, charm: str, model: Model
-) -> typing.AsyncGenerator[Application, None]:
-    """Deploy the charm."""
+@pytest.fixture(scope="module", name="application")
+def application_fixture(
+    pytestconfig: pytest.Config, charm: str, juju: jubilant.Juju
+) -> str:
+    """Deploy the charm.
+
+    Args:
+        pytestconfig: Pytest configuration.
+        charm: Path to the packed charm file.
+        juju: Jubilant juju fixture.
+
+    Returns:
+        The haproxy app name.
+    """
     app_name = "haproxy"
-    if pytestconfig.getoption("--no-deploy") and app_name in model.applications:
+    if pytestconfig.getoption("--no-deploy") and app_name in juju.status().apps:
         logger.warning("Using existing application: %s", app_name)
-        yield model.applications[app_name]
-        return
-    # Deploy the charm and wait for active/idle status
-    application = await model.deploy(charm, trust=True)
-    await model.wait_for_idle(apps=[application.name], status="active", raise_on_error=True)
-    yield application
+        return app_name
+    juju.deploy(charm, trust=True, app=app_name)
+    juju.wait(lambda status: jubilant.all_active(status, app_name))
+    return app_name
 
 
-@pytest_asyncio.fixture(scope="module", name="certificate_provider_application")
-async def certificate_provider_application_fixture(
+@pytest.fixture(scope="module", name="certificate_provider_application")
+def certificate_provider_application_fixture(
     pytestconfig: pytest.Config,
-    model: Model,
-) -> Application:
-    """Deploy self-signed-certificates."""
+    juju: jubilant.Juju,
+) -> str:
+    """Deploy self-signed-certificates.
+
+    Args:
+        pytestconfig: Pytest configuration.
+        juju: Jubilant juju fixture.
+
+    Returns:
+        The self-signed-certificates app name.
+    """
     app_name = "self-signed-certificates"
-    if pytestconfig.getoption("--no-deploy") and app_name in model.applications:
+    if pytestconfig.getoption("--no-deploy") and app_name in juju.status().apps:
         logger.warning("Using existing application: %s", app_name)
-        return model.applications[app_name]
-    application = await model.deploy("self-signed-certificates", channel="1/edge")
+        return app_name
+    juju.deploy("self-signed-certificates", channel="1/edge", app=app_name)
+    return app_name
+
+
+@pytest.fixture(scope="module", name="configured_application_with_tls")
+def configured_application_with_tls_fixture(
+    application: str,
+    certificate_provider_application: str,
+    juju: jubilant.Juju,
+) -> str:
+    """The haproxy charm configured and integrated with TLS provider.
+
+    Args:
+        application: The haproxy application name.
+        certificate_provider_application: The certificate provider app name.
+        juju: Jubilant juju fixture.
+
+    Returns:
+        The haproxy application name.
+    """
+    juju.config(application, {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
+    juju.integrate(
+        f"{application}:certificates",
+        f"{certificate_provider_application}:certificates",
+    )
+    juju.wait(
+        lambda status: (
+            jubilant.all_active(status, application, certificate_provider_application)
+        ),
+    )
     return application
 
 
-@pytest_asyncio.fixture(scope="module", name="configured_application_with_tls")
-async def configured_application_with_tls_fixture(
-    application: Application,
-    certificate_provider_application: Application,
-):
-    """The haproxy charm configured and integrated with tls provider."""
-    await application.set_config({"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
-    await application.model.add_relation(
-        f"{application.name}:certificates", f"{certificate_provider_application.name}:certificates"
-    )
-    await application.model.wait_for_idle(
-        apps=[certificate_provider_application.name, application.name],
-        idle_period=30,
-        status="active",
-    )
-    return application
-
-
-async def get_unit_ip_address(
-    application: Application,
+def get_unit_ip_address(
+    juju: jubilant.Juju,
+    application: str,
 ) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
     """Get the unit address to make HTTP requests.
 
     Args:
-        application: The deployed application
+        juju: The Jubilant juju instance.
+        application: The deployed application name.
 
     Returns:
-        The unit address
+        The unit address.
     """
-    status: FullStatus = await application.model.get_status([application.name])
-    application = typing.cast(Application, status.applications[application.name])
-    unit_status: UnitStatus = next(iter(application.units.values()))
-    assert unit_status.public_address, "Invalid unit address"
-    address = (
-        unit_status.public_address
-        if isinstance(unit_status.public_address, str)
-        else unit_status.public_address.decode()
-    )
-
+    status = juju.status()
+    app_status = status.apps.get(application)
+    assert app_status, f"Application {application} not found in model status"
+    unit_status = next(iter(app_status.units.values()))
+    address = unit_status.public_address
+    assert address, f"Unit of {application} has no public address"
     return ipaddress.ip_address(address)
 
 
-async def get_unit_address(application: Application) -> str:
-    """Get the unit address to make HTTP requests.
+def get_unit_address(juju: jubilant.Juju, application: str) -> str:
+    """Get the HTTP URL for the first unit of a Juju application.
 
     Args:
-        application: The deployed application
+        juju: The Jubilant juju instance.
+        application: The deployed application name.
 
     Returns:
-        The unit address
+        The unit base HTTP URL.
     """
-    unit_ip_address = await get_unit_ip_address(application)
+    unit_ip_address = get_unit_ip_address(juju, application)
     url = f"http://{unit_ip_address!s}"
     if isinstance(unit_ip_address, ipaddress.IPv6Address):
         url = f"http://[{unit_ip_address!s}]"
     return url
 
 
-@pytest_asyncio.fixture(scope="module", name="any_charm_src")
-async def any_charm_src_fixture() -> dict[str, str]:
-    """any-charm configuration to test with haproxy."""
+def get_ingress_url_for_application(
+    juju: jubilant.Juju, app_name: str
+) -> ParseResult:
+    """Get the ingress url from the requirer's unit data.
+
+    Args:
+        juju: The Jubilant juju instance.
+        app_name: Requirer application name.
+
+    Returns:
+        The parsed ingress url.
+    """
+    unit_name = f"{app_name}/0"
+    result = juju.cli("show-unit", unit_name, "--format", "json")
+    unit_information = json.loads(result)[unit_name]
+    ingress_integration_data = json.loads(
+        unit_information["relation-info"][0]["application-data"]["ingress"]
+    )
+    return urlparse(ingress_integration_data["url"])
+
+
+@pytest.fixture(scope="module", name="any_charm_src")
+def any_charm_src_fixture() -> dict[str, str]:
+    """Any-charm configuration to test with haproxy."""
     any_charm_py = textwrap.dedent(
         """\
         import pathlib
@@ -231,9 +267,9 @@ async def any_charm_src_fixture() -> dict[str, str]:
     return {"any_charm.py": any_charm_py}
 
 
-@pytest_asyncio.fixture(scope="module", name="any_charm_src_invalid_port")
-async def any_charm_src_invalid_port_fixture() -> dict[str, str]:
-    """any-charm configuration to test with haproxy."""
+@pytest.fixture(scope="module", name="any_charm_src_invalid_port")
+def any_charm_src_invalid_port_fixture() -> dict[str, str]:
+    """Any-charm configuration to test with haproxy (invalid port)."""
     any_charm_py = textwrap.dedent(
         """\
         import ops
@@ -279,14 +315,14 @@ async def any_charm_src_invalid_port_fixture() -> dict[str, str]:
     return {"any_charm.py": any_charm_py}
 
 
-@pytest_asyncio.fixture(scope="module", name="any_charm_ingress_requirer_name")
-async def any_charm_ingress_requirer_name_fixture() -> str:
+@pytest.fixture(scope="module", name="any_charm_ingress_requirer_name")
+def any_charm_ingress_requirer_name_fixture() -> str:
     """Name of the ingress requirer charm."""
     return "any-charm-ingress-requirer"
 
 
-@pytest_asyncio.fixture(scope="module", name="any_charm_src_ingress_requirer")
-async def any_charm_src_ingress_requirer_fixture() -> dict[str, str]:
+@pytest.fixture(scope="module", name="any_charm_src_ingress_requirer")
+def any_charm_src_ingress_requirer_fixture() -> dict[str, str]:
     """Any charm ingress requirer source code fixture."""
     any_charm_py = textwrap.dedent(
         """\
@@ -324,84 +360,130 @@ async def any_charm_src_ingress_requirer_fixture() -> dict[str, str]:
     }
 
 
-@pytest_asyncio.fixture(scope="function", name="any_charm_ingress_requirer")
-async def any_charm_ingress_requirer_fixture(
+@pytest.fixture(name="any_charm_ingress_requirer")
+def any_charm_ingress_requirer_fixture(
     pytestconfig: pytest.Config,
-    model: Model,
+    juju: jubilant.Juju,
     any_charm_src_ingress_requirer: dict[str, str],
     any_charm_ingress_requirer_name: str,
-) -> typing.AsyncGenerator[Application, None]:
-    """Deploy any-charm and configure it to serve as a requirer for the http interface."""
+) -> str:
+    """Deploy any-charm configured as a requirer for the ingress-per-app interface.
+
+    Args:
+        pytestconfig: Pytest configuration.
+        juju: Jubilant juju fixture.
+        any_charm_src_ingress_requirer: Source overwrite for any-charm.
+        any_charm_ingress_requirer_name: App name.
+
+    Returns:
+        The any-charm ingress requirer app name.
+    """
     if (
         pytestconfig.getoption("--no-deploy")
-        and any_charm_ingress_requirer_name in model.applications
+        and any_charm_ingress_requirer_name in juju.status().apps
     ):
         logger.warning("Using existing application: %s", any_charm_ingress_requirer_name)
-        yield model.applications[any_charm_ingress_requirer_name]
-        return
-    application = await model.deploy(
+        return any_charm_ingress_requirer_name
+    juju.deploy(
         "any-charm",
-        application_name=any_charm_ingress_requirer_name,
+        app=any_charm_ingress_requirer_name,
         channel="beta",
         config={
             "src-overwrite": json.dumps(any_charm_src_ingress_requirer),
             "python-packages": "pydantic<2.0",
         },
     )
-    await model.wait_for_idle(apps=[application.name], status="active")
-    action = await application.units[0].run_action("rpc", method="start_server")
-    await action.wait()
-    yield application
+    juju.wait(lambda status: jubilant.all_active(status, any_charm_ingress_requirer_name))
+    juju.run(f"{any_charm_ingress_requirer_name}/0", "rpc", {"method": "start_server"})
+    return any_charm_ingress_requirer_name
 
 
-@pytest_asyncio.fixture(scope="function", name="any_charm_requirer")
-async def any_charm_requirer_fixture(
-    model: Model, any_charm_src: dict[str, str]
-) -> typing.AsyncGenerator[Application, None]:
-    """Deploy any-charm and configure it to serve as a requirer for the reverseproxy relation."""
-    application = await model.deploy(
+@pytest.fixture(name="any_charm_requirer")
+def any_charm_requirer_fixture(
+    juju: jubilant.Juju, any_charm_src: dict[str, str]
+) -> str:
+    """Deploy any-charm configured as a requirer for the reverseproxy relation.
+
+    Args:
+        juju: Jubilant juju fixture.
+        any_charm_src: Source overwrite for any-charm.
+
+    Returns:
+        The any-charm requirer app name.
+    """
+    app_name = "requirer"
+    juju.deploy(
         "any-charm",
-        application_name="requirer",
+        app=app_name,
         channel="beta",
         config={"src-overwrite": json.dumps(any_charm_src)},
     )
-    await model.wait_for_idle(apps=[application.name], status="active")
-    yield application
+    juju.wait(lambda status: jubilant.all_active(status, app_name))
+    return app_name
 
 
-@pytest_asyncio.fixture(scope="function", name="reverseproxy_requirer")
-async def reverseproxy_requirer_fixture(
-    model: Model,
-) -> typing.AsyncGenerator[Application, None]:
-    """Deploy any-charm and configure it to serve as a requirer for the website relation."""
-    application = await model.deploy(
+@pytest.fixture(name="reverseproxy_requirer")
+def reverseproxy_requirer_fixture(
+    juju: jubilant.Juju,
+) -> str:
+    """Deploy haproxy from channel as a requirer for the website relation.
+
+    Args:
+        juju: Jubilant juju fixture.
+
+    Returns:
+        The reverseproxy-requirer app name.
+    """
+    app_name = "reverseproxy-requirer"
+    juju.deploy(
         "haproxy",
-        application_name="reverseproxy-requirer",
+        app=app_name,
         channel="latest/edge",
     )
-    await model.wait_for_idle(apps=[application.name], status="active")
-    yield application
+    juju.wait(lambda status: jubilant.all_active(status, app_name))
+    return app_name
 
 
-@pytest_asyncio.fixture(scope="function", name="hacluster")
-async def hacluster_fixture(
-    model: Model,
-) -> typing.AsyncGenerator[Application, None]:
-    """Deploy hacluster."""
-    application = await model.deploy(
-        "hacluster", application_name="hacluster", channel="2.4/edge", series="noble"
+@pytest.fixture(name="hacluster")
+def hacluster_fixture(
+    juju: jubilant.Juju,
+) -> str:
+    """Deploy hacluster.
+
+    Args:
+        juju: Jubilant juju fixture.
+
+    Returns:
+        The hacluster app name.
+    """
+    app_name = "hacluster"
+    juju.deploy(
+        "hacluster",
+        app=app_name,
+        channel="2.4/edge",
+        base="ubuntu@noble",
     )
-    await model.wait_for_idle(apps=[application.name], wait_for_at_least_units=0, status="unknown")
-    yield application
+    juju.wait(
+        lambda status: app_name in status.apps,
+    )
+    return app_name
 
 
-@pytest_asyncio.fixture(scope="function", name="haproxy_route_requirer")
-async def haproxy_route_requirer_fixture(model: Model) -> typing.AsyncGenerator[Application, None]:
-    """Deploy any-charm and configure it to serve as a requirer for the haproxy-route interface."""
-    application = await model.deploy(
+@pytest.fixture(name="haproxy_route_requirer")
+def haproxy_route_requirer_fixture(juju: jubilant.Juju) -> str:
+    """Deploy any-charm configured as a requirer for the haproxy-route interface.
+
+    Args:
+        juju: Jubilant juju fixture.
+
+    Returns:
+        The haproxy-route-requirer app name.
+    """
+    app_name = "haproxy-route-requirer"
+    juju.deploy(
         "any-charm",
         channel="beta",
-        application_name="haproxy-route-requirer",
+        app=app_name,
         config={
             "src-overwrite": json.dumps(
                 {
@@ -417,8 +499,64 @@ async def haproxy_route_requirer_fixture(model: Model) -> typing.AsyncGenerator[
             "python-packages": "pydantic~=2.10\nvalidators",
         },
     )
-    await model.wait_for_idle(apps=[application.name], status="active")
+    juju.wait(lambda status: jubilant.all_active(status, app_name))
+    juju.run(f"{app_name}/0", "rpc", {"method": "start_server"})
+    return app_name
 
-    action = await application.units[0].run_action("rpc", method="start_server")
-    await action.wait()
-    yield application
+
+class DNSResolverHTTPSAdapter(HTTPAdapter):
+    """A simple mounted DNS resolver for HTTP requests."""
+
+    def __init__(
+        self,
+        hostname,
+        ip,
+    ):
+        """Initialize the dns resolver.
+
+        Args:
+            hostname: DNS entry to resolve.
+            ip: Target IP address.
+        """
+        self.hostname = hostname
+        self.ip = ip
+        super().__init__(
+            pool_connections=DEFAULT_POOLSIZE,
+            pool_maxsize=DEFAULT_POOLSIZE,
+            max_retries=DEFAULT_RETRIES,
+            pool_block=DEFAULT_POOLBLOCK,
+        )
+
+    # Ignore pylint rule as this is the parent method signature
+    def send(self, request, stream=False, timeout=None, verify=True, cert=None, proxies=None):  # pylint: disable=too-many-arguments, too-many-positional-arguments
+        """Wrap HTTPAdapter send to modify the outbound request.
+
+        Args:
+            request: Outbound HTTP request.
+            stream: argument used by parent method.
+            timeout: argument used by parent method.
+            verify: argument used by parent method.
+            cert: argument used by parent method.
+            proxies: argument used by parent method.
+
+        Returns:
+            Response: HTTP response after modification.
+        """
+        connection_pool_kwargs = self.poolmanager.connection_pool_kw
+
+        result = urlparse(request.url)
+        if result.hostname == self.hostname:
+            ip = self.ip
+            if result.scheme == "https" and ip:
+                request.url = request.url.replace(
+                    "https://" + result.hostname,
+                    "https://" + ip,
+                )
+                connection_pool_kwargs["server_hostname"] = result.hostname
+                connection_pool_kwargs["assert_hostname"] = result.hostname
+                request.headers["Host"] = result.hostname
+            else:
+                connection_pool_kwargs.pop("server_hostname", None)
+                connection_pool_kwargs.pop("assert_hostname", None)
+
+        return super().send(request, stream, timeout, verify, cert, proxies)

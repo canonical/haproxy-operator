@@ -29,10 +29,9 @@ coverage-report = ["coverage[toml]", "pytest"]
 static = ["bandit[toml]"]
 integration = [
   "jubilant==1.10.0",
-  "juju==3.6.1.3",
   "opcli @ git+https://github.com/canonical/charm-ci.git@v0.0.1-alpha.3",
   "pytest",
-  "pytest-operator",
+  "pytest-jubilant>=2,<3",
 ]
 
 [tool.uv]

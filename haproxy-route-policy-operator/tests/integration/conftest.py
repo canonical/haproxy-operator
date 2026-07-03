@@ -5,7 +5,6 @@
 
 import json
 import pathlib
-import typing
 
 import jubilant
 import pytest
@@ -25,20 +24,11 @@ def charm_fixture(charm_paths: dict[str, CharmPathList]) -> str:
     return charm_paths["haproxy-route-policy"].path
 
 
-@pytest.fixture(scope="module", name="juju")
-def juju_fixture(request: pytest.FixtureRequest):
-    """Pytest fixture that wraps :meth:`jubilant.with_model`."""
-    model = request.config.getoption("--model")
-    if model:
-        juju = jubilant.Juju(model=model)
-        juju.wait_timeout = JUJU_WAIT_TIMEOUT
-        yield juju
-        return
-
-    keep_models = typing.cast(bool, request.config.getoption("--keep-models"))
-    with jubilant.temp_model(keep=keep_models) as juju:
-        juju.wait_timeout = JUJU_WAIT_TIMEOUT
-        yield juju
+@pytest.fixture(scope="module")
+def juju(juju: jubilant.Juju) -> jubilant.Juju:
+    """Override juju fixture to set wait_timeout."""
+    juju.wait_timeout = JUJU_WAIT_TIMEOUT
+    return juju
 
 
 @pytest.fixture(scope="module", name="application")

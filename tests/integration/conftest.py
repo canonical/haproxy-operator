@@ -38,34 +38,18 @@ def lxd_juju_fixture(request: pytest.FixtureRequest):
     try:
         juju.bootstrap(lxd_cloud_name, lxd_controller_name)
     except jubilant.CLIError as err:
-        if not "already exists":
-            logger.exception(err)
+        if "already exists" not in str(err):
             raise
 
     # We need to switch to the controller or commands like add-cloud will not work.
     juju.cli("switch", f"{lxd_controller_name}:", include_model=False)
-
-    model = request.config.getoption("--model")
-    if model:
-        try:
-            juju.add_model(
-                model=model, cloud=lxd_cloud_name, controller=lxd_controller_name
-            )
-        except jubilant.CLIError as err:
-            if not "already exists":
-                logger.exception(err)
-                raise
-            juju.model = f"{lxd_controller_name}:{model}"
-        juju = jubilant.Juju(model=f"{lxd_controller_name}:{model}")
-        juju.wait_timeout = JUJU_WAIT_TIMEOUT
-        return juju
 
     keep_models = typing.cast(bool, request.config.getoption("--keep-models"))
     with jubilant.temp_model(
         keep=keep_models, cloud=lxd_cloud_name, controller=lxd_controller_name
     ) as juju:
         juju.wait_timeout = JUJU_WAIT_TIMEOUT
-        return juju
+        yield juju
 
 
 @pytest.fixture(scope="session", name="k8s_juju")
