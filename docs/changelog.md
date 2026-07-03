@@ -10,7 +10,7 @@ Each revision is versioned by the date of the revision.
 
 ## 2026-06-26
 
-- docs: Add docs on the terraform module.
+- docs: Add docs on the Terraform module.
 
 ## 2026-06-18
 
