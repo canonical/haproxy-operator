@@ -1,7 +1,7 @@
 ---
 myst:
   html_meta:
-    "description lang=en": "How to deploy the HAProxy charm using Terraform."
+    "description lang=en": "Learn how to deploy the HAProxy charm using Terraform."
 ---
 
 
