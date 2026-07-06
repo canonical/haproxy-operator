@@ -450,9 +450,7 @@ class HAProxyCharm(ops.CharmBase):
 
         return self._get_haproxy_route_status_message(haproxy_route_requirers_information)
 
-    def _get_haproxy_route_status_message(
-        self, info: HaproxyRouteRequirersInformation
-    ) -> str:
+    def _get_haproxy_route_status_message(self, info: HaproxyRouteRequirersInformation) -> str:
         """Generate a status message showing valid/total relations.
 
         Args:
@@ -461,9 +459,8 @@ class HAProxyCharm(ops.CharmBase):
         Returns:
             str: A status message indicating valid/total relations.
         """
-        total = (
-            len(self.haproxy_route_provider.relations)
-            + len(self.haproxy_route_tcp_provider.relations)
+        total = len(self.haproxy_route_provider.relations) + len(
+            self.haproxy_route_tcp_provider.relations
         )
         invalid = len(info.relation_ids_with_invalid_data) + len(
             info.relation_ids_with_invalid_data_tcp
