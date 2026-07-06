@@ -37,9 +37,7 @@ def test_ingress_integration(
     assert ingress_url.path == f"/{model_name}-{any_charm_ingress_requirer}/"
 
     session = Session()
-    session.mount(
-        "https://", DNSResolverHTTPSAdapter(ingress_url.netloc, str(unit_ip_address))
-    )
+    session.mount("https://", DNSResolverHTTPSAdapter(ingress_url.netloc, str(unit_ip_address)))
 
     if isinstance(unit_ip_address, ipaddress.IPv6Address):
         requirer_url = f"http://[{unit_ip_address!s}]{ingress_url.path}ok"

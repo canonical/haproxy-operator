@@ -30,9 +30,7 @@ def charm_fixture(charm_paths: dict[str, CharmPathList]) -> str:
 
 
 @pytest.fixture(scope="module", name="application")
-def application_fixture(
-    pytestconfig: pytest.Config, charm: str, juju: jubilant.Juju
-) -> str:
+def application_fixture(pytestconfig: pytest.Config, charm: str, juju: jubilant.Juju) -> str:
     """Deploy the charm.
 
     Args:
@@ -142,9 +140,7 @@ def get_unit_address(juju: jubilant.Juju, application: str) -> str:
     return url
 
 
-def get_ingress_url_for_application(
-    juju: jubilant.Juju, app_name: str
-) -> ParseResult:
+def get_ingress_url_for_application(juju: jubilant.Juju, app_name: str) -> ParseResult:
     """Get the ingress url from the requirer's unit data.
 
     Args:
@@ -399,9 +395,7 @@ def any_charm_ingress_requirer_fixture(
 
 
 @pytest.fixture(name="any_charm_requirer")
-def any_charm_requirer_fixture(
-    juju: jubilant.Juju, any_charm_src: dict[str, str]
-) -> str:
+def any_charm_requirer_fixture(juju: jubilant.Juju, any_charm_src: dict[str, str]) -> str:
     """Deploy any-charm configured as a requirer for the reverseproxy relation.
 
     Args:

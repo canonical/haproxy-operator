@@ -27,9 +27,7 @@ def test_get_certificate_action(
     )
     assert "-----BEGIN CERTIFICATE-----" in task.results.get("certificate", "")
 
-    stdout = juju.ssh(
-        f"{configured_application_with_tls}/0", "ls /var/lib/haproxy/certs"
-    )
+    stdout = juju.ssh(f"{configured_application_with_tls}/0", "ls /var/lib/haproxy/certs")
     assert f"{TEST_EXTERNAL_HOSTNAME_CONFIG}.pem" in stdout
 
     # The action should fail when run without the required hostname parameter.

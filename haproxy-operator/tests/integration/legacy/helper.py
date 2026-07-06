@@ -67,9 +67,7 @@ class DNSResolverHTTPSAdapter(HTTPAdapter):
         return super().send(request, stream, timeout, verify, cert, proxies)
 
 
-def get_ingress_url_for_application(
-    juju: jubilant.Juju, app_name: str
-) -> ParseResult:
+def get_ingress_url_for_application(juju: jubilant.Juju, app_name: str) -> ParseResult:
     """Get the ingress url from the requirer's unit data.
 
     Args:
