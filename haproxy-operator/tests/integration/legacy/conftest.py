@@ -7,6 +7,7 @@ import ipaddress
 import json
 import logging
 import pathlib
+import tempfile
 import textwrap
 from urllib.parse import ParseResult, urlparse
 
@@ -94,9 +95,7 @@ def configured_application_with_tls_fixture(
         f"{certificate_provider_application}:certificates",
     )
     juju.wait(
-        lambda status: (
-            jubilant.all_active(status, application, certificate_provider_application)
-        ),
+        lambda status: jubilant.all_active(status, application, certificate_provider_application),
     )
     return application
 
@@ -380,15 +379,19 @@ def any_charm_ingress_requirer_fixture(
     ):
         logger.warning("Using existing application: %s", any_charm_ingress_requirer_name)
         return any_charm_ingress_requirer_name
-    juju.deploy(
-        "any-charm",
-        app=any_charm_ingress_requirer_name,
-        channel="beta",
-        config={
-            "src-overwrite": json.dumps(any_charm_src_ingress_requirer),
-            "python-packages": "pydantic<2.0",
-        },
-    )
+    # Write large src-overwrite to a file to avoid ARG_MAX CLI limit
+    with tempfile.NamedTemporaryFile(dir=".") as tf:
+        tf.write(json.dumps(any_charm_src_ingress_requirer).encode("utf-8"))
+        tf.flush()
+        juju.deploy(
+            "any-charm",
+            app=any_charm_ingress_requirer_name,
+            channel="beta",
+            config={
+                "src-overwrite": f"@{tf.name}",
+                "python-packages": "pydantic<2.0",
+            },
+        )
     juju.wait(lambda status: jubilant.all_active(status, any_charm_ingress_requirer_name))
     juju.run(f"{any_charm_ingress_requirer_name}/0", "rpc", {"method": "start_server"})
     return any_charm_ingress_requirer_name
@@ -474,25 +477,26 @@ def haproxy_route_requirer_fixture(juju: jubilant.Juju) -> str:
         The haproxy-route-requirer app name.
     """
     app_name = "haproxy-route-requirer"
-    juju.deploy(
-        "any-charm",
-        channel="beta",
-        app=app_name,
-        config={
-            "src-overwrite": json.dumps(
-                {
-                    "any_charm.py": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(
-                        encoding="utf-8"
-                    ),
-                    "haproxy_route.py": pathlib.Path(HAPROXY_ROUTE_LIB_SRC).read_text(
-                        encoding="utf-8"
-                    ),
-                    "apt.py": pathlib.Path(APT_LIB_SRC).read_text(encoding="utf-8"),
-                }
-            ),
-            "python-packages": "pydantic~=2.10\nvalidators",
-        },
+    src_overwrite = json.dumps(
+        {
+            "any_charm.py": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(encoding="utf-8"),
+            "haproxy_route.py": pathlib.Path(HAPROXY_ROUTE_LIB_SRC).read_text(encoding="utf-8"),
+            "apt.py": pathlib.Path(APT_LIB_SRC).read_text(encoding="utf-8"),
+        }
     )
+    # Write large src-overwrite to a file to avoid ARG_MAX CLI limit
+    with tempfile.NamedTemporaryFile(dir=".") as tf:
+        tf.write(src_overwrite.encode("utf-8"))
+        tf.flush()
+        juju.deploy(
+            "any-charm",
+            channel="beta",
+            app=app_name,
+            config={
+                "src-overwrite": f"@{tf.name}",
+                "python-packages": "pydantic~=2.10\nvalidators",
+            },
+        )
     juju.wait(lambda status: jubilant.all_active(status, app_name))
     juju.run(f"{app_name}/0", "rpc", {"method": "start_server"})
     return app_name

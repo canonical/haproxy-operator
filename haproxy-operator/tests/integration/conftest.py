@@ -105,9 +105,7 @@ def configured_application_with_tls_base_fixture(
         f"{application}:certificates", f"{certificate_provider_application}:certificates"
     )
     juju.wait(
-        lambda status: (
-            jubilant.all_active(status, application, certificate_provider_application)
-        ),
+        lambda status: jubilant.all_active(status, application, certificate_provider_application),
         timeout=JUJU_WAIT_TIMEOUT,
     )
     return application
@@ -162,7 +160,7 @@ def any_charm_ingress_per_unit_requirer_fixture(
     )
 
     juju.wait(
-        lambda status: (jubilant.all_active(status, ANY_CHARM_INGRESS_PER_UNIT_REQUIRER)),
+        lambda status: jubilant.all_active(status, ANY_CHARM_INGRESS_PER_UNIT_REQUIRER),
         timeout=JUJU_WAIT_TIMEOUT,
     )
     return ANY_CHARM_INGRESS_PER_UNIT_REQUIRER
@@ -216,8 +214,8 @@ def any_charm_haproxy_route_requirer_base_fixture(
             },
         )
         juju.wait(
-            lambda status: (
-                jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)
+            lambda status: jubilant.all_active(
+                status, ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION
             ),
             timeout=JUJU_WAIT_TIMEOUT,
         )
@@ -252,27 +250,32 @@ def any_charm_haproxy_route_tcp_requirer_base_fixture(
     """Deploy any-charm and configure it to serve as a requirer for the haproxy-route
     integration.
     """
-    juju.deploy(
-        "any-charm",
-        app=ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION,
-        channel="beta",
-        config={
-            "src-overwrite": json.dumps(
-                {
-                    "any_charm.py": pathlib.Path(HAPROXY_ROUTE_TCP_REQUIRER_SRC).read_text(
-                        encoding="utf-8"
-                    ),
-                    "haproxy_route_tcp.py": pathlib.Path(HAPROXY_ROUTE_TCP_LIB_SRC).read_text(
-                        encoding="utf-8"
-                    ),
-                }
+    src_overwrite = json.dumps(
+        {
+            "any_charm.py": pathlib.Path(HAPROXY_ROUTE_TCP_REQUIRER_SRC).read_text(
+                encoding="utf-8"
             ),
-            "python-packages": "pydantic~=2.10\nvalidators",
-        },
+            "haproxy_route_tcp.py": pathlib.Path(HAPROXY_ROUTE_TCP_LIB_SRC).read_text(
+                encoding="utf-8"
+            ),
+        }
     )
+    # Write large src-overwrite to a file to avoid ARG_MAX CLI limit
+    with tempfile.NamedTemporaryFile(dir=".") as tf:
+        tf.write(src_overwrite.encode("utf-8"))
+        tf.flush()
+        juju.deploy(
+            "any-charm",
+            app=ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION,
+            channel="beta",
+            config={
+                "src-overwrite": f"@{tf.name}",
+                "python-packages": "pydantic~=2.10\nvalidators",
+            },
+        )
     juju.wait(
-        lambda status: (
-            jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION)
+        lambda status: jubilant.all_active(
+            status, ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION
         ),
         timeout=JUJU_WAIT_TIMEOUT,
     )
