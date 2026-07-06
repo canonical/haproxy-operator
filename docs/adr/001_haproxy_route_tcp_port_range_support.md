@@ -37,10 +37,9 @@ The `offset` is `backend.start - frontend.start`. When both ranges are identical
 
 Server entries in the backend config omit the explicit port (i.e. `server name <address>` with no `:port`) when the backend is a port range, and the config relies on `set-dst-port` to determine the backend port.
 
-
 ### Conflict detection
 
-We classify requirers for the `haproxy-route-tcp` relation into 2 types: "single-port" requirers that either sets the `port` and `backend_port` attribute or sets single value for the `port-mapping` attribute ( e.g `4000-4000:5000-5000`) ( from now on will be referenced as `type 1` ) and "port-range" requirers that sets the `port-mapping` attribute to port ranges of len > 1 ( `type 2` ).
+We classify requirers for the `haproxy-route-tcp` relation into 2 types: "single-port" requirers that either sets the `port` and `backend_port` attribute or sets single value for the `port-mapping` attribute ( e.g `4000-4000:5000-5000`) ( from now on will be referenced as `type 1` ) and "port-range" requirers that sets the `port-mapping` attribute to port ranges of `len > 1` ( `type 2` ).
 
 There's no change for type 1 requirers with regards to conflict detection
 
