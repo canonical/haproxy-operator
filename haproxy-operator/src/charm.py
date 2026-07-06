@@ -144,6 +144,14 @@ class HAProxyCharm(ops.CharmBase):
                 self.on.config_changed,
                 self.haproxy_route_provider.on.data_available,
                 self.haproxy_route_provider.on.data_removed,
+                self.haproxy_route_tcp_provider.on.data_available,
+                self.haproxy_route_tcp_provider.on.data_removed,
+                # We also need to refresh on spoe-auth and haproxy-route-policy relation changes
+                # as they also contribute to the list of certificate requests.
+                self.on[SPOE_AUTH_RELATION].relation_changed,
+                self.on[SPOE_AUTH_RELATION].relation_broken,
+                self.on[HAPROXY_ROUTE_POLICY_RELATION_NAME].relation_changed,
+                self.on[HAPROXY_ROUTE_POLICY_RELATION_NAME].relation_broken,
             ],
             mode=Mode.APP,
             private_key=self._ensure_private_key(),
@@ -297,6 +305,7 @@ class HAProxyCharm(ops.CharmBase):
         ha_information = HAInformation.from_charm(self)
         self._reconcile_ha(ha_information)
 
+        status_message = ""
         match proxy_mode:
             case ProxyMode.INGRESS:
                 self._configure_ingress(charm_state, IngressRequirersInformation)
@@ -305,7 +314,7 @@ class HAProxyCharm(ops.CharmBase):
             case ProxyMode.LEGACY:
                 self._configure_legacy(charm_state)
             case ProxyMode.HAPROXY_ROUTE:
-                self._configure_haproxy_route(charm_state, ha_information)
+                status_message = self._configure_haproxy_route(charm_state, ha_information)
             case _:
                 if self.model.get_relation(TLS_CERT_RELATION):
                     # Reconcile certificates in case the certificates relation is present
@@ -314,7 +323,7 @@ class HAProxyCharm(ops.CharmBase):
 
                 self.unit.set_ports(80)
                 self.haproxy_service.reconcile_default(charm_state)
-        self.unit.status = ops.ActiveStatus()
+        self.unit.status = ops.ActiveStatus(status_message)
 
     def _configure_ingress(
         self,
@@ -371,8 +380,12 @@ class HAProxyCharm(ops.CharmBase):
 
     def _configure_haproxy_route(
         self, charm_state: CharmState, ha_information: HAInformation
-    ) -> None:
-        """Configure the haproxy route relation."""
+    ) -> str:
+        """Configure the haproxy route relation.
+
+        Returns:
+            str: A status message indicating valid/total relations.
+        """
         haproxy_route_requirers_information = HaproxyRouteRequirersInformation.from_provider(
             haproxy_route=self.haproxy_route_provider,
             haproxy_route_tcp=self.haproxy_route_tcp_provider,
@@ -418,8 +431,9 @@ class HAProxyCharm(ops.CharmBase):
             80,
             443,
             *(
-                frontend.port
+                port
                 for frontend in haproxy_route_requirers_information.valid_tcp_frontends()
+                for port in frontend.covered_ports
             ),
             *(
                 backend.application_data.external_grpc_port
@@ -433,6 +447,28 @@ class HAProxyCharm(ops.CharmBase):
                 haproxy_route_requirers_information, ha_information
             )
             self._publish_certificate_to_peer_units(tls_information)
+
+        return self._get_haproxy_route_status_message(haproxy_route_requirers_information)
+
+    def _get_haproxy_route_status_message(self, info: HaproxyRouteRequirersInformation) -> str:
+        """Generate a status message showing valid/total relations.
+
+        Args:
+            info: The haproxy route requirers information.
+
+        Returns:
+            str: A status message indicating valid/total relations.
+        """
+        total = len(self.haproxy_route_provider.relations) + len(
+            self.haproxy_route_tcp_provider.relations
+        )
+        invalid = len(info.relation_ids_with_invalid_data) + len(
+            info.relation_ids_with_invalid_data_tcp
+        )
+        valid = total - invalid
+        if not total:
+            return ""
+        return f"{valid}/{total} valid relations"
 
     def _get_certificate_requests(self) -> typing.List[CertificateRequestAttributes]:
         """Get the certificate requests.
