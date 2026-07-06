@@ -10,7 +10,7 @@ on:
 
 jobs:
   integration-test:
-    uses: canonical/charm-ci/.github/workflows/integration-test.yml@v0.0.1-alpha.3
+    uses: canonical/charm-ci/.github/workflows/integration-test.yml@v0.0.1-alpha.6
     with:
       spread-jobs-include: "integration-test-ci:*"
     secrets: inherit

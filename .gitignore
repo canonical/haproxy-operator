@@ -36,3 +36,5 @@ haproxy-route-policy/.python-version
 .spread-reuse.*
 .spread-run-*/
 artifacts.build.yaml
+
+.worktrees
