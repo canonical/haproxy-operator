@@ -97,3 +97,37 @@ def test_haproxy_route_tcp(
             "timeout queue 2s",
         ]
     )
+
+    # Test with PROXY PROTOCOL enabled
+    juju.run(
+        f"{any_charm_haproxy_route_tcp_requirer}/0",
+        "rpc",
+        {"method": "update_relation_with_proxy_protocol"},
+    )
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, any_charm_haproxy_route_tcp_requirer
+        )
+    )
+
+    haproxy_config = juju.ssh(
+        f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
+    )
+    assert "send-proxy" in haproxy_config
+
+    # Test with port range binding
+    juju.run(
+        f"{any_charm_haproxy_route_tcp_requirer}/0",
+        "rpc",
+        {"method": "update_relation_with_port_mapping"},
+    )
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, any_charm_haproxy_route_tcp_requirer
+        )
+    )
+
+    haproxy_config = juju.ssh(
+        f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
+    )
+    assert "bind [::]:8080-8090" in haproxy_config

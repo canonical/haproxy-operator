@@ -11,6 +11,15 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import scenario
+from charmlibs.interfaces.tls_certificates import (
+    Certificate,
+    CertificateSigningRequest,
+    PrivateKey,
+    generate_ca,
+    generate_certificate,
+    generate_csr,
+    generate_private_key,
+)
 from charms.haproxy.v0.spoe_auth import SpoeAuthProviderAppData, SpoeAuthProviderUnitData
 from charms.haproxy.v1.haproxy_route_tcp import (
     HaproxyRouteTcpRequirerData,
@@ -21,15 +30,6 @@ from charms.haproxy.v2.haproxy_route import (
     HaproxyRouteRequirerData,
     RequirerApplicationData,
     RequirerUnitData,
-)
-from charms.tls_certificates_interface.v4.tls_certificates import (
-    Certificate,
-    CertificateSigningRequest,
-    PrivateKey,
-    generate_ca,
-    generate_certificate,
-    generate_csr,
-    generate_private_key,
 )
 from ops.testing import Context
 
@@ -111,14 +111,14 @@ def mock_certificate_fixture(
     provider_cert_mock.certificate = certificate
     monkeypatch.setattr(
         (
-            "charms.tls_certificates_interface.v4.tls_certificates"
+            "charmlibs.interfaces.tls_certificates"
             ".TLSCertificatesRequiresV4.get_assigned_certificate"
         ),
         MagicMock(return_value=(provider_cert_mock, private_key)),
     )
     monkeypatch.setattr(
         (
-            "charms.tls_certificates_interface.v4.tls_certificates"
+            "charmlibs.interfaces.tls_certificates"
             ".TLSCertificatesRequiresV4.get_assigned_certificates"
         ),
         MagicMock(return_value=([provider_cert_mock], private_key)),
@@ -296,6 +296,7 @@ def base_state_fixture(peer_relation):
     """
     input_state = {
         "relations": [peer_relation],
+        "leader": True,
     }
     return input_state
 
@@ -316,6 +317,7 @@ def base_state_with_ingress_fixture(peer_relation, ingress_integration, certific
         "config": {
             "external-hostname": "ingress.local",
         },
+        "leader": True,
     }
     return input_state
 
@@ -353,6 +355,7 @@ def base_state_haproxy_route_fixture(
         "config": {
             "external-hostname": "haproxy.internal",
         },
+        "leader": True,
     }
     return input_state
 
@@ -417,6 +420,7 @@ def base_state_with_ingress_per_unit_fixture(
         "config": {
             "external-hostname": "ingress.local",
         },
+        "leader": True,
     }
     return input_state
 
@@ -457,8 +461,9 @@ def tcp_reconcile_context_fixture():
 
 def build_haproxy_route_tcp_relation(
     *,
-    port: int = 4000,
+    port: int | None = 4000,
     backend_port: int | None = None,
+    port_mapping: str | None = None,
     sni: str | None = None,
     enforce_tls: bool = True,
     tls_terminate: bool = False,
@@ -469,6 +474,7 @@ def build_haproxy_route_tcp_relation(
     Args:
         port: Frontend port.
         backend_port: Backend port (defaults to port).
+        port_mapping: Port mapping in "frontend-range:backend-range" form.
         sni: Server Name Indication value.
         enforce_tls: Whether to enforce TLS.
         tls_terminate: Whether to terminate TLS.
@@ -478,12 +484,16 @@ def build_haproxy_route_tcp_relation(
         A scenario Relation for haproxy-route-tcp.
     """
     app_data: dict[str, str | int | bool | None] = {
-        "port": port,
         "enforce_tls": enforce_tls,
         "tls_terminate": tls_terminate,
     }
-    if backend_port is not None:
-        app_data["backend_port"] = backend_port
+    if port_mapping is not None:
+        app_data["port_mapping"] = port_mapping
+    else:
+        if port is not None:
+            app_data["port"] = port
+        if backend_port is not None:
+            app_data["backend_port"] = backend_port
     if sni is not None:
         app_data["sni"] = sni
 
