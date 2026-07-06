@@ -22,6 +22,7 @@ Integrate with non-charm workloads <integrate-with-non-charm-workload.md>
 Provide extra configurations for ingress requirer charms <provide-extra-configurations-for-ingress-requirer-charms.md>
 Control haproxy-route relation data <control-haproxy-route-relation-data.md>
 Configure virtual IP on OpenStack <configure-virtual-ip-on-openstack.md>
+Add to existing Terraform project <deploy-with-terraform.md>
 ```
 
 ## Load balancing
@@ -55,5 +56,5 @@ and benefits from ongoing improvements.
 ```{toctree}
 :maxdepth: 1
 Upgrade <upgrade.md>
-Contribute <contribute.md>
+Contribute <contribute.rst>
 ```
