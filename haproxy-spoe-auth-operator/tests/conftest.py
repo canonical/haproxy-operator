@@ -6,7 +6,6 @@
 
 def pytest_addoption(parser):
     """Register charm test options."""
-    parser.addoption("--charm-file", action="store", help="Charm file to be deployed.")
     # --keep-models is passed by reusable CI workflows; consumed as no-op here.
     # pytest-jubilant v2 uses --no-juju-teardown instead.
     parser.addoption(
