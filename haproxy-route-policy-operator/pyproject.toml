@@ -14,7 +14,7 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-  "ops==3.7.1",
+  "ops==3.8.0",
   "requests==2.34.2",
   "charmlibs-snap==1.0.1.post0",
   "pydantic>=2.12.5",
@@ -28,7 +28,8 @@ unit = [ "coverage[toml]", "ops[testing]", "pytest" ]
 coverage-report = [ "coverage[toml]", "pytest" ]
 static = [ "bandit[toml]" ]
 integration = [
-  "jubilant==1.10.0",
+  "jubilant==1.11.0",
+  "juju==3.6.1.3",
   "opcli @ git+https://github.com/canonical/charm-ci.git@v0.0.1-alpha.3",
   "pytest",
   "pytest-jubilant>=2,<3",
