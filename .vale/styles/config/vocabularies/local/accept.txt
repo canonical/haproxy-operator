@@ -1,0 +1,6 @@
+AI
+configurator
+databag
+hardcoded
+hostnames
+proxied

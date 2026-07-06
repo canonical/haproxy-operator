@@ -1,0 +1,15 @@
+version_schema: 2
+
+changes:
+  - title: Fix remove ca certificate relation where there are still ca certificates.
+    author: alexdlukens
+    type: minor
+    description: >
+      Instead of removing the cas.pem file when removing a CA relation, call the update_trusted_cas() method.
+      Update the update_trusted_cas() method to check if all CAs have been removed.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/358
+      related_issue: https://github.com/canonical/haproxy-operator/issues/357
+    visibility: public
+    highlight: false

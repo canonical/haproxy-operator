@@ -1,0 +1,18 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: Docs spread
+
+on:
+  pull_request:
+  schedule:
+  - cron: 0 9 * * 1 # At 09:00 UTC on Monday, aligned with the weekly haproxy stable release.
+
+jobs:
+  doc-test:
+    uses: canonical/charm-ci/.github/workflows/doc-test.yml@v0.0.1-alpha.6
+    permissions:
+      contents: read
+      actions: read
+    with:
+      spread-jobs-include: "docs-ci:*"

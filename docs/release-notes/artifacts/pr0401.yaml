@@ -1,0 +1,20 @@
+version_schema: 2
+
+changes:
+  - title: Added rule matching engine and request evaluation on creation
+    author: tphan025
+    type: minor
+    description: >
+      Added a rule matching engine that evaluates backend requests against rules
+      ordered by descending priority. Within the same priority group, deny rules
+      take precedence over allow rules. Integrated the engine into the bulk create
+      endpoint so that each new request is evaluated immediately and its status is
+      set to accepted, rejected, or pending accordingly. Included unit tests for the
+      matching logic and integration tests for rule evaluation during request creation.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/401
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false

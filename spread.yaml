@@ -1,0 +1,85 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+project: haproxy-operator
+path: /home/ubuntu/proj
+kill-timeout: 60m
+warn-timeout: 1m
+backends:
+  integration-test:
+    type: integration-test
+    systems:
+    - ubuntu-24.04:
+    - ubuntu-24.04-arm64:
+        runner: [ubuntu-24.04-arm]
+  docs:
+    type: opcli-minimal
+    systems:
+    - ubuntu-24.04
+environment:
+  OPCLI_GIT_REF: '$(HOST: echo "${OPCLI_GIT_REF:-main}")'
+  CONCIERGE: concierge-lxd.yaml
+exclude:
+- .git
+- .tox
+- .venv
+- .*_cache
+integration-suites:
+  haproxy-operator/tests/integration/:
+    summary: haproxy-operator integration tests
+    working-dir: haproxy-operator/
+    backends:
+    - integration-test
+    systems: [ubuntu-24.04]
+    pytest-arguments-template: &default-pytest-args |
+      --model testing
+      --keep-models
+  haproxy-operator/tests/integration/arm64:
+    summary: haproxy-operator integration tests
+    working-dir: haproxy-operator/
+    auto-discover: false
+    environment:
+      MODULE/legacy_test_charm: tests/integration/legacy/test_charm.py
+    backends:
+    - integration-test
+    systems: [ubuntu-24.04-arm64]
+    pytest-arguments-template: *default-pytest-args
+  haproxy-spoe-auth-operator/tests/integration/:
+    summary: haproxy-spoe-auth-operator integration tests
+    working-dir: haproxy-spoe-auth-operator/
+    backends:
+    - integration-test
+    systems: [ubuntu-24.04]
+    pytest-arguments-template: *default-pytest-args
+  haproxy-ddos-protection-configurator/tests/integration/:
+    summary: haproxy-ddos-protection-configurator integration tests
+    working-dir: haproxy-ddos-protection-configurator/
+    backends:
+    - integration-test
+    systems: [ubuntu-24.04]
+    pytest-arguments-template: *default-pytest-args
+  haproxy-route-policy-operator/tests/integration/:
+    summary: haproxy-route-policy-operator integration tests
+    working-dir: haproxy-route-policy-operator/
+    backends:
+    - integration-test
+    systems: [ubuntu-24.04]
+    pytest-arguments-template: *default-pytest-args
+  tests/integration/:
+    summary: global integration tests (cross-charm, requires LXD + canonical-k8s)
+    working-dir: ./
+    backends:
+    - integration-test
+    systems: [ubuntu-24.04]
+    environment:
+      CONCIERGE: concierge-ck8s.yaml
+    prepare: |
+      k8s config | sudo -u ubuntu juju add-k8s ck8s --client
+    pytest-arguments-template: *default-pytest-args
+suites:
+  tests/spread/tutorial/:
+    summary: Tutorial smoke test (getting-started.md)
+    backends:
+    - docs
+    environment:
+      TUTORIAL: docs/tutorial/getting-started.md

@@ -1,0 +1,875 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+"""HAproxy route charm state component."""
+
+import logging
+from collections import defaultdict
+from collections.abc import Collection
+from functools import cached_property
+from pathlib import Path
+from typing import Optional, cast
+
+from charms.haproxy.v1.haproxy_route_tcp import (
+    HaproxyRouteTcpProvider,
+    HaproxyRouteTcpRequirersData,
+)
+from charms.haproxy.v2.haproxy_route import (
+    DataValidationError,
+    HaproxyRewriteMethod,
+    HaproxyRouteProvider,
+    HaproxyRouteRequirerData,
+    LoadBalancingAlgorithm,
+    RequirerApplicationData,
+    ServerHealthCheck,
+)
+from charms.haproxy_route_policy.v0.haproxy_route_policy import (
+    HaproxyRoutePolicyBackendRequest,
+    HaproxyRoutePolicyProviderAppData,
+    HaproxyRoutePolicyRequirer,
+)
+from pydantic import Field, IPvAnyAddress, ValidationError, model_validator
+from pydantic.dataclasses import dataclass
+from typing_extensions import Self
+
+from .exception import CharmStateValidationBaseError
+from .haproxy_route_tcp import (
+    HAProxyRouteTcpBackend,
+    HAProxyRouteTcpFrontend,
+    HAProxyRouteTcpFrontendValidationError,
+)
+
+HAPROXY_ROUTE_RELATION = "haproxy-route"
+HAPROXY_PEER_INTEGRATION = "haproxy-peers"
+HAPROXY_CAS_DIR = Path("/var/lib/haproxy/cas")
+HAPROXY_CAS_FILE = Path(HAPROXY_CAS_DIR / "cas.pem")
+# We put a leading space in front of computed properties to make the
+# rendered haproxy config consistent regardless of what property is None/rendered.
+# This is made to be a constant to explicitly indicate the intention and avoid
+# having properties like f" {}" which will be harder to maintain and understand.
+LEADING_SPACE = " "
+logger = logging.getLogger()
+
+
+class HaproxyRouteIntegrationDataValidationError(CharmStateValidationBaseError):
+    """Exception raised when ingress integration is not established."""
+
+
+class HaproxyRoutePolicyMissingHostnameError(CharmStateValidationBaseError):
+    """Exception raised when haproxy-route-policy is present but external-hostname is missing."""
+
+
+@dataclass(frozen=True)
+class HAProxyRouteServer:
+    """A representation of a server in the backend section of the haproxy config.
+
+    Attrs:
+        server_name: The name of the unit with invalid characters replaced.
+        address: The IP address of the requirer unit.
+        port: The port that the requirer application wishes to be exposed.
+        protocol: The protocol that the backend service speaks. "http" (default) or "https".
+        check: Health check configuration.
+        maxconn: Maximum allowed connections before requests are queued.
+    """
+
+    server_name: str
+    address: IPvAnyAddress
+    port: int
+    protocol: str
+    check: Optional[ServerHealthCheck]
+    maxconn: Optional[int]
+
+    @property
+    def server_health_check_configuration(self) -> str:
+        """Build the backend server health check configuration for HTTPS protocol.
+
+        Returns:
+            str: The backend server health check configuration for HTTPS protocol,
+            or an empty string if protocol is not HTTPS.
+        """
+        if self.check is None:
+            return ""
+        return f"{LEADING_SPACE}check inter {self.check.interval}s rise {self.check.rise} fall {self.check.fall}"
+
+
+@dataclass(frozen=True)
+class HAProxyRouteBackend:
+    """A component of charm state that represent an ingress requirer application.
+
+    Attrs:
+        relation_id: The id of the relation, used to publish the proxied endpoints.
+        application_data: requirer application data.
+        backend_name: The name of the backend (computed).
+        servers: The list of server each corresponding to a requirer unit.
+        hostname_acls: The list of hostname ACLs for the backend.
+        load_balancing_configuration: Load balancing configuration for the haproxy backend.
+        rewrite_configurations: Rewrite configuration.
+        path_acl_required: Indicate if path routing is required.
+        deny_path_acl_required: Indicate if deny_path is required.
+        consistent_hashing: Use consistent hashing to avoid redirection
+            when servers are added/removed.
+        wildcard_hostname_acls: The set of wildcard hostname ACLs for the backend.
+        standard_hostname_acls: The set of standard (non-wildcard) hostname ACLs for the backend.
+        health_check_host_header: The Host header to use for health checks.
+    """
+
+    relation_id: int
+    application_data: RequirerApplicationData
+    servers: list[HAProxyRouteServer]
+    hostname_acls: set[str]
+
+    @property
+    def backend_name(self) -> str:
+        """The backend name.
+
+        Returns:
+            str: The backend name.
+        """
+        return self.application_data.service
+
+    @property
+    def path_acl_required(self) -> bool:
+        """Indicate if path routing is required.
+
+        Returns:
+            bool: Whether the `paths` attribute in the requirer data is empty.
+        """
+        return bool(self.application_data.paths)
+
+    @property
+    def deny_path_acl_required(self) -> bool:
+        """Indicate if deny_path is required.
+
+        Returns:
+            bool: Whether the `deny_paths` attribute in the requirer data is empty.
+        """
+        return bool(self.application_data.deny_paths)
+
+    # We disable no-member here because pylint doesn't know that
+    # self.application_data.load_balancing Has a default value set
+    # pylint: disable=no-member
+    @property
+    def load_balancing_configuration(self) -> str:
+        """Build the load balancing configuration for the haproxy backend.
+
+        Returns:
+            str: The haproxy load balancing configuration for the backend.
+        """
+        if self.application_data.load_balancing.algorithm == LoadBalancingAlgorithm.COOKIE:
+            # The library ensures that if algorithm == cookie
+            # then the cookie attribute must be not none
+            return f"hash req.cook({cast(str, self.application_data.load_balancing.cookie)})"
+        return str(self.application_data.load_balancing.algorithm.value)
+
+    @property
+    def consistent_hashing(self) -> bool:
+        """Indicate if consistent hashing should be applied for this backend.
+
+        Returns:
+            bool: Whether consistent hashing should be applied.
+        """
+        return (
+            self.application_data.load_balancing.consistent_hashing
+            and self.application_data.load_balancing.algorithm
+            in [LoadBalancingAlgorithm.COOKIE, LoadBalancingAlgorithm.SRCIP]
+        )
+
+    def _build_rewrite_configurations(
+        self, allowed_methods: Collection[HaproxyRewriteMethod] | None = None
+    ) -> list[str]:
+        """Build rewrite configurations with optional filtering.
+
+        Args:
+            allowed_methods: Optional collection of allowed rewrite methods to filter by.
+
+        Returns:
+            list[str]: The rewrite configurations.
+        """
+        rewrite_configurations: list[str] = []
+        for rewrite in self.application_data.rewrites:
+            if allowed_methods and rewrite.method not in allowed_methods:
+                continue
+
+            match rewrite.method:
+                case HaproxyRewriteMethod.SET_HEADER:
+                    rewrite_configurations.append(
+                        f"{rewrite.method.value!s} {rewrite.header} {rewrite.expression}"
+                    )
+                case HaproxyRewriteMethod.SET_PATH | HaproxyRewriteMethod.SET_QUERY:
+                    rewrite_configurations.append(f"{rewrite.method.value!s} {rewrite.expression}")
+        return rewrite_configurations
+
+    @cached_property
+    def rewrite_configurations(self) -> list[str]:
+        """Build the rewrite configurations.
+
+        For example, method = SET_HEADER, header = COOKIE, expression = "testing"
+        will result in the following rewrite config:
+
+        http-request set-header COOKIE testing
+
+        Returns:
+            list[str]: The rewrite configurations.
+        """
+        return self._build_rewrite_configurations()
+
+    @cached_property
+    def grpc_rewrite_configurations(self) -> list[str]:
+        """Build rewrite configurations for header rewrites only.
+
+        Returns:
+            list[str]: The header-only rewrite configurations.
+        """
+        return self._build_rewrite_configurations(
+            allowed_methods={HaproxyRewriteMethod.SET_HEADER, HaproxyRewriteMethod.SET_PATH}
+        )
+
+    @property
+    def wildcard_hostname_acls(self) -> set[str]:
+        """Build the hostname-based routing rules for this backend.
+
+        Returns:
+            set[str]: The hostname-based routing rules for this backend (non-wildcard).
+        """
+        # We also take the leading '.' to ensure that requests to the base domain won't match.
+        # The ACL will be something like this: req.hdr(host),field(1,:) -m end .example.com
+        return {hostname[1:] for hostname in self.hostname_acls if hostname.startswith("*.")}
+
+    @property
+    def standard_hostname_acls(self) -> set[str]:
+        """Build the hostname ACLs for this backend that are not wildcard.
+
+        Returns:
+            set[str]: The hostname ACLs for this backend that are wildcard.
+        """
+        return {hostname for hostname in self.hostname_acls if not hostname.startswith("*.")}
+
+    @property
+    def health_check_host_header(self) -> Optional[str]:
+        """Build the backend health check Host header.
+
+        Returns:
+            Optional[str]: The base domain if the hostname is a wildcard,
+            otherwise return the hostname itself.
+        """
+        if not self.hostname_acls:
+            return None
+        hostname = next(iter(self.hostname_acls))
+        return hostname[2:] if hostname.startswith("*.") else hostname
+
+    @property
+    def https_backend_server_configuration(self) -> str:
+        """Build the backend server configuration for HTTPS protocol.
+
+        Returns:
+            str: The backend server configuration for HTTPS protocol,
+            or an empty string if protocol is not HTTPS.
+        """
+        if self.application_data.protocol != "https":
+            return ""
+        return f"{LEADING_SPACE}ssl ca-file {HAPROXY_CAS_FILE} alpn h2,http/1.1 check-alpn h2,http/1.1"
+
+    @property
+    def grpc_backend_server_configuration(self) -> str:
+        """Build the backend server configuration for gRPC protocol.
+
+        Returns:
+            str: The backend server configuration for gRPC protocol,
+            or an empty string if external_grpc_port is not set.
+        """
+        if not self.application_data.external_grpc_port:
+            return ""
+        return f"{LEADING_SPACE}ssl ca-file {HAPROXY_CAS_FILE} alpn h2 check-alpn h2"
+
+    @property
+    def enable_http_check(self) -> bool:
+        """Return whether to enable HTTP health checks.
+
+        Returns:
+            bool: True if backend protocol is HTTP, False otherwise.
+        """
+        return self.application_data.protocol == "http"
+
+
+@dataclass(frozen=True)
+class HaproxyRoutePolicyProviderBackend:
+    """A representation of the haproxy-route-policy provider backend.
+
+    Attrs:
+        policy_backend_port: The port of the policy backend.
+        policy_backend_unit_addresses: The list of unit addresses for the policy backend.
+        path: The path identifier for the policy backend.
+        hostname: The external hostname for the policy backend.
+    """
+
+    policy_backend_port: int = Field(
+        gt=0, le=65535, description="Port number for the policy backend."
+    )
+    policy_backend_unit_addresses: list[IPvAnyAddress] = Field(
+        description="List of unit addresses for the policy backend."
+    )
+    model: str = Field(description="Model name for the policy backend.")
+    app: str = Field(description="Application name for the policy backend.")
+    hostname: str = Field(description="Hostname for the policy backend.")
+
+    @classmethod
+    def from_requirer(
+        cls, haproxy_route_policy: HaproxyRoutePolicyRequirer, external_hostname: str | None
+    ) -> "HaproxyRoutePolicyProviderBackend| None":
+        """Create a HaproxyRoutePolicyProviderBackend from the policy requirer relation.
+
+        Args:
+            haproxy_route_policy: The haproxy-route-policy requirer instance.
+            external_hostname: The charm's configured external hostname.
+
+        Raises:
+            HaproxyRoutePolicyMissingHostnameError: When haproxy-route-policy relation is present
+                but external hostname is not set.
+
+        Returns:
+            HaproxyRoutePolicyProviderBackend or None if relation data is invalid or missing.
+        """
+        if not external_hostname:
+            logger.error(
+                "External hostname is required for policy backend but is not set. "
+                "Skipping policy backend configuration."
+            )
+            raise HaproxyRoutePolicyMissingHostnameError(
+                "External hostname is required for haproxy-route-policy but is not set."
+            )
+        try:
+            if relation := haproxy_route_policy.relation:
+                provider_data = relation.load(HaproxyRoutePolicyProviderAppData, relation.app)
+                provider_unit_addresses = [
+                    # explicitly cast to IPvAnyAddress because we already filtered out None values.
+                    cast(IPvAnyAddress, relation.data[unit].get("private-address"))
+                    for unit in relation.units
+                    if relation.data[unit].get("private-address") is not None
+                ]
+                return cls(
+                    policy_backend_port=provider_data.policy_backend_port,
+                    policy_backend_unit_addresses=provider_unit_addresses,
+                    model=provider_data.model,
+                    app=relation.app.name,
+                    hostname=f"{provider_data.model}-{relation.app.name}.{external_hostname}",
+                )
+        except ValidationError as exc:
+            logger.error("Validation error when parsing policy provider backend: %s", exc)
+            # We don't propagate this error because the data is likely incomplete and in that case
+            # we don't block the charm but simply skip rendering of the policy backend.
+        return None
+
+    @property
+    def backend_name(self) -> str:
+        """The backend name for the policy backend.
+
+        Returns:
+            str: The backend name for the policy backend.
+        """
+        return f"policy_{self.model}_{self.app}"
+
+    @property
+    def hostname_acl_name(self) -> str:
+        """The hostname ACL name for the policy backend.
+
+        Returns:
+            str: The hostname ACL name for the policy backend.
+        """
+        return f"{self.backend_name}_hostname"
+
+    @property
+    def hostname_acl(self) -> str:
+        """Build the hostname ACL for the policy backend.
+
+        Returns:
+            str: The hostname ACL string.
+        """
+        return f"acl {self.hostname_acl_name} req.hdr(host),field(1,:) -i {self.hostname}"
+
+    @property
+    def policy_backend_server_configuration(self) -> list[str]:
+        """Build the backend server configuration for the policy backend.
+
+        Returns:
+            list[str]: The backend server configuration for the policy backend.
+        """
+        return [
+            f"server {self.app}_{unit_index} {address!s}:{self.policy_backend_port} check"
+            for unit_index, address in enumerate(self.policy_backend_unit_addresses)
+        ]
+
+    @property
+    def use_backend_configuration(self) -> str:
+        """Build the use_backend configuration for the policy backend.
+
+        Returns:
+            str: The use_backend configuration for the policy backend.
+        """
+        return f"use_backend {self.backend_name} if {self.hostname_acl_name}"
+
+
+# pylint: disable=too-many-locals
+@dataclass(frozen=True)
+class HaproxyRouteRequirersInformation:
+    """A component of charm state containing haproxy-route requirers information.
+
+    Attrs:
+        backends: The list of backends each corresponds to a requirer application.
+        stick_table_entries: List of stick table entries in the haproxy "peer" section.
+        peers: List of IP address of haproxy peer units.
+        relation_ids_with_invalid_data: Set of haproxy-route relation ids
+            that contains invalid data.
+        relation_ids_with_invalid_data_tcp: Set of haproxy-route-tcp relation ids
+            that contains invalid data.
+        ports_with_conflicts: Set of ports that have conflicts between HTTP, TCP, and gRPC backends.
+        tcp_frontends: List of frontend in TCP mode.
+    """
+
+    backends: list[HAProxyRouteBackend]
+    stick_table_entries: list[str]
+    peers: list[IPvAnyAddress]
+    relation_ids_with_invalid_data: set[int]
+    relation_ids_with_invalid_data_tcp: set[int]
+    ports_with_conflicts: set[int]
+    tcp_frontends: list[HAProxyRouteTcpFrontend]
+    # This is used to transform haproxy-route requirers to backend requests for the policy charm.
+    valid_haproxy_route_requirers: list[HaproxyRouteRequirerData]
+    policy_provider_backend: HaproxyRoutePolicyProviderBackend | None
+
+    @property
+    def backend_requests_for_policy(self) -> list[HaproxyRoutePolicyBackendRequest]:
+        """Transform the requirer data into backend requests for the policy charm.
+
+        Returns:
+            list[HaproxyRoutePolicyBackendRequest]: The backend requests for the policy charm.
+        """
+        backend_requests: list[HaproxyRoutePolicyBackendRequest] = []
+        for requirer in self.valid_haproxy_route_requirers:
+            try:
+                port = requirer.application_data.external_grpc_port or (
+                    80 if requirer.application_data.allow_http else 443
+                )
+                backend_requests.append(
+                    HaproxyRoutePolicyBackendRequest(
+                        relation_id=requirer.relation_id,
+                        backend_name=requirer.application_data.service,
+                        hostname_acls=list(
+                            generate_hostname_acls(
+                                requirer.application_data, external_hostname=None
+                            )
+                        ),
+                        paths=requirer.application_data.paths,
+                        port=port,
+                    )
+                )
+            except ValidationError as exc:
+                logger.error(
+                    "Validation error for backend %s, skipping: %s",
+                    requirer.application_data.service,
+                    exc,
+                )
+                continue
+        return backend_requests
+
+    @classmethod
+    def from_provider(  # pylint: disable=too-many-arguments
+        cls,
+        *,
+        haproxy_route: HaproxyRouteProvider,
+        haproxy_route_tcp: HaproxyRouteTcpProvider,
+        haproxy_route_policy: HaproxyRoutePolicyRequirer,
+        external_hostname: Optional[str],
+        peers: list[str],
+        ca_certs_configured: bool,
+    ) -> "HaproxyRouteRequirersInformation":
+        """Initialize the HaproxyRouteRequirersInformation state component.
+
+        Args:
+            haproxy_route: The haproxy-route provider class.
+            haproxy_route_tcp: The haproxy-route-tcp provider class.
+            haproxy_route_policy: The haproxy-route-policy requirer class.
+            external_hostname: The charm's configured hostname.
+            peers: List of IP address of haproxy peer units.
+            ca_certs_configured: If ca certificates are configured for haproxy backends.
+
+        Raises:
+            HaproxyRouteIntegrationDataValidationError: When data validation failed.
+
+        Returns:
+            HaproxyRouteRequirersInformation: Information about requirers
+                for the haproxy-route interface.
+        """
+        try:
+            # Fetch approved requests from the policy charm and cross-reference with requirers data from haproxy-route
+            requirers = haproxy_route.get_data(haproxy_route.relations)
+            approved_requirers = get_approved_requirers_from_policy(
+                requirers.requirers_data, haproxy_route_policy
+            )
+
+            # This is used to check that requirers don't ask for the same backend name.
+            backend_names: set[str] = set()
+            # Control stick tables for rate_limiting and
+            # eventually any shared values between haproxy units.
+            stick_table_entries: list[str] = []
+            backends: list[HAProxyRouteBackend] = []
+            relation_ids_with_invalid_data = requirers.relation_ids_with_invalid_data
+
+            # If there is a policy relation, only process the approved requirers. Otherwise, process all requirers.
+            requirers_to_process = (
+                approved_requirers
+                if haproxy_route_policy.relation is not None
+                else requirers.requirers_data
+            )
+            for requirer in requirers_to_process:
+                # Duplicate backend names check is done in the library's `get_data` method
+                backend_names.add(requirer.application_data.service)
+
+                if requirer.application_data.rate_limit:
+                    stick_table_entries.append(f"{requirer.application_data.service}_rate_limit")
+
+                backend = HAProxyRouteBackend(
+                    relation_id=requirer.relation_id,
+                    application_data=requirer.application_data,
+                    servers=get_servers_definition_from_requirer_data(requirer),
+                    hostname_acls=generate_hostname_acls(
+                        requirer.application_data, external_hostname
+                    ),
+                )
+
+                if not backend.hostname_acls:
+                    relation_ids_with_invalid_data.add(requirer.relation_id)
+                    continue
+
+                if (
+                    backend.servers
+                    and backend.servers[0].protocol == "https"
+                    and not ca_certs_configured
+                ):
+                    relation_ids_with_invalid_data.add(requirer.relation_id)
+                    continue
+
+                backends.append(backend)
+
+            tcp_frontends: list[HAProxyRouteTcpFrontend] = []
+            tcp_requirers: HaproxyRouteTcpRequirersData = haproxy_route_tcp.get_data(
+                haproxy_route_tcp.relations
+            )
+            tcp_frontends = parse_haproxy_route_tcp_requirers_data(tcp_requirers)
+            # Calculate the invalid relation ids after parsing the relations data into
+            # HAProxyRouteTcpFrontend objects
+            relation_ids_with_invalid_data_tcp = (
+                tcp_requirers.relation_ids_with_invalid_data.union(
+                    *[frontend.relation_ids_with_invalid_data for frontend in tcp_frontends]
+                )
+            )
+
+            policy_provider_backend = None
+            if haproxy_route_policy.relation is not None:
+                policy_provider_backend = HaproxyRoutePolicyProviderBackend.from_requirer(
+                    haproxy_route_policy, external_hostname
+                )
+            return HaproxyRouteRequirersInformation(
+                # Sort backend by the max depth of the required path.
+                # This is to ensure that backends with deeper path ACLs get routed first.
+                backends=sorted(backends, key=get_backend_max_path_depth, reverse=True),
+                stick_table_entries=stick_table_entries,
+                peers=[cast(IPvAnyAddress, peer_address) for peer_address in peers],
+                relation_ids_with_invalid_data=relation_ids_with_invalid_data,
+                relation_ids_with_invalid_data_tcp=relation_ids_with_invalid_data_tcp,
+                tcp_frontends=tcp_frontends,
+                ports_with_conflicts=set[int](),
+                valid_haproxy_route_requirers=requirers.requirers_data,
+                policy_provider_backend=policy_provider_backend,
+            )
+        except (ValidationError, DataValidationError) as exc:
+            raise HaproxyRouteIntegrationDataValidationError from exc
+
+    @model_validator(mode="after")
+    def check_backend_paths(self) -> Self:
+        """Output a warning if requirers declared conflicting paths/hostnames.
+
+        Returns:
+            Self: The validated model.
+        """
+        requirers_paths: list[str] = []
+        requirers_hostnames: list[str] = []
+
+        for backend in self.backends:
+            requirers_paths.extend(backend.application_data.paths)
+            requirers_hostnames.extend(backend.hostname_acls)
+
+        if len(requirers_paths) != len(set(requirers_paths)):
+            logger.warning(
+                "Requirers defined path(s) that map to multiple backends."
+                "This can cause unintended behaviors."
+            )
+
+        if len(requirers_hostnames) != len(set(requirers_hostnames)):
+            logger.warning(
+                "Requirers defined hostname(s) that map to multiple backends."
+                "This can cause unintended behaviors."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def check_tcp_http_port_conflicts(self) -> Self:
+        """Check for port conflicts between HTTP backends and TCP/gRPC backends.
+        If conflict between HTTP and TCP/gRPC backends is found,
+        the TCP/gRPC backend relation_id is added to the invalid data list.
+        If conflict between TCP and gRPC backends is found,
+        both relation_ids are added to the invalid data lists.
+
+        Returns:
+            Self: The validated model
+        """
+        standard_ports = {80, 443}
+        valid_backends = self.valid_backends()
+        has_http_backends = any(not b.application_data.external_grpc_port for b in valid_backends)
+
+        grpc_ports = {
+            backend.application_data.external_grpc_port: backend
+            for backend in valid_backends
+            if backend.application_data.external_grpc_port
+        }
+        tcp_ports: dict[int, HAProxyRouteTcpFrontend] = {
+            covered_port: frontend
+            for frontend in self.tcp_frontends
+            for covered_port in frontend.covered_ports
+        }
+
+        # Check for conflicts between standard HTTP and TCP/gRPC ports
+        if has_http_backends:
+            for standard_port in standard_ports:
+                if standard_port in tcp_ports:
+                    logger.error(
+                        f"TCP backend conflicts with HTTP backends on external port {standard_port}."
+                    )
+                    self.relation_ids_with_invalid_data_tcp.update(
+                        {backend.relation_id for backend in tcp_ports[standard_port].backends}
+                    )
+                    self.ports_with_conflicts.add(standard_port)
+                if standard_port in grpc_ports:
+                    logger.error(
+                        f"gRPC backend conflicts with HTTP backends on external port {standard_port}."
+                    )
+                    self.relation_ids_with_invalid_data.add(grpc_ports[standard_port].relation_id)
+                    self.ports_with_conflicts.add(standard_port)
+
+        # Check for conflicts between gRPC and TCP ports
+        for port in grpc_ports.keys() & tcp_ports.keys():
+            logger.error(f"Conflicting TCP backend and gRPC backend on external port {port}.")
+            self.relation_ids_with_invalid_data_tcp.update(
+                {backend.relation_id for backend in tcp_ports[port].backends}
+            )
+            self.relation_ids_with_invalid_data.add(grpc_ports[port].relation_id)
+            self.ports_with_conflicts.add(port)
+
+        if self.ports_with_conflicts:
+            logger.warning(f"The following ports have conflicts: {self.ports_with_conflicts}")
+
+        return self
+
+    def valid_backends(self) -> list[HAProxyRouteBackend]:
+        """Get the list of valid backends (not in the invalid list).
+
+        Returns:
+            list[HAProxyRouteBackend]: List of valid backends.
+        """
+        return [
+            backend
+            for backend in self.backends
+            if backend.relation_id not in self.relation_ids_with_invalid_data
+        ]
+
+    def valid_tcp_frontends(self) -> list[HAProxyRouteTcpFrontend]:
+        """Get the list of valid TCP endpoints (not in the invalid list).
+
+        Returns:
+            list[HAProxyRouteTcpFrontend]: List of valid TCP endpoints.
+        """
+        return [
+            frontend
+            for frontend in self.tcp_frontends
+            if not any(p in self.ports_with_conflicts for p in frontend.covered_ports)
+        ]
+
+    @property
+    def acls_for_allow_http(self) -> list[str]:
+        """Get the list of all allow_http ACLs from all backends.
+
+        Returns:
+            list[str]: List of allow_http ACLs.
+        """
+        allow_http_acls: list[str] = []
+        for backend in self.backends:
+            if backend.application_data.allow_http:
+                allow_http_acls.append(
+                    f"req.hdr(host),field(1,:) -i {' '.join(backend.hostname_acls)}"
+                )
+                if backend.path_acl_required:
+                    allow_http_acls.append(
+                        f"path_beg -i {' '.join(backend.application_data.paths)}"
+                    )
+                if backend.deny_path_acl_required:
+                    allow_http_acls.append(
+                        f"!path_beg -i {' '.join(backend.application_data.deny_paths)}"
+                    )
+        return allow_http_acls
+
+
+def get_servers_definition_from_requirer_data(
+    requirer: HaproxyRouteRequirerData,
+) -> list[HAProxyRouteServer]:
+    """Get servers definition from the requirer data.
+
+    Args:
+        requirer: The requirer data.
+
+    Returns:
+        list[HAProxyRouteServer]: List of server definitions.
+    """
+    servers: list[HAProxyRouteServer] = []
+    server_addresses: list[IPvAnyAddress] = (
+        requirer.application_data.hosts
+        if requirer.application_data.hosts
+        else [unit_data.address for unit_data in requirer.units_data]
+    )
+    for i, server_address in enumerate(server_addresses):
+        for port in requirer.application_data.ports:
+            servers.append(
+                HAProxyRouteServer(
+                    server_name=f"{requirer.application_data.service}_{port}_{i}",
+                    address=server_address,
+                    port=port,
+                    protocol=requirer.application_data.protocol,
+                    check=requirer.application_data.check,
+                    maxconn=requirer.application_data.server_maxconn,
+                )
+            )
+    return servers
+
+
+def get_backend_max_path_depth(backend: HAProxyRouteBackend) -> int:
+    """Return the max depth of requested paths for the given backend.
+
+    Return 1 if no custom path is requested.
+
+    Args:
+        backend: haproxy-route backend.
+
+    Returns:
+        int: The max requested path depth
+    """
+    paths = backend.application_data.paths
+    if not paths:
+        return 1
+    return max(len(path.rstrip("/").split("/")) for path in paths)
+
+
+def generate_hostname_acls(
+    application_data: RequirerApplicationData, external_hostname: Optional[str]
+) -> set[str]:
+    """Generate the list of hostname ACLs for a backend.
+
+    Args:
+        application_data: The requirer application data.
+        external_hostname: The charm's configured external hostname.
+
+    Returns:
+        set[str]: The combined set of hostnames.
+    """
+    if not application_data.hostname:
+        if not external_hostname:
+            return set()
+
+        return {external_hostname}
+    return {application_data.hostname, *application_data.additional_hostnames}
+
+
+def parse_haproxy_route_tcp_requirers_data(
+    tcp_requirers: HaproxyRouteTcpRequirersData,
+) -> list[HAProxyRouteTcpFrontend]:
+    """Parse HAProxyRouteTcpFrontend data from requirers into frontend objects.
+
+    Backends are grouped into frontends following these rules:
+      * Each valid port-range backend anchors its own frontend. Port-range backends
+        are never merged with each other; overlapping ranges are flagged invalid
+        upstream and excluded here.
+      * A single-port backend is merged into a port-range frontend when its port
+        falls within that range, otherwise single-port backends are grouped together
+        by their port (SNI multiplexing).
+
+    Returns:
+        list[HAProxyRouteTcpFrontend]: The parsed frontend data.
+    """
+    backends = [
+        HAProxyRouteTcpBackend.from_haproxy_route_tcp_requirer_data(requirer)
+        for requirer in tcp_requirers.requirers_data
+        if requirer.relation_id not in tcp_requirers.relation_ids_with_invalid_data
+    ]
+
+    # Each port-range backend anchors its own frontend, paired with the single-port
+    # backends merged into it.
+    range_groups: list[tuple[HAProxyRouteTcpBackend, list[HAProxyRouteTcpBackend]]] = [
+        (backend, []) for backend in backends if backend.application_data.is_port_range
+    ]
+    single_port_groups: dict[int, list[HAProxyRouteTcpBackend]] = defaultdict(list)
+
+    for backend in backends:
+        if backend.application_data.is_port_range:
+            continue
+        port = backend.application_data.port_range.start
+        merged = False
+        for range_backend, merged_singles in range_groups:
+            frontend_range = range_backend.application_data.port_range
+            if frontend_range.start <= port <= frontend_range.end:
+                merged_singles.append(backend)
+                merged = True
+                break
+        if not merged:
+            single_port_groups[port].append(backend)
+
+    tcp_frontends: list[HAProxyRouteTcpFrontend] = []
+    for range_backend, merged_singles in range_groups:
+        tcp_frontends.append(
+            HAProxyRouteTcpFrontend.from_backends_port_range(range_backend, merged_singles)
+        )
+
+    for group in single_port_groups.values():
+        try:
+            tcp_frontends.append(HAProxyRouteTcpFrontend.from_backends_single_port(group))
+        except HAProxyRouteTcpFrontendValidationError as exc:
+            logger.error(f"Failed to parse TCP frontend: {exc}")
+
+    return tcp_frontends
+
+
+def get_approved_requirers_from_policy(
+    requirers: list[HaproxyRouteRequirerData], haproxy_route_policy: HaproxyRoutePolicyRequirer
+) -> list[HaproxyRouteRequirerData]:
+    """Parse haproxy-route requirer data into backend requests for the policy charm.
+
+    Args:
+        requirers: List of haproxy-route requirer data.
+        haproxy_route_policy: The haproxy-route-policy requirer instance.
+
+    Returns:
+        list[HaproxyRouteRequirerData]: The list of requirer data that are approved by the policy charm.
+    """
+    try:
+        if relation := haproxy_route_policy.relation:
+            approved_requests = relation.load(
+                HaproxyRoutePolicyProviderAppData, relation.app
+            ).approved_requests
+            approved_backend_names = {request.backend_name for request in approved_requests}
+            return [
+                requirer
+                for requirer in requirers
+                if requirer.application_data.service in approved_backend_names
+            ]
+    except ValidationError:
+        logger.exception(
+            "Validation error when loading approved backend requests from policy relation."
+        )
+        return []
+    return []

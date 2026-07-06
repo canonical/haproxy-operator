@@ -1,0 +1,14 @@
+schema_version: 1
+changes:
+  - title: Migrated the Python project to use `uv` and `ruff`
+    author: weiiwang01
+    type: minor
+    description: |
+       Now the repository uses `uv`, `tox-uv`, and `ruff` for building,
+       testing and linting.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/225
+      related_doc: 
+      related_issue: 
+    visibility: public
+    highlight: false

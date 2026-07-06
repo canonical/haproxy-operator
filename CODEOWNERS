@@ -1,4 +1,1 @@
-# Ignore changelog from codeowner requests
-docs/changelog.md
-
-docs/*	@erinecon
+*	@canonical/platform-engineering-emea

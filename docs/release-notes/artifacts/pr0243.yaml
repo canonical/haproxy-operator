@@ -1,0 +1,14 @@
+schema_version: 1
+changes:
+  - title:  update terraform module to support keepalived, update docs.
+    author: tphan025
+    type: minor
+    description: |
+      Update TF module to provide support for keepalived,
+        add validation rules to ensure mutual exclusivity between the 2 options.
+    urls:
+      pr: https://github.com/canonical/haproxy-operator/pull/243
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false

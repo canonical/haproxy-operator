@@ -1,0 +1,13 @@
+schema_version: 1
+title: Updated HAProxy config to track connections per minute instead of rate limit
+author: swetha1654
+type: minor
+description: >
+  Currently the haproxy-route library exposes the `rate_limit_connections_per_minute` attribute,
+  however the underlying HAProxy configuration tracks request rate limiting using the 
+  `http_req_rate` parameter. This update modifies the HAProxy configuration to use
+  `conn_rate` instead.
+urls:
+  - https://github.com/canonical/haproxy-operator/pull/319
+visibility: public
+highlight: false

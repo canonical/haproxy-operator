@@ -1,0 +1,23 @@
+version_schema: 2
+
+changes:
+  - title: Switch TLS certificates to app mode with shared private key and peer relation distribution
+    author: tphan025
+    type: minor
+    description: >
+      Switched the TLS certificates library from unit mode to app mode so
+      only the leader requests and receives certificates. The leader stores
+      a shared private key in a Juju secret and publishes certificates plus
+      CA chains to the peer relation app databag. Non-leader units read TLS
+      information from the peer relation instead of the certificates
+      relation directly, enabling all units to serve the same certificates
+      without individual CSR requests. Added peer relation-changed/joined
+      observers so non-leader units reconcile when certificate data is
+      published.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/523
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false

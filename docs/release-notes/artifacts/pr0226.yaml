@@ -1,0 +1,13 @@
+schema_version: 1
+changes:
+  - title: Fixed the `publish_spoe_auth_snap` workflow by specifying the snap folder in the build step
+    author: Thanhphan1147
+    type: bugfix
+    description: |
+       Fixed the `publish_spoe_auth_snap` workflow by specifying the snap folder in the build step.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/226
+      related_doc: 
+      related_issue: 
+    visibility: hidden
+    highlight: false

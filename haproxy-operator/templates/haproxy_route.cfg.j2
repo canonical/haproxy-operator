@@ -1,0 +1,167 @@
+{% extends 'haproxy.cfg.j2' %}
+{% block proxy_configuration %}
+{% if http_backends or policy_provider_backend is not none %}
+frontend haproxy
+    mode http
+    bind [::]:80 v4v6
+    bind [::]:443 v4v6 ssl crt {{ haproxy_crt_dir }} alpn h2,http/1.1
+
+{{ ddos_protection_rules() }}
+
+    # Redirect HTTP to HTTPS
+{% for acl in acls_for_allow_http %}
+    acl is_allow_http {{ acl }}
+{% endfor %}
+    http-request redirect scheme https unless { ssl_fc } {% if acls_for_allow_http %}|| is_allow_http{% endif %}
+
+    # Set X-Forwarded-Proto based on the connection scheme (allow-http lets plain HTTP through)
+    http-request set-header X-Forwarded-Proto %[ssl_fc,iif(https,http)]
+
+{% if enable_hsts %}
+    # Add HSTS header for HTTPS connections (only when HTTP is not allowed)
+    http-response set-header Strict-Transport-Security "max-age=2592000" if { ssl_fc } {% if acls_for_allow_http %}!is_allow_http{% endif %}
+
+{% endif %}
+
+{% for spoe_auth_info in spoe_auth_info_list  %}
+    acl oidc_host_{{ spoe_auth_info.id }} req.hdr(host),field(1,:) -i {{ spoe_auth_info.hostname }}
+    acl oidc_callback_path_{{ spoe_auth_info.id }} path_beg -i {{ spoe_auth_info.oidc_callback_path }}
+    use_backend spoe_oidc_callback_{{ spoe_auth_info.id }} if oidc_host_{{ spoe_auth_info.id }} oidc_callback_path_{{ spoe_auth_info.id }}
+
+    filter spoe engine spoe-auth-{{ spoe_auth_info.id }} config /etc/haproxy/spoe_auth.conf
+
+    acl authenticated_{{ spoe_auth_info.id }} var({{ spoe_auth_info.var_authenticated_scope }}.auth_{{ spoe_auth_info.id }}.{{ spoe_auth_info.var_authenticated }}) -m bool
+    use_backend backend_redirect_{{ spoe_auth_info.id }} if oidc_host_{{ spoe_auth_info.id }} !authenticated_{{ spoe_auth_info.id }}
+{% endfor %}
+{% endif %}
+
+{% for backend in http_backends %}
+{% if backend.path_acl_required %}
+    acl acl_path_{{ backend.backend_name }} path_beg -i {% for path in backend.application_data.paths %}{{ path }} {% endfor +%}
+{% endif %}
+{% if backend.standard_hostname_acls %}
+    acl acl_host_{{ backend.backend_name }} req.hdr(host),field(1,:) -i {% for hostname in backend.standard_hostname_acls%}{{hostname}} {% endfor +%}
+{% endif %}
+{% if backend.wildcard_hostname_acls %}
+    acl acl_host_{{ backend.backend_name }} req.hdr(host),field(1,:) -m end {% for hostname in backend.wildcard_hostname_acls%}{{hostname}} {% endfor +%}
+{% endif %}
+
+{% if backend.deny_path_acl_required %}
+    acl acl_deny_path_{{ backend.backend_name }} path_beg -i {% for path in backend.application_data.deny_paths %}{{ path }} {% endfor +%}
+{% endif %}
+    use_backend {{ backend.backend_name }} if {% if backend.path_acl_required %}acl_path_{{ backend.backend_name }}{% endif %} acl_host_{{ backend.backend_name }} {% if backend.deny_path_acl_required %}!acl_deny_path_{{ backend.backend_name }}{% endif +%}
+{% endfor %}
+{% if policy_provider_backend is not none %}
+    # Routing configuration for the haproxy-route-policy provider
+    {{ policy_provider_backend.hostname_acl }}
+    {{ policy_provider_backend.use_backend_configuration }}
+{% endif %}
+
+    default_backend default
+
+{% if policy_provider_backend is not none %}
+# Backend configuration for the haproxy-route-policy provider
+backend {{ policy_provider_backend.backend_name }}
+    mode http
+    http-request set-header X-Forwarded-Proto https
+    http-request set-header X-Forwarded-Ssl on
+{% for server_configuration in policy_provider_backend.policy_backend_server_configuration %}
+    {{ server_configuration}}
+{% endfor %}
+{% endif %}
+
+peers haproxy_peers
+{% for address in peer_units_address %}
+    peer {{ address }}
+{% endfor %}
+{% for entry in stick_table_entries %}
+    table {{ entry }} type ip size 100k expire 2m store http_req_rate(1m)
+{% endfor %}
+{% if ddos_protection_config.has_rate_limiting %}
+    table ddos_protection_ip type ip size 100k expire 2m store http_req_rate(1m),conn_rate(1m),conn_cur
+{% endif %}
+
+{% for backend in http_backends %}
+backend {{ backend.backend_name }}
+    option forwardfor
+    balance {{ backend.load_balancing_configuration }}
+{% if backend.consistent_hashing %}
+    hash-type consistent
+{% endif %}
+    timeout server {{ backend.application_data.timeout.server }}s
+    timeout connect {{ backend.application_data.timeout.connect }}s
+    timeout queue {{ backend.application_data.timeout.queue }}s
+{% if backend.application_data.retry %}
+    retries {{ backend.application_data.retry.count }}
+{% if backend.application_data.retry.redispatch %}
+    option redispatch
+{% endif %}
+{% endif %}
+
+{% if backend.application_data.http_server_close %}
+    option http-server-close
+{% endif %}
+
+{% if backend.enable_http_check %}
+    option httpchk {% if backend.application_data.check.path %}GET {{ backend.application_data.check.path }}{% endif +%}
+{% if backend.application_data.check.port %}
+    http-check connect port {{ backend.application_data.check.port }}
+{% endif %}
+{% if backend.health_check_host_header is not none %}
+    http-check send hdr Host {{ backend.health_check_host_header }}
+{% endif %}
+{% endif %}
+{% if backend.application_data.rate_limit %}
+    http-request track-sc0 src table  haproxy_peers/{{ backend.backend_name }}_rate_limit
+    http-request {{ backend.application_data.rate_limit.policy.value }} if { sc_conn_rate(0,haproxy_peers/{{ backend.backend_name }}_rate_limit) gt {{ backend.application_data.rate_limit.connections_per_minute }} }
+{% endif %}
+
+{% if backend.application_data.bandwidth_limit.download %}
+
+    filter bwlim-out download default-limit {{ backend.application_data.bandwidth_limit.download }} default-period 1s
+    http-response set-bandwidth-limit download
+{% endif %}
+{% if backend.application_data.bandwidth_limit.upload %}
+    filter bwlim-in upload default-limit {{ backend.application_data.bandwidth_limit.upload }} default-period 1s
+    http-request set-bandwidth-limit upload
+{% endif %}
+{% for rewrite_configuration in backend.rewrite_configurations %}
+    http-request {{ rewrite_configuration }}
+{% endfor %}
+{% for server in backend.servers %}
+    server {{ server.server_name }} {{ server.address }}:{{ server.port }}{{ server.server_health_check_configuration }}{{backend.https_backend_server_configuration}}
+{% endfor %}
+{% endfor %}
+
+{% for spoe_auth_info in spoe_auth_info_list  %}
+backend backend_redirect_{{ spoe_auth_info.id }}
+    mode http
+    balance roundrobin
+    http-request redirect location %[var({{ spoe_auth_info.var_redirect_url_scope }}.auth_{{ spoe_auth_info.id }}.{{ spoe_auth_info.var_redirect_url }})]
+
+backend spoe_oidc_callback_{{ spoe_auth_info.id }}
+    mode http
+    balance roundrobin
+    option tcp-check
+    timeout connect 5s
+    timeout server  1m
+{% for agent_address in spoe_auth_info.unit_addresses %}
+    server {{ agent_address }} {{ agent_address }}:{{ spoe_auth_info.oidc_callback_port }} check
+{% endfor %}
+
+backend spop_auth_{{ spoe_auth_info.id }}
+    mode tcp
+    balance roundrobin
+    option spop-check
+    timeout connect 5s
+    timeout server  1m
+{% for agent_address in spoe_auth_info.unit_addresses %}
+    server {{ agent_address }} {{ agent_address }}:{{ spoe_auth_info.spop_port }} check
+{% endfor %}
+{% endfor %}
+
+{% if tcp_frontends %}{% include 'haproxy_route_tcp.cfg.j2' %}{% endif %}
+
+{% if grpc_backends %}{% include 'haproxy_route_grpc.cfg.j2' %}{% endif %}
+
+{% endblock %}

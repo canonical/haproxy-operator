@@ -1,0 +1,16 @@
+version_schema: 2
+
+changes:
+  - title: Publish proxied endpoints for haproxy-route-tcp frontends
+    author: tphan025
+    type: minor
+    description: >
+      Added publishing of proxied endpoints for haproxy-route-tcp relations.
+      For SNI-enabled frontends, endpoints are published as "<sni>:<port>".
+      For non-SNI frontends, endpoints use the HA VIP when available or fallback to peer unit
+      addresses. The haproxy-route-tcp library now uses string endpoints instead of AnyUrl.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/384
+    visibility: public
+    highlight: false

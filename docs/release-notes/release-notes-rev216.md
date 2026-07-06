@@ -1,3 +1,5 @@
+(release_notes_release_notes_rev216)=
+
 # HAProxy release notes – 2.8/stable, revision 216
 
 These release notes cover new features and changes in HAProxy for revisions
@@ -13,7 +15,7 @@ Main bug fixes:
 * Fixed a typo in the cookie fetch method in the load-balancing algorithm ([PR](https://github.com/canonical/haproxy-operator/pull/179)).
 * Fixed an ambiguous endpoint in an integration test ([PR](https://github.com/canonical/haproxy-operator/pull/129)).
 
-See our [Release policy and schedule](docs/release-notes/landing-page.md).
+See our [Release policy and schedule](index.md).
 
 ## Requirements and compatibility
 
@@ -35,15 +37,16 @@ The following major and minor features were added in this release.
 ### Add consistent hashing support
 
 Consistent hashing reduce redistribution of clients to another backend server when server is added/removed. On HAProxy it will add 
+
 ```
 hash-type consistent
 ```
+
 to the configuration.
 
 Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/171)
-
 
 ### Allow customization to configure port for HTTP check
 
@@ -53,7 +56,6 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/119)
 
-
 ### Added hosts attribute to requirer data
 
 You can now override the unit IP addresses used to generate server entries in the HAProxy configuration.
@@ -61,7 +63,6 @@ You can now override the unit IP addresses used to generate server entries in th
 Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/149)
-
 
 ### Validated requirer relation data object
 
@@ -73,7 +74,6 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/118)
 
-
 ### Updated integration tests
 
 The integration tests now only run one unit to save CI time.
@@ -82,7 +82,6 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/131)
 
-
 ### Updated certifications handling
 
 The charm now requests a new certification for each subdomain during initialization.
@@ -90,7 +89,6 @@ The charm now requests a new certification for each subdomain during initializat
 Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/150)
-
 
 ### Refactored source code and tests
 
@@ -103,7 +101,6 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/158)
 
-
 ### Added a new relation
 
 Added the `ingress-per-unit` relation to support reaching each
@@ -114,18 +111,16 @@ Relevant links:
 * [PR](https://github.com/canonical/haproxy-operator/pull/153)
 * [Related issue](https://github.com/canonical/haproxy-operator/issues/88)
 
-
 ### Added new field to the requirer application databag
 
 The requirer application databag now has a "protocol" field to
-support HTTPS supstream servers.
+support HTTPS upstream servers.
 
 Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/164)
 
-
-### Added http-server-close support
+### Added `http-server-close` support
 
 Added the `http-server-close` argument to the HAProxy configuration.
 When this argument is set, it closes the connection after the request.
@@ -133,7 +128,6 @@ When this argument is set, it closes the connection after the request.
 Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/175)
-
 
 ### Enforce health check fields to all be set
 
@@ -144,15 +138,13 @@ Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/170)
 
-
 ### Added first scenario test
 
-Added the first scenario test which kickstarts the transition process from Harness to Scenario.
+Added the first scenario test which starts the transition process from Harness to Scenario.
 
 Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/108)
-
 
 ### Rendered `retry` configuration in template and remove `retry_interval` attribute
 
@@ -162,7 +154,6 @@ To configure the time between 2 retries we can use `timeout.connect`.
 Relevant links:
 
 * [PR](https://github.com/canonical/haproxy-operator/pull/166)
-
 
 ### Added terraform charm and product module
 
@@ -200,7 +191,6 @@ Relevant links:
 * Mitigated bug in Terraform provider by setting subordinate charm units to `1` ([PR](https://github.com/canonical/haproxy-operator/pull/135)).
 * Fixed an ambiguous endpoint in an integration test ([PR](https://github.com/canonical/haproxy-operator/pull/129)).
 
-
 ## Known issues
 
 * [Addressing Protocol Mismatch Between SSL Termination and HTTPS-Required Backends](https://github.com/canonical/haproxy-operator/issues/70)
@@ -208,4 +198,4 @@ Relevant links:
 
 ## Thanks to our contributors
 
-[Thanhphan1147](https://github.com/Thanhphan1147), [dimaqq](https://github.com/dimaqq), [yhaliaw](https://github.com/yhaliaw), [erinecon](https://github.com/erinecon), [swetha1654](https://github.com/swetha1654), [javierdelapuente](https://github.com/javierdelapuente), [alithethird](https://github.com/alithethird), [arturo-seijas](https://github.com/arturo-seijas)
+[`Thanhphan1147`](https://github.com/Thanhphan1147), [`dimaqq`](https://github.com/dimaqq), [`yhaliaw`](https://github.com/yhaliaw), [`erinecon`](https://github.com/erinecon), [`swetha1654`](https://github.com/swetha1654), [`javierdelapuente`](https://github.com/javierdelapuente), [`alithethird`](https://github.com/alithethird), [`arturo-seijas`](https://github.com/arturo-seijas)

@@ -1,0 +1,133 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+"""Integration tests for the ingress per unit relation."""
+
+import socket
+import ssl
+
+import jubilant
+import pytest
+
+from .helper import get_unit_ip_address
+
+
+@pytest.mark.abort_on_fail
+def test_haproxy_route_tcp(
+    configured_application_with_tls: str,
+    any_charm_haproxy_route_tcp_requirer: str,
+    juju: jubilant.Juju,
+):
+    """Deploy the charm with anycharm ingress per unit requirer that installs apache2.
+
+    Assert that the requirer endpoints are available.
+    """
+    juju.integrate(
+        f"{configured_application_with_tls}:haproxy-route-tcp",
+        any_charm_haproxy_route_tcp_requirer,
+    )
+    # We set the removed retry-interval config option here as
+    # ingress-configurator is not yet synced with the updated lib. This will be removed.
+    juju.run(
+        f"{any_charm_haproxy_route_tcp_requirer}/0",
+        "rpc",
+        {"method": "update_relation"},
+    )
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, any_charm_haproxy_route_tcp_requirer
+        )
+    )
+    haproxy_ip_address = get_unit_ip_address(juju, configured_application_with_tls)
+    # We need to call _create_unverified_context() to test with self-signed certs
+    context = ssl._create_unverified_context()  # pylint: disable=protected-access  # nosec
+    with (
+        socket.create_connection((str(haproxy_ip_address), 4444)) as sock,
+        context.wrap_socket(sock, server_hostname="example.com") as ssock,
+    ):
+        ssock.send(b"ping")
+        server_response = ssock.read()
+        assert "pong" in str(server_response)
+
+    # Test with sticky sessions
+    juju.run(
+        f"{any_charm_haproxy_route_tcp_requirer}/0",
+        "rpc",
+        {"method": "update_relation_with_sticky_sessions"},
+    )
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, any_charm_haproxy_route_tcp_requirer
+        )
+    )
+
+    haproxy_config = juju.ssh(
+        f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
+    )
+    assert all(
+        entry in haproxy_config
+        for entry in [
+            "retries 3",
+            "option redispatch",
+            "balance source",
+            "hash-type consistent",
+        ]
+    )
+
+    # Test with timeouts
+    juju.run(
+        f"{any_charm_haproxy_route_tcp_requirer}/0",
+        "rpc",
+        {"method": "update_relation_with_timeouts"},
+    )
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, any_charm_haproxy_route_tcp_requirer
+        )
+    )
+
+    haproxy_config = juju.ssh(
+        f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
+    )
+    assert all(
+        entry in haproxy_config
+        for entry in [
+            "timeout server 10s",
+            "timeout connect 5s",
+            "timeout queue 2s",
+        ]
+    )
+
+    # Test with PROXY PROTOCOL enabled
+    juju.run(
+        f"{any_charm_haproxy_route_tcp_requirer}/0",
+        "rpc",
+        {"method": "update_relation_with_proxy_protocol"},
+    )
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, any_charm_haproxy_route_tcp_requirer
+        )
+    )
+
+    haproxy_config = juju.ssh(
+        f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
+    )
+    assert "send-proxy" in haproxy_config
+
+    # Test with port range binding
+    juju.run(
+        f"{any_charm_haproxy_route_tcp_requirer}/0",
+        "rpc",
+        {"method": "update_relation_with_port_mapping"},
+    )
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, any_charm_haproxy_route_tcp_requirer
+        )
+    )
+
+    haproxy_config = juju.ssh(
+        f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
+    )
+    assert "bind [::]:8080-8090" in haproxy_config

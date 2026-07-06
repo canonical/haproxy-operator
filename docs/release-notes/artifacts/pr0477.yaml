@@ -1,0 +1,25 @@
+version_schema: 2
+
+changes:
+  - title: Change proxied_endpoint from URL to domain, guard API calls on service active, and add integration test
+    author: tphan025
+    type: minor
+    description: >
+      Updated the haproxy-route-policy interface library (LIBPATCH 8) to
+      validate proxied_endpoint as a plain domain instead of an HttpUrl,
+      using a new valid_domain validator. The haproxy-operator now publishes
+      the bare hostname rather than a full URL. In the policy-operator charm,
+      backend request refresh is now guarded behind an is_service_active
+      check so the API is only called when gunicorn is running, and the
+      proxied endpoint domain is appended directly to allowed-hosts without
+      extracting a host component. Added an integration test that deploys a
+      haproxy-route requirer, integrates all three charms, submits a backend
+      request, and verifies the policy API returns requests through the
+      HAProxy frontend.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/477
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false

@@ -1,18 +1,44 @@
-name: Publish to edge
+name: Publish
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
-      # workflow runs on main and 2.8/main are mutually exclusive.
-      # This will be replaced by 2.8/main once we finished moving the 
-      # legacy haproxy code to this repo.
-      # - 2.8/main 
 
 jobs:
-  publish-to-edge:
-    uses: canonical/operator-workflows/.github/workflows/publish_charm.yaml@main
-    secrets: inherit
+  publish:
+    uses: canonical/charm-ci/.github/workflows/publish-artifacts.yml@v0.0.1-alpha.6
+    permissions:
+      actions: read
+      contents: write
     with:
-      channel: 2.8/edge
+      integration-workflow-name: integration_test.yaml
+    secrets:
+      CHARMHUB_TOKEN: ${{ secrets.CHARMHUB_TOKEN }}
+
+  release-libs:
+    name: Release any bumped charm library
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the source
+        uses: actions/checkout@v7
+        with:
+          path: charm
+      - name: Release libraries
+        env:
+          CHARMCRAFT_AUTH: "${{ secrets.CHARMHUB_TOKEN }}"
+          CHARM_PATH: './haproxy-operator'
+          CHARM_NAME: 'haproxy'
+        run: |
+          sudo snap install charmcraft --classic
+          cd "${GITHUB_WORKSPACE}/charm/${CHARM_PATH}"
+          # Get the charm name
+          if [[ $CHARM_NAME = "" ]]; then echo "Error: empty charm name." && exit 1; fi
+          charmlib_path="${CHARM_NAME//-/_}"
+          # For each library belonging to the charm, publish it
+          if [ -d "lib/charms/${charmlib_path}" ]; then
+            for lib in $(find "lib/charms/${charmlib_path}" -type f | sed 's|lib/||' | sed 's/.py$//' | sed 's|/|.|g'); do
+              charmcraft publish-lib "$lib"
+            done
+          fi

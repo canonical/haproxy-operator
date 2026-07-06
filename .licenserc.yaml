@@ -5,6 +5,9 @@ header:
     content: |
       Copyright [year] [owner]
       See LICENSE file for licensing details.
+    pattern: |
+      Copyright \d{4} Canonical Ltd.
+      See LICENSE file for licensing details.
   paths:
     - '**'
   paths-ignore:
@@ -24,7 +27,16 @@ header:
     - 'lib/**'
     - '.woke.yaml'
     - 'templates/**'
-    - 'src/loki_alert_rules/*.rule'
+    - '**/src/loki_alert_rules/*.rule'
     - 'docs/release-notes/**/*.yaml'
     - '**/*.md.j2'
+    - '**/lib/**'
+    - '**/uv.lock'
+    - '**/templates/**'
+    - '**/*_pb2_grpc.py'
+    - '**/*_pb2.py'
+    - '.readthedocs.yaml'
+    - 'docs/**'
+    - '.lycheeignore'
+    - 'haproxy-route-policy/policy/migrations/*.py'
   comment: on-failure

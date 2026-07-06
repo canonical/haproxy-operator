@@ -1,0 +1,15 @@
+schema_version: 1
+changes:
+  - title: Added a security policy
+    author: weiiwang01
+    type: minor
+    description: |
+       The code repository now contains a SECURITY.md that defines
+       what qualifies as a security issues and how to report any
+       security vulnerabilities.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/199
+      related_doc: 
+      related_issue: 
+    visibility: hidden
+    highlight: false

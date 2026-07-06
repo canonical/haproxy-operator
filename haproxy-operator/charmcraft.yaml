@@ -1,0 +1,156 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+type: charm
+base: ubuntu@24.04
+build-base: ubuntu@24.04
+
+platforms:
+  amd64:
+  arm64:
+
+parts:
+  charm:
+    source: .
+    plugin: uv
+    build-snaps:
+    - astral-uv
+    build-packages:
+    - git
+  templates:
+    plugin: dump
+    source: .
+    stage:
+    - templates
+name: haproxy
+title: HAProxy charm.
+description: |
+  A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
+  deploying and managing [HAProxy](https://www.haproxy.org/) on machines.
+
+  HAProxy is a TCP/HTTP reverse proxy which is particularly suited for high
+  availability environments. It features connection persistence through HTTP
+  cookies, load balancing, header addition, modification, deletion both ways. It
+  has request blocking capabilities and provides interface to display server
+  status.
+
+  This charm simplifies initial deployment and "day N" operations of HAProxy on
+  VMs and bare metal.
+summary: Fast and reliable load balancing reverse proxy.
+links:
+  documentation: https://canonical.com/juju/docs/haproxy-charm/
+  issues: https://github.com/canonical/haproxy-operator/issues
+  source: https://github.com/canonical/haproxy-operator
+  contact:
+  - https://launchpad.net/~canonical-is-devops
+
+assumes:
+- juju >= 3.3
+requires:
+  certificates:
+    interface: tls-certificates
+    limit: 1
+  reverseproxy:
+    interface: http
+  ha:
+    interface: hacluster
+  receive-ca-certs:
+    interface: certificate_transfer
+    optional: true
+    description: Receive a CA certs for haproxy to trust.
+  spoe-auth:
+    interface: spoe-auth
+    optional: true
+    description: Relation to provide authentication proxy to HAProxy.
+  ddos-protection:
+    interface: ddos_protection
+    optional: true
+    limit: 1
+  haproxy-route-policy:
+    interface: haproxy-route-policy
+    optional: true
+    limit: 1
+
+
+provides:
+  ingress:
+    interface: ingress
+  ingress-per-unit:
+    interface: ingress_per_unit
+  cos-agent:
+    interface: cos_agent
+    optional: true
+  website:
+    interface: http
+    optional: true
+  haproxy-route:
+    interface: haproxy-route
+  haproxy-route-tcp:
+    interface: haproxy-route-tcp
+
+peers:
+  haproxy-peers:
+    interface: haproxy-peers
+
+config:
+  options:
+    external-hostname:
+      default: ""
+      type: string
+      description: Hostname of HAProxy.
+    global-maxconn:
+      default: 4096
+      type: int
+      description: |
+        Sets the maximum per-process number of concurrent connections to
+        <number>. Must be greater than 0.
+    vip:
+      type: string
+      description: Virtual IP address, used in active-passive ha mode.
+    ddos-protection:
+      type: boolean
+      default: true
+      description: |
+        Enable basic DDoS protection mechanisms, including http-request, http-keep-alive and 
+        client timeouts, automatic dropping of connections with invalid, empty, or 
+        missing host headers.
+    enable-hsts:
+      default: false
+      type: boolean
+      description: |
+        Send the http response header Strict-Transport-Security for domains provided
+        through the `haproxy-route` relation without the allow_http attribute.
+        The Strict-Transport-Security header value is "max-age=2592000;".
+
+actions:
+  get-certificate:
+    description: Returns the TLS Certificate. Intended for testing and debugging
+      purposes.
+    params:
+      hostname:
+        type: string
+        description: Hostname to extract certs from.
+      wildcard:
+        type: boolean
+        description: Whether the certificate is a wildcard certificate.
+        default: false
+    required:
+    - hostname
+  get-proxied-endpoints:
+    description: |
+      Return a list of endpoints
+      based on route definitions (backends) provided through the `haproxy-route` relation.
+      If no `backend` is provided, endpoints for all backends are returned.
+    params:
+      backend:
+        type: string
+        description: |
+          The name of the backend for which to get the endpoints.
+          If no backend with this name is present, an empty list is returned.
+
+charm-libs:
+- lib: traefik_k8s.ingress_per_unit
+  version: "1"
+- lib: haproxy.ddos_protection
+  version: "0"
+- lib: haproxy_route_policy.haproxy_route_policy
+  version: "0"

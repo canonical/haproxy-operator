@@ -7,254 +7,450 @@
 import json
 import logging
 import pathlib
+import subprocess  # nosec
 import tempfile
 import typing
-from pathlib import Path
 
 import jubilant
 import pytest
-import yaml
-
-from .helper import pytestconfig_arg_no_deploy
+from opcli.pytest_plugin import CharmPathList
+from playwright._impl._driver import compute_driver_executable, get_driver_env
 
 logger = logging.getLogger(__name__)
 
-TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
-HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/haproxy_route_requirer.py"
-HAPROXY_ROUTE_LIB_SRC = "lib/charms/haproxy/v1/haproxy_route.py"
-APT_LIB_SRC = "lib/charms/operator_libs_linux/v0/apt.py"
-ANY_CHARM_INGRESS_PER_UNIT_REQUIRER = "ingress-per-unit-requirer-any"
-ANY_CHARM_INGRESS_PER_UNIT_REQUIRER_SRC = "tests/integration/ingress_per_unit_requirer.py"
 JUJU_WAIT_TIMEOUT = 10 * 60  # 10 minutes
 SELF_SIGNED_CERTIFICATES_APP_NAME = "self-signed-certificates"
-ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION = "any-charm-haproxy-route-requirer"
-HAPROXY_ROUTE_TCP_REQUIRER_SRC = "tests/integration/haproxy_route_tcp_requirer.py"
-HAPROXY_ROUTE_TCP_LIB_SRC = "lib/charms/haproxy/v0/haproxy_route_tcp.py"
-ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION = "any-charm-haproxy-route-tcp-requirer"
+TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
+HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/haproxy_route_requirer.py"
+HAPROXY_ROUTE_LIB_SRC = "haproxy-operator/lib/charms/haproxy/v2/haproxy_route.py"
+APT_LIB_SRC = "haproxy-operator/lib/charms/operator_libs_linux/v0/apt.py"
+HAPROXY_ROUTE_POLICY_APP_NAME = "policy"
+POSTGRESQL_APPLICATION = "db"
 
+@pytest.fixture(scope="session", name="lxd_juju")
+def lxd_juju_fixture(request: pytest.FixtureRequest):
+    """Bootstrap a new lxd controller and model and return a Juju fixture for it."""
+    juju = jubilant.Juju()
 
-@pytest.fixture(scope="session", name="charm")
-def charm_fixture(pytestconfig: pytest.Config):
-    """Pytest fixture that packs the charm and returns the filename, or --charm-file if set."""
-    charm = pytestconfig.getoption("--charm-file")
-    assert charm, "--charm-file must be set"
-    return charm
+    lxd_controller_name = "concierge-lxd"
+    lxd_cloud_name = "localhost"
+    juju.wait_timeout = JUJU_WAIT_TIMEOUT
+    try:
+        juju.bootstrap(lxd_cloud_name, lxd_controller_name)
+    except jubilant.CLIError as err:
+        if not "already exists":
+            logger.exception(err)
+            raise
 
-
-@pytest.fixture(scope="module", name="juju")
-def juju_fixture(request: pytest.FixtureRequest):
-    """Pytest fixture that wraps :meth:`jubilant.with_model`."""
-
-    def show_debug_log(juju: jubilant.Juju):
-        """Show the debug log if tests failed.
-
-        Args:
-            juju: Jubilant juju instance.
-        """
-        if request.session.testsfailed:
-            log = juju.debug_log(limit=1000)
-            print(log, end="")
+    # We need to switch to the controller or commands like add-cloud will not work.
+    juju.cli("switch", f"{lxd_controller_name}:", include_model=False)
 
     model = request.config.getoption("--model")
     if model:
-        juju = jubilant.Juju(model=model)
+        try:
+            juju.add_model(
+                model=model, cloud=lxd_cloud_name, controller=lxd_controller_name
+            )
+        except jubilant.CLIError as err:
+            if not "already exists":
+                logger.exception(err)
+                raise
+            juju.model = f"{lxd_controller_name}:{model}"
+        juju = jubilant.Juju(model=f"{lxd_controller_name}:{model}")
         juju.wait_timeout = JUJU_WAIT_TIMEOUT
-        yield juju
-        show_debug_log(juju)
-        return
+        return juju
 
     keep_models = typing.cast(bool, request.config.getoption("--keep-models"))
-    with jubilant.temp_model(keep=keep_models) as juju:
+    with jubilant.temp_model(
+        keep=keep_models, cloud=lxd_cloud_name, controller=lxd_controller_name
+    ) as juju:
         juju.wait_timeout = JUJU_WAIT_TIMEOUT
-        yield juju
+        return juju
+
+
+@pytest.fixture(scope="session", name="k8s_juju")
+def k8s_juju_fixture(lxd_juju: jubilant.Juju, request: pytest.FixtureRequest):
+    """Bootstrap a new k8s model in the lxd controller and return a Juju fixture for it."""
+    clouds_json = lxd_juju.cli("clouds", "--format=json", include_model=False)
+    clouds = json.loads(clouds_json)
+    k8s_clouds = sorted([k for k, v in clouds.items() if v["type"] == "k8s"])
+    assert len(k8s_clouds) >= 1, (
+        f"At least one cloud of type k8s supported for the test. {k8s_clouds}"
+    )
+    k8s_cloud = k8s_clouds[0]
+
+    # Add the k8s cloud to our new controller (no-op if prepare already did it).
+    try:
+        lxd_juju.cli(
+            "add-cloud",
+            "--controller",
+            lxd_juju.status().model.controller,
+            k8s_cloud,
+            include_model=False,
+        )
+    except jubilant.CLIError as err:
+        if "already exists" not in str(err):
+            raise
+
+    new_juju = jubilant.Juju(model=lxd_juju.model)
+    new_juju.wait_timeout = JUJU_WAIT_TIMEOUT
+    k8s_model_name = f"k{lxd_juju.status().model.name}"
+    try:
+        new_juju.add_model(k8s_model_name, k8s_cloud)
+    except jubilant.CLIError as err:
+        if "already exists" not in str(err):
+            logger.exception(err)
+            raise
+        new_juju.model = k8s_model_name
+    yield new_juju
 
 
 @pytest.fixture(scope="module", name="application")
-def application_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju, charm: str):
+def application_fixture(
+    charm_paths: dict[str, CharmPathList], pytestconfig: pytest.Config, lxd_juju: jubilant.Juju
+):
     """Deploy the haproxy application.
 
     Args:
-        juju: Jubilant juju fixture.
-        charm_file: Path to the packed charm file.
+        charm_paths: Dict of charm name to CharmPathList from the pytest-opcli plugin.
+        lxd_juju: Jubilant juju fixture.
 
     Returns:
         The haproxy app name.
     """
-    metadata = yaml.safe_load(pathlib.Path("./charmcraft.yaml").read_text(encoding="UTF-8"))
-    app_name = metadata["name"]
-    if pytestconfig.getoption("--no-deploy") and app_name in juju.status().apps:
+    app_name = "haproxy"
+    if pytestconfig.getoption("--no-deploy") and app_name in lxd_juju.status().apps:
         return app_name
-    juju.deploy(
-        charm=charm,
+
+    charm_file = charm_paths["haproxy"].path
+    lxd_juju.deploy(
+        charm=charm_file,
         app=app_name,
         base="ubuntu@24.04",
     )
     return app_name
 
 
-@pytest.fixture(scope="module", name="certificate_provider_application")
-def certificate_provider_application_fixture(
+@pytest.fixture(scope="module", name="ddos_protection_configurator")
+def haproxy_ddos_protection_configurator_fixture(
+    charm_paths: dict[str, CharmPathList],
     pytestconfig: pytest.Config,
-    juju: jubilant.Juju,
+    lxd_juju: jubilant.Juju,
+    application: str,
 ):
-    """Deploy self-signed-certificates."""
+    """Deploy the haproxy-ddos-protection-configurator application.
+
+    Args:
+        charm_paths: Dict of charm name to CharmPathList from the pytest-opcli plugin.
+        pytestconfig: Pytest config for --no-deploy flag.
+        lxd_juju: Jubilant juju fixture.
+        application: The haproxy application name.
+
+    Returns:
+        The haproxy-ddos-protection-configurator app name.
+    """
+    ddos_app_name = "haproxy-ddos-protection-configurator"
+
     if (
         pytestconfig.getoption("--no-deploy")
-        and SELF_SIGNED_CERTIFICATES_APP_NAME in juju.status().apps
+        and ddos_app_name in lxd_juju.status().apps
     ):
-        logger.warning("Using existing application: %s", SELF_SIGNED_CERTIFICATES_APP_NAME)
-        return SELF_SIGNED_CERTIFICATES_APP_NAME
-    juju.deploy(
-        "self-signed-certificates", app=SELF_SIGNED_CERTIFICATES_APP_NAME, channel="1/edge"
+        return ddos_app_name
+
+    charm_file = charm_paths["haproxy-ddos-protection-configurator"].path
+    lxd_juju.deploy(
+        charm=charm_file,
+        app=ddos_app_name,
+        base="ubuntu@24.04",
     )
-    return SELF_SIGNED_CERTIFICATES_APP_NAME
+
+    return ddos_app_name
 
 
-@pytest.fixture(scope="module", name="configured_application_with_tls")
-def configured_application_with_tls_fixture(
+@pytest.fixture(scope="module", name="configured_application_with_tls_base")
+def configured_application_with_tls_base_fixture(
     pytestconfig: pytest.Config,
     application: str,
     certificate_provider_application: str,
-    juju: jubilant.Juju,
+    lxd_juju: jubilant.Juju,
 ):
     """The haproxy charm configured and integrated with TLS provider."""
-    if pytestconfig.getoption("--no-deploy") and "haproxy" in juju.status().apps:
-        return "haproxy"
-    juju.config(application, {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
-    juju.integrate(
-        f"{application}:certificates", f"{certificate_provider_application}:certificates"
-    )
-    juju.wait(
-        lambda status: (
-            jubilant.all_active(status, application)
-            and jubilant.all_active(status, certificate_provider_application)
-        ),
-        timeout=JUJU_WAIT_TIMEOUT,
+    if pytestconfig.getoption("--no-deploy") and "haproxy" in lxd_juju.status().apps:
+        return application
+    lxd_juju.config(application, {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
+    lxd_juju.integrate(
+        f"{application}:certificates",
+        f"{certificate_provider_application}:certificates",
     )
     return application
 
 
-@pytest.fixture(name="any_charm_ingress_per_unit_requirer")
-def any_charm_ingress_per_unit_requirer_fixture(
-    pytestconfig: pytest.Config, juju: jubilant.Juju, configured_application_with_tls: str
-) -> str:
-    """Deploy any-charm and configure it to serve as a requirer for the ingress-per-unit
-    interface.
+@pytest.fixture(name="configured_application_with_tls")
+def configured_application_with_tls_fixture(
+    configured_application_with_tls_base: str,
+    certificate_provider_application: str,
+):
+    """Provide haproxy with TLS and clean up test-specific relations after each test.
+
+    This function-scoped fixture wraps the module-scoped configured_application_with_tls_base
+    and ensures that relations created during tests are removed, while preserving the
+    certificates relation for reuse across tests.
     """
+    yield configured_application_with_tls_base
+
+
+@pytest.fixture(scope="module", name="certificate_provider_application")
+def certificate_provider_application_fixture(
+    pytestconfig: pytest.Config,
+    lxd_juju: jubilant.Juju,
+):
+    """Deploy self-signed-certificates."""
     if (
         pytestconfig.getoption("--no-deploy")
-        and ANY_CHARM_INGRESS_PER_UNIT_REQUIRER in juju.status().apps
+        and SELF_SIGNED_CERTIFICATES_APP_NAME in lxd_juju.status().apps
     ):
-        logger.warning("Using existing application: %s", ANY_CHARM_INGRESS_PER_UNIT_REQUIRER)
-        return ANY_CHARM_INGRESS_PER_UNIT_REQUIRER
-
-    any_charm_src_overwrite = {
-        "any_charm.py": Path(ANY_CHARM_INGRESS_PER_UNIT_REQUIRER_SRC).read_text(encoding="utf-8"),
-        "ingress_per_unit.py": Path("lib/charms/traefik_k8s/v1/ingress_per_unit.py").read_text(
-            encoding="utf-8"
-        ),
-        "apt.py": Path("lib/charms/operator_libs_linux/v0/apt.py").read_text(encoding="utf-8"),
-    }
-
-    juju.deploy(
-        "any-charm",
-        app=ANY_CHARM_INGRESS_PER_UNIT_REQUIRER,
-        channel="beta",
-        config={
-            "src-overwrite": json.dumps(any_charm_src_overwrite),
-            "python-packages": "pydantic<2.0",
-        },
-        num_units=2,
-    )
-
-    juju.wait(
-        lambda status: (jubilant.all_active(status, ANY_CHARM_INGRESS_PER_UNIT_REQUIRER)),
-        timeout=JUJU_WAIT_TIMEOUT,
-    )
-    juju.integrate(
-        f"{configured_application_with_tls}:ingress-per-unit",
-        f"{ANY_CHARM_INGRESS_PER_UNIT_REQUIRER}:require-ingress-per-unit",
-    )
-    juju.wait(
-        lambda status: jubilant.all_active(
-            status, configured_application_with_tls, ANY_CHARM_INGRESS_PER_UNIT_REQUIRER
+        logger.warning(
+            "Using existing application: %s", SELF_SIGNED_CERTIFICATES_APP_NAME
         )
+        return SELF_SIGNED_CERTIFICATES_APP_NAME
+    lxd_juju.deploy(
+        "self-signed-certificates",
+        app=SELF_SIGNED_CERTIFICATES_APP_NAME,
+        channel="1/edge",
     )
-    return ANY_CHARM_INGRESS_PER_UNIT_REQUIRER
+    return SELF_SIGNED_CERTIFICATES_APP_NAME
 
 
-@pytest.fixture(scope="module", name="any_charm_haproxy_route_requirer")
-@pytestconfig_arg_no_deploy(application=ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)
-def any_charm_haproxy_route_requirer_fixture(_pytestconfig: pytest.Config, juju: jubilant.Juju):
-    """Deploy any-charm and configure it to serve as a requirer for the haproxy-route
-    integration.
-    """
+@pytest.fixture(scope="module", name="iam_bundle")
+def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
+    """Deploy Canonical identity bundle."""
+    # https://github.com/canonical/iam-bundle-integration
+    if k8s_juju.status().apps.get("hydra"):
+        logger.info("identity-platform is already deployed")
+        return
+    k8s_juju.deploy(
+        "self-signed-certificates", channel="1/stable", revision=317, trust=True
+    )
+    k8s_juju.deploy("hydra", channel="latest/edge", revision=399, trust=True)
+    k8s_juju.deploy("kratos", channel="latest/edge", revision=567, trust=True)
+    k8s_juju.deploy(
+        "identity-platform-login-ui-operator",
+        channel="latest/edge",
+        revision=200,
+        trust=True,
+    )
+    k8s_juju.deploy(
+        "traefik-k8s",
+        "traefik-public",
+        channel="latest/edge",
+        revision=270,
+        trust=True,
+    )
+    k8s_juju.deploy(
+        "postgresql-k8s",
+        channel="14/edge",
+        base="ubuntu@22.04",
+        trust=True,
+        config={
+            "profile": "testing",
+            "plugin_hstore_enable": "true",
+            "plugin_pg_trgm_enable": "true",
+        },
+    )
+    # Integrations
+    k8s_juju.integrate(
+        "hydra:hydra-endpoint-info",
+        "identity-platform-login-ui-operator:hydra-endpoint-info",
+    )
+    k8s_juju.integrate("hydra:hydra-endpoint-info", "kratos:hydra-endpoint-info")
+    k8s_juju.integrate(
+        "kratos:kratos-info", "identity-platform-login-ui-operator:kratos-info"
+    )
+    k8s_juju.integrate(
+        "hydra:ui-endpoint-info", "identity-platform-login-ui-operator:ui-endpoint-info"
+    )
+    k8s_juju.integrate(
+        "kratos:ui-endpoint-info",
+        "identity-platform-login-ui-operator:ui-endpoint-info",
+    )
+    k8s_juju.integrate("postgresql-k8s:database", "hydra:pg-database")
+    k8s_juju.integrate("postgresql-k8s:database", "kratos:pg-database")
+    k8s_juju.integrate(
+        "self-signed-certificates:certificates", "traefik-public:certificates"
+    )
+    k8s_juju.integrate("traefik-public:traefik-route", "hydra:public-route")
+    k8s_juju.integrate("traefik-public:traefik-route", "kratos:public-route")
+    k8s_juju.integrate(
+        "traefik-public:traefik-route",
+        "identity-platform-login-ui-operator:public-route",
+    )
+
+    k8s_juju.config("kratos", {"enforce_mfa": False})
+    k8s_juju.offer(app=f"{k8s_juju.model}.hydra", endpoint="oauth")
+
+
+@pytest.fixture(scope="module", name="any_charm_haproxy_route_deployer")
+def any_charm_haproxy_route_deployer_fixture(
+    pytestconfig: pytest.Config,
+    lxd_juju: jubilant.Juju,
+):
+    """Return a fixture function to create haproxy_route requirer anycharms."""
+
+    def deployer(app_name):
+        return deploy_any_charm_haproxy_route_requirer(pytestconfig, lxd_juju, app_name)
+
+    yield deployer
+
+
+def deploy_any_charm_haproxy_route_requirer(
+    pytestconfig: pytest.Config, lxd_juju: jubilant.Juju, app_name
+):
+    """Deploy a haproxy_route requirer anycharm."""
+    if pytestconfig.getoption("--no-deploy") and app_name in lxd_juju.status().apps:
+        return app_name
     src_overwrite = json.dumps(
         {
-            "any_charm.py": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(encoding="utf-8"),
-            "haproxy_route.py": pathlib.Path(HAPROXY_ROUTE_LIB_SRC).read_text(encoding="utf-8"),
-            "tls_certificates.py": pathlib.Path(
-                "lib/charms/tls_certificates_interface/v4/tls_certificates.py"
-            ).read_text(encoding="utf-8"),
+            "any_charm.py": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(
+                encoding="utf-8"
+            ),
+            "haproxy_route.py": pathlib.Path(HAPROXY_ROUTE_LIB_SRC).read_text(
+                encoding="utf-8"
+            ),
             "apt.py": pathlib.Path(APT_LIB_SRC).read_text(encoding="utf-8"),
         }
     )
     with tempfile.NamedTemporaryFile(dir=".") as tf:
         tf.write(src_overwrite.encode("utf-8"))
         tf.flush()
-        juju.deploy(
+        lxd_juju.deploy(
             "any-charm",
-            app=ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION,
+            app=app_name,
             channel="beta",
             config={
                 "src-overwrite": f"@{tf.name}",
-                "python-packages": "pydantic\ncryptography==45.0.6",
+                "python-packages": "pydantic\ncryptography==45.0.6\nvalidators",
             },
         )
-    juju.wait(
-        lambda status: (jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)),
-        timeout=JUJU_WAIT_TIMEOUT,
-    )
-    juju.run(
-        f"{ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION}/0", "rpc", {"method": "start_server"}
-    )
-    juju.wait(
-        lambda status: (jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)),
-        timeout=JUJU_WAIT_TIMEOUT,
-    )
-    return ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION
+    return app_name
 
 
-@pytest.fixture(scope="function", name="any_charm_haproxy_route_tcp_requirer")
-@pytestconfig_arg_no_deploy(application=ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION)
-def any_charm_haproxy_route_tcp_requirer_fixture(
-    _pytestconfig: pytest.Config, juju: jubilant.Juju
+@pytest.fixture(scope="module", name="haproxy_spoe_auth_deployer")
+def haproxy_spoe_deployer_fixture(
+    charm_paths: dict[str, CharmPathList],
+    pytestconfig: pytest.Config,
+    lxd_juju: jubilant.Juju,
+    application,
+    k8s_juju,
+    iam_bundle,
 ):
-    """Deploy any-charm and configure it to serve as a requirer for the haproxy-route
-    integration.
-    """
-    juju.deploy(
-        "any-charm",
-        app=ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION,
-        channel="beta",
-        config={
-            "src-overwrite": json.dumps(
-                {
-                    "any_charm.py": pathlib.Path(HAPROXY_ROUTE_TCP_REQUIRER_SRC).read_text(
-                        encoding="utf-8"
-                    ),
-                    "haproxy_route_tcp.py": pathlib.Path(HAPROXY_ROUTE_TCP_LIB_SRC).read_text(
-                        encoding="utf-8"
-                    ),
-                }
-            ),
-            "python-packages": "pydantic~=2.10",
-        },
+    """Return a fixture function to deploy haproxy-spoe charms."""
+    spoe_charm_file = charm_paths["haproxy-spoe-auth"].path
+
+    def deployer(haproxy_spoe_name, hostname):
+        haproxy_spoe_name = deploy_spoe_auth(
+            pytestconfig, lxd_juju, haproxy_spoe_name, hostname, spoe_charm_file
+        )
+        k8s_juju.wait(
+            lambda status: status.apps["self-signed-certificates"].is_active,
+            timeout=5 * 60,
+        )
+        ca_cert_result = k8s_juju.run(
+            "self-signed-certificates/0", "get-ca-certificate"
+        )
+        ca_cert = ca_cert_result.results["ca-certificate"].encode("utf-8")
+        lxd_juju.wait(
+            lambda status: not status.apps[haproxy_spoe_name].is_waiting, timeout=400
+        )
+        logger.info(lxd_juju.status().apps[haproxy_spoe_name])
+        inject_ca_certificate(lxd_juju, f"{haproxy_spoe_name}/0", ca_cert)
+        lxd_juju.integrate(f"{k8s_juju.model}.hydra", haproxy_spoe_name)
+        lxd_juju.integrate(f"{application}:spoe-auth", haproxy_spoe_name)
+        return haproxy_spoe_name
+
+    yield deployer
+
+
+def deploy_spoe_auth(
+    pytestconfig: pytest.Config, lxd_juju: jubilant.Juju, app_name, host_name, charm_file: str
+) -> str:
+    """Deploy the haproxy-spoe-auth charm."""
+    if pytestconfig.getoption("--no-deploy") and app_name in lxd_juju.status().apps:
+        return app_name
+
+    lxd_juju.deploy(
+        charm=charm_file,
+        app=app_name,
+        config={"hostname": host_name},
     )
-    juju.wait(
-        lambda status: (
-            jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION)
-        ),
+    return app_name
+
+
+def inject_ca_certificate(lxd_juju, unit_name, ca_cert: str):
+    """Inject a ca certificate into a juju unit and run update-ca-certificates."""
+    juju = lxd_juju
+    with tempfile.NamedTemporaryFile(dir=".") as tf:
+        tf.write(ca_cert)
+        tf.flush()
+        # the unit could be not the number 0.
+        juju.scp(tf.name, f"{unit_name}:/home/ubuntu/iam.crt")
+        juju.exec(
+            command="sudo mv /home/ubuntu/iam.crt /usr/local/share/ca-certificates",
+            unit=unit_name,
+        )
+        juju.exec(command="sudo update-ca-certificates", unit=unit_name)
+
+
+@pytest.fixture(scope="session")
+def browser_context_manager():
+    """
+    A session-scoped fixture that installs the Playwright browser.
+    """
+    driver_executable, driver_cli = compute_driver_executable()
+    completed_process = subprocess.run(  # nosec
+        [driver_executable, driver_cli, "install-deps"], env=get_driver_env()
+    )
+    logger.info("install-deps output %s", completed_process)
+    completed_process = subprocess.run(  # nosec
+        [driver_executable, driver_cli, "install", "chromium"], env=get_driver_env()
+    )
+    logger.info("install chromium %s", completed_process)
+
+
+@pytest.fixture(scope="module", name="postgresql")
+def postgresql_fixture(pytestconfig: pytest.Config, lxd_juju: jubilant.Juju):
+    """Deploy PostgreSQL."""
+    if (
+        pytestconfig.getoption("--no-deploy")
+        and POSTGRESQL_APPLICATION in lxd_juju.status().apps
+    ):
+        return POSTGRESQL_APPLICATION
+    lxd_juju.deploy(
+        "postgresql",
+        app=POSTGRESQL_APPLICATION,
+        channel="16/edge",
+        base="ubuntu@24.04",
+    )
+    lxd_juju.wait(
+        lambda status: jubilant.all_active(status, POSTGRESQL_APPLICATION),
         timeout=JUJU_WAIT_TIMEOUT,
     )
-    return ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION
+    return POSTGRESQL_APPLICATION
+
+
+@pytest.fixture(scope="module", name="haproxy_route_policy")
+def haproxy_route_policy_fixture(
+    charm_paths: dict[str, CharmPathList], pytestconfig: pytest.Config, lxd_juju: jubilant.Juju
+) -> str:
+    """Deploy the haproxy-route-policy charm."""
+    if (
+        pytestconfig.getoption("--no-deploy")
+        and HAPROXY_ROUTE_POLICY_APP_NAME in lxd_juju.status().apps
+    ):
+        return HAPROXY_ROUTE_POLICY_APP_NAME
+
+    charm_file = charm_paths["haproxy-route-policy"].path
+    lxd_juju.deploy(
+        charm=charm_file,
+        app=HAPROXY_ROUTE_POLICY_APP_NAME,
+    )
+    return HAPROXY_ROUTE_POLICY_APP_NAME

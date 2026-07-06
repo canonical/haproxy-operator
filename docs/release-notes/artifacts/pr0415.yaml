@@ -1,0 +1,20 @@
+version_schema: 2
+
+changes:
+  - title: Added snap packaging and runtime scripts for haproxy-route-policy
+    author: tphan025
+    type: minor
+    description: >
+      Added snap packaging for the haproxy-route-policy app, including
+      `snap/snapcraft.yaml`, install/configure hooks, and helper scripts to run
+      Gunicorn and Django management commands with snap configuration values.
+      Added Gunicorn as a dependency and configured uv build metadata in
+      `pyproject.toml` for packaging. Updated the app README with a basic setup
+      flow for PostgreSQL and snap configuration.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/415
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false

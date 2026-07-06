@@ -1,0 +1,14 @@
+schema_version: 1
+changes:
+  - title: Get network information from relation endpoint binding
+    author: Thanhphan1147
+    type: minor
+    description: |
+       So that the charm will work with Juju spaces, now the charm
+       gets its network information from the relation endpoint binding.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/223
+      related_doc: 
+      related_issue: 
+    visibility: public
+    highlight: false

@@ -1,0 +1,6 @@
+copilot:
+  version: "v0.13.0"
+  collections:
+    - charm-python
+    - pfe-charms
+    - pfe-docs

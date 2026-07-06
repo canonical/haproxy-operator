@@ -1,0 +1,142 @@
+{% macro render_tcp_server(server) -%}
+    server
+{{ server.server_name }}
+{{ server.server_endpoint }}
+{% if server.check %}
+check
+inter {{ server.check.interval }}s
+rise {{ server.check.rise }}
+fall {{ server.check.fall }}
+{% endif %}
+{% if server.maxconn %}
+maxconn {{ server.maxconn }}
+{% endif %}
+{% if server.send_proxy %}
+send-proxy
+{% endif %}
+{%- endmacro %}
+
+{% for frontend in tcp_frontends %}
+frontend haproxy_route_tcp_{{ frontend.bind_port }}
+    mode tcp
+    option tcplog
+    bind [::]:{{ frontend.bind_port }} v4v6 {% if frontend.tls_terminate %} ssl crt {{ haproxy_crt_dir }} {% endif +%}
+
+{# DDOS protection configuration. #}
+{% if ddos_protection_config.client_timeout %}
+    timeout client {{ ddos_protection_config.client_timeout }}
+{% endif %}
+{% if ddos_protection_config.has_rate_limiting %}
+    tcp-request connection track-sc0 src table haproxy_peers/ddos_protection_ip
+{% if ddos_protection_config.rate_limit_connections_per_minute %}
+    tcp-request connection {{ ddos_protection_config.limit_policy_tcp }} if { sc_conn_rate(0,haproxy_peers/ddos_protection_ip) gt {{ ddos_protection_config.rate_limit_connections_per_minute }} }
+{% endif %}
+{% if ddos_protection_config.concurrent_connections_limit %}
+    tcp-request connection {{ ddos_protection_config.limit_policy_tcp }} if { sc_conn_cur(0,haproxy_peers/ddos_protection_ip) gt {{ ddos_protection_config.concurrent_connections_limit }} }
+{% endif %}
+{% endif %}
+{% if ddos_protection_config.ip_allow_list %}
+    acl allowed_ips src -f {{ ip_allow_list_file }}
+    http-request allow if allowed_ips
+{% endif %}
+
+{# This configuration block is only applicable when not terminating TLS. #}
+{% if not frontend.tls_terminate %}
+{% if frontend.content_inspect_delay_required %}
+    tcp-request inspect-delay 5s
+{% endif %}
+{% if frontend.is_sni_routing_enabled %}
+    tcp-request content accept if { req_ssl_hello_type 1 }
+{% endif %}
+{% if frontend.enforce_tls %}
+    {{ frontend.enforce_tls_configuration }}
+{% endif %}
+{% endif %}
+
+{# Render SNI routing configurations for this frontend. #}
+{%for routing_configuration in frontend.backend_sni_routing_configurations %}
+    {{ routing_configuration.acl }}
+    {{ routing_configuration.use_backend }}
+{% endfor %}
+
+    default_backend {{ frontend.default_backend_name }}
+
+{# Render the default backend for this frontend. #}
+{# If the list of backends only has one element and SNI is not used, the default backend will be that backend. #}
+{# Otherwise, the default backend will reject all TCP connections. #}
+backend {{ frontend.default_backend_name }}
+    mode tcp
+{% if frontend.default_backend is not none %}
+{% if frontend.default_backend.dst_port_translation %}
+    {{ frontend.default_backend.dst_port_translation }}
+{% endif %}
+{% if frontend.default_backend.application_data.load_balancing %}
+    balance {{ frontend.default_backend.application_data.load_balancing.algorithm.value }}
+{% if frontend.default_backend.application_data.load_balancing.consistent_hashing %}
+    hash-type consistent
+{% endif %}
+{% endif %}
+{% if frontend.default_backend.application_data.timeout %}
+{% if frontend.default_backend.application_data.timeout.server %}
+    timeout server {{ frontend.default_backend.application_data.timeout.server }}s
+{% endif %}
+{% if frontend.default_backend.application_data.timeout.connect %}
+    timeout connect {{ frontend.default_backend.application_data.timeout.connect }}s
+{% endif %}
+{% if frontend.default_backend.application_data.timeout.queue %}
+    timeout queue {{ frontend.default_backend.application_data.timeout.queue }}s
+{% endif %}
+{% endif %}
+{% if frontend.default_backend.application_data.retry %}
+    retries {{ frontend.default_backend.application_data.retry.count }}
+{% if frontend.default_backend.application_data.retry.redispatch %}
+    option redispatch
+{% endif %}
+{% endif %}
+{% for option in frontend.default_backend.tcp_check_options %}
+    {{ option }}
+{% endfor %}
+{% for server in frontend.default_backend.servers %}
+    {{ render_tcp_server(server) | replace("\n", " ") }}
+{% endfor %}
+{% endif %}
+
+{# Render each backend for the frontend. #}
+{% for backend in frontend.backends %}
+backend {{ backend.name }}
+    mode tcp
+{% if backend.dst_port_translation %}
+    {{ backend.dst_port_translation }}
+{% endif %}
+{% if backend.application_data.load_balancing %}
+    balance {{ backend.application_data.load_balancing.algorithm.value }}
+{% if backend.application_data.load_balancing.consistent_hashing %}
+    hash-type consistent
+{% endif %}
+{% endif %}
+{% if backend.application_data.timeout %}
+{% if backend.application_data.timeout.server %}
+    timeout server {{ backend.application_data.timeout.server }}s
+{% endif %}
+{% if backend.application_data.timeout.connect %}
+    timeout connect {{ backend.application_data.timeout.connect }}s
+{% endif %}
+{% if backend.application_data.timeout.queue %}
+    timeout queue {{ backend.application_data.timeout.queue }}s
+{% endif %}
+{% endif %}
+{% if backend.application_data.retry %}
+    retries {{ backend.application_data.retry.count }}
+{% if backend.application_data.retry.redispatch %}
+    option redispatch
+{% endif %}
+{% endif %}
+{% for option in backend.tcp_check_options %}
+    {{ option }}
+{% endfor %}
+{% for server in backend.servers %}
+    {{ render_tcp_server(server) | replace("\n", " ") }}
+{% endfor %}
+
+{% endfor %}
+{% endfor %}

@@ -1,0 +1,14 @@
+schema_version: 1
+changes:
+  - title: Updated TCP ports behavior after updating HAProxy configuration
+    author: Thanhphan1147
+    type: minor
+    description: |
+      After the HAProxy configuration is updated, the requested TCP ports
+      are opened.    
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/188
+      related_doc: 
+      related_issue: 
+    visibility: public
+    highlight: false
