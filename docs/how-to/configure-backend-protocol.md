@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    "description lang=en": "Learn about how to configure the backend protocol to use HTTPS for connections."
+---
+
 (how_to_configure_backend_protocol)=
 
 # How to configure the backend protocol
