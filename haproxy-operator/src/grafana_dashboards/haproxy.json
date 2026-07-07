@@ -12311,7 +12311,7 @@
         "name": "code",
         "options": [],
         "query": {
-          "query": "label_values(haproxy_server_http_responses_total{instance=\"$host\"}, code)",
+          "query": "label_values(haproxy_frontend_http_responses_total{instance=\"$host\"}, code)",
           "refId": "Prometheus-code-Variable-Query"
         },
         "refresh": 1,
