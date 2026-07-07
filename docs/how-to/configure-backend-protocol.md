@@ -6,7 +6,7 @@ myst:
 
 (how_to_configure_backend_protocol)=
 
-# How to configure the backend protocol
+# How to set the protocol to HTTPS for a backend application
 
 By default, the HAProxy charm enforces HTTPS for connections from clients while communicating with backend applications over HTTP. In some scenarios, you may also want to use HTTPS as the communication protocol for connections between HAProxy and the backend applications.
 
