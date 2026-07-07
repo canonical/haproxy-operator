@@ -377,7 +377,7 @@ def test_spoe_auth(monkeypatch: pytest.MonkeyPatch, certificates_integration):
         RegexMatcher("filter spoe engine spoe-auth"),
         ANY,
     )
-    assert out.unit_status == ops.testing.ActiveStatus("")
+    assert out.unit_status == ops.testing.ActiveStatus("1/1 valid relations")
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
@@ -437,7 +437,7 @@ def test_two_spoe_auth(monkeypatch: pytest.MonkeyPatch, certificates_integration
             ),
             ANY,
         )
-    assert out.unit_status == ops.testing.ActiveStatus("")
+    assert out.unit_status == ops.testing.ActiveStatus("2/2 valid relations")
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
