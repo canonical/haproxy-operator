@@ -10,7 +10,7 @@ myst:
 
 By default, the HAProxy charm enforces HTTPS for connections from clients while communicating with backend applications over HTTP. In some scenarios, you may also want to use HTTPS as the communication protocol for connections between HAProxy and the backend applications.
 
-To do so, HAProxy verifies the identity of the backend application against a set of trusted certificate authority (CA) certificates. These certificates are sent to the `haproxy` charm through the `receive-ca-certs` relation. Therefore, at least one `receive-ca-certs` integration is required before you can set the backend protocol to HTTPS.
+To do so, HAProxy verifies the identity of the backend application against a set of trusted certificate authority (CA) certificates. These certificates are sent to the `haproxy` charm through the `receive-ca-certs` relation. Therefore, at least one `receive-ca-certs` relation is required before you can set the backend protocol to HTTPS.
 
 This guide assumes that you have already deployed the `haproxy` charm and integrated it with a `haproxy-route` requirer. In this guide we use the [`ingress-configurator`](https://charmhub.io/ingress-configurator) charm as the requirer.
 
