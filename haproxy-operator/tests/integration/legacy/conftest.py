@@ -7,7 +7,7 @@ import ipaddress
 import json
 import logging
 import pathlib
-import subprocess
+import subprocess  # nosec B404
 import tempfile
 import textwrap
 from urllib.parse import ParseResult, urlparse
@@ -49,7 +49,7 @@ def application_fixture(pytestconfig: pytest.Config, charm: str, juju: jubilant.
         return app_name
 
     constraints = {
-        "arch": subprocess.check_output(["dpkg", "--print-architecture"], text=True).strip()
+        "arch": subprocess.check_output(["dpkg", "--print-architecture"], text=True).strip()  # nosec B603 B607
     }
 
     # juju.deploy(charm, application_name="haproxy", trust=True, constraints=constraints)
