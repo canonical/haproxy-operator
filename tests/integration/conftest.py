@@ -13,8 +13,8 @@ import typing
 
 import jubilant
 import pytest
-from opcli.pytest_plugin import CharmPathList
-from playwright._impl._driver import compute_driver_executable, get_driver_env
+from opcli.pytest_plugin import CharmPathList  # type: ignore[import-not-found]
+from playwright._impl._driver import compute_driver_executable, get_driver_env  # type: ignore[import-not-found]
 
 logger = logging.getLogger(__name__)
 
@@ -380,7 +380,7 @@ def inject_ca_certificate(lxd_juju, unit_name, ca_cert: str):
     """Inject a ca certificate into a juju unit and run update-ca-certificates."""
     juju = lxd_juju
     with tempfile.NamedTemporaryFile(dir=".") as tf:
-        tf.write(ca_cert)
+        tf.write(ca_cert.encode("utf-8"))
         tf.flush()
         # the unit could be not the number 0.
         juju.scp(tf.name, f"{unit_name}:/home/ubuntu/iam.crt")
