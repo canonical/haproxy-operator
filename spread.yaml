@@ -39,7 +39,7 @@ integration-suites:
     working-dir: haproxy-operator/
     auto-discover: false
     environment:
-      MODULE/legacy_test_charm: tests/integration/test_haproxy_ddos.py
+      MODULE/legacy_test_charm: tests/integration/legacy/test_charm.py
     backends:
     - integration-test
     systems: [ubuntu-24.04-arm64]
