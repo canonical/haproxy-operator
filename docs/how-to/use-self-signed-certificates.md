@@ -17,7 +17,8 @@ charm and then use it to sign certificates for the HAProxy charm.
 
 To use the self-signed-certificates charm with the HAProxy charm, simply deploy
 the self-signed-certificates charm and integrate it with the HAProxy charm using
-the `certificates` relation.
+the `certificates` relation. This guide uses the Pollen charm as the backend application
+requiring a certificate.
 
 ```
 juju deploy haproxy --channel=2.8/stable
@@ -53,7 +54,8 @@ CSR with your own CA using the `get-outstanding-certificate-requests` and
 To use the
 `manual-tls-certificates` charm with the HAProxy charm, deploy the
 manual-tls-certificates charm and integrate it with the HAProxy charm using
-the `certificates` relation.
+the `certificates` relation. This guide uses the Pollen charm as the backend application
+requiring a certificate.
 
 ```
 juju deploy haproxy --channel=2.8/stable
