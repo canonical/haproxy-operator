@@ -344,7 +344,7 @@ def haproxy_spoe_deployer_fixture(
         ca_cert_result = k8s_juju.run(
             "self-signed-certificates/0", "get-ca-certificate"
         )
-        ca_cert = ca_cert_result.results["ca-certificate"].encode("utf-8")
+        ca_cert = ca_cert_result.results["ca-certificate"]
         lxd_juju.wait(
             lambda status: not status.apps[haproxy_spoe_name].is_waiting, timeout=400
         )
