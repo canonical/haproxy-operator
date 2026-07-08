@@ -3,14 +3,14 @@
 
 """Integration tests for haproxy route policy."""
 
+import json
 import logging
-
+from typing import Any, Callable
 
 import jubilant
 import pytest
-from typing import Callable, Any
-import json
 import requests
+
 from .helper import get_unit_ip_address
 
 logger = logging.getLogger(__name__)

@@ -458,7 +458,7 @@ def hacluster_fixture(
         "hacluster",
         app=app_name,
         channel="2.4/edge",
-        base="ubuntu@noble",
+        base="ubuntu@24.04",
     )
     juju.wait(
         lambda status: app_name in status.apps,
