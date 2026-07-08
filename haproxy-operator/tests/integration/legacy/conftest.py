@@ -48,7 +48,9 @@ def application_fixture(pytestconfig: pytest.Config, charm: str, juju: jubilant.
         logger.warning("Using existing application: %s", app_name)
         return app_name
 
-    constraints = {"arch": subprocess.check_output(["dpkg", "--print-architecture"], text=True).strip()}
+    constraints = {
+        "arch": subprocess.check_output(["dpkg", "--print-architecture"], text=True).strip()
+    }
 
     # juju.deploy(charm, application_name="haproxy", trust=True, constraints=constraints)
     juju.deploy(charm, trust=True, app=app_name, constraints=constraints)
