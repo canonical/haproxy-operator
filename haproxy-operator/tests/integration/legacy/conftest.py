@@ -6,8 +6,8 @@
 import ipaddress
 import json
 import logging
-import os
 import pathlib
+import subprocess
 import tempfile
 import textwrap
 from urllib.parse import ParseResult, urlparse
@@ -48,8 +48,7 @@ def application_fixture(pytestconfig: pytest.Config, charm: str, juju: jubilant.
         logger.warning("Using existing application: %s", app_name)
         return app_name
 
-    arch = os.getenv("TEST_ARCH")
-    constraints = {"arch": arch} if arch else {}
+    constraints = {"arch": subprocess.check_output(["dpkg", "--print-architecture"], text=True).strip()}
 
     # juju.deploy(charm, application_name="haproxy", trust=True, constraints=constraints)
     juju.deploy(charm, trust=True, app=app_name, constraints=constraints)
