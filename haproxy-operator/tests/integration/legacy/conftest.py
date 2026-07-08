@@ -6,6 +6,7 @@
 import ipaddress
 import json
 import logging
+import os
 import pathlib
 import tempfile
 import textwrap
@@ -46,7 +47,12 @@ def application_fixture(pytestconfig: pytest.Config, charm: str, juju: jubilant.
     if pytestconfig.getoption("--no-deploy") and app_name in juju.status().apps:
         logger.warning("Using existing application: %s", app_name)
         return app_name
-    juju.deploy(charm, trust=True, app=app_name)
+
+    arch = os.getenv("TEST_ARCH")
+    constraints = {"arch": arch} if arch else {}
+
+    # juju.deploy(charm, application_name="haproxy", trust=True, constraints=constraints)
+    juju.deploy(charm, trust=True, app=app_name, constraints=constraints)
     juju.wait(lambda status: jubilant.all_active(status, app_name))
     return app_name
 
