@@ -26,7 +26,7 @@ def _set_juju_timeout(juju: jubilant.Juju) -> None:
 
 
 @pytest.fixture(scope="module", name="application")
-def application_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju, charm: str):
+def application_fixture(juju: jubilant.Juju, charm: str):
     """Deploy the haproxy-ddos-protection-configurator application.
 
     Args:
@@ -39,7 +39,7 @@ def application_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju, charm:
     """
     metadata = yaml.safe_load(pathlib.Path("./charmcraft.yaml").read_text(encoding="UTF-8"))
     app_name = metadata["name"]
-    if pytestconfig.getoption("--no-deploy") and app_name in juju.status().apps:
+    if app_name in juju.status().apps:
         return app_name
     juju.deploy(
         charm=charm,

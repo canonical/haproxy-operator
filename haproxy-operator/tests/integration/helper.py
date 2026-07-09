@@ -140,7 +140,7 @@ def get_unit_address(juju: jubilant.Juju, application: str) -> str:
 
 
 def pytestconfig_arg_no_deploy(application: str) -> typing.Callable:
-    """Create a decorator that handles the --no-deploy config.
+    """Create a decorator that handles deployment when app is already there.
 
     Args:
         application: The application to deploy.
@@ -152,7 +152,7 @@ def pytestconfig_arg_no_deploy(application: str) -> typing.Callable:
     def decorator(
         method: typing.Callable,
     ) -> typing.Callable:
-        """Create a decorator that handles the --no-deploy config.
+        """Create a decorator that handles deployment when app is already there.
 
         Args:
             method: observer method to wrap.
@@ -161,20 +161,19 @@ def pytestconfig_arg_no_deploy(application: str) -> typing.Callable:
             the function wrapper.
         """
 
-        def wrapper(pytestconfig: pytest.Config, juju: jubilant.Juju, *args: typing.Any) -> str:
+        def wrapper( juju: jubilant.Juju, *args: typing.Any) -> str:
             """Block the charm if the config is wrong.
 
             Args:
-                pytestconfig: Contains parameters passed to the test.
                 juju: jubilant fixture
                 args: Additional arguments
 
             Returns:
                 The value returned from the original function. That is, None.
             """
-            if pytestconfig.getoption("--no-deploy") and application in juju.status().apps:
+            if application in juju.status().apps:
                 return application
-            return method(pytestconfig, juju, *args)
+            return method(juju, *args)
 
         return wrapper
 

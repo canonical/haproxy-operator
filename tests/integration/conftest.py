@@ -93,7 +93,6 @@ def k8s_juju_fixture(lxd_juju: jubilant.Juju, request: pytest.FixtureRequest):
 @pytest.fixture(scope="module", name="application")
 def application_fixture(
     charm_paths: dict[str, CharmPathList],
-    pytestconfig: pytest.Config,
     lxd_juju: jubilant.Juju,
 ):
     """Deploy the haproxy application.
@@ -106,7 +105,7 @@ def application_fixture(
         The haproxy app name.
     """
     app_name = "haproxy"
-    if pytestconfig.getoption("--no-deploy") and app_name in lxd_juju.status().apps:
+    if  app_name in lxd_juju.status().apps:
         return app_name
 
     charm_file = charm_paths["haproxy"].path
@@ -121,7 +120,6 @@ def application_fixture(
 @pytest.fixture(scope="module", name="ddos_protection_configurator")
 def haproxy_ddos_protection_configurator_fixture(
     charm_paths: dict[str, CharmPathList],
-    pytestconfig: pytest.Config,
     lxd_juju: jubilant.Juju,
     application: str,
 ):
@@ -129,7 +127,6 @@ def haproxy_ddos_protection_configurator_fixture(
 
     Args:
         charm_paths: Dict of charm name to CharmPathList from the pytest-opcli plugin.
-        pytestconfig: Pytest config for --no-deploy flag.
         lxd_juju: Jubilant juju fixture.
         application: The haproxy application name.
 
@@ -139,8 +136,7 @@ def haproxy_ddos_protection_configurator_fixture(
     ddos_app_name = "haproxy-ddos-protection-configurator"
 
     if (
-        pytestconfig.getoption("--no-deploy")
-        and ddos_app_name in lxd_juju.status().apps
+        ddos_app_name in lxd_juju.status().apps
     ):
         return ddos_app_name
 
@@ -156,13 +152,12 @@ def haproxy_ddos_protection_configurator_fixture(
 
 @pytest.fixture(scope="module", name="configured_application_with_tls_base")
 def configured_application_with_tls_base_fixture(
-    pytestconfig: pytest.Config,
     application: str,
     certificate_provider_application: str,
     lxd_juju: jubilant.Juju,
 ):
     """The haproxy charm configured and integrated with TLS provider."""
-    if pytestconfig.getoption("--no-deploy") and "haproxy" in lxd_juju.status().apps:
+    if  "haproxy" in lxd_juju.status().apps:
         return application
     lxd_juju.config(application, {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
     lxd_juju.integrate(
@@ -188,13 +183,11 @@ def configured_application_with_tls_fixture(
 
 @pytest.fixture(scope="module", name="certificate_provider_application")
 def certificate_provider_application_fixture(
-    pytestconfig: pytest.Config,
     lxd_juju: jubilant.Juju,
 ):
     """Deploy self-signed-certificates."""
     if (
-        pytestconfig.getoption("--no-deploy")
-        and SELF_SIGNED_CERTIFICATES_APP_NAME in lxd_juju.status().apps
+        SELF_SIGNED_CERTIFICATES_APP_NAME in lxd_juju.status().apps
     ):
         logger.warning(
             "Using existing application: %s", SELF_SIGNED_CERTIFICATES_APP_NAME
@@ -278,22 +271,21 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
 
 @pytest.fixture(scope="module", name="any_charm_haproxy_route_deployer")
 def any_charm_haproxy_route_deployer_fixture(
-    pytestconfig: pytest.Config,
-    lxd_juju: jubilant.Juju,
+     lxd_juju: jubilant.Juju,
 ):
     """Return a fixture function to create haproxy_route requirer anycharms."""
 
     def deployer(app_name):
-        return deploy_any_charm_haproxy_route_requirer(pytestconfig, lxd_juju, app_name)
+        return deploy_any_charm_haproxy_route_requirer(lxd_juju, app_name)
 
     yield deployer
 
 
 def deploy_any_charm_haproxy_route_requirer(
-    pytestconfig: pytest.Config, lxd_juju: jubilant.Juju, app_name
+     lxd_juju: jubilant.Juju, app_name
 ):
     """Deploy a haproxy_route requirer anycharm."""
-    if pytestconfig.getoption("--no-deploy") and app_name in lxd_juju.status().apps:
+    if app_name in lxd_juju.status().apps:
         return app_name
     src_overwrite = json.dumps(
         {
@@ -324,7 +316,6 @@ def deploy_any_charm_haproxy_route_requirer(
 @pytest.fixture(scope="module", name="haproxy_spoe_auth_deployer")
 def haproxy_spoe_deployer_fixture(
     charm_paths: dict[str, CharmPathList],
-    pytestconfig: pytest.Config,
     lxd_juju: jubilant.Juju,
     application,
     k8s_juju,
@@ -335,7 +326,7 @@ def haproxy_spoe_deployer_fixture(
 
     def deployer(haproxy_spoe_name, hostname):
         haproxy_spoe_name = deploy_spoe_auth(
-            pytestconfig, lxd_juju, haproxy_spoe_name, hostname, spoe_charm_file
+            lxd_juju, haproxy_spoe_name, hostname, spoe_charm_file
         )
         k8s_juju.wait(
             lambda status: status.apps["self-signed-certificates"].is_active,
@@ -358,14 +349,13 @@ def haproxy_spoe_deployer_fixture(
 
 
 def deploy_spoe_auth(
-    pytestconfig: pytest.Config,
     lxd_juju: jubilant.Juju,
     app_name,
     host_name,
     charm_file: str,
 ) -> str:
     """Deploy the haproxy-spoe-auth charm."""
-    if pytestconfig.getoption("--no-deploy") and app_name in lxd_juju.status().apps:
+    if app_name in lxd_juju.status().apps:
         return app_name
 
     lxd_juju.deploy(
@@ -408,11 +398,10 @@ def browser_context_manager():
 
 
 @pytest.fixture(scope="module", name="postgresql")
-def postgresql_fixture(pytestconfig: pytest.Config, lxd_juju: jubilant.Juju):
+def postgresql_fixture(lxd_juju: jubilant.Juju):
     """Deploy PostgreSQL."""
     if (
-        pytestconfig.getoption("--no-deploy")
-        and POSTGRESQL_APPLICATION in lxd_juju.status().apps
+     POSTGRESQL_APPLICATION in lxd_juju.status().apps
     ):
         return POSTGRESQL_APPLICATION
     lxd_juju.deploy(
@@ -431,13 +420,11 @@ def postgresql_fixture(pytestconfig: pytest.Config, lxd_juju: jubilant.Juju):
 @pytest.fixture(scope="module", name="haproxy_route_policy")
 def haproxy_route_policy_fixture(
     charm_paths: dict[str, CharmPathList],
-    pytestconfig: pytest.Config,
     lxd_juju: jubilant.Juju,
 ) -> str:
     """Deploy the haproxy-route-policy charm."""
     if (
-        pytestconfig.getoption("--no-deploy")
-        and HAPROXY_ROUTE_POLICY_APP_NAME in lxd_juju.status().apps
+         HAPROXY_ROUTE_POLICY_APP_NAME in lxd_juju.status().apps
     ):
         return HAPROXY_ROUTE_POLICY_APP_NAME
 

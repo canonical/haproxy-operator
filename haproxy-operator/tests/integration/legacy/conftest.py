@@ -32,11 +32,10 @@ def charm_fixture(charm_paths: dict[str, CharmPathList]) -> str:
 
 
 @pytest.fixture(scope="module", name="application")
-def application_fixture(pytestconfig: pytest.Config, charm: str, juju: jubilant.Juju) -> str:
+def application_fixture( charm: str, juju: jubilant.Juju) -> str:
     """Deploy the charm.
 
     Args:
-        pytestconfig: Pytest configuration.
         charm: Path to the packed charm file.
         juju: Jubilant juju fixture.
 
@@ -44,7 +43,7 @@ def application_fixture(pytestconfig: pytest.Config, charm: str, juju: jubilant.
         The haproxy app name.
     """
     app_name = "haproxy"
-    if pytestconfig.getoption("--no-deploy") and app_name in juju.status().apps:
+    if  app_name in juju.status().apps:
         logger.warning("Using existing application: %s", app_name)
         return app_name
 
@@ -60,20 +59,18 @@ def application_fixture(pytestconfig: pytest.Config, charm: str, juju: jubilant.
 
 @pytest.fixture(scope="module", name="certificate_provider_application")
 def certificate_provider_application_fixture(
-    pytestconfig: pytest.Config,
     juju: jubilant.Juju,
 ) -> str:
     """Deploy self-signed-certificates.
 
     Args:
-        pytestconfig: Pytest configuration.
         juju: Jubilant juju fixture.
 
     Returns:
         The self-signed-certificates app name.
     """
     app_name = "self-signed-certificates"
-    if pytestconfig.getoption("--no-deploy") and app_name in juju.status().apps:
+    if app_name in juju.status().apps:
         logger.warning("Using existing application: %s", app_name)
         return app_name
     juju.deploy("self-signed-certificates", channel="1/edge", app=app_name)
@@ -364,7 +361,6 @@ def any_charm_src_ingress_requirer_fixture() -> dict[str, str]:
 
 @pytest.fixture(name="any_charm_ingress_requirer")
 def any_charm_ingress_requirer_fixture(
-    pytestconfig: pytest.Config,
     juju: jubilant.Juju,
     any_charm_src_ingress_requirer: dict[str, str],
     any_charm_ingress_requirer_name: str,
@@ -372,7 +368,6 @@ def any_charm_ingress_requirer_fixture(
     """Deploy any-charm configured as a requirer for the ingress-per-app interface.
 
     Args:
-        pytestconfig: Pytest configuration.
         juju: Jubilant juju fixture.
         any_charm_src_ingress_requirer: Source overwrite for any-charm.
         any_charm_ingress_requirer_name: App name.
@@ -381,8 +376,7 @@ def any_charm_ingress_requirer_fixture(
         The any-charm ingress requirer app name.
     """
     if (
-        pytestconfig.getoption("--no-deploy")
-        and any_charm_ingress_requirer_name in juju.status().apps
+        any_charm_ingress_requirer_name in juju.status().apps
     ):
         logger.warning("Using existing application: %s", any_charm_ingress_requirer_name)
         return any_charm_ingress_requirer_name

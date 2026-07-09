@@ -50,7 +50,7 @@ def _set_juju_timeout(juju: jubilant.Juju) -> None:
 
 
 @pytest.fixture(scope="module", name="application")
-def application_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju, charm: str):
+def application_fixture(juju: jubilant.Juju, charm: str):
     """Deploy the haproxy application.
 
     Args:
@@ -62,7 +62,7 @@ def application_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju, charm:
     """
     metadata = yaml.safe_load(pathlib.Path("./charmcraft.yaml").read_text(encoding="UTF-8"))
     app_name = metadata["name"]
-    if pytestconfig.getoption("--no-deploy") and app_name in juju.status().apps:
+    if app_name in juju.status().apps:
         return app_name
     juju.deploy(
         charm=charm,
@@ -74,13 +74,10 @@ def application_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju, charm:
 
 @pytest.fixture(scope="module", name="certificate_provider_application")
 def certificate_provider_application_fixture(
-    pytestconfig: pytest.Config,
     juju: jubilant.Juju,
 ):
     """Deploy self-signed-certificates."""
-    if (
-        pytestconfig.getoption("--no-deploy")
-        and SELF_SIGNED_CERTIFICATES_APP_NAME in juju.status().apps
+    if (SELF_SIGNED_CERTIFICATES_APP_NAME in juju.status().apps
     ):
         logger.warning("Using existing application: %s", SELF_SIGNED_CERTIFICATES_APP_NAME)
         return SELF_SIGNED_CERTIFICATES_APP_NAME
@@ -92,13 +89,12 @@ def certificate_provider_application_fixture(
 
 @pytest.fixture(scope="module", name="configured_application_with_tls_base")
 def configured_application_with_tls_base_fixture(
-    pytestconfig: pytest.Config,
     application: str,
     certificate_provider_application: str,
     juju: jubilant.Juju,
 ):
     """The haproxy charm configured and integrated with TLS provider."""
-    if pytestconfig.getoption("--no-deploy") and "haproxy" in juju.status().apps:
+    if "haproxy" in juju.status().apps:
         return application
     juju.config(application, {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
     juju.integrate(
@@ -128,14 +124,13 @@ def configured_application_with_tls_fixture(
 
 @pytest.fixture(name="any_charm_ingress_per_unit_requirer")
 def any_charm_ingress_per_unit_requirer_fixture(
-    pytestconfig: pytest.Config, juju: jubilant.Juju, configured_application_with_tls: str
+    juju: jubilant.Juju, configured_application_with_tls: str
 ) -> str:
     """Deploy any-charm and configure it to serve as a requirer for the ingress-per-unit
     interface.
     """
     if (
-        pytestconfig.getoption("--no-deploy")
-        and ANY_CHARM_INGRESS_PER_UNIT_REQUIRER in juju.status().apps
+         ANY_CHARM_INGRESS_PER_UNIT_REQUIRER in juju.status().apps
     ):
         logger.warning("Using existing application: %s", ANY_CHARM_INGRESS_PER_UNIT_REQUIRER)
         return ANY_CHARM_INGRESS_PER_UNIT_REQUIRER
@@ -169,7 +164,7 @@ def any_charm_ingress_per_unit_requirer_fixture(
 @pytest.fixture(scope="module", name="any_charm_haproxy_route_requirer_base")
 @pytestconfig_arg_no_deploy(application=ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)
 def any_charm_haproxy_route_requirer_base_fixture(
-    _pytestconfig: pytest.Config, juju: jubilant.Juju
+    juju: jubilant.Juju
 ):
     """Deploy any-charm and configure it to serve as a requirer for the haproxy-route
     integration.
@@ -245,7 +240,7 @@ def any_charm_haproxy_route_requirer_fixture(
 @pytest.fixture(scope="module", name="any_charm_haproxy_route_tcp_requirer_base")
 @pytestconfig_arg_no_deploy(application=ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION)
 def any_charm_haproxy_route_tcp_requirer_base_fixture(
-    _pytestconfig: pytest.Config, juju: jubilant.Juju
+    juju: jubilant.Juju
 ):
     """Deploy any-charm and configure it to serve as a requirer for the haproxy-route
     integration.
