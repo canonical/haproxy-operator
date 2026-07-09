@@ -68,7 +68,7 @@ class DNSResolverHTTPSAdapter(HTTPAdapter):
 
 
 def get_ingress_url_for_application(juju: jubilant.Juju, app_name: str) -> ParseResult:
-    """Get the ingress url from the requirer's unit data.
+    """Get the ingress url from the requirer's RPC helper.
 
     Args:
         juju: The Jubilant juju instance.
@@ -77,12 +77,8 @@ def get_ingress_url_for_application(juju: jubilant.Juju, app_name: str) -> Parse
     Returns:
         The parsed ingress url.
     """
-    import json
-
     unit_name = f"{app_name}/0"
-    result = juju.cli("show-unit", unit_name, "--format", "json")
-    unit_information = json.loads(result)[unit_name]
-    ingress_integration_data = json.loads(
-        unit_information["relation-info"][0]["application-data"]["ingress"]
-    )
-    return urlparse(ingress_integration_data["url"])
+    task = juju.run(unit_name, "rpc", {"method": "get_ingress_url"})
+    ingress_url = task.results.get("return") or task.results.get("result")
+    assert isinstance(ingress_url, str), f"RPC call on {unit_name} did not return an ingress URL"
+    return urlparse(ingress_url)

@@ -51,7 +51,6 @@ def application_fixture( charm: str, juju: jubilant.Juju) -> str:
         "arch": subprocess.check_output(["dpkg", "--print-architecture"], text=True).strip()  # nosec B603 B607
     }
 
-    # juju.deploy(charm, application_name="haproxy", trust=True, constraints=constraints)
     juju.deploy(charm, trust=True, app=app_name, constraints=constraints)
     juju.wait(lambda status: jubilant.all_active(status, app_name))
     return app_name
@@ -144,7 +143,7 @@ def get_unit_address(juju: jubilant.Juju, application: str) -> str:
 
 
 def get_ingress_url_for_application(juju: jubilant.Juju, app_name: str) -> ParseResult:
-    """Get the ingress url from the requirer's unit data.
+    """Get the ingress url from the requirer's RPC helper.
 
     Args:
         juju: The Jubilant juju instance.
@@ -154,12 +153,10 @@ def get_ingress_url_for_application(juju: jubilant.Juju, app_name: str) -> Parse
         The parsed ingress url.
     """
     unit_name = f"{app_name}/0"
-    result = juju.cli("show-unit", unit_name, "--format", "json")
-    unit_information = json.loads(result)[unit_name]
-    ingress_integration_data = json.loads(
-        unit_information["relation-info"][0]["application-data"]["ingress"]
-    )
-    return urlparse(ingress_integration_data["url"])
+    task = juju.run(unit_name, "rpc", {"method": "get_ingress_url"})
+    ingress_url = task.results.get("return") or task.results.get("result")
+    assert isinstance(ingress_url, str), f"RPC call on {unit_name} did not return an ingress URL"
+    return urlparse(ingress_url)
 
 
 @pytest.fixture(scope="module", name="any_charm_src")
@@ -336,6 +333,9 @@ def any_charm_src_ingress_requirer_fixture() -> dict[str, str]:
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.ingress = IngressPerAppRequirer(self, port=80, strip_prefix=True)
+
+        def get_ingress_url(self):
+            return self.ingress.url
 
         def start_server(self):
             apt.update()
