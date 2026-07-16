@@ -45,7 +45,7 @@ def lxd_juju_fixture(request: pytest.FixtureRequest):
     # We need to switch to the controller or commands like add-cloud will not work.
     juju.cli("switch", f"{lxd_controller_name}:", include_model=False)
 
-    keep_models = typing.cast(bool, request.config.getoption("--keep-models"))
+    keep_models = typing.cast(bool, request.config.getoption("--no-juju-teardown"))
     with jubilant.temp_model(
         keep=keep_models, cloud=lxd_cloud_name, controller=lxd_controller_name
     ) as juju:
