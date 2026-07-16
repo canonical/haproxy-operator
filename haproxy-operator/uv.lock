@@ -353,7 +353,7 @@ wheels = [
 
 [[package]]
 name = "cosl"
-version = "1.9.2"
+version = "1.10.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ops" },
@@ -362,9 +362,9 @@ dependencies = [
     { name = "tenacity" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/00/3e/2f8fe3f460b18cea99722f3cdb885d494de1cc9accef1cd18535c14de3f1/cosl-1.9.2.tar.gz", hash = "sha256:4999be5574c679f8070806f125b2c50fc4bdaa78e8f8247b17868af20e82bcfd", size = 150799, upload-time = "2026-06-16T15:00:42.378Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ef/84/6da25e5e0da58419b8d3252a6707bb97f05866fa7c6098ae35e302626c65/cosl-1.10.1.tar.gz", hash = "sha256:6f49482707e5e5163fd47fc90226189d51c0867d49ff65109d3e96ccf9dad5e4", size = 152093, upload-time = "2026-07-14T15:51:48.262Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/66/be/93e0b9eb3de24b5fd670e1de2dac2ab9bdb6e2fcd659a806830aa07bc6ca/cosl-1.9.2-py3-none-any.whl", hash = "sha256:b78248720fc250fb8f3b872c2e0eae760129d80ac76829a556ecc963fe793b81", size = 38346, upload-time = "2026-06-16T15:00:41.215Z" },
+    { url = "https://files.pythonhosted.org/packages/d8/e6/c576f8ebc071dc5edd18a56f66eb0388511d3ece04188812996d4dc72e5b/cosl-1.10.1-py3-none-any.whl", hash = "sha256:845bdbaaaf22b992e5b8dfa87af3e8f3f8004a14ba172b07017274f844aaa9bc", size = 39269, upload-time = "2026-07-14T15:51:46.887Z" },
 ]
 
 [[package]]
@@ -724,11 +724,11 @@ unit = [
 [package.metadata]
 requires-dist = [
     { name = "charmlibs-interfaces-tls-certificates", specifier = ">=1.8.1" },
-    { name = "cosl", specifier = "==1.9.2" },
+    { name = "cosl", specifier = "==1.10.1" },
     { name = "cryptography", specifier = "==49.0.0" },
     { name = "interface-hacluster", git = "https://github.com/charmed-kubernetes/charm-interface-hacluster?rev=1.32%2Bck2" },
     { name = "jsonschema", specifier = "==4.26.0" },
-    { name = "opentelemetry-api", specifier = "==1.43.0" },
+    { name = "opentelemetry-api", specifier = "==1.44.0" },
     { name = "ops", specifier = "==3.8.0" },
     { name = "pydantic", specifier = "==2.13.4" },
     { name = "validators", specifier = ">=0.35.0" },
@@ -1229,14 +1229,14 @@ dependencies = [
 
 [[package]]
 name = "opentelemetry-api"
-version = "1.43.0"
+version = "1.44.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ae/cc/e4c9584181f86494df0f6bdec1a4f3280c50db44704dc2a407e994fc87bb/opentelemetry_api-1.43.0.tar.gz", hash = "sha256:107d0d03857ea8fc7c5fcbbbd83f800c281f0d560553d61c1d675fccfd1761c1", size = 73476, upload-time = "2026-06-24T15:19:55.323Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ee/8b/aa9e2d8b8dfa7c946f7dec5d1f8f6ba8eca062f43509a06bdb5ce93d26c0/opentelemetry_api-1.44.0.tar.gz", hash = "sha256:67647e5e9566edcf421166fdf022b3537f818635daa852b289e34604dc6fb33a", size = 72406, upload-time = "2026-07-16T15:25:32.678Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/17/83/6dba32b85f31868400440dc7ad2ca1eab94cbbf3a7b0459ed39f8311a9e2/opentelemetry_api-1.43.0-py3-none-any.whl", hash = "sha256:20acf45e9b21851926835292e4045d290acade1edd2ff3de86d2f069687ba1fd", size = 61912, upload-time = "2026-06-24T15:19:35.434Z" },
+    { url = "https://files.pythonhosted.org/packages/ca/6f/a04e900f465ff3221ccc395522503e2d10e79fa21f2723c8e177aae1e0d1/opentelemetry_api-1.44.0-py3-none-any.whl", hash = "sha256:94b98c893a91b88657eaac1e3ba89618cdb85be6918196705354f34728b2cdef", size = 60018, upload-time = "2026-07-16T15:25:11.657Z" },
 ]
 
 [[package]]
