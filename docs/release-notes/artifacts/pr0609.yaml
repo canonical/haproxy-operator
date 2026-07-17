@@ -1,0 +1,20 @@
+version_schema: 2
+
+changes:
+  - title: Add get-configuration Juju action for inspecting effective haproxy config
+    author: minulo
+    type: minor
+    description: >
+      Added a `get-configuration` Juju action that allows operators to inspect
+      the effective haproxy configuration without shell access to the unit.
+      Supports two modes: `source=disk` (default) returns the currently applied
+      `/etc/haproxy/haproxy.cfg`, and `source=relations` previews the
+      configuration that would be generated from the current relation data
+      without writing files or reloading the service. Logs a warning when the
+      effective configuration matches the default (no proxy backends configured).
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/609
+      related_issue:
+    visibility: public
+    highlight: false
