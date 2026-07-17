@@ -9,7 +9,7 @@ import jubilant
 import pytest
 from requests import Session
 
-from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG, get_unit_ip_address
+from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG, all_active_and_idle, get_unit_ip_address
 from .helper import DNSResolverHTTPSAdapter, get_ingress_url_for_application
 
 
@@ -29,7 +29,13 @@ def test_ingress_integration(
         f"{configured_application_with_tls}:ingress",
         f"{any_charm_ingress_requirer}:ingress",
     )
-    juju.wait(lambda status: jubilant.all_active(status, configured_application_with_tls))
+    juju.wait(
+        lambda status: all_active_and_idle(
+            status, configured_application_with_tls, any_charm_ingress_requirer
+        ),
+        delay=5,
+        successes=6,
+    )
 
     ingress_url = get_ingress_url_for_application(juju, any_charm_ingress_requirer)
     model_name = juju.status().model.name
