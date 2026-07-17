@@ -13,7 +13,7 @@ from collections import namedtuple
 import jubilant
 import pytest
 import requests
-from playwright.sync_api import expect, sync_playwright
+from playwright.sync_api import expect, sync_playwright  # type: ignore[import-not-found]
 
 from .helper import get_unit_ip_address
 

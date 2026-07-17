@@ -25,6 +25,15 @@ HAPROXY_ROUTE_LIB_SRC = "lib/charms/haproxy/v2/haproxy_route.py"
 APT_LIB_SRC = "lib/charms/operator_libs_linux/v0/apt.py"
 
 
+def all_active_and_idle(status: jubilant.Status, *apps: str) -> bool:
+    """Return whether the applications are active with no hooks running."""
+    return jubilant.all_active(status, *apps) and all(
+        unit.juju_status.current == "idle"
+        for app in apps
+        for unit in status.apps[app].units.values()
+    )
+
+
 @pytest.fixture(scope="module", name="charm")
 def charm_fixture(charm_paths: dict[str, CharmPathList]) -> str:
     """Get path to the haproxy charm."""
@@ -32,7 +41,7 @@ def charm_fixture(charm_paths: dict[str, CharmPathList]) -> str:
 
 
 @pytest.fixture(scope="module", name="application")
-def application_fixture( charm: str, juju: jubilant.Juju) -> str:
+def application_fixture(charm: str, juju: jubilant.Juju) -> str:
     """Deploy the charm.
 
     Args:
@@ -43,7 +52,7 @@ def application_fixture( charm: str, juju: jubilant.Juju) -> str:
         The haproxy app name.
     """
     app_name = "haproxy"
-    if  app_name in juju.status().apps:
+    if app_name in juju.status().apps:
         logger.warning("Using existing application: %s", app_name)
         return app_name
 
@@ -98,7 +107,9 @@ def configured_application_with_tls_fixture(
         f"{certificate_provider_application}:certificates",
     )
     juju.wait(
-        lambda status: jubilant.all_active(status, application, certificate_provider_application),
+        lambda status: all_active_and_idle(status, application, certificate_provider_application),
+        delay=5,
+        successes=6,
     )
     return application
 
@@ -375,9 +386,7 @@ def any_charm_ingress_requirer_fixture(
     Returns:
         The any-charm ingress requirer app name.
     """
-    if (
-        any_charm_ingress_requirer_name in juju.status().apps
-    ):
+    if any_charm_ingress_requirer_name in juju.status().apps:
         logger.warning("Using existing application: %s", any_charm_ingress_requirer_name)
         return any_charm_ingress_requirer_name
     # Write large src-overwrite to a file to avoid ARG_MAX CLI limit

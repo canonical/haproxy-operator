@@ -37,6 +37,15 @@ GRPC_MESSAGE_STUB_SRC = GRPC_SERVER_DIR / "echo_pb2.py"
 GRPC_SERVICE_STUB_SRC = GRPC_SERVER_DIR / "echo_pb2_grpc.py"
 
 
+def all_active_and_idle(status: jubilant.Status, *apps: str) -> bool:
+    """Return whether the applications are active with no hooks running."""
+    return jubilant.all_active(status, *apps) and all(
+        unit.juju_status.current == "idle"
+        for app in apps
+        for unit in status.apps[app].units.values()
+    )
+
+
 @pytest.fixture(scope="session", name="charm")
 def charm_fixture(charm_paths: dict[str, CharmPathList]) -> str:
     """Pytest fixture that returns the path to the haproxy charm."""
@@ -77,8 +86,7 @@ def certificate_provider_application_fixture(
     juju: jubilant.Juju,
 ):
     """Deploy self-signed-certificates."""
-    if (SELF_SIGNED_CERTIFICATES_APP_NAME in juju.status().apps
-    ):
+    if SELF_SIGNED_CERTIFICATES_APP_NAME in juju.status().apps:
         logger.warning("Using existing application: %s", SELF_SIGNED_CERTIFICATES_APP_NAME)
         return SELF_SIGNED_CERTIFICATES_APP_NAME
     juju.deploy(
@@ -94,14 +102,19 @@ def configured_application_with_tls_base_fixture(
     juju: jubilant.Juju,
 ):
     """The haproxy charm configured and integrated with TLS provider."""
-    if "haproxy" in juju.status().apps:
-        return application
     juju.config(application, {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
-    juju.integrate(
-        f"{application}:certificates", f"{certificate_provider_application}:certificates"
-    )
+    certificate_relations = juju.status().apps[application].relations.get("certificates", [])
+    if not any(
+        relation.related_app == certificate_provider_application
+        for relation in certificate_relations
+    ):
+        juju.integrate(
+            f"{application}:certificates", f"{certificate_provider_application}:certificates"
+        )
     juju.wait(
-        lambda status: jubilant.all_active(status, application, certificate_provider_application),
+        lambda status: all_active_and_idle(status, application, certificate_provider_application),
+        delay=5,
+        successes=6,
         timeout=JUJU_WAIT_TIMEOUT,
     )
     return application
@@ -129,9 +142,7 @@ def any_charm_ingress_per_unit_requirer_fixture(
     """Deploy any-charm and configure it to serve as a requirer for the ingress-per-unit
     interface.
     """
-    if (
-         ANY_CHARM_INGRESS_PER_UNIT_REQUIRER in juju.status().apps
-    ):
+    if ANY_CHARM_INGRESS_PER_UNIT_REQUIRER in juju.status().apps:
         logger.warning("Using existing application: %s", ANY_CHARM_INGRESS_PER_UNIT_REQUIRER)
         return ANY_CHARM_INGRESS_PER_UNIT_REQUIRER
 
@@ -163,9 +174,7 @@ def any_charm_ingress_per_unit_requirer_fixture(
 
 @pytest.fixture(scope="module", name="any_charm_haproxy_route_requirer_base")
 @pytestconfig_arg_no_deploy(application=ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)
-def any_charm_haproxy_route_requirer_base_fixture(
-    juju: jubilant.Juju
-):
+def any_charm_haproxy_route_requirer_base_fixture(juju: jubilant.Juju):
     """Deploy any-charm and configure it to serve as a requirer for the haproxy-route
     integration.
     """
@@ -239,9 +248,7 @@ def any_charm_haproxy_route_requirer_fixture(
 
 @pytest.fixture(scope="module", name="any_charm_haproxy_route_tcp_requirer_base")
 @pytestconfig_arg_no_deploy(application=ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION)
-def any_charm_haproxy_route_tcp_requirer_base_fixture(
-    juju: jubilant.Juju
-):
+def any_charm_haproxy_route_tcp_requirer_base_fixture(juju: jubilant.Juju):
     """Deploy any-charm and configure it to serve as a requirer for the haproxy-route
     integration.
     """

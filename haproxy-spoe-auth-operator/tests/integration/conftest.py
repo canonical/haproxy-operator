@@ -41,7 +41,7 @@ def application_fixture(juju: jubilant.Juju, charm: str):
     """
     metadata = yaml.safe_load(pathlib.Path("./charmcraft.yaml").read_text(encoding="UTF-8"))
     app_name = metadata["name"]
-    if  app_name in juju.status().apps:
+    if app_name in juju.status().apps:
         return app_name
     juju.deploy(
         charm=charm,

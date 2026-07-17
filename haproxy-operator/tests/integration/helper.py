@@ -11,7 +11,6 @@ import typing
 from urllib.parse import ParseResult, urlparse
 
 import jubilant
-import pytest
 import yaml
 from requests.adapters import DEFAULT_POOLBLOCK, DEFAULT_POOLSIZE, DEFAULT_RETRIES, HTTPAdapter
 
@@ -161,7 +160,7 @@ def pytestconfig_arg_no_deploy(application: str) -> typing.Callable:
             the function wrapper.
         """
 
-        def wrapper( juju: jubilant.Juju, *args: typing.Any) -> str:
+        def wrapper(juju: jubilant.Juju, *args: typing.Any) -> str:
             """Block the charm if the config is wrong.
 
             Args:

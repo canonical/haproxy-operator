@@ -28,6 +28,15 @@ HAPROXY_ROUTE_POLICY_APP_NAME = "policy"
 POSTGRESQL_APPLICATION = "db"
 
 
+def all_active_and_idle(status: jubilant.Status, *apps: str) -> bool:
+    """Return whether the applications are active with no hooks running."""
+    return jubilant.all_active(status, *apps) and all(
+        unit.juju_status.current == "idle"
+        for app in apps
+        for unit in status.apps[app].units.values()
+    )
+
+
 @pytest.fixture(scope="session", name="lxd_juju")
 def lxd_juju_fixture(request: pytest.FixtureRequest):
     """Bootstrap a new lxd controller and model and return a Juju fixture for it."""
@@ -105,7 +114,7 @@ def application_fixture(
         The haproxy app name.
     """
     app_name = "haproxy"
-    if  app_name in lxd_juju.status().apps:
+    if app_name in lxd_juju.status().apps:
         return app_name
 
     charm_file = charm_paths["haproxy"].path
@@ -135,9 +144,7 @@ def haproxy_ddos_protection_configurator_fixture(
     """
     ddos_app_name = "haproxy-ddos-protection-configurator"
 
-    if (
-        ddos_app_name in lxd_juju.status().apps
-    ):
+    if ddos_app_name in lxd_juju.status().apps:
         return ddos_app_name
 
     charm_file = charm_paths["haproxy-ddos-protection-configurator"].path
@@ -157,12 +164,25 @@ def configured_application_with_tls_base_fixture(
     lxd_juju: jubilant.Juju,
 ):
     """The haproxy charm configured and integrated with TLS provider."""
-    if  "haproxy" in lxd_juju.status().apps:
-        return application
     lxd_juju.config(application, {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
-    lxd_juju.integrate(
-        f"{application}:certificates",
-        f"{certificate_provider_application}:certificates",
+    certificate_relations = (
+        lxd_juju.status().apps[application].relations.get("certificates", [])
+    )
+    if not any(
+        relation.related_app == certificate_provider_application
+        for relation in certificate_relations
+    ):
+        lxd_juju.integrate(
+            f"{application}:certificates",
+            f"{certificate_provider_application}:certificates",
+        )
+    lxd_juju.wait(
+        lambda status: all_active_and_idle(
+            status, application, certificate_provider_application
+        ),
+        delay=5,
+        successes=6,
+        timeout=JUJU_WAIT_TIMEOUT,
     )
     return application
 
@@ -186,9 +206,7 @@ def certificate_provider_application_fixture(
     lxd_juju: jubilant.Juju,
 ):
     """Deploy self-signed-certificates."""
-    if (
-        SELF_SIGNED_CERTIFICATES_APP_NAME in lxd_juju.status().apps
-    ):
+    if SELF_SIGNED_CERTIFICATES_APP_NAME in lxd_juju.status().apps:
         logger.warning(
             "Using existing application: %s", SELF_SIGNED_CERTIFICATES_APP_NAME
         )
@@ -271,7 +289,7 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
 
 @pytest.fixture(scope="module", name="any_charm_haproxy_route_deployer")
 def any_charm_haproxy_route_deployer_fixture(
-     lxd_juju: jubilant.Juju,
+    lxd_juju: jubilant.Juju,
 ):
     """Return a fixture function to create haproxy_route requirer anycharms."""
 
@@ -281,9 +299,7 @@ def any_charm_haproxy_route_deployer_fixture(
     yield deployer
 
 
-def deploy_any_charm_haproxy_route_requirer(
-     lxd_juju: jubilant.Juju, app_name
-):
+def deploy_any_charm_haproxy_route_requirer(lxd_juju: jubilant.Juju, app_name):
     """Deploy a haproxy_route requirer anycharm."""
     if app_name in lxd_juju.status().apps:
         return app_name
@@ -400,9 +416,7 @@ def browser_context_manager():
 @pytest.fixture(scope="module", name="postgresql")
 def postgresql_fixture(lxd_juju: jubilant.Juju):
     """Deploy PostgreSQL."""
-    if (
-     POSTGRESQL_APPLICATION in lxd_juju.status().apps
-    ):
+    if POSTGRESQL_APPLICATION in lxd_juju.status().apps:
         return POSTGRESQL_APPLICATION
     lxd_juju.deploy(
         "postgresql",
@@ -423,9 +437,7 @@ def haproxy_route_policy_fixture(
     lxd_juju: jubilant.Juju,
 ) -> str:
     """Deploy the haproxy-route-policy charm."""
-    if (
-         HAPROXY_ROUTE_POLICY_APP_NAME in lxd_juju.status().apps
-    ):
+    if HAPROXY_ROUTE_POLICY_APP_NAME in lxd_juju.status().apps:
         return HAPROXY_ROUTE_POLICY_APP_NAME
 
     charm_file = charm_paths["haproxy-route-policy"].path

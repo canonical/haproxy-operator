@@ -31,7 +31,7 @@ def _set_juju_timeout(juju: jubilant.Juju) -> None:
 
 
 @pytest.fixture(scope="module", name="application")
-def application_fixture( juju: jubilant.Juju, charm: str):
+def application_fixture(juju: jubilant.Juju, charm: str):
     """Deploy the haproxy-route-policy application.
 
     Args:
@@ -43,7 +43,7 @@ def application_fixture( juju: jubilant.Juju, charm: str):
     """
     metadata = yaml.safe_load(pathlib.Path("./charmcraft.yaml").read_text(encoding="UTF-8"))
     app_name = metadata["name"]
-    if  app_name in juju.status().apps:
+    if app_name in juju.status().apps:
         return app_name
     juju.deploy(
         charm=charm,
@@ -54,15 +54,11 @@ def application_fixture( juju: jubilant.Juju, charm: str):
 
 
 @pytest.fixture(scope="module", name="any_charm_haproxy_route_policy_requirer")
-def any_charm_haproxy_route_policy_requirer_fixture(
-     juju: jubilant.Juju
-):
+def any_charm_haproxy_route_policy_requirer_fixture(juju: jubilant.Juju):
     """Deploy any-charm and configure it to serve as a requirer for the haproxy-route
     integration.
     """
-    if (
-     ANY_CHARM_HAPROXY_ROUTE_POLICY_REQUIRER_APPLICATION in juju.status().apps
-    ):
+    if ANY_CHARM_HAPROXY_ROUTE_POLICY_REQUIRER_APPLICATION in juju.status().apps:
         return ANY_CHARM_HAPROXY_ROUTE_POLICY_REQUIRER_APPLICATION
     juju.deploy(
         "any-charm",
@@ -92,7 +88,7 @@ def any_charm_haproxy_route_policy_requirer_fixture(
 
 
 @pytest.fixture(scope="module", name="postgresql")
-def postgresql_fixture( juju: jubilant.Juju):
+def postgresql_fixture(juju: jubilant.Juju):
     """Deploy PostgreSQL."""
     if POSTGRESQL_APPLICATION in juju.status().apps:
         return POSTGRESQL_APPLICATION
