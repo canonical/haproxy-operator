@@ -197,13 +197,10 @@ class HAProxyService:
         spoe_oauth_info_list: list[SpoeAuthInformation],
         ddos_protection_config: DDosProtection,
     ) -> str:
-        """Render the haproxy-route configuration and return it without applying it.
+        """Render the haproxy-route configuration and return it as a string.
 
-        Read-only counterpart of `reconcile_haproxy_route`: both build their
-        context through `_build_haproxy_route_template_context`, but this method
-        returns the rendered configuration as a string with no side effects (no
-        file writes, validation, or reload). It is used to preview the
-        configuration that the current relation data would generate.
+        Unlike `reconcile_haproxy_route`, performs no side effects (no file
+        writes, validation, or reload).
 
         Args:
             charm_state: The charm state component.
@@ -231,9 +228,8 @@ class HAProxyService:
     ) -> dict:
         """Build the template context for the haproxy-route configuration.
 
-        Shared by `reconcile_haproxy_route` (which applies the config) and
-        `render_haproxy_route_config` (which only previews it), so both always
-        produce identical output.
+        Shared by `reconcile_haproxy_route` and `render_haproxy_route_config`
+        so they cannot drift.
 
         Args:
             charm_state: The charm state component.
@@ -285,13 +281,10 @@ class HAProxyService:
         self._reload_haproxy_service()
 
     def render_default_config(self, charm_state: CharmState) -> str:
-        """Render the default haproxy configuration and return it without applying it.
+        """Render the default haproxy configuration and return it as a string.
 
-        Read-only counterpart of `reconcile_default`: both build their context
-        through `_build_default_template_context`, but this method returns the
-        rendered configuration as a string with no side effects (no file writes,
-        validation, or reload). It is used to detect whether the effective
-        configuration is just the default.
+        Unlike `reconcile_default`, performs no side effects. Used to detect
+        whether the effective configuration is just the default.
 
         Args:
             charm_state: The charm state component.

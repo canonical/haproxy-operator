@@ -729,16 +729,12 @@ class HAProxyCharm(ops.CharmBase):
     def _on_get_configuration_action(self, event: ActionEvent) -> None:
         """Triggered when users run the `get-configuration` Juju action.
 
-        By default (`source=disk`) reads the rendered haproxy configuration from
-        disk and returns it, strictly read-only: it never renders configuration,
-        reloads the haproxy service, or writes to a relation databag.
-
-        When `source=relations`, it previews the haproxy-route configuration that
-        the current relation data would generate on the next reconcile, without
-        writing to disk or reloading the service. When a haproxy-route-policy
-        relation is present, the policy backend reflects the policy charm's
-        current output, which converges asynchronously; `source=disk` remains
-        authoritative for the applied configuration.
+        `source=disk` (default) returns the on-disk configuration.
+        `source=relations` renders the haproxy-route configuration from the
+        current relation data. Neither writes to disk nor reloads the service.
+        When a haproxy-route-policy relation is present, the rendered policy
+        backend reflects the policy charm's current, asynchronously-converging
+        output.
 
         Args:
             event: Juju event
@@ -778,14 +774,13 @@ class HAProxyCharm(ops.CharmBase):
         event.set_results({"configuration": configuration, "source": source})
 
     def _recompute_haproxy_route_configuration(self) -> str:
-        """Recompute the haproxy-route configuration from the current relation data.
+        """Render the haproxy-route configuration from the current relation data.
 
-        This is the read-only counterpart of `_configure_haproxy_route`: it
-        gathers the same state from the current relations but performs no side
-        effects (no port changes, no databag writes, no file writes, no reload).
+        Unlike `_configure_haproxy_route`, performs no side effects (no port
+        changes, databag writes, file writes, or reload).
 
         Returns:
-            The configuration that the current haproxy-route relations would generate.
+            The rendered haproxy-route configuration.
         """
         charm_state = self._charm_state()
         haproxy_route_requirers_information = HaproxyRouteRequirersInformation.from_provider(
@@ -808,14 +803,11 @@ class HAProxyCharm(ops.CharmBase):
     def _configuration_is_default(self, configuration: str) -> bool:
         """Return whether the given configuration matches the default configuration.
 
-        Used to warn operators that the effective configuration is just the
-        default, which usually means no proxy backends are configured.
-
         Args:
             configuration: The configuration to compare against the default.
 
         Returns:
-            True if the configuration is identical to the rendered default config.
+            True if it is identical to the rendered default configuration.
         """
         try:
             default_configuration = self.haproxy_service.render_default_config(self._charm_state())
