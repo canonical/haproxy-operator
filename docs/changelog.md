@@ -28,6 +28,10 @@ Each revision is versioned by the date of the revision.
 
 - Added relation endpoints reference page.
 
+## 2026-05-27
+
+- Added optional `dns-record` relation to publish DNS A records for HAProxy hostnames.
+
 ## 2026-05-26
 
 - Added `port_mapping` attribute to `haproxy-route-tcp` relation to allow mapping a range of frontend ports to a range of backend ports.
