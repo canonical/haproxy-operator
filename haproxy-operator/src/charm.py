@@ -47,7 +47,7 @@ from interface_hacluster.ops_ha_interface import HAServiceRequires
 from ops.charm import ActionEvent
 from ops.model import Port, SecretNotFoundError
 
-from haproxy import HAPROXY_SERVICE, HAProxyService
+from haproxy import HAPROXY_CONFIG, HAPROXY_SERVICE, HAProxyService, file_exists, read_file
 from http_interface import (
     HTTPBackendAvailableEvent,
     HTTPBackendRemovedEvent,
@@ -217,6 +217,7 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(
             self.on.get_proxied_endpoints_action, self._on_get_proxied_endpoints_action
         )
+        self.framework.observe(self.on.get_configuration_action, self._on_get_configuration_action)
         # Hook peer relation events so non-leader units reconcile when the leader
         # publishes certificate data to the peer relation app databag.
         self.framework.observe(
@@ -284,10 +285,13 @@ class HAProxyCharm(ops.CharmBase):
         """Handle data_removed event for reverseproxy integration."""
         self._reconcile()
 
-    def _reconcile(self) -> None:
-        """Render the haproxy config and restart the service."""
-        self.unit.status = ops.MaintenanceStatus("Configuring haproxy.")
-        charm_state = CharmState.from_charm(
+    def _charm_state(self) -> CharmState:
+        """Build the charm state from the current charm and its providers.
+
+        Returns:
+            The charm state component.
+        """
+        return CharmState.from_charm(
             self,
             self._ingress_provider,
             self._ingress_per_unit_provider,
@@ -296,6 +300,11 @@ class HAProxyCharm(ops.CharmBase):
             self.reverseproxy_requirer,
             self.haproxy_route_policy,
         )
+
+    def _reconcile(self) -> None:
+        """Render the haproxy config and restart the service."""
+        self.unit.status = ops.MaintenanceStatus("Configuring haproxy.")
+        charm_state = self._charm_state()
         proxy_mode = charm_state.mode
         if proxy_mode == ProxyMode.INVALID:
             # We don't raise any exception/set status here as it should already be handled
@@ -716,6 +725,103 @@ class HAProxyCharm(ops.CharmBase):
         ]
 
         event.set_results({"endpoints": json.dumps(proxied_endpoints)})
+
+    def _on_get_configuration_action(self, event: ActionEvent) -> None:
+        """Triggered when users run the `get-configuration` Juju action.
+
+        By default (`source=disk`) reads the rendered haproxy configuration from
+        disk and returns it, strictly read-only: it never renders configuration,
+        reloads the haproxy service, or writes to a relation databag.
+
+        When `source=relations`, it previews the haproxy-route configuration that
+        the current relation data would generate on the next reconcile, without
+        writing to disk or reloading the service. When a haproxy-route-policy
+        relation is present, the policy backend reflects the policy charm's
+        current output, which converges asynchronously; `source=disk` remains
+        authoritative for the applied configuration.
+
+        Args:
+            event: Juju event
+        """
+        source = event.params.get("source", "disk")
+        if source == "relations":
+            try:
+                configuration = self._recompute_haproxy_route_configuration()
+            except (
+                CharmStateValidationBaseError,
+                HaproxyRouteIntegrationDataValidationError,
+            ) as exc:
+                event.fail(f"Failed to recompute configuration from relations: {exc}")
+                return
+            if self.haproxy_route_policy.relation is not None:
+                event.log(
+                    "A haproxy-route-policy relation is present; the policy backend in this "
+                    "preview reflects the policy charm's current output and converges "
+                    "asynchronously. Use source=disk for the authoritative applied configuration."
+                )
+        else:
+            if not file_exists(HAPROXY_CONFIG):
+                event.fail(
+                    f"HAProxy configuration file {HAPROXY_CONFIG} does not exist yet. "
+                    "Ensure the charm is configured and integrated before running this action."
+                )
+                return
+            configuration = read_file(HAPROXY_CONFIG)
+
+        if self._configuration_is_default(configuration):
+            event.log(
+                "The HAProxy configuration matches the default configuration. This usually "
+                "means no proxy backends are configured (e.g. no haproxy-route, ingress, or "
+                "reverseproxy relations)."
+            )
+
+        event.set_results({"configuration": configuration, "source": source})
+
+    def _recompute_haproxy_route_configuration(self) -> str:
+        """Recompute the haproxy-route configuration from the current relation data.
+
+        This is the read-only counterpart of `_configure_haproxy_route`: it
+        gathers the same state from the current relations but performs no side
+        effects (no port changes, no databag writes, no file writes, no reload).
+
+        Returns:
+            The configuration that the current haproxy-route relations would generate.
+        """
+        charm_state = self._charm_state()
+        haproxy_route_requirers_information = HaproxyRouteRequirersInformation.from_provider(
+            haproxy_route=self.haproxy_route_provider,
+            haproxy_route_tcp=self.haproxy_route_tcp_provider,
+            haproxy_route_policy=self.haproxy_route_policy,
+            external_hostname=typing.cast("str | None", self.config.get("external-hostname")),
+            peers=self._get_peer_units_address(),
+            ca_certs_configured=bool(self.recv_ca_certs.get_all_certificates()),
+        )
+        ddos_protection_config = DDosProtection.from_charm(self.ddos_requirer)
+        spoe_oauth_info_list = SpoeAuthInformation.from_requirer(self.spoe_auth_requirer)
+        return self.haproxy_service.render_haproxy_route_config(
+            charm_state,
+            haproxy_route_requirers_information,
+            spoe_oauth_info_list,
+            ddos_protection_config,
+        )
+
+    def _configuration_is_default(self, configuration: str) -> bool:
+        """Return whether the given configuration matches the default configuration.
+
+        Used to warn operators that the effective configuration is just the
+        default, which usually means no proxy backends are configured.
+
+        Args:
+            configuration: The configuration to compare against the default.
+
+        Returns:
+            True if the configuration is identical to the rendered default config.
+        """
+        try:
+            default_configuration = self.haproxy_service.render_default_config(self._charm_state())
+        except CharmStateValidationBaseError:
+            return False
+        return configuration == default_configuration
 
     def _publish_haproxy_route_proxied_endpoints(
         self, haproxy_route_requirers_information: HaproxyRouteRequirersInformation

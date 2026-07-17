@@ -14,6 +14,7 @@ import ops.testing
 import pytest
 import scenario
 
+import charm as charm_module
 import tls_relation
 from charm import HAProxyCharm
 from tests.unit.conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
@@ -470,3 +471,184 @@ def test_spoe_auth_invalid_data(monkeypatch: pytest.MonkeyPatch, certificates_in
     assert render_file_mock.call_count == 0
     assert out.unit_status.name == ops.testing.BlockedStatus.name
     assert spoe_auth_relation.remote_app_name in out.unit_status.message
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+class TestGetConfigurationAction:
+    """Test "get-configuration" Action."""
+
+    def test_returns_full_configuration(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """
+        arrange: mock the config file on disk with known content.
+        act: trigger the get-configuration action without a filter.
+        assert: the full file content is returned unchanged.
+        """
+        content = "global\n    maxconn 4096\n\nfrontend default\n    bind :80\n"
+        monkeypatch.setattr(charm_module, "file_exists", lambda _: True)
+        monkeypatch.setattr(charm_module, "read_file", lambda _: content)
+        context = ops.testing.Context(HAProxyCharm)
+        state = ops.testing.State(leader=True)
+
+        context.run(context.on.action("get-configuration"), state)
+
+        assert context.action_results == {"configuration": content, "source": "disk"}
+
+    def test_source_relations_previews_config(self) -> None:
+        """
+        arrange: create state with a haproxy-route relation for a specific backend.
+        act: trigger the get-configuration action with source=relations.
+        assert: the recomputed configuration is returned (containing the backend)
+            without reading from disk.
+        """
+        service_name = "haproxy-tutorial-ingress-configurator"
+        context = ops.testing.Context(HAProxyCharm)
+        haproxy_route_relation = ops.testing.Relation(
+            "haproxy-route",
+            remote_app_data={
+                "hostname": f'"{TEST_EXTERNAL_HOSTNAME_CONFIG}"',
+                "paths": '["/v1"]',
+                "ports": "[443]",
+                "protocol": '"http"',
+                "service": f'"{service_name}"',
+            },
+            remote_units_data={0: {"address": '"10.75.1.129"'}},
+        )
+        state = ops.testing.State(
+            relations=[haproxy_route_relation],
+            leader=True,
+            model=ops.testing.Model(name="haproxy-tutorial"),
+            app_status=ops.testing.ActiveStatus(),
+            unit_status=ops.testing.ActiveStatus(),
+        )
+
+        context.run(context.on.action("get-configuration", params={"source": "relations"}), state)
+
+        out = context.action_results
+        assert out is not None
+        assert out["source"] == "relations"
+        assert service_name in out["configuration"]
+
+    def test_warns_when_policy_relation_present(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """
+        arrange: create state with a haproxy-route-policy relation.
+        act: trigger the get-configuration action with source=relations.
+        assert: a warning about the policy backend converging asynchronously is logged.
+        """
+        monkeypatch.setattr(
+            charm_module.HAProxyCharm,
+            "_recompute_haproxy_route_configuration",
+            lambda self: "global\n",
+        )
+        context = ops.testing.Context(HAProxyCharm)
+        state = ops.testing.State(
+            relations=[ops.testing.Relation("haproxy-route-policy")],
+            leader=True,
+        )
+
+        context.run(context.on.action("get-configuration", params={"source": "relations"}), state)
+
+        assert any("haproxy-route-policy" in log.lower() for log in context.action_logs)
+
+    @pytest.mark.parametrize("num_relations", [20, 100])
+    def test_source_relations_scales(self, num_relations: int) -> None:
+        """
+        arrange: create state with many haproxy-route relations (one backend each).
+        act: trigger the get-configuration action with source=relations.
+        assert: every backend appears in the recomputed configuration (nothing is
+            truncated at the charm level).
+        """
+        context = ops.testing.Context(HAProxyCharm)
+        relations = []
+        service_names = []
+        for i in range(num_relations):
+            service = f"backend-service-{i}"
+            service_names.append(service)
+            relations.append(
+                ops.testing.Relation(
+                    "haproxy-route",
+                    remote_app_data={
+                        "hostname": f'"svc{i}.{TEST_EXTERNAL_HOSTNAME_CONFIG}"',
+                        "paths": '["/v1"]',
+                        "ports": "[443]",
+                        "protocol": '"http"',
+                        "service": f'"{service}"',
+                    },
+                    remote_units_data={0: {"address": '"10.75.1.129"'}},
+                )
+            )
+        state = ops.testing.State(
+            relations=relations,
+            leader=True,
+            model=ops.testing.Model(name="haproxy-tutorial"),
+            app_status=ops.testing.ActiveStatus(),
+            unit_status=ops.testing.ActiveStatus(),
+        )
+
+        context.run(context.on.action("get-configuration", params={"source": "relations"}), state)
+
+        out = context.action_results
+        assert out is not None
+        full_config = out["configuration"]
+        for service in service_names:
+            assert service in full_config, (
+                f"{service} missing from a {num_relations}-relation config"
+            )
+
+    def test_missing_file_fails(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """
+        arrange: mock the config file as absent from disk.
+        act: trigger the get-configuration action.
+        assert: the action fails with a clear message rather than returning empty.
+        """
+        monkeypatch.setattr(charm_module, "file_exists", lambda _: False)
+        context = ops.testing.Context(HAProxyCharm)
+        state = ops.testing.State(leader=True)
+
+        with pytest.raises(ops.testing.ActionFailed) as exc_info:
+            context.run(context.on.action("get-configuration"), state)
+
+        assert "does not exist" in exc_info.value.message
+
+    def test_warns_when_config_is_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """
+        arrange: mock the on-disk config to equal the rendered default config.
+        act: trigger the get-configuration action.
+        assert: a warning is logged and the configuration is still returned.
+        """
+        default_config = "global\n    maxconn 4096\n"
+        monkeypatch.setattr(charm_module, "file_exists", lambda _: True)
+        monkeypatch.setattr(charm_module, "read_file", lambda _: default_config)
+        monkeypatch.setattr(
+            charm_module.HAProxyService, "render_default_config", lambda self, _: default_config
+        )
+        context = ops.testing.Context(HAProxyCharm)
+        state = ops.testing.State(leader=True)
+
+        context.run(context.on.action("get-configuration"), state)
+
+        assert context.action_results == {"configuration": default_config, "source": "disk"}
+        assert any("default configuration" in log.lower() for log in context.action_logs)
+
+    def test_no_warning_when_config_differs_from_default(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """
+        arrange: mock the on-disk config to differ from the rendered default config.
+        act: trigger the get-configuration action.
+        assert: no default-configuration warning is logged.
+        """
+        monkeypatch.setattr(charm_module, "file_exists", lambda _: True)
+        monkeypatch.setattr(
+            charm_module, "read_file", lambda _: "frontend haproxy\n    bind :80\n"
+        )
+        monkeypatch.setattr(
+            charm_module.HAProxyService,
+            "render_default_config",
+            lambda self, _: "global\n    maxconn 4096\n",
+        )
+        context = ops.testing.Context(HAProxyCharm)
+        state = ops.testing.State(leader=True)
+
+        context.run(context.on.action("get-configuration"), state)
+
+        assert not any("default configuration" in log.lower() for log in context.action_logs)
