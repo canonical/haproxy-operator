@@ -17,8 +17,7 @@ lint = [
   "ops[testing]",
   "pep8-naming",
   "pytest",
-  "pytest-asyncio",
-  "pytest-operator",
+  "pytest-jubilant>=2,<3",
   "requests",
   "ruff",
   "snowballstemmer<4",
@@ -36,8 +35,8 @@ integration = [
   "protobuf==6.33.6",
   "playwright==1.61.0",
   "pytest",
-  "pytest-asyncio",
-  "pytest-operator",
+  "pytest-jubilant>=2,<3",
+  "requests==2.32.5",
   "websockets<17",
 ]
 

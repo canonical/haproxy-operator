@@ -1,13 +1,12 @@
-# Copyright 2025 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Helper methods for integration tests."""
+"""Helper methods for legacy integration tests."""
 
 import json
 from urllib.parse import ParseResult, urlparse
 
-from juju.application import Application
-from pytest_operator.plugin import OpsTest
+import jubilant
 from requests.adapters import DEFAULT_POOLBLOCK, DEFAULT_POOLSIZE, DEFAULT_RETRIES, HTTPAdapter
 
 
@@ -69,22 +68,25 @@ class DNSResolverHTTPSAdapter(HTTPAdapter):
         return super().send(request, stream, timeout, verify, cert, proxies)
 
 
-async def get_ingress_url_for_application(
-    ingress_requirer_application: Application, ops_test: OpsTest
-) -> ParseResult:
-    """Get the ingress url from the requirer's unit data.
+def get_ingress_url_for_application(juju: jubilant.Juju, app_name: str) -> ParseResult:
+    """Get the ingress url from the requirer's RPC helper.
 
     Args:
-        ingress_requirer_application: Requirer application.
-        ops_test: OpsTest framework to run juju show-unit.
+        juju: The Jubilant juju instance.
+        app_name: Requirer application name.
 
     Returns:
-        ParseResult: The parsed ingress url.
+        The parsed ingress url.
     """
-    unit_name = ingress_requirer_application.units[0].name
-    _, stdout, _ = await ops_test.juju("show-unit", unit_name, "--format", "json")
-    unit_information = json.loads(stdout)[unit_name]
-    ingress_integration_data = json.loads(
-        unit_information["relation-info"][0]["application-data"]["ingress"]
-    )
-    return urlparse(ingress_integration_data["url"])
+    unit_name = f"{app_name}/0"
+    task = juju.run(unit_name, "rpc", {"method": "get_ingress_url"})
+    ingress_url = task.results.get("return") or task.results.get("result")
+    if isinstance(ingress_url, str):
+        try:
+            decoded = json.loads(ingress_url)
+            if isinstance(decoded, str):
+                ingress_url = decoded
+        except json.JSONDecodeError:
+            pass
+    assert isinstance(ingress_url, str), f"RPC call on {unit_name} did not return an ingress URL"
+    return urlparse(ingress_url)
