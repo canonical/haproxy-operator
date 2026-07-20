@@ -128,3 +128,25 @@ class AnyCharm(AnyCharmBase):
             connect_timeout=5,
             queue_timeout=2,
         )
+
+    def update_relation_with_proxy_protocol(self):
+        """Update haproxy-route-tcp relation data with proxy protocol enabled."""
+        self._haproxy_route_tcp.provide_haproxy_route_tcp_requirements(
+            port=4444,
+            backend_port=4000,
+            proxy_protocol=True,
+            sni=CNAME,
+        )
+
+    def update_relation_with_port_mapping(self):
+        """Provide a port-range to port-range mapping.
+
+        Frontend ports 8080-8090 map to backend ports 9080-9090, i.e. a positive
+        offset of 1000. HAProxy should bind the whole range and translate the
+        destination port with `set-dst-port dst_port,add(1000)`.
+        """
+        self._haproxy_route_tcp.provide_haproxy_route_tcp_requirements(
+            port_mapping="8080-8090:9080-9090",
+            enforce_tls=False,
+            tls_terminate=False,
+        )

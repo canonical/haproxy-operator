@@ -1,36 +1,23 @@
-# Copyright 2025 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Integration test for haproxy charm."""
 
-from juju.application import Application
+import jubilant
 
 
-async def test_config(application: Application):
+def test_config(application: str, juju: jubilant.Juju):
     """
     arrange: Deploy the charm.
     act: Update the charm config to an invalid value and then a valid value.
-    assert: The charm correctly blocks the first time and write the configured
+    assert: The charm correctly blocks the first time and writes the configured
     value to haproxy.cfg the second time.
     """
-    await application.set_config({"global-maxconn": "-1"})
-    await application.model.wait_for_idle(
-        apps=[application.name],
-        idle_period=10,
-        status="blocked",
-    )
+    juju.config(application, {"global-maxconn": "-1"})
+    juju.wait(lambda status: status.apps[application].is_blocked)
 
-    await application.set_config({"global-maxconn": "1024"})
-    await application.model.wait_for_idle(
-        apps=[application.name],
-        idle_period=10,
-        status="active",
-    )
+    juju.config(application, {"global-maxconn": "1024"})
+    juju.wait(lambda status: jubilant.all_active(status, application))
 
-    action = await application.units[0].run("cat /etc/haproxy/haproxy.cfg", timeout=60)
-    await action.wait()
-
-    code = action.results.get("return-code")
-    stdout = action.results.get("stdout")
-    assert code == 0
+    stdout = juju.ssh(f"{application}/0", "cat /etc/haproxy/haproxy.cfg")
     assert "maxconn 1024" in stdout

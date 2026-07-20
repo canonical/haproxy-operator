@@ -27,6 +27,9 @@ import yaml
 project = "HAProxy charm"
 author = "Canonical Ltd."
 
+# Version
+
+version = f"{os.environ.get('READTHEDOCS_VERSION', 'local')}"
 
 # Sidebar documentation title; best kept reasonably short
 #
@@ -70,7 +73,7 @@ copyright = "%s CC-BY-SA, %s" % (datetime.date.today().year, author)
 # NOTE: The Open Graph Protocol (OGP) enhances page display in a social graph
 #       and is used by social media platforms; see https://ogp.me/
 
-ogp_site_url = "https://canonical-starter-pack.readthedocs-hosted.com/"
+ogp_site_url = f"https://canonical.com/juju/docs/haproxy-charm/{version}/"
 
 
 # Preview name of the documentation website
@@ -176,7 +179,7 @@ html_theme_options = {
 # TODO: If your documentation is hosted on https://docs.ubuntu.com/,
 #       uncomment and update as needed.
 
-# slug = ''
+slug = 'juju/docs/haproxy-charm'
 
 #######################
 # Sitemap configuration: https://sphinx-sitemap.readthedocs.io/
@@ -184,7 +187,7 @@ html_theme_options = {
 
 # Use RTD canonical URL to ensure duplicate pages have a specific canonical URL
 
-html_baseurl = os.environ.get("READTHEDOCS_CANONICAL_URL", "/")
+html_baseurl = f"https://canonical.com/juju/docs/haproxy-charm/{version}/"
 
 # sphinx-sitemap uses html_baseurl to generate the full URL for each page:
 
@@ -232,6 +235,8 @@ redirects = {
     'reference/style-guide-myst/': '../myst-syntax-reference',
     'reference/style-guide/': '../rst-syntax-reference',
     './getting-started': './tutorial/getting-started',
+    'tutorial/loadbalancing-for-a-grpc-server': '/how-to/loadbalancing-for-a-grpc-server',
+    'tutorial/loadbalancing-for-an-ftp-server': '/how-to/loadbalancing-for-an-ftp-server',
 }
 
 
@@ -306,6 +311,7 @@ extensions = [
 
 exclude_patterns = [
     "doc-cheat-sheet*",
+    "adr/*",
 ]
 
 # Adds custom CSS files, located under 'html_static_path'
@@ -315,7 +321,10 @@ html_css_files = ['cookie-banner.css']
 
 # Adds custom JavaScript files, located under 'html_static_path'
 
-html_js_files = ['js/bundle.js']
+html_js_files = [
+    'js/bundle.js',
+    "js/overwrite_links.js",
+]
 
 
 # Specifies a reST snippet to be appended to each .rst file

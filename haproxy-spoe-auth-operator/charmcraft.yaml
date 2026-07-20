@@ -34,7 +34,7 @@ description: |
   VMs and bare metal.
 summary: HAProxy SPOE authentication agent
 links:
-  documentation: https://discourse.charmhub.io/t/haproxy-spoe-auth-documentation-overview/
+  documentation: https://canonical.com/juju/docs/haproxy-charm/
   issues: https://github.com/canonical/haproxy-operator/issues
   source: https://github.com/canonical/haproxy-operator
   contact:

@@ -1,10 +1,10 @@
-# Copyright 2025 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Integration tests for the haproxy route relation."""
 
+import jubilant
 import pytest
-from juju.application import Application
 from requests import Session
 
 from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG, get_unit_ip_address
@@ -14,29 +14,29 @@ HAPROXY_ROUTE_REQUIRER_HOSTNAME = f"ok.{TEST_EXTERNAL_HOSTNAME_CONFIG}"
 
 
 @pytest.mark.abort_on_fail
-async def test_haproxy_route_integration(
-    configured_application_with_tls: Application,
-    haproxy_route_requirer: Application,
+def test_haproxy_route_integration(
+    configured_application_with_tls: str,
+    haproxy_route_requirer: str,
+    juju: jubilant.Juju,
 ):
-    """Deploy the charm with anycharm haproxy-route requirer that installs apache2.
-
-    Assert that the requirer endpoint is available.
     """
-    application = configured_application_with_tls
-
-    await application.model.add_relation(
-        f"{application.name}:haproxy-route", f"{haproxy_route_requirer.name}:require-haproxy-route"
+    arrange: Deploy the charm with anycharm haproxy-route requirer that installs apache2.
+    act: Add the haproxy-route relation and update relation data.
+    assert: The requirer endpoint is available.
+    """
+    juju.integrate(
+        f"{configured_application_with_tls}:haproxy-route",
+        f"{haproxy_route_requirer}:require-haproxy-route",
     )
-    action = await haproxy_route_requirer.units[0].run_action("rpc", method="update_relation")
-    await action.wait()
+    juju.run(f"{haproxy_route_requirer}/0", "rpc", {"method": "update_relation"})
 
-    await application.model.wait_for_idle(
-        apps=[application.name, haproxy_route_requirer.name],
-        idle_period=30,
-        status="active",
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, haproxy_route_requirer
+        )
     )
 
-    unit_ip_address = await get_unit_ip_address(application)
+    unit_ip_address = get_unit_ip_address(juju, configured_application_with_tls)
     session = Session()
     for subdomain in ["ok", "ok2", "ok3"]:
         url = f"https://{subdomain}.{TEST_EXTERNAL_HOSTNAME_CONFIG}"

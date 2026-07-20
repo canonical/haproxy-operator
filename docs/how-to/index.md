@@ -8,7 +8,8 @@ myst:
 
 # How-to guides
 
-The following guides cover key processes and common tasks for managing and using the HAProxy charm.
+Manage the full operations lifecycle of the HAProxy charm, from initial deployment through
+production maintenance. Each guide assumes that you’ve already deployed the charm with Juju.
 
 ## Common use-cases
 
@@ -16,36 +17,44 @@ Once you've set up the HAProxy charm, you can take advantage of the built-in fea
 
 ```{toctree}
 :maxdepth: 1
+Configure high availability <configure-high-availability.md>
 Integrate with non-charm workloads <integrate-with-non-charm-workload.md>
 Provide extra configurations for ingress requirer charms <provide-extra-configurations-for-ingress-requirer-charms.md>
-Protect a hostname using OpenID Connect <protect-hostname-spoe-auth.md>
-Enable DDoS Protection <enable-ddos-protection.md>
-Configure high availability <configure-high-availability.md>
+Control haproxy-route relation data <control-haproxy-route-relation-data.md>
+Configure virtual IP on OpenStack <configure-virtual-ip-on-openstack.md>
+Add to existing Terraform project <deploy-with-terraform.md>
 ```
 
-## Platform-specific workflows
+## Load balancing
 
-In some cases additional steps need to be performed on specific substrates to ensure that the charm is working as intended.
+Additional steps need to be performed to provide load balancing to your deployment
+depending on your required server protocol.
 
 ```{toctree}
 :maxdepth: 1
-Configure virtual IP on OpenStack <configure-virtual-ip-on-openstack.md>
+Provide load balancing for a gRPC server <loadbalancing-for-a-grpc-server.md>
+Provide load balancing for an FTP server <loadbalancing-for-an-ftp-server.md>
 ```
 
-## Maintenance
+## Security
 
-This section contains how-to guides for maintenance actions that you might need to take while operating the charm.
+The HAProxy charm comes with built-in configurations and integrations to secure your deployment
+against vulnerabilities and attacks.
+
+```{toctree}
+:maxdepth: 1
+Enable DDoS Protection <enable-ddos-protection.md>
+Protect a hostname using OpenID Connect <protect-hostname-spoe-auth.md>
+Use self-signed certificates <use-self-signed-certificates.md>
+```
+
+## Maintenance and development
+
+Upgrades and community contributions ensure the HAProxy charm stays current
+and benefits from ongoing improvements.
 
 ```{toctree}
 :maxdepth: 1
 Upgrade <upgrade.md>
-```
-
-## Development
-
-This section contains how-to guides for developing the charm.
-
-```{toctree}
-:maxdepth: 1
-Contribute <contribute.md>
+Contribute <contribute.rst>
 ```

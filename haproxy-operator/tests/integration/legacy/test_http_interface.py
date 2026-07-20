@@ -1,48 +1,36 @@
-# Copyright 2025 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Integration tests for the http interface."""
 
 import json
 
+import jubilant
 import pytest
 import requests
-from juju.application import Application
 
 from .conftest import get_unit_address
 
 
 @pytest.mark.abort_on_fail
-async def test_reverseproxy_relation(
-    application: Application,
-    any_charm_requirer: Application,
-    any_charm_src_invalid_port: dict[str, str],
+def test_reverseproxy_relation(
+    application: str,
+    any_charm_requirer: str,
+    any_charm_src_invalid_port: dict,
+    juju: jubilant.Juju,
 ):
-    """Deploy the charm with valid config and tls integration.
-
-    Assert on valid output of get-certificate.
     """
-    action = await any_charm_requirer.units[0].run_action(
-        "rpc",
-        method="start_server",
-    )
-    await action.wait()
+    arrange: Deploy the charm with valid config.
+    act: Add the reverseproxy relation and update relation data.
+    assert: Requests are correctly proxied; invalid port causes blocked state.
+    """
+    juju.run(f"{any_charm_requirer}/0", "rpc", {"method": "start_server"})
 
-    await application.model.add_relation(
-        f"{application.name}:reverseproxy", any_charm_requirer.name
-    )
-    action = await any_charm_requirer.units[0].run_action(
-        "rpc",
-        method="update_relation_data",
-    )
-    await action.wait()
-    await application.model.wait_for_idle(
-        apps=[application.name, any_charm_requirer.name],
-        idle_period=30,
-        status="active",
-    )
+    juju.integrate(f"{application}:reverseproxy", any_charm_requirer)
+    juju.run(f"{any_charm_requirer}/0", "rpc", {"method": "update_relation_data"})
+    juju.wait(lambda status: jubilant.all_active(status, application, any_charm_requirer))
 
-    unit_address = await get_unit_address(application)
+    unit_address = get_unit_address(juju, application)
 
     response = requests.get(f"{unit_address}:8994", timeout=5)
     assert response.status_code == 200
@@ -52,16 +40,6 @@ async def test_reverseproxy_relation(
     assert response.status_code == 200
     assert "server 1 healthy" in response.text
 
-    await any_charm_requirer.set_config(
-        {"src-overwrite": json.dumps(any_charm_src_invalid_port)},
-    )
-    action = await any_charm_requirer.units[0].run_action(
-        "rpc",
-        method="update_relation_data",
-    )
-    await action.wait()
-    await application.model.wait_for_idle(
-        apps=[application.name],
-        idle_period=30,
-        status="blocked",
-    )
+    juju.config(any_charm_requirer, {"src-overwrite": json.dumps(any_charm_src_invalid_port)})
+    juju.run(f"{any_charm_requirer}/0", "rpc", {"method": "update_relation_data"})
+    juju.wait(lambda status: status.apps[application].is_blocked)

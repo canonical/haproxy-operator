@@ -8,14 +8,13 @@ import logging
 import typing
 from pathlib import Path
 
-from charms.certificate_transfer_interface.v1.certificate_transfer import (
-    CertificateTransferRequires,
-)
-from charms.tls_certificates_interface.v4.tls_certificates import (
+from charmlibs.interfaces.tls_certificates import (
     Certificate,
-    PrivateKey,
     ProviderCertificate,
     TLSCertificatesRequiresV4,
+)
+from charms.certificate_transfer_interface.v1.certificate_transfer import (
+    CertificateTransferRequires,
 )
 from ops.model import Model
 
@@ -83,7 +82,7 @@ class TLSRelationService:
         if len(self.certificates.certificate_requests) == 0:
             logger.warning("No certificate was requested")
             return
-        for certificate, chain in tls_information.tls_cert_and_ca_chain.values():
+        for certificate, chain in tls_information.tls_cert_and_ca_chain.shared_certificates:
             if not self._certificate_matches_stored_content(
                 certificate=certificate,
                 chain=chain,
@@ -105,7 +104,7 @@ class TLSRelationService:
         self.write_cas_to_unit(ca_certificates)
 
     def _certificate_matches_stored_content(
-        self, certificate: Certificate, chain: list[Certificate], private_key: PrivateKey
+        self, certificate: Certificate, chain: list[Certificate], private_key: str
     ) -> bool:
         """Check if the certificate matches the stored content.
 
@@ -122,14 +121,14 @@ class TLSRelationService:
                 "\n",
                 "\n".join(str(cert) for cert in chain),
                 "\n",
-                str(private_key),
+                private_key,
             ]
         )
         existing_certificate = read_file(HAPROXY_CERTS_DIR / f"{certificate.common_name}.pem")
         return expected_certificate == existing_certificate
 
     def write_certificate_to_unit(
-        self, certificate: Certificate, chain: list[Certificate], private_key: PrivateKey
+        self, certificate: Certificate, chain: list[Certificate], private_key: str
     ) -> None:
         """Store certificate in workload.
 
@@ -148,7 +147,7 @@ class TLSRelationService:
                 "\n",
                 "\n".join(str(cert) for cert in chain),
                 "\n",
-                str(private_key),
+                private_key,
             ]
         )
         render_file(pem_file_path, pem_file_content, 0o644)

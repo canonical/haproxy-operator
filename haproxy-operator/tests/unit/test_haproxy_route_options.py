@@ -69,6 +69,11 @@ def test_protocol_https(
         " ssl ca-file /var/lib/haproxy/cas/cas.pem alpn h2,http/1.1 check-alpn h2,http/1.1\n"
         in haproxy_conf_contents
     )
+    assert "option forwardfor" in haproxy_conf_contents
+    assert (
+        "http-request set-header X-Forwarded-Proto %[ssl_fc,iif(https,http)]"
+        in haproxy_conf_contents
+    )
     assert out.app_status == ActiveStatus("")
 
 
