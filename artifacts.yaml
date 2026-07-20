@@ -32,13 +32,3 @@ charms:
   platforms:
   - arch: amd64
   channel: latest/edge
-snaps:
-- name: haproxy-route-policy
-  snapcraft-yaml: haproxy-route-policy/snap/snapcraft.yaml
-  pack-dir: haproxy-route-policy
-  platforms:
-  - arch: amd64
-- name: haproxy-spoe-auth
-  snapcraft-yaml: haproxy-spoe-auth-snap/snapcraft.yaml
-  platforms:
-  - arch: amd64

@@ -46,6 +46,7 @@ against vulnerabilities and attacks.
 Enable DDoS Protection <enable-ddos-protection.md>
 Protect a hostname using OpenID Connect <protect-hostname-spoe-auth.md>
 Configure the backend protocol <configure-backend-protocol.md>
+Use self-signed certificates <use-self-signed-certificates.md>
 ```
 
 ## Maintenance and development
