@@ -10,7 +10,7 @@ import pathlib
 import subprocess  # nosec B404
 import tempfile
 import textwrap
-from urllib.parse import ParseResult, urlparse
+from urllib.parse import urlparse
 
 import jubilant
 import pytest
