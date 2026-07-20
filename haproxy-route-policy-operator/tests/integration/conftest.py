@@ -5,7 +5,6 @@
 
 import json
 import pathlib
-import typing
 
 import jubilant
 import pytest
@@ -25,24 +24,14 @@ def charm_fixture(charm_paths: dict[str, CharmPathList]) -> str:
     return charm_paths["haproxy-route-policy"].path
 
 
-@pytest.fixture(scope="module", name="juju")
-def juju_fixture(request: pytest.FixtureRequest):
-    """Pytest fixture that wraps :meth:`jubilant.with_model`."""
-    model = request.config.getoption("--model")
-    if model:
-        juju = jubilant.Juju(model=model)
-        juju.wait_timeout = JUJU_WAIT_TIMEOUT
-        yield juju
-        return
-
-    keep_models = typing.cast(bool, request.config.getoption("--keep-models"))
-    with jubilant.temp_model(keep=keep_models) as juju:
-        juju.wait_timeout = JUJU_WAIT_TIMEOUT
-        yield juju
+@pytest.fixture(scope="module", autouse=True)
+def _set_juju_timeout(juju: jubilant.Juju) -> None:
+    """Set wait_timeout on the juju fixture."""
+    juju.wait_timeout = JUJU_WAIT_TIMEOUT
 
 
 @pytest.fixture(scope="module", name="application")
-def application_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju, charm: str):
+def application_fixture(juju: jubilant.Juju, charm: str):
     """Deploy the haproxy-route-policy application.
 
     Args:
@@ -54,7 +43,7 @@ def application_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju, charm:
     """
     metadata = yaml.safe_load(pathlib.Path("./charmcraft.yaml").read_text(encoding="UTF-8"))
     app_name = metadata["name"]
-    if pytestconfig.getoption("--no-deploy") and app_name in juju.status().apps:
+    if app_name in juju.status().apps:
         return app_name
     juju.deploy(
         charm=charm,
@@ -65,16 +54,11 @@ def application_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju, charm:
 
 
 @pytest.fixture(scope="module", name="any_charm_haproxy_route_policy_requirer")
-def any_charm_haproxy_route_policy_requirer_fixture(
-    pytestconfig: pytest.Config, juju: jubilant.Juju
-):
+def any_charm_haproxy_route_policy_requirer_fixture(juju: jubilant.Juju):
     """Deploy any-charm and configure it to serve as a requirer for the haproxy-route
     integration.
     """
-    if (
-        pytestconfig.getoption("--no-deploy")
-        and ANY_CHARM_HAPROXY_ROUTE_POLICY_REQUIRER_APPLICATION in juju.status().apps
-    ):
+    if ANY_CHARM_HAPROXY_ROUTE_POLICY_REQUIRER_APPLICATION in juju.status().apps:
         return ANY_CHARM_HAPROXY_ROUTE_POLICY_REQUIRER_APPLICATION
     juju.deploy(
         "any-charm",
@@ -104,9 +88,9 @@ def any_charm_haproxy_route_policy_requirer_fixture(
 
 
 @pytest.fixture(scope="module", name="postgresql")
-def postgresql_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju):
+def postgresql_fixture(juju: jubilant.Juju):
     """Deploy PostgreSQL."""
-    if pytestconfig.getoption("--no-deploy") and POSTGRESQL_APPLICATION in juju.status().apps:
+    if POSTGRESQL_APPLICATION in juju.status().apps:
         return POSTGRESQL_APPLICATION
     juju.deploy(
         "postgresql",
