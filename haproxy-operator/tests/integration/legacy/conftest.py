@@ -153,23 +153,6 @@ def get_unit_address(juju: jubilant.Juju, application: str) -> str:
     return url
 
 
-def get_ingress_url_for_application(juju: jubilant.Juju, app_name: str) -> ParseResult:
-    """Get the ingress url from the requirer's RPC helper.
-
-    Args:
-        juju: The Jubilant juju instance.
-        app_name: Requirer application name.
-
-    Returns:
-        The parsed ingress url.
-    """
-    unit_name = f"{app_name}/0"
-    task = juju.run(unit_name, "rpc", {"method": "get_ingress_url"})
-    ingress_url = task.results.get("return") or task.results.get("result")
-    assert isinstance(ingress_url, str), f"RPC call on {unit_name} did not return an ingress URL"
-    return urlparse(ingress_url)
-
-
 @pytest.fixture(scope="module", name="any_charm_src")
 def any_charm_src_fixture() -> dict[str, str]:
     """Any-charm configuration to test with haproxy."""

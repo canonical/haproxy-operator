@@ -3,6 +3,7 @@
 
 """Helper methods for legacy integration tests."""
 
+import json
 from urllib.parse import ParseResult, urlparse
 
 import jubilant
@@ -80,5 +81,12 @@ def get_ingress_url_for_application(juju: jubilant.Juju, app_name: str) -> Parse
     unit_name = f"{app_name}/0"
     task = juju.run(unit_name, "rpc", {"method": "get_ingress_url"})
     ingress_url = task.results.get("return") or task.results.get("result")
+    if isinstance(ingress_url, str):
+        try:
+            decoded = json.loads(ingress_url)
+            if isinstance(decoded, str):
+                ingress_url = decoded
+        except json.JSONDecodeError:
+            pass
     assert isinstance(ingress_url, str), f"RPC call on {unit_name} did not return an ingress URL"
     return urlparse(ingress_url)
