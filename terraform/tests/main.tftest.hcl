@@ -80,7 +80,7 @@ run "basic_deploy" {
   }
 
   assert {
-    condition     = output.metadata.version == "0.0.0"
-    error_message = "metadata.version should default to 0.0.0"
+    condition     = output.metadata.version == "1.0.0"
+    error_message = "metadata.version should default to 1.0.0"
   }
 }

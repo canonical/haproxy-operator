@@ -54,20 +54,67 @@ output "models" {
 }
 
 output "provides" {
+  description = "Map of provided endpoints."
   value = {
-    ingress          = "ingress"
-    haproxy_route    = "haproxy-route"
-    logging_provider = "logging-provider"
+    haproxy_route = {
+      kind       = "endpoint"
+      name       = module.haproxy.app_name
+      endpoint   = "haproxy-route"
+      controller = null
+    }
+    ingress = {
+      kind       = "endpoint"
+      name       = module.haproxy.app_name
+      endpoint   = "ingress"
+      controller = null
+    }
+    logging_provider = {
+      kind       = "endpoint"
+      name       = module.haproxy.app_name
+      endpoint   = "logging-provider"
+      controller = null
+    }
   }
 }
 
 output "requires" {
+  description = "Map of required endpoints."
   value = {
-    reverseproxy                = "reverseproxy"
-    certificates                = "certificates"
-    receive_ca_certs            = "receive-ca-certs"
-    metrics_endpoint            = "metrics-endpoint"
-    send_remote_write           = "send-remote-write"
-    grafana_dashboards_consumer = "grafana-dashboards-consumer"
+    certificates = {
+      kind       = "endpoint"
+      name       = module.haproxy.app_name
+      endpoint   = "certificates"
+      controller = null
+    }
+    grafana_dashboards_consumer = {
+      kind       = "endpoint"
+      name       = module.haproxy.app_name
+      endpoint   = "grafana-dashboards-consumer"
+      controller = null
+    }
+    metrics_endpoint = {
+      kind       = "endpoint"
+      name       = module.haproxy.app_name
+      endpoint   = "metrics-endpoint"
+      controller = null
+    }
+    receive_ca_certs = {
+      kind       = "endpoint"
+      name       = module.haproxy.app_name
+      endpoint   = "receive-ca-certs"
+      controller = null
+    }
+    reverseproxy = {
+      kind       = "endpoint"
+      name       = module.haproxy.app_name
+      endpoint   = "reverseproxy"
+      controller = null
+    }
+    send_remote_write = {
+      kind       = "endpoint"
+      name       = module.haproxy.app_name
+      endpoint   = "send-remote-write"
+      controller = null
+    }
   }
 }

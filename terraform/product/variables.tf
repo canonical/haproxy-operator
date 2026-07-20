@@ -65,7 +65,7 @@ variable "keepalived" {
 variable "metadata_version" {
   description = "Version string reported in the product module 'metadata' output."
   type        = string
-  default     = "0.0.0"
+  default     = "1.0.0"
 }
 
 variable "model_uuid" {

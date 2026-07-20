@@ -11,19 +11,61 @@ output "application" {
 }
 
 output "provides" {
+  description = "Map of provided endpoints."
   value = {
-    ingress       = "ingress"
-    haproxy_route = "haproxy-route"
-    cos_agent     = "cos-agent"
-    spoe_auth     = "spoe-auth"
+    cos_agent = {
+      kind       = "endpoint"
+      name       = juju_application.haproxy.name
+      endpoint   = "cos-agent"
+      controller = null
+    }
+    haproxy_route = {
+      kind       = "endpoint"
+      name       = juju_application.haproxy.name
+      endpoint   = "haproxy-route"
+      controller = null
+    }
+    ingress = {
+      kind       = "endpoint"
+      name       = juju_application.haproxy.name
+      endpoint   = "ingress"
+      controller = null
+    }
+    spoe_auth = {
+      kind       = "endpoint"
+      name       = juju_application.haproxy.name
+      endpoint   = "spoe-auth"
+      controller = null
+    }
   }
 }
 
 output "requires" {
+  description = "Map of required endpoints."
   value = {
-    certificates     = "certificates"
-    receive_ca_certs = "receive-ca-certs"
-    reverseproxy     = "reverseproxy"
-    ddos_protection  = "ddos-protection"
+    certificates = {
+      kind       = "endpoint"
+      name       = juju_application.haproxy.name
+      endpoint   = "certificates"
+      controller = null
+    }
+    ddos_protection = {
+      kind       = "endpoint"
+      name       = juju_application.haproxy.name
+      endpoint   = "ddos-protection"
+      controller = null
+    }
+    receive_ca_certs = {
+      kind       = "endpoint"
+      name       = juju_application.haproxy.name
+      endpoint   = "receive-ca-certs"
+      controller = null
+    }
+    reverseproxy = {
+      kind       = "endpoint"
+      name       = juju_application.haproxy.name
+      endpoint   = "reverseproxy"
+      controller = null
+    }
   }
 }
