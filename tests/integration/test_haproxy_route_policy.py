@@ -3,14 +3,14 @@
 
 """Integration tests for haproxy route policy."""
 
+import json
 import logging
-
+from typing import Any, Callable
 
 import jubilant
 import pytest
-from typing import Callable, Any
-import json
 import requests
+
 from .helper import get_unit_ip_address
 
 logger = logging.getLogger(__name__)
@@ -71,8 +71,8 @@ def test_haproxy_route_policy(
     response = requests.get(
         f"https://{str(haproxy_unit_ip)}/api/v1/requests",
         headers={
-            # split(':)[1] is used here because in multi-controllers setup the model name is prefixed with the controller name.
-            "Host": f"{lxd_juju.model.split(':')[1]}-{haproxy_route_policy}.{TEST_HOSTNAME}"
+            # split(':')[1] is used here because in multi-controllers setup the model name is prefixed with the controller name.
+            "Host": f"{lxd_juju.model.split(':')[1]}-{haproxy_route_policy}.{TEST_HOSTNAME}"  # type: ignore[union-attr]
         },
         auth=("admin", admin_credentials.results["password"]),
         verify=False,

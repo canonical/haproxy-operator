@@ -1,50 +1,55 @@
-# Copyright 2025 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Integration tests for the ingress relation."""
 
 import ipaddress
 
+import jubilant
 import pytest
-from juju.application import Application
-from pytest_operator.plugin import OpsTest
 from requests import Session
 
-from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG, get_unit_ip_address
+from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG, all_active_and_idle, get_unit_ip_address
 from .helper import DNSResolverHTTPSAdapter, get_ingress_url_for_application
 
 
 @pytest.mark.abort_on_fail
-async def test_ingress_integration(
-    configured_application_with_tls: Application,
-    any_charm_ingress_requirer: Application,
-    ops_test: OpsTest,
+def test_ingress_integration(
+    configured_application_with_tls: str,
+    any_charm_ingress_requirer: str,
+    juju: jubilant.Juju,
 ):
-    """Deploy the charm with anycharm ingress requirer that installs apache2.
-
-    Assert that the requirer endpoint is available.
     """
-    application = configured_application_with_tls
-    unit_ip_address = await get_unit_ip_address(application)
-    await application.model.add_relation(
-        f"{application.name}:ingress", f"{any_charm_ingress_requirer.name}:ingress"
+    arrange: Deploy the charm with anycharm ingress requirer that installs apache2.
+    act: Add the ingress relation.
+    assert: The requirer endpoint is available.
+    """
+    unit_ip_address = get_unit_ip_address(juju, configured_application_with_tls)
+    juju.integrate(
+        f"{configured_application_with_tls}:ingress",
+        f"{any_charm_ingress_requirer}:ingress",
     )
-    await application.model.wait_for_idle(
-        apps=[application.name],
-        idle_period=30,
-        status="active",
+    juju.wait(
+        lambda status: all_active_and_idle(
+            status, configured_application_with_tls, any_charm_ingress_requirer
+        ),
+        delay=5,
+        successes=6,
     )
 
-    ingress_url = await get_ingress_url_for_application(any_charm_ingress_requirer, ops_test)
+    ingress_url = get_ingress_url_for_application(juju, any_charm_ingress_requirer)
+    model_name = juju.status().model.name
     assert ingress_url.netloc == TEST_EXTERNAL_HOSTNAME_CONFIG
-    assert ingress_url.path == f"/{application.model.name}-{any_charm_ingress_requirer.name}/"
+    assert ingress_url.path == f"/{model_name}-{any_charm_ingress_requirer}/"
 
     session = Session()
     session.mount("https://", DNSResolverHTTPSAdapter(ingress_url.netloc, str(unit_ip_address)))
 
-    requirer_url = f"http://{unit_ip_address!s}/{ingress_url.path}ok"
     if isinstance(unit_ip_address, ipaddress.IPv6Address):
-        requirer_url = f"http://[{unit_ip_address!s}]/{ingress_url.path}ok"
+        requirer_url = f"http://[{unit_ip_address!s}]{ingress_url.path}ok"
+    else:
+        requirer_url = f"http://{unit_ip_address!s}{ingress_url.path}ok"
+
     response = session.get(
         requirer_url,
         headers={"Host": ingress_url.netloc},
