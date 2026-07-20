@@ -36,7 +36,7 @@ integration = [
   "playwright==1.61.0",
   "pytest",
   "pytest-jubilant>=2,<3",
-  "requests==2.32.5",
+  "requests==2.34.2",
   "websockets<17",
 ]
 

@@ -33,7 +33,7 @@ integration = [
   "opcli @ git+https://github.com/canonical/charm-ci.git@v0.0.1-alpha.9",
   "pytest",
   "pytest-jubilant>=2,<3",
-  "requests==2.32.5",
+  "requests==2.34.2",
 ]
 
 [tool.uv]
