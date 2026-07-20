@@ -14,7 +14,10 @@ import typing
 import jubilant
 import pytest
 from opcli.pytest_plugin import CharmPathList  # type: ignore[import-not-found]
-from playwright._impl._driver import compute_driver_executable, get_driver_env  # type: ignore[import-not-found]
+from playwright._impl._driver import (  # type: ignore[import-not-found]
+    compute_driver_executable,
+    get_driver_env,
+)
 
 logger = logging.getLogger(__name__)
 
