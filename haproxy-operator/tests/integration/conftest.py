@@ -90,7 +90,7 @@ def certificate_provider_application_fixture(
         logger.warning("Using existing application: %s", SELF_SIGNED_CERTIFICATES_APP_NAME)
         return SELF_SIGNED_CERTIFICATES_APP_NAME
     juju.deploy(
-        "self-signed-certificates", app=SELF_SIGNED_CERTIFICATES_APP_NAME, channel="1/edge"
+        "self-signed-certificates", app=SELF_SIGNED_CERTIFICATES_APP_NAME, channel="1/edge", force=True
     )
     return SELF_SIGNED_CERTIFICATES_APP_NAME
 
