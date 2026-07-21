@@ -1,0 +1,14 @@
+version_schema: 2
+changes:
+  - title: Do not render the default backend if there are no other backends
+    author: skatsaounis
+    type: bugfix
+    description: >
+      Do not render the default backend if there are no other backends in the
+      haproxy-route-tcp relation template, to avoid rendering unused
+      configuration.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/476
+    visibility: public
+    highlight: false

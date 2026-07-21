@@ -101,8 +101,8 @@ backend {{ frontend.default_backend_name }}
 {% endfor %}
 {% endif %}
 
-{# Render each backend for the frontend. #}
-{% for backend in frontend.backends %}
+{# Render each backend for the frontend. Skip rendering if there's only the default backend. #}
+{% for backend in frontend.backends if frontend.backends|length > 1 %}
 backend {{ backend.name }}
     mode tcp
 {% if backend.dst_port_translation %}
