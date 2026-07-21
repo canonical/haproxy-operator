@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-06-20
+
+- Do not render the default backend if there are no other backends in in the haproxy-route-tcp.
+
 ## 2026-06-26
 
 - docs: Add docs on the Terraform module.
