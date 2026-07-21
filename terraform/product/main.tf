@@ -16,18 +16,68 @@ module "haproxy" {
   units       = var.haproxy.units
   constraints = var.haproxy.constraints
   config      = var.haproxy.config
+}
 
-  use_hacluster            = local.use_hacluster
-  hacluster_app_name       = local.use_hacluster ? var.hacluster.app_name : null
-  hacluster_charm_channel  = local.use_hacluster ? var.hacluster.channel : null
-  hacluster_charm_revision = local.use_hacluster ? var.hacluster.revision : null
-  hacluster_config         = local.use_hacluster ? var.hacluster.config : {}
+resource "juju_application" "hacluster" {
+  count      = local.use_hacluster ? 1 : 0
+  name       = var.hacluster.app_name
+  model_uuid = var.model_uuid
+  units      = 0
 
-  use_keepalived            = local.use_keepalived
-  keepalived_app_name       = local.use_keepalived ? var.keepalived.app_name : null
-  keepalived_charm_channel  = local.use_keepalived ? var.keepalived.channel : null
-  keepalived_charm_revision = local.use_keepalived ? var.keepalived.revision : null
-  keepalived_config         = local.use_keepalived ? var.keepalived.config : {}
+  charm {
+    name     = "hacluster"
+    revision = var.hacluster.revision
+    channel  = var.hacluster.channel
+    base     = var.haproxy.base
+  }
+
+  config = var.hacluster.config
+}
+
+resource "juju_integration" "ha" {
+  count      = local.use_hacluster ? 1 : 0
+  model_uuid = var.model_uuid
+
+  application {
+    name     = module.haproxy.app_name
+    endpoint = module.haproxy.requires.ha.endpoint
+  }
+
+  application {
+    name     = juju_application.hacluster[0].name
+    endpoint = "ha"
+  }
+}
+
+resource "juju_application" "keepalived" {
+  count      = local.use_keepalived ? 1 : 0
+  name       = var.keepalived.app_name
+  model_uuid = var.model_uuid
+  units      = 0
+
+  charm {
+    name     = "keepalived"
+    revision = var.keepalived.revision
+    channel  = var.keepalived.channel
+    base     = var.haproxy.base
+  }
+
+  config = var.keepalived.config
+}
+
+resource "juju_integration" "keepalived" {
+  count      = local.use_keepalived ? 1 : 0
+  model_uuid = var.model_uuid
+
+  application {
+    name     = module.haproxy.app_name
+    endpoint = module.haproxy.provides.juju_info.endpoint
+  }
+
+  application {
+    name     = juju_application.keepalived[0].name
+    endpoint = "juju-info"
+  }
 }
 
 resource "juju_application" "grafana_agent" {
@@ -115,7 +165,7 @@ resource "juju_integration" "haproxy_spoe_auth" {
 
   application {
     name     = module.haproxy.app_name
-    endpoint = module.haproxy.provides.spoe_auth.endpoint
+    endpoint = module.haproxy.requires.spoe_auth.endpoint
   }
 }
 

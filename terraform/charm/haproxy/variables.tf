@@ -50,54 +50,6 @@ variable "expose" {
   default = {}
 }
 
-variable "hacluster_app_name" {
-  description = "Application name of the hacluster charm."
-  type        = string
-  default     = "hacluster"
-}
-
-variable "hacluster_charm_channel" {
-  description = "Channel of the hacluster charm."
-  type        = string
-  default     = "2.4/edge"
-}
-
-variable "hacluster_charm_revision" {
-  description = "Revision of the hacluster charm."
-  type        = number
-  default     = null
-}
-
-variable "hacluster_config" {
-  description = "Hacluster charm config."
-  type        = map(string)
-  default     = {}
-}
-
-variable "keepalived_app_name" {
-  description = "Application name of the keepalived charm."
-  type        = string
-  default     = "keepalived"
-}
-
-variable "keepalived_charm_channel" {
-  description = "Channel of the keepalived charm."
-  type        = string
-  default     = "latest/edge"
-}
-
-variable "keepalived_charm_revision" {
-  description = "Revision of the keepalived charm."
-  type        = number
-  default     = null
-}
-
-variable "keepalived_config" {
-  description = "Keepalived charm config."
-  type        = map(string)
-  default     = {}
-}
-
 variable "machines" {
   description = "Set of existing machines to place the haproxy units on. Mutually exclusive with units; leave null to let Juju place units according to the units count."
   type        = set(string)
@@ -133,19 +85,4 @@ variable "units" {
   default     = 1
 }
 
-variable "use_hacluster" {
-  description = "Whether to use hacluster for active/passive."
-  type        = bool
-  default     = false
-}
 
-variable "use_keepalived" {
-  description = "Whether to use keepalived for active/passive."
-  type        = bool
-  default     = false
-
-  validation {
-    condition     = (!var.use_hacluster || !var.use_keepalived)
-    error_message = "use_hacluster and use_keepalived cannot both be set."
-  }
-}
