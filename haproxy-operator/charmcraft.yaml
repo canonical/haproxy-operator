@@ -150,22 +150,14 @@ actions:
     description: |
       Return the haproxy configuration. By default (source=disk) returns the
       rendered configuration currently on disk (/etc/haproxy/haproxy.cfg) that
-      haproxy is running. Set source=relations to instead preview the
-      haproxy-route configuration that would be generated from the current
+      haproxy is running. Set source=relations to instead read the
+      haproxy-route configuration that is enroute to be generated from the current
       relation data, without writing to disk or reloading the service.
       Intended for debugging purposes.
     params:
       source:
         type: string
         description: |
-          Where to obtain the configuration from. "disk" (default) returns the
-          rendered configuration currently on disk. "relations" recomputes and
-          previews the configuration that would be generated on the next
-          reconcile from the current haproxy-route relation data, without
-          applying it. When a haproxy-route-policy relation is present, the
-          policy backend in the preview reflects the policy charm's current
-          output and converges asynchronously; use "disk" for the authoritative
-          applied configuration.
         default: disk
         enum:
         - disk
