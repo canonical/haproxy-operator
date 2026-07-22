@@ -16,7 +16,7 @@ from .helper import (
 
 
 @pytest.mark.abort_on_fail
-async def test_ingress_per_unit_integration(
+def test_ingress_per_unit_integration(
     configured_application_with_tls: str,
     any_charm_ingress_per_unit_requirer: str,
     juju: jubilant.Juju,
