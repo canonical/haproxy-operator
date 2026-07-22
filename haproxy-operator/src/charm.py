@@ -108,6 +108,46 @@ def _validate_port(port: int) -> bool:
     return 0 <= port <= 65535
 
 
+def _strip_shared_boundaries(configuration: str, reference: str) -> str:
+    """Remove the leading and trailing lines ``configuration`` shares with ``reference``.
+
+    Keeps everything between the first and last differing line, so
+    operator-specific content is never dropped. Returns the input verbatim when
+    nothing is shared at the boundaries.
+
+    Args:
+        configuration: The configuration to trim.
+        reference: The reference configuration to compare against.
+
+    Returns:
+        The trimmed configuration.
+    """
+    config_lines = configuration.splitlines()
+    reference_lines = reference.splitlines()
+
+    start = 0
+    while (
+        start < len(config_lines)
+        and start < len(reference_lines)
+        and config_lines[start] == reference_lines[start]
+    ):
+        start += 1
+
+    config_end = len(config_lines)
+    reference_end = len(reference_lines)
+    while (
+        config_end > start
+        and reference_end > start
+        and config_lines[config_end - 1] == reference_lines[reference_end - 1]
+    ):
+        config_end -= 1
+        reference_end -= 1
+
+    if start == 0 and config_end == len(config_lines):
+        return configuration
+    return "\n".join(config_lines[start:config_end])
+
+
 # pylint: disable=too-many-instance-attributes
 class HAProxyCharm(ops.CharmBase):
     """Charm haproxy."""
@@ -771,6 +811,9 @@ class HAProxyCharm(ops.CharmBase):
                 "reverseproxy relations)."
             )
 
+        if not typing.cast(bool, event.params.get("full", False)):
+            configuration = self._hide_constant_configuration(configuration, event)
+
         event.set_results({"configuration": configuration, "source": source})
 
     def _recompute_haproxy_route_configuration(self) -> str:
@@ -814,6 +857,37 @@ class HAProxyCharm(ops.CharmBase):
         except CharmStateValidationBaseError:
             return False
         return configuration == default_configuration
+
+    def _hide_constant_configuration(self, configuration: str, event: ActionEvent) -> str:
+        """Hide the constant scaffold the config shares with the default render.
+
+        The shared head/tail (global, defaults, prometheus frontend, fallback
+        backend) is derived from ``render_default_config`` rather than hard-coded
+        section names, so it stays correct if the template changes. Notifies the
+        user via ``event.log`` when anything is hidden.
+
+        Args:
+            configuration: The configuration to trim.
+            event: Juju event, used to notify the user when content is hidden.
+
+        Returns:
+            The trimmed configuration, or the input unchanged if the default
+            configuration cannot be rendered.
+        """
+        try:
+            default_configuration = self.haproxy_service.render_default_config(self._charm_state())
+        except CharmStateValidationBaseError:
+            return configuration
+
+        trimmed = _strip_shared_boundaries(configuration, default_configuration)
+        if trimmed != configuration:
+            event.log(
+                "Constant/default config sections (global, defaults, the prometheus frontend "
+                "and the fallback backend) that are identical across deployments have been "
+                "hidden for readability. Re-run this action with full=true to return the "
+                "complete configuration."
+            )
+        return trimmed
 
     def _publish_haproxy_route_proxied_endpoints(
         self, haproxy_route_requirers_information: HaproxyRouteRequirersInformation

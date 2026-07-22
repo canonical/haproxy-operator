@@ -480,7 +480,7 @@ class TestGetConfigurationAction:
     def test_returns_full_configuration(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """
         arrange: mock the config file on disk with known content.
-        act: trigger the get-configuration action without a filter.
+        act: trigger the get-configuration action with full=true.
         assert: the full file content is returned unchanged.
         """
         content = "global\n    maxconn 4096\n\nfrontend default\n    bind :80\n"
@@ -489,9 +489,44 @@ class TestGetConfigurationAction:
         context = ops.testing.Context(HAProxyCharm)
         state = ops.testing.State(leader=True)
 
-        context.run(context.on.action("get-configuration"), state)
+        context.run(context.on.action("get-configuration", params={"full": True}), state)
 
         assert context.action_results == {"configuration": content, "source": "disk"}
+
+    def test_hides_constant_configuration_by_default(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """
+        arrange: mock the on-disk config as the default scaffold wrapping an
+            operator-specific frontend section.
+        act: trigger the get-configuration action without full=true.
+        assert: the constant head/tail shared with the default render is hidden,
+            the operator-specific section is kept, and the user is notified.
+        """
+        default_config = "global\n    maxconn 4096\n\nbackend default\n    return 200\n"
+        on_disk = (
+            "global\n    maxconn 4096\n\n"
+            "frontend haproxy\n    bind :443\n"
+            "backend default\n    return 200\n"
+        )
+        monkeypatch.setattr(charm_module, "file_exists", lambda _: True)
+        monkeypatch.setattr(charm_module, "read_file", lambda _: on_disk)
+        monkeypatch.setattr(
+            charm_module.HAProxyService, "render_default_config", lambda self, _: default_config
+        )
+        context = ops.testing.Context(HAProxyCharm)
+        state = ops.testing.State(leader=True)
+
+        context.run(context.on.action("get-configuration"), state)
+
+        out = context.action_results
+        assert out is not None
+        configuration = out["configuration"]
+        assert "global" not in configuration
+        assert "maxconn" not in configuration
+        assert "frontend haproxy" in configuration
+        assert "bind :443" in configuration
+        assert any("hidden for readability" in log.lower() for log in context.action_logs)
 
     def test_source_relations_previews_config(self) -> None:
         """
@@ -624,7 +659,7 @@ class TestGetConfigurationAction:
         context = ops.testing.Context(HAProxyCharm)
         state = ops.testing.State(leader=True)
 
-        context.run(context.on.action("get-configuration"), state)
+        context.run(context.on.action("get-configuration", params={"full": True}), state)
 
         assert context.action_results == {"configuration": default_config, "source": "disk"}
         assert any("default configuration" in log.lower() for log in context.action_logs)

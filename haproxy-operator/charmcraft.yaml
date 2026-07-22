@@ -162,6 +162,14 @@ actions:
         enum:
         - disk
         - relations
+      full:
+        type: boolean
+        default: false
+        description: |
+          When false (the default), the constant sections that are identical
+          across all deployments (global, defaults, the prometheus frontend and
+          the fallback backend) are hidden for readability. Set to true to
+          return the complete configuration.
 
 charm-libs:
 - lib: traefik_k8s.ingress_per_unit
