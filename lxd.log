@@ -1,8 +1,0 @@
-controller-0: 03:54:06 INFO juju.worker.apicaller [4d0cfe] "machine-0" successfully connected to "wss://localhost:17070"
-controller-0: 03:54:06 INFO juju.worker.logforwarder config change - log forwarding not enabled
-controller-0: 03:54:06 INFO juju.worker.machineundertaker setting up machine undertaker
-controller-0: 03:54:06 INFO juju.worker.logger logger worker started
-controller-0: 03:54:06 INFO juju.worker.pruner.action pruner config: max age: 336h0m0s, max collection size 5120M for jubilant-adf52682 (4d0cfe1e-2637-4244-8b76-b0739d80c1a6)
-controller-0: 03:54:06 INFO juju.worker.pruner.statushistory pruner config: max age: 336h0m0s, max collection size 5120M for jubilant-adf52682 (4d0cfe1e-2637-4244-8b76-b0739d80c1a6)
-controller-0: 03:54:06 INFO juju.worker.provisioner entering provisioner task loop; using provisioner pool with 16 workers
-controller-0: 03:54:06 INFO juju.worker.provisioner provisioning in zones: [my-juju-vm]

@@ -150,19 +150,26 @@ def test_get_configuration_action(
 
     on_disk = juju.ssh(f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg")
 
-    # Full configuration must match what is on disk.
-    task = juju.run(f"{configured_application_with_tls}/0", "get-configuration")
+    # full=true must return the complete configuration matching what is on disk.
+    task = juju.run(f"{configured_application_with_tls}/0", "get-configuration", {"full": True})
     assert task.results["configuration"].splitlines() == on_disk.splitlines(), task.results
 
-    # Recomputing from relations (source=relations) must match the applied config
-    # when the deployment is settled, without touching disk.
+    # Recomputing from relations (source=relations) with full=true must match the
+    # applied config when the deployment is settled, without touching disk.
     task = juju.run(
         f"{configured_application_with_tls}/0",
         "get-configuration",
-        {"source": "relations"},
+        {"source": "relations", "full": True},
     )
     assert task.results["source"] == "relations", task.results
     assert task.results["configuration"].splitlines() == on_disk.splitlines(), task.results
+
+    # Default (full=false) hides the constant scaffold shared with the default
+    # render (e.g. the prometheus frontend) but keeps the operator-specific backend.
+    task = juju.run(f"{configured_application_with_tls}/0", "get-configuration")
+    default_config = task.results["configuration"]
+    assert "frontend prometheus" not in default_config, task.results
+    assert service_name in default_config, task.results
 
     juju.remove_relation(
         f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer

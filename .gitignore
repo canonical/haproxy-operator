@@ -38,3 +38,6 @@ haproxy-route-policy/.python-version
 artifacts.build.yaml
 
 .worktrees
+
+# local juju/lxd logs
+*.log
