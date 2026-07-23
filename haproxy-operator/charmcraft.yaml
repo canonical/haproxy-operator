@@ -170,6 +170,14 @@ actions:
           across all deployments (global, defaults, the prometheus frontend and
           the fallback backend) are hidden for readability. Set to true to
           return the complete configuration.
+      backend:
+        type: string
+        description: |
+          If set, return only the `backend <name>` section for this backend
+          The shared frontend and the constant scaffold are not included; 
+          use full=true to see those. Takes precedence over 'full'. If no 
+          such backend exists, an empty configuration is returned and the 
+          backends that are present are logged.
 
 charm-libs:
 - lib: traefik_k8s.ingress_per_unit

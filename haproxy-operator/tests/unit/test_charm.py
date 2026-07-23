@@ -528,6 +528,106 @@ class TestGetConfigurationAction:
         assert "bind :443" in configuration
         assert any("hidden for readability" in log.lower() for log in context.action_logs)
 
+    def test_backend_filter_returns_whole_section(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """
+        arrange: mock an on-disk config with a frontend and two backends, where the
+            target backend's body has a line that does NOT contain the backend name.
+        act: trigger the get-configuration action with backend=foo.
+        assert: only the whole `backend foo` section is returned (including the body
+            line grep would miss); the shared frontend, the unrelated backend and
+            the global scaffold are all excluded.
+        """
+        config = (
+            "global\n    maxconn 4096\n\n"
+            "frontend haproxy\n"
+            "    use_backend foo if acl_host_foo\n"
+            "    use_backend bar if acl_host_bar\n\n"
+            "backend foo\n"
+            "    server srv1 10.0.0.1:80\n"
+            "    timeout server 60s\n\n"
+            "backend bar\n"
+            "    server srv2 10.0.0.2:80\n"
+        )
+        monkeypatch.setattr(charm_module, "file_exists", lambda _: True)
+        monkeypatch.setattr(charm_module, "read_file", lambda _: config)
+        context = ops.testing.Context(HAProxyCharm)
+        state = ops.testing.State(leader=True)
+
+        context.run(context.on.action("get-configuration", params={"backend": "foo"}), state)
+
+        results = context.action_results
+        assert results is not None
+        out = results["configuration"]
+        assert "backend foo" in out
+        # whole-section body preserved — grep for "foo" would have dropped this line
+        assert "server srv1 10.0.0.1:80" in out
+        assert "timeout server 60s" in out
+        # the shared frontend is NOT included (use full for that)
+        assert "frontend haproxy" not in out
+        # the unrelated backend's section is excluded (its unique server line is gone)
+        assert "server srv2 10.0.0.2:80" not in out
+        # the constant scaffold is excluded
+        assert "maxconn" not in out
+
+    def test_backend_filter_unknown_logs_available(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """
+        arrange: mock an on-disk config with a single backend.
+        act: trigger the get-configuration action with a backend name that is absent.
+        assert: an empty configuration is returned and the available backends are logged.
+        """
+        config = "global\n    maxconn 4096\n\nbackend foo\n    server srv1 10.0.0.1:80\n"
+        monkeypatch.setattr(charm_module, "file_exists", lambda _: True)
+        monkeypatch.setattr(charm_module, "read_file", lambda _: config)
+        context = ops.testing.Context(HAProxyCharm)
+        state = ops.testing.State(leader=True)
+
+        context.run(context.on.action("get-configuration", params={"backend": "nope"}), state)
+
+        results = context.action_results
+        assert results is not None
+        assert results["configuration"] == ""
+        assert any("nope" in log and "foo" in log for log in context.action_logs), (
+            context.action_logs
+        )
+
+    def test_backend_filter_matches_last_section(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """
+        arrange: mock an on-disk config where the target backend is the LAST section,
+            with no section after it — the case the section splitter's post-loop flush
+            must handle (haproxy-route backends are appended at the end of the file).
+        act: trigger the get-configuration action with backend=foo.
+        assert: the whole trailing `backend foo` section is returned, body and all,
+            and nothing preceding it leaks in.
+        """
+        config = (
+            "global\n    maxconn 4096\n\n"
+            "frontend haproxy\n"
+            "    use_backend bar if acl_host_bar\n"
+            "    use_backend foo if acl_host_foo\n\n"
+            "backend bar\n    server srv2 10.0.0.2:80\n\n"
+            "backend foo\n"
+            "    server srv1 10.0.0.1:80\n"
+            "    timeout server 60s\n"
+        )
+        monkeypatch.setattr(charm_module, "file_exists", lambda _: True)
+        monkeypatch.setattr(charm_module, "read_file", lambda _: config)
+        context = ops.testing.Context(HAProxyCharm)
+        state = ops.testing.State(leader=True)
+
+        context.run(context.on.action("get-configuration", params={"backend": "foo"}), state)
+
+        results = context.action_results
+        assert results is not None
+        out = results["configuration"]
+        assert "backend foo" in out
+        assert "server srv1 10.0.0.1:80" in out
+        # the LAST line of the trailing section is not dropped
+        assert "timeout server 60s" in out
+        # earlier sections are excluded
+        assert "frontend haproxy" not in out
+        assert "server srv2 10.0.0.2:80" not in out
+        assert "maxconn" not in out
+
     def test_source_relations_previews_config(self) -> None:
         """
         arrange: create state with a haproxy-route relation for a specific backend.

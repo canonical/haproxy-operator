@@ -148,6 +148,81 @@ def _strip_shared_boundaries(configuration: str, reference: str) -> str:
     return "\n".join(config_lines[start:config_end])
 
 
+def _is_section_header(line: str) -> bool:
+    """Return whether a line starts a new haproxy config section.
+
+    Args:
+        line: A single configuration line.
+
+    Returns:
+        True if the line begins a section.
+    """
+    return bool(line) and not line[0].isspace() and not line.lstrip().startswith("#")
+
+
+def _split_config_sections(configuration: str) -> list[list[str]]:
+    """Split an haproxy configuration into its sections, preserving lines verbatim.
+
+    Each section is a header line plus every line beneath it, up to (but not
+    including) the next header.
+
+    Args:
+        configuration: The haproxy configuration text.
+
+    Returns:
+        A list of sections, each the list of lines it contains.
+    """
+    sections: list[list[str]] = []
+    current: list[str] = []
+    for line in configuration.splitlines():
+        # A new header means the section we were accumulating is finished.
+        if _is_section_header(line) and current:
+            sections.append(current)
+            current = []
+        current.append(line)
+    if current:
+        sections.append(current)
+    return sections
+
+
+def _filter_config_by_backend(configuration: str, backend_name: str) -> str:
+    """Return the ``backend <name>`` section(s) for ``backend_name``.
+
+    A section-aware alternative to grepping the output: a section is matched only
+    by its header (``backend <name>``).
+
+    Args:
+        configuration: The haproxy configuration text.
+        backend_name: The backend name to filter for.
+
+    Returns:
+        The matching ``backend`` section(s), or "" if none match.
+    """
+    matched = []
+    for section in _split_config_sections(configuration):
+        tokens = section[0].split()
+        if len(tokens) >= 2 and tokens[0] == "backend" and tokens[1] == backend_name:
+            matched.append(section)
+    return "\n".join("\n".join(section) for section in matched)
+
+
+def _config_backend_names(configuration: str) -> list[str]:
+    """Return the names of every ``backend`` section in the configuration.
+
+    Args:
+        configuration: The haproxy configuration text.
+
+    Returns:
+        The backend names, in the order they appear.
+    """
+    names: list[str] = []
+    for section in _split_config_sections(configuration):
+        tokens = section[0].split()
+        if len(tokens) >= 2 and tokens[0] == "backend":
+            names.append(tokens[1])
+    return names
+
+
 # pylint: disable=too-many-instance-attributes
 class HAProxyCharm(ops.CharmBase):
     """Charm haproxy."""
@@ -804,15 +879,19 @@ class HAProxyCharm(ops.CharmBase):
                 return
             configuration = read_file(HAPROXY_CONFIG)
 
-        if self._configuration_is_default(configuration):
-            event.log(
-                "The HAProxy configuration matches the default configuration. This usually "
-                "means no proxy backends are configured (e.g. no haproxy-route, ingress, or "
-                "reverseproxy relations)."
-            )
+        backend = typing.cast(str, event.params.get("backend", "")).strip()
+        if backend:
+            configuration = self._filter_configuration_for_backend(configuration, backend, event)
+        else:
+            if self._configuration_is_default(configuration):
+                event.log(
+                    "The HAProxy configuration matches the default configuration. This usually "
+                    "means no proxy backends are configured (e.g. no haproxy-route, ingress, or "
+                    "reverseproxy relations)."
+                )
 
-        if not typing.cast(bool, event.params.get("full", False)):
-            configuration = self._hide_constant_configuration(configuration, event)
+            if not typing.cast(bool, event.params.get("full", False)):
+                configuration = self._hide_constant_configuration(configuration, event)
 
         event.set_results({"configuration": configuration, "source": source})
 
@@ -888,6 +967,32 @@ class HAProxyCharm(ops.CharmBase):
                 "complete configuration."
             )
         return trimmed
+
+    def _filter_configuration_for_backend(
+        self, configuration: str, backend_name: str, event: ActionEvent
+    ) -> str:
+        """Return only the ``backend <name>`` section for ``backend_name``.
+
+        Args:
+            configuration: The configuration to filter.
+            backend_name: The backend name to filter for.
+            event: Juju event, used to notify the caller when nothing matches.
+
+        Returns:
+            The matching sections, or "" if the backend is not present.
+        """
+        filtered = _filter_config_by_backend(configuration, backend_name)
+        if not filtered:
+            available = _config_backend_names(configuration)
+            event.log(
+                f"No configuration section involves a backend named '{backend_name}'. "
+                + (
+                    f"Backends present: {', '.join(available)}."
+                    if available
+                    else "No backends are configured."
+                )
+            )
+        return filtered
 
     def _publish_haproxy_route_proxied_endpoints(
         self, haproxy_route_requirers_information: HaproxyRouteRequirersInformation

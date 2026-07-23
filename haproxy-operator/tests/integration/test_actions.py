@@ -171,6 +171,26 @@ def test_get_configuration_action(
     assert "frontend prometheus" not in default_config, task.results
     assert service_name in default_config, task.results
 
+    # Per-backend filter returns only that backend's own section, section-aware
+    # (not grep). Derive a real, non-default backend name from the full config.
+    full_config = juju.run(
+        f"{configured_application_with_tls}/0", "get-configuration", {"full": True}
+    ).results["configuration"]
+    backend_names = [
+        line.split()[1]
+        for line in full_config.splitlines()
+        if line.startswith("backend ") and line.split()[1] != "default"
+    ]
+    assert backend_names, f"expected at least one non-default backend:\n{full_config}"
+    target = backend_names[0]
+    filtered = juju.run(
+        f"{configured_application_with_tls}/0", "get-configuration", {"backend": target}
+    ).results["configuration"]
+    assert f"backend {target}" in filtered, filtered
+    # only the backend section is returned: the frontend and scaffold are excluded
+    assert "frontend haproxy" not in filtered, filtered
+    assert "frontend prometheus" not in filtered, filtered
+
     juju.remove_relation(
         f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
     )
