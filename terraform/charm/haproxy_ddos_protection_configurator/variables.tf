@@ -73,4 +73,9 @@ variable "units" {
   description = "Number of haproxy-ddos-protection-configurator units."
   type        = number
   default     = 1
+
+  validation {
+    condition     = var.machines == null || var.units == length(var.machines)
+    error_message = "When machines is set, units must equal length(machines)."
+  }
 }
