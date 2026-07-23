@@ -38,3 +38,10 @@ haproxy-route-policy/.python-version
 artifacts.build.yaml
 
 .worktrees
+
+# local juju/lxd logs
+*.log
+
+# local scratch documentation
+PROGRESS.md
+CHARM_EXPLAINER.md

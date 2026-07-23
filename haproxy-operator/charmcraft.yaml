@@ -146,6 +146,38 @@ actions:
         description: |
           The name of the backend for which to get the endpoints.
           If no backend with this name is present, an empty list is returned.
+  get-configuration:
+    description: |
+      Return the haproxy configuration. By default (source=disk) returns the
+      rendered configuration currently on disk (/etc/haproxy/haproxy.cfg) that
+      haproxy is running. Set source=relations to instead read the
+      haproxy-route configuration that is enroute to be generated from the current
+      relation data, without writing to disk or reloading the service.
+      Intended for debugging purposes.
+    params:
+      source:
+        type: string
+        description: |
+        default: disk
+        enum:
+        - disk
+        - relations
+      full:
+        type: boolean
+        default: false
+        description: |
+          When false (the default), the constant sections that are identical
+          across all deployments (global, defaults, the prometheus frontend and
+          the fallback backend) are hidden for readability. Set to true to
+          return the complete configuration.
+      backend:
+        type: string
+        description: |
+          If set, return only the `backend <name>` section for this backend
+          The shared frontend and the constant scaffold are not included; 
+          use full=true to see those. Takes precedence over 'full'. If no 
+          such backend exists, an empty configuration is returned and the 
+          backends that are present are logged.
 
 charm-libs:
 - lib: traefik_k8s.ingress_per_unit

@@ -47,7 +47,7 @@ from interface_hacluster.ops_ha_interface import HAServiceRequires
 from ops.charm import ActionEvent
 from ops.model import Port, SecretNotFoundError
 
-from haproxy import HAPROXY_SERVICE, HAProxyService
+from haproxy import HAPROXY_CONFIG, HAPROXY_SERVICE, HAProxyService, file_exists, read_file
 from http_interface import (
     HTTPBackendAvailableEvent,
     HTTPBackendRemovedEvent,
@@ -106,6 +106,121 @@ def _validate_port(port: int) -> bool:
         bool: True if valid, False otherwise.
     """
     return 0 <= port <= 65535
+
+
+def _strip_shared_boundaries(configuration: str, reference: str) -> str:
+    """Remove the leading and trailing lines ``configuration`` shares with ``reference``.
+
+    Keeps everything between the first and last differing line, so
+    operator-specific content is never dropped. Returns the input verbatim when
+    nothing is shared at the boundaries.
+
+    Args:
+        configuration: The configuration to trim.
+        reference: The reference configuration to compare against.
+
+    Returns:
+        The trimmed configuration.
+    """
+    config_lines = configuration.splitlines()
+    reference_lines = reference.splitlines()
+
+    start = 0
+    while (
+        start < len(config_lines)
+        and start < len(reference_lines)
+        and config_lines[start] == reference_lines[start]
+    ):
+        start += 1
+
+    config_end = len(config_lines)
+    reference_end = len(reference_lines)
+    while (
+        config_end > start
+        and reference_end > start
+        and config_lines[config_end - 1] == reference_lines[reference_end - 1]
+    ):
+        config_end -= 1
+        reference_end -= 1
+
+    if start == 0 and config_end == len(config_lines):
+        return configuration
+    return "\n".join(config_lines[start:config_end])
+
+
+def _is_section_header(line: str) -> bool:
+    """Return whether a line starts a new haproxy config section.
+
+    Args:
+        line: A single configuration line.
+
+    Returns:
+        True if the line begins a section.
+    """
+    return bool(line) and not line[0].isspace() and not line.lstrip().startswith("#")
+
+
+def _split_config_sections(configuration: str) -> list[list[str]]:
+    """Split an haproxy configuration into its sections, preserving lines verbatim.
+
+    Each section is a header line plus every line beneath it, up to (but not
+    including) the next header.
+
+    Args:
+        configuration: The haproxy configuration text.
+
+    Returns:
+        A list of sections, each the list of lines it contains.
+    """
+    sections: list[list[str]] = []
+    current: list[str] = []
+    for line in configuration.splitlines():
+        # A new header means the section we were accumulating is finished.
+        if _is_section_header(line) and current:
+            sections.append(current)
+            current = []
+        current.append(line)
+    if current:
+        sections.append(current)
+    return sections
+
+
+def _filter_config_by_backend(configuration: str, backend_name: str) -> str:
+    """Return the ``backend <name>`` section(s) for ``backend_name``.
+
+    A section-aware alternative to grepping the output: a section is matched only
+    by its header (``backend <name>``).
+
+    Args:
+        configuration: The haproxy configuration text.
+        backend_name: The backend name to filter for.
+
+    Returns:
+        The matching ``backend`` section(s), or "" if none match.
+    """
+    matched = []
+    for section in _split_config_sections(configuration):
+        tokens = section[0].split()
+        if len(tokens) >= 2 and tokens[0] == "backend" and tokens[1] == backend_name:
+            matched.append(section)
+    return "\n".join("\n".join(section) for section in matched)
+
+
+def _config_backend_names(configuration: str) -> list[str]:
+    """Return the names of every ``backend`` section in the configuration.
+
+    Args:
+        configuration: The haproxy configuration text.
+
+    Returns:
+        The backend names, in the order they appear.
+    """
+    names: list[str] = []
+    for section in _split_config_sections(configuration):
+        tokens = section[0].split()
+        if len(tokens) >= 2 and tokens[0] == "backend":
+            names.append(tokens[1])
+    return names
 
 
 # pylint: disable=too-many-instance-attributes
@@ -217,6 +332,7 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(
             self.on.get_proxied_endpoints_action, self._on_get_proxied_endpoints_action
         )
+        self.framework.observe(self.on.get_configuration_action, self._on_get_configuration_action)
         # Hook peer relation events so non-leader units reconcile when the leader
         # publishes certificate data to the peer relation app databag.
         self.framework.observe(
@@ -284,10 +400,13 @@ class HAProxyCharm(ops.CharmBase):
         """Handle data_removed event for reverseproxy integration."""
         self._reconcile()
 
-    def _reconcile(self) -> None:
-        """Render the haproxy config and restart the service."""
-        self.unit.status = ops.MaintenanceStatus("Configuring haproxy.")
-        charm_state = CharmState.from_charm(
+    def _charm_state(self) -> CharmState:
+        """Build the charm state from the current charm and its providers.
+
+        Returns:
+            The charm state component.
+        """
+        return CharmState.from_charm(
             self,
             self._ingress_provider,
             self._ingress_per_unit_provider,
@@ -296,6 +415,11 @@ class HAProxyCharm(ops.CharmBase):
             self.reverseproxy_requirer,
             self.haproxy_route_policy,
         )
+
+    def _reconcile(self) -> None:
+        """Render the haproxy config and restart the service."""
+        self.unit.status = ops.MaintenanceStatus("Configuring haproxy.")
+        charm_state = self._charm_state()
         proxy_mode = charm_state.mode
         if proxy_mode == ProxyMode.INVALID:
             # We don't raise any exception/set status here as it should already be handled
@@ -716,6 +840,159 @@ class HAProxyCharm(ops.CharmBase):
         ]
 
         event.set_results({"endpoints": json.dumps(proxied_endpoints)})
+
+    def _on_get_configuration_action(self, event: ActionEvent) -> None:
+        """Triggered when users run the `get-configuration` Juju action.
+
+        `source=disk` (default) returns the on-disk configuration.
+        `source=relations` renders the haproxy-route configuration from the
+        current relation data. Neither writes to disk nor reloads the service.
+        When a haproxy-route-policy relation is present, the rendered policy
+        backend reflects the policy charm's current, asynchronously-converging
+        output.
+
+        Args:
+            event: Juju event
+        """
+        source = event.params.get("source", "disk")
+        if source == "relations":
+            try:
+                configuration = self._recompute_haproxy_route_configuration()
+            except (
+                CharmStateValidationBaseError,
+                HaproxyRouteIntegrationDataValidationError,
+            ) as exc:
+                event.fail(f"Failed to recompute configuration from relations: {exc}")
+                return
+            if self.haproxy_route_policy.relation is not None:
+                event.log(
+                    "A haproxy-route-policy relation is present; the policy backend in this "
+                    "preview reflects the policy charm's current output and converges "
+                    "asynchronously. Use source=disk for the authoritative applied configuration."
+                )
+        else:
+            if not file_exists(HAPROXY_CONFIG):
+                event.fail(
+                    f"HAProxy configuration file {HAPROXY_CONFIG} does not exist yet. "
+                    "Ensure the charm is configured and integrated before running this action."
+                )
+                return
+            configuration = read_file(HAPROXY_CONFIG)
+
+        backend = typing.cast(str, event.params.get("backend", "")).strip()
+        if backend:
+            configuration = self._filter_configuration_for_backend(configuration, backend, event)
+        else:
+            if self._configuration_is_default(configuration):
+                event.log(
+                    "The HAProxy configuration matches the default configuration. This usually "
+                    "means no proxy backends are configured (e.g. no haproxy-route, ingress, or "
+                    "reverseproxy relations)."
+                )
+
+            if not typing.cast(bool, event.params.get("full", False)):
+                configuration = self._hide_constant_configuration(configuration, event)
+
+        event.set_results({"configuration": configuration, "source": source})
+
+    def _recompute_haproxy_route_configuration(self) -> str:
+        """Render the haproxy-route configuration from the current relation data.
+
+        Unlike `_configure_haproxy_route`, performs no side effects (no port
+        changes, databag writes, file writes, or reload).
+
+        Returns:
+            The rendered haproxy-route configuration.
+        """
+        charm_state = self._charm_state()
+        haproxy_route_requirers_information = HaproxyRouteRequirersInformation.from_provider(
+            haproxy_route=self.haproxy_route_provider,
+            haproxy_route_tcp=self.haproxy_route_tcp_provider,
+            haproxy_route_policy=self.haproxy_route_policy,
+            external_hostname=typing.cast("str | None", self.config.get("external-hostname")),
+            peers=self._get_peer_units_address(),
+            ca_certs_configured=bool(self.recv_ca_certs.get_all_certificates()),
+        )
+        ddos_protection_config = DDosProtection.from_charm(self.ddos_requirer)
+        spoe_oauth_info_list = SpoeAuthInformation.from_requirer(self.spoe_auth_requirer)
+        return self.haproxy_service.render_haproxy_route_config(
+            charm_state,
+            haproxy_route_requirers_information,
+            spoe_oauth_info_list,
+            ddos_protection_config,
+        )
+
+    def _configuration_is_default(self, configuration: str) -> bool:
+        """Return whether the given configuration matches the default configuration.
+
+        Args:
+            configuration: The configuration to compare against the default.
+
+        Returns:
+            True if it is identical to the rendered default configuration.
+        """
+        try:
+            default_configuration = self.haproxy_service.render_default_config(self._charm_state())
+        except CharmStateValidationBaseError:
+            return False
+        return configuration == default_configuration
+
+    def _hide_constant_configuration(self, configuration: str, event: ActionEvent) -> str:
+        """Hide the constant scaffold the config shares with the default render.
+
+        The shared head/tail (global, defaults, prometheus frontend, fallback
+        backend) is derived from ``render_default_config`` rather than hard-coded
+        section names, so it stays correct if the template changes. Notifies the
+        user via ``event.log`` when anything is hidden.
+
+        Args:
+            configuration: The configuration to trim.
+            event: Juju event, used to notify the user when content is hidden.
+
+        Returns:
+            The trimmed configuration, or the input unchanged if the default
+            configuration cannot be rendered.
+        """
+        try:
+            default_configuration = self.haproxy_service.render_default_config(self._charm_state())
+        except CharmStateValidationBaseError:
+            return configuration
+
+        trimmed = _strip_shared_boundaries(configuration, default_configuration)
+        if trimmed != configuration:
+            event.log(
+                "Constant/default config sections (global, defaults, the prometheus frontend "
+                "and the fallback backend) that are identical across deployments have been "
+                "hidden for readability. Re-run this action with full=true to return the "
+                "complete configuration."
+            )
+        return trimmed
+
+    def _filter_configuration_for_backend(
+        self, configuration: str, backend_name: str, event: ActionEvent
+    ) -> str:
+        """Return only the ``backend <name>`` section for ``backend_name``.
+
+        Args:
+            configuration: The configuration to filter.
+            backend_name: The backend name to filter for.
+            event: Juju event, used to notify the caller when nothing matches.
+
+        Returns:
+            The matching sections, or "" if the backend is not present.
+        """
+        filtered = _filter_config_by_backend(configuration, backend_name)
+        if not filtered:
+            available = _config_backend_names(configuration)
+            event.log(
+                f"No configuration section involves a backend named '{backend_name}'. "
+                + (
+                    f"Backends present: {', '.join(available)}."
+                    if available
+                    else "No backends are configured."
+                )
+            )
+        return filtered
 
     def _publish_haproxy_route_proxied_endpoints(
         self, haproxy_route_requirers_information: HaproxyRouteRequirersInformation
