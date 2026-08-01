@@ -60,7 +60,7 @@ integration = [
   "pytest",
   "pytest-jubilant>=2,<3",
   "requests==2.32.5",
-  "websockets<17",
+  "websockets<18",
 ]
 
 [tool.uv]
