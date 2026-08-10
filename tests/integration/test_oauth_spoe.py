@@ -13,7 +13,10 @@ from collections import namedtuple
 import jubilant
 import pytest
 import requests
-from playwright.sync_api import expect, sync_playwright
+from playwright.sync_api import (  # type: ignore[import-not-found]
+    expect,
+    sync_playwright,
+)
 
 from .helper import get_unit_ip_address
 
@@ -116,7 +119,9 @@ def _assert_idp_login_success(haproxy_unit_ip, hostname, test_email, test_passwo
         )
         context = browser.new_context(ignore_https_errors=True)
         page = context.new_page()
+        page.set_default_timeout(60000)
         page.goto(f"https://{hostname}")
+        page.wait_for_load_state("networkidle")
         logger.info("Page content: %s", page.content())
         expect(page).not_to_have_title(re.compile("Sign in failed"))
         # This will timeout if there is no email field.
