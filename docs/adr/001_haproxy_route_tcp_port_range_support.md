@@ -37,7 +37,7 @@ Merging is done by applying the following rules:
   * They have set an SNI for SNI-routing
   * The requested port fall into the port range requested by the "port-range" requirer
 
-#### Alternatvies
+#### Alternatives
 
 Merge "port-range" requirers requesting for exactly the same range together, using the same logic as with "single-port" requirers.
 

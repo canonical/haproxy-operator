@@ -11,6 +11,17 @@ The repository also contains the snapped workload of some charms:
 1. `haproxy-spoe-auth-snap`: A snap of the SPOE agent made for the haproxy-spoe-auth-operator charm. See the [haproxy-spoe-auth-snap README](haproxy-spoe-auth-snap/README.md) for more information.
 2. `haproxy-route-policy-snap`: A snap of the `haproxy-route-policy` app made for the `haproxy-route-policy-operator` charm. See the [haproxy-route-policy-snap README](haproxy-route-policy/README.md) for more information.
 
+## Charmhub and Snapcraft
+
+| Name | Listing |
+|------|---------|
+| `haproxy` | https://charmhub.io/haproxy |
+| `haproxy-ddos-protection-configurator` | https://charmhub.io/haproxy-ddos-protection-configurator |
+| `haproxy-route-policy` | https://charmhub.io/haproxy-route-policy |
+| `haproxy-spoe-auth` | https://charmhub.io/haproxy-spoe-auth |
+| `haproxy-route-policy` | https://snapcraft.io/haproxy-route-policy |
+| `haproxy-spoe-auth` | https://snapcraft.io/haproxy-spoe-auth |
+
 ## Project and community
 
 The haproxy-operator project is a member of the Ubuntu family. It is an open source project that warmly welcomes community projects, contributions, suggestions, fixes and constructive feedback.
