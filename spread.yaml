@@ -32,8 +32,8 @@ integration-suites:
     - integration-test
     systems: [ubuntu-24.04]
     pytest-arguments-template: &default-pytest-args |
-      --model testing
-      --keep-models
+      --juju-model testing
+      --no-juju-teardown
   haproxy-operator/tests/integration/arm64:
     summary: haproxy-operator integration tests
     working-dir: haproxy-operator/
