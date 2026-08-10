@@ -49,7 +49,7 @@ integration = [
   "protobuf==6.33.6",
   "pytest",
   "pytest-jubilant>=2,<3",
-  "websockets<17",
+  "websockets<18",
 ]
 
 [tool.uv]
