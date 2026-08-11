@@ -1,17 +1,18 @@
-# Copyright 2025 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Integration test for actions."""
 
+import jubilant
 import pytest
-from juju.application import Application
 
 from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
 @pytest.mark.abort_on_fail
-async def test_get_certificate_action(
-    configured_application_with_tls: Application,
+def test_get_certificate_action(
+    configured_application_with_tls: str,
+    juju: jubilant.Juju,
 ):
     """
     arrange: Deploy the charm with valid config and tls integration.
@@ -19,23 +20,17 @@ async def test_get_certificate_action(
     the cert location on the unit.
     assert: The output of both operations are valid.
     """
-    action = await configured_application_with_tls.units[0].run_action(
-        "get-certificate", hostname=TEST_EXTERNAL_HOSTNAME_CONFIG
+    task = juju.run(
+        f"{configured_application_with_tls}/0",
+        "get-certificate",
+        {"hostname": TEST_EXTERNAL_HOSTNAME_CONFIG},
     )
-    await action.wait()
-    assert "-----BEGIN CERTIFICATE-----" in action.results.get("certificate")
+    assert "-----BEGIN CERTIFICATE-----" in task.results.get("certificate", "")
 
-    action = await configured_application_with_tls.units[0].run(
-        "ls /var/lib/haproxy/certs", timeout=60
-    )
-    await action.wait()
-
-    stdout = action.results.get("stdout")
+    stdout = juju.ssh(f"{configured_application_with_tls}/0", "ls /var/lib/haproxy/certs")
     assert f"{TEST_EXTERNAL_HOSTNAME_CONFIG}.pem" in stdout
 
-    # The action should fail
-    # when we run the get-certificate action without the required hostname parameter.
+    # The action should fail when run without the required hostname parameter.
     # disable ruff B017 error (assert-raises-exception) for using Exception in pytest.raises
     with pytest.raises(Exception):  # noqa: B017
-        action = await configured_application_with_tls.units[0].run_action("get-certificate")
-        await action.wait()
+        juju.run(f"{configured_application_with_tls}/0", "get-certificate")
