@@ -112,7 +112,7 @@ output "requires" {
     }
     send_remote_write = {
       kind       = "endpoint"
-      name       = module.haproxy.app_name
+      name       = juju_application.grafana_agent.name
       endpoint   = "send-remote-write"
       controller = null
     }
