@@ -285,13 +285,10 @@ class HAProxyCharm(ops.CharmBase):
         """Handle data_removed event for reverseproxy integration."""
         self._reconcile()
 
-    def _charm_state(self) -> CharmState:
-        """Build the charm state from the current charm and its providers.
-
-        Returns:
-            The charm state component.
-        """
-        return CharmState.from_charm(
+    def _reconcile(self) -> None:
+        """Render the haproxy config and restart the service."""
+        self.unit.status = ops.MaintenanceStatus("Configuring haproxy.")
+        charm_state = CharmState.from_charm(
             self,
             self._ingress_provider,
             self._ingress_per_unit_provider,
@@ -300,11 +297,6 @@ class HAProxyCharm(ops.CharmBase):
             self.reverseproxy_requirer,
             self.haproxy_route_policy,
         )
-
-    def _reconcile(self) -> None:
-        """Render the haproxy config and restart the service."""
-        self.unit.status = ops.MaintenanceStatus("Configuring haproxy.")
-        charm_state = self._charm_state()
         proxy_mode = charm_state.mode
         if proxy_mode == ProxyMode.INVALID:
             # We don't raise any exception/set status here as it should already be handled
@@ -763,7 +755,17 @@ class HAProxyCharm(ops.CharmBase):
             True if it is identical to the rendered default configuration.
         """
         try:
-            default_configuration = self.haproxy_service.render_default_config(self._charm_state())
+            default_configuration = self.haproxy_service.render_default_config(
+                CharmState.from_charm(
+                    self,
+                    self._ingress_provider,
+                    self._ingress_per_unit_provider,
+                    self.haproxy_route_provider,
+                    self.haproxy_route_tcp_provider,
+                    self.reverseproxy_requirer,
+                    self.haproxy_route_policy,
+                )
+            )
         except CharmStateValidationBaseError:
             return False
         return configuration == default_configuration
