@@ -64,6 +64,7 @@ def any_charm_haproxy_route_policy_requirer_fixture(juju: jubilant.Juju):
         "any-charm",
         app=ANY_CHARM_HAPROXY_ROUTE_POLICY_REQUIRER_APPLICATION,
         channel="beta",
+        force=True,
         config={
             "src-overwrite": json.dumps(
                 {
@@ -97,6 +98,7 @@ def postgresql_fixture(juju: jubilant.Juju):
         app=POSTGRESQL_APPLICATION,
         channel="16/edge",
         base="ubuntu@24.04",
+        force=True,
     )
     juju.wait(
         lambda status: jubilant.all_active(status, POSTGRESQL_APPLICATION),
