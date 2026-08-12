@@ -4,6 +4,7 @@
 
 """Fixtures for haproxy charm integration tests."""
 
+import base64
 import json
 import logging
 import pathlib
@@ -391,17 +392,12 @@ def deploy_spoe_auth(
 
 def inject_ca_certificate(lxd_juju, unit_name, ca_cert: str):
     """Inject a ca certificate into a juju unit and run update-ca-certificates."""
-    juju = lxd_juju
-    with tempfile.NamedTemporaryFile(dir=".") as tf:
-        tf.write(ca_cert.encode("utf-8"))
-        tf.flush()
-        # the unit could be not the number 0.
-        juju.scp(tf.name, f"{unit_name}:/home/ubuntu/iam.crt")
-        juju.exec(
-            command="sudo mv /home/ubuntu/iam.crt /usr/local/share/ca-certificates",
-            unit=unit_name,
-        )
-        juju.exec(command="sudo update-ca-certificates", unit=unit_name)
+    cert_b64 = base64.b64encode(ca_cert.encode("utf-8")).decode("ascii")
+    lxd_juju.exec(
+        f"echo {cert_b64} | base64 -d | sudo tee /usr/local/share/ca-certificates/iam.crt",
+        unit=unit_name,
+    )
+    lxd_juju.exec(command="sudo update-ca-certificates", unit=unit_name)
 
 
 @pytest.fixture(scope="session")
