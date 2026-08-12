@@ -506,7 +506,7 @@ class TestGetConfigurationAction:
         with pytest.raises(ops.testing.ActionFailed) as exc_info:
             context.run(context.on.action("get-configuration"), state)
 
-        assert "does not exist" in exc_info.value.message
+        assert "not found" in exc_info.value.message
 
     def test_warns_when_config_is_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """
@@ -551,3 +551,29 @@ class TestGetConfigurationAction:
         context.run(context.on.action("get-configuration"), state)
 
         assert not any("default configuration" in log.lower() for log in context.action_logs)
+
+    def test_notes_when_charm_state_cannot_be_built(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """
+        arrange: the config file is present, but building the charm state raises.
+        act: trigger the get-configuration action.
+        assert: the configuration is still returned, and a "could not determine" note is
+            logged instead of silently claiming it is not the default.
+        """
+        content = "frontend haproxy\n    bind :80\n"
+        monkeypatch.setattr(charm_module, "file_exists", lambda _: True)
+        monkeypatch.setattr(charm_module, "read_file", lambda _: content)
+
+        def _raise(*_args: object, **_kwargs: object) -> charm_module.CharmState:
+            raise charm_module.CharmStateValidationBaseError("invalid config")
+
+        monkeypatch.setattr(charm_module.CharmState, "from_charm", _raise)
+        context = ops.testing.Context(HAProxyCharm)
+        state = ops.testing.State(leader=True)
+
+        context.run(context.on.action("get-configuration"), state)
+
+        results = context.action_results
+        assert results is not None
+        assert results == {"configuration": content, "source": "disk"}
+        assert any("could not determine" in log.lower() for log in context.action_logs)
+        assert not any("matches the default" in log.lower() for log in context.action_logs)

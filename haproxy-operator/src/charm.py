@@ -729,13 +729,19 @@ class HAProxyCharm(ops.CharmBase):
             event: Juju event
         """
         if not file_exists(HAPROXY_CONFIG):
-            event.fail(
-                f"HAProxy configuration file at {HAPROXY_CONFIG} not found. "
-            )
+            event.fail(f"HAProxy configuration file at {HAPROXY_CONFIG} not found. ")
             return
         configuration = read_file(HAPROXY_CONFIG)
 
-        if self._configuration_is_default(configuration):
+        try:
+            configuration_is_default = self._configuration_is_default(configuration)
+        except CharmStateValidationBaseError:
+            event.log(
+                "Could not determine whether this is the default configuration because the "
+                "charm state is invalid; see `juju status` for the blocking condition."
+            )
+            configuration_is_default = False
+        if configuration_is_default:
             event.log(
                 "The HAProxy configuration matches the default configuration. This usually "
                 "means no proxy backends are configured."
@@ -749,23 +755,24 @@ class HAProxyCharm(ops.CharmBase):
         Args:
             configuration: The configuration to compare against the default.
 
+        Raises:
+            CharmStateValidationBaseError: When the charm state needed to render
+                the default configuration cannot be built.
+
         Returns:
             True if it is identical to the rendered default configuration.
         """
-        try:
-            default_configuration = self.haproxy_service.render_default_config(
-                CharmState.from_charm(
-                    self,
-                    self._ingress_provider,
-                    self._ingress_per_unit_provider,
-                    self.haproxy_route_provider,
-                    self.haproxy_route_tcp_provider,
-                    self.reverseproxy_requirer,
-                    self.haproxy_route_policy,
-                )
+        default_configuration = self.haproxy_service.render_default_config(
+            CharmState.from_charm(
+                self,
+                self._ingress_provider,
+                self._ingress_per_unit_provider,
+                self.haproxy_route_provider,
+                self.haproxy_route_tcp_provider,
+                self.reverseproxy_requirer,
+                self.haproxy_route_policy,
             )
-        except CharmStateValidationBaseError:
-            return False
+        )
         return configuration == default_configuration
 
     def _publish_haproxy_route_proxied_endpoints(
