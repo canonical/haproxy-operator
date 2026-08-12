@@ -173,75 +173,8 @@ class HAProxyService:
         store_config_to_file(ddos_protection_config.ip_allow_list, IP_ALLOW_LIST_FILE)
         store_config_to_file(ddos_protection_config.deny_paths, DENY_PATHS_FILE)
 
-        template_context = self._build_haproxy_route_template_context(
-            charm_state,
-            haproxy_route_requirers_information,
-            spoe_oauth_info_list,
-            ddos_protection_config,
-        )
-        self._render_haproxy_config(HAPROXY_ROUTE_CONFIG_TEMPLATE, template_context)
-        if spoe_oauth_info_list:
-            spoe_auth_template_context = {
-                "spoe_auth_info_list": spoe_oauth_info_list,
-            }
-            self._render_config_file(
-                SPOE_AUTH_CONFIG_TEMPLATE, spoe_auth_template_context, SPOE_AUTH_CONFIG
-            )
-        self._validate_haproxy_config()
-        self._reload_haproxy_service()
-
-    def render_haproxy_route_config(
-        self,
-        charm_state: CharmState,
-        haproxy_route_requirers_information: HaproxyRouteRequirersInformation,
-        spoe_oauth_info_list: list[SpoeAuthInformation],
-        ddos_protection_config: DDosProtection,
-    ) -> str:
-        """Render the haproxy-route configuration and return it as a string.
-
-        Unlike `reconcile_haproxy_route`, performs no side effects (no file
-        writes, validation, or reload).
-
-        Args:
-            charm_state: The charm state component.
-            haproxy_route_requirers_information: HaproxyRouteRequirersInformation state component.
-            spoe_oauth_info_list: Information about SPOE auth providers.
-            ddos_protection_config: DDoS protection configuration.
-
-        Returns:
-            The rendered haproxy-route configuration.
-        """
-        template_context = self._build_haproxy_route_template_context(
-            charm_state,
-            haproxy_route_requirers_information,
-            spoe_oauth_info_list,
-            ddos_protection_config,
-        )
-        return self._render_to_string(HAPROXY_ROUTE_CONFIG_TEMPLATE, template_context)
-
-    def _build_haproxy_route_template_context(
-        self,
-        charm_state: CharmState,
-        haproxy_route_requirers_information: HaproxyRouteRequirersInformation,
-        spoe_oauth_info_list: list[SpoeAuthInformation],
-        ddos_protection_config: DDosProtection,
-    ) -> dict:
-        """Build the template context for the haproxy-route configuration.
-
-        Shared by `reconcile_haproxy_route` and `render_haproxy_route_config`
-        so they cannot drift.
-
-        Args:
-            charm_state: The charm state component.
-            haproxy_route_requirers_information: HaproxyRouteRequirersInformation state component.
-            spoe_oauth_info_list: Information about SPOE auth providers.
-            ddos_protection_config: DDoS protection configuration.
-
-        Returns:
-            The template context for the haproxy-route template.
-        """
         valid_backends = haproxy_route_requirers_information.valid_backends()
-        return {
+        template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
             "enable_hsts": charm_state.enable_hsts,
             "ddos_protection": charm_state.ddos_protection,
@@ -266,6 +199,16 @@ class HAProxyService:
             "deny_paths_file": DENY_PATHS_FILE,
             "policy_provider_backend": haproxy_route_requirers_information.policy_provider_backend,
         }
+        self._render_haproxy_config(HAPROXY_ROUTE_CONFIG_TEMPLATE, template_context)
+        if spoe_oauth_info_list:
+            spoe_auth_template_context = {
+                "spoe_auth_info_list": spoe_oauth_info_list,
+            }
+            self._render_config_file(
+                SPOE_AUTH_CONFIG_TEMPLATE, spoe_auth_template_context, SPOE_AUTH_CONFIG
+            )
+        self._validate_haproxy_config()
+        self._reload_haproxy_service()
 
     def reconcile_default(self, charm_state: CharmState) -> None:
         """Render the default haproxy config and reload the service.

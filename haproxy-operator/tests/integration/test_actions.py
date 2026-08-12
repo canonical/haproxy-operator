@@ -116,9 +116,8 @@ def test_get_configuration_action(
     juju: jubilant.Juju,
 ):
     """arrange: Deploy the charm integrated with any_charm haproxy-route.
-    act: Trigger the action 'get-configuration' in disk and relations modes.
-    assert: The returned configuration matches the on-disk haproxy.cfg, and the
-        relations-mode preview matches the applied configuration.
+    act: Trigger the 'get-configuration' action.
+    assert: The returned configuration matches the on-disk haproxy.cfg.
     """
     _integrate_haproxy_route(
         juju, f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
@@ -150,46 +149,10 @@ def test_get_configuration_action(
 
     on_disk = juju.ssh(f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg")
 
-    # full=true must return the complete configuration matching what is on disk.
-    task = juju.run(f"{configured_application_with_tls}/0", "get-configuration", {"full": True})
-    assert task.results["configuration"].splitlines() == on_disk.splitlines(), task.results
-
-    # Recomputing from relations (source=relations) with full=true must match the
-    # applied config when the deployment is settled, without touching disk.
-    task = juju.run(
-        f"{configured_application_with_tls}/0",
-        "get-configuration",
-        {"source": "relations", "full": True},
-    )
-    assert task.results["source"] == "relations", task.results
-    assert task.results["configuration"].splitlines() == on_disk.splitlines(), task.results
-
-    # Default (full=false) hides the constant scaffold shared with the default
-    # render (e.g. the prometheus frontend) but keeps the operator-specific backend.
+    # The action returns exactly the configuration currently on disk.
     task = juju.run(f"{configured_application_with_tls}/0", "get-configuration")
-    default_config = task.results["configuration"]
-    assert "frontend prometheus" not in default_config, task.results
-    assert service_name in default_config, task.results
-
-    # Per-backend filter returns only that backend's own section, section-aware
-    # (not grep). Derive a real, non-default backend name from the full config.
-    full_config = juju.run(
-        f"{configured_application_with_tls}/0", "get-configuration", {"full": True}
-    ).results["configuration"]
-    backend_names = [
-        line.split()[1]
-        for line in full_config.splitlines()
-        if line.startswith("backend ") and line.split()[1] != "default"
-    ]
-    assert backend_names, f"expected at least one non-default backend:\n{full_config}"
-    target = backend_names[0]
-    filtered = juju.run(
-        f"{configured_application_with_tls}/0", "get-configuration", {"backend": target}
-    ).results["configuration"]
-    assert f"backend {target}" in filtered, filtered
-    # only the backend section is returned: the frontend and scaffold are excluded
-    assert "frontend haproxy" not in filtered, filtered
-    assert "frontend prometheus" not in filtered, filtered
+    assert task.results["source"] == "disk", task.results
+    assert task.results["configuration"].splitlines() == on_disk.splitlines(), task.results
 
     juju.remove_relation(
         f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
