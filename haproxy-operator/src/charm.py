@@ -340,7 +340,7 @@ class HAProxyCharm(ops.CharmBase):
                 self.haproxy_service.reconcile_default(charm_state)
         if self.unit.is_leader():
             self._update_dns_records()
-        self.unit.status = ops.ActiveStatus()
+        self.unit.status = ops.ActiveStatus(status_message)
 
     def _configure_ingress(
         self,
