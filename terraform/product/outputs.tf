@@ -94,7 +94,7 @@ output "requires" {
     }
     metrics_endpoint = {
       kind       = "endpoint"
-      name       = module.haproxy.app_name
+      name       = juju_application.grafana_agent.name
       endpoint   = "metrics-endpoint"
       controller = null
     }
