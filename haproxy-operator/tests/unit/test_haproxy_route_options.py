@@ -70,6 +70,10 @@ def test_protocol_https(
         in haproxy_conf_contents
     )
     assert "option forwardfor" in haproxy_conf_contents
+    assert (
+        "http-request set-header X-Forwarded-Proto %[ssl_fc,iif(https,http)]"
+        in haproxy_conf_contents
+    )
     assert out.app_status == ActiveStatus("")
 
 

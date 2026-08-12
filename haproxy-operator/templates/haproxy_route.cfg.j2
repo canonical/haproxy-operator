@@ -14,6 +14,9 @@ frontend haproxy
 {% endfor %}
     http-request redirect scheme https unless { ssl_fc } {% if acls_for_allow_http %}|| is_allow_http{% endif %}
 
+    # Set X-Forwarded-Proto based on the connection scheme (allow-http lets plain HTTP through)
+    http-request set-header X-Forwarded-Proto %[ssl_fc,iif(https,http)]
+
 {% if enable_hsts %}
     # Add HSTS header for HTTPS connections (only when HTTP is not allowed)
     http-response set-header Strict-Transport-Security "max-age=2592000" if { ssl_fc } {% if acls_for_allow_http %}!is_allow_http{% endif %}

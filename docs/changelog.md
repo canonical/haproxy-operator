@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-07-06
+
+- docs: Add a how-to guide for configuring the backend protocol.
+
+## 2026-06-26
+
+- docs: Add docs on the Terraform module.
+
 ## 2026-06-18
 
 - docs: Migrated the RTD documentation URL under the Canonical domain.
@@ -32,6 +40,10 @@ Each revision is versioned by the date of the revision.
 
 - docs: Updated the home page to implement the new pattern for the "In this documentation" section.
 - docs: Reorganized two tutorials to how-to section; expanded the upgrade guide
+
+## 2026-04-21
+
+- Do not render the default backend if there are no other backends in in the haproxy-route-tcp.
 
 ## 2026-04-17
 

@@ -1,6 +1,7 @@
 configurator
 Configurator
 databag
+dataclass
 gunicorn
 Gunicorn
 hardcoded
@@ -15,5 +16,7 @@ SNIs
 upserts
 upstreams
 uv
+validator
 validators
 vendored
+passthrough

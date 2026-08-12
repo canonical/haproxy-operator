@@ -16,5 +16,6 @@ grpc-support.md
 http2-support.md
 relation-endpoints.md
 SPOE authentication <spoe-auth-support.md>
+Terraform module <terraform.md>
 Changelog <../changelog.md>
 ```

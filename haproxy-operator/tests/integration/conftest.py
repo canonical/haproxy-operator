@@ -1,4 +1,4 @@
-# Copyright 2025 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 # pylint: disable=duplicate-code
 
@@ -8,7 +8,6 @@ import json
 import logging
 import pathlib
 import tempfile
-import typing
 from pathlib import Path
 
 import jubilant
@@ -38,42 +37,29 @@ GRPC_MESSAGE_STUB_SRC = GRPC_SERVER_DIR / "echo_pb2.py"
 GRPC_SERVICE_STUB_SRC = GRPC_SERVER_DIR / "echo_pb2_grpc.py"
 
 
+def all_active_and_idle(status: jubilant.Status, *apps: str) -> bool:
+    """Return whether the applications are active with no hooks running."""
+    return jubilant.all_active(status, *apps) and all(
+        unit.juju_status.current == "idle"
+        for app in apps
+        for unit in status.apps[app].units.values()
+    )
+
+
 @pytest.fixture(scope="session", name="charm")
 def charm_fixture(charm_paths: dict[str, CharmPathList]) -> str:
     """Pytest fixture that returns the path to the haproxy charm."""
     return charm_paths["haproxy"].path
 
 
-@pytest.fixture(scope="module", name="juju")
-def juju_fixture(request: pytest.FixtureRequest):
-    """Pytest fixture that wraps :meth:`jubilant.with_model`."""
-
-    def show_debug_log(juju: jubilant.Juju):
-        """Show the debug log if tests failed.
-
-        Args:
-            juju: Jubilant juju instance.
-        """
-        if request.session.testsfailed:
-            log = juju.debug_log(limit=1000)
-            print(log, end="")
-
-    model = request.config.getoption("--model")
-    if model:
-        juju = jubilant.Juju(model=model)
-        juju.wait_timeout = JUJU_WAIT_TIMEOUT
-        yield juju
-        show_debug_log(juju)
-        return
-
-    keep_models = typing.cast(bool, request.config.getoption("--keep-models"))
-    with jubilant.temp_model(keep=keep_models) as juju:
-        juju.wait_timeout = JUJU_WAIT_TIMEOUT
-        yield juju
+@pytest.fixture(scope="module", autouse=True)
+def _set_juju_timeout(juju: jubilant.Juju) -> None:
+    """Set wait_timeout on the juju fixture."""
+    juju.wait_timeout = JUJU_WAIT_TIMEOUT
 
 
 @pytest.fixture(scope="module", name="application")
-def application_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju, charm: str):
+def application_fixture(juju: jubilant.Juju, charm: str):
     """Deploy the haproxy application.
 
     Args:
@@ -85,7 +71,7 @@ def application_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju, charm:
     """
     metadata = yaml.safe_load(pathlib.Path("./charmcraft.yaml").read_text(encoding="UTF-8"))
     app_name = metadata["name"]
-    if pytestconfig.getoption("--no-deploy") and app_name in juju.status().apps:
+    if app_name in juju.status().apps:
         return app_name
     juju.deploy(
         charm=charm,
@@ -97,14 +83,10 @@ def application_fixture(pytestconfig: pytest.Config, juju: jubilant.Juju, charm:
 
 @pytest.fixture(scope="module", name="certificate_provider_application")
 def certificate_provider_application_fixture(
-    pytestconfig: pytest.Config,
     juju: jubilant.Juju,
 ):
     """Deploy self-signed-certificates."""
-    if (
-        pytestconfig.getoption("--no-deploy")
-        and SELF_SIGNED_CERTIFICATES_APP_NAME in juju.status().apps
-    ):
+    if SELF_SIGNED_CERTIFICATES_APP_NAME in juju.status().apps:
         logger.warning("Using existing application: %s", SELF_SIGNED_CERTIFICATES_APP_NAME)
         return SELF_SIGNED_CERTIFICATES_APP_NAME
     juju.deploy(
@@ -115,22 +97,24 @@ def certificate_provider_application_fixture(
 
 @pytest.fixture(scope="module", name="configured_application_with_tls_base")
 def configured_application_with_tls_base_fixture(
-    pytestconfig: pytest.Config,
     application: str,
     certificate_provider_application: str,
     juju: jubilant.Juju,
 ):
     """The haproxy charm configured and integrated with TLS provider."""
-    if pytestconfig.getoption("--no-deploy") and "haproxy" in juju.status().apps:
-        return application
     juju.config(application, {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
-    juju.integrate(
-        f"{application}:certificates", f"{certificate_provider_application}:certificates"
-    )
+    certificate_relations = juju.status().apps[application].relations.get("certificates", [])
+    if not any(
+        relation.related_app == certificate_provider_application
+        for relation in certificate_relations
+    ):
+        juju.integrate(
+            f"{application}:certificates", f"{certificate_provider_application}:certificates"
+        )
     juju.wait(
-        lambda status: (
-            jubilant.all_active(status, application, certificate_provider_application)
-        ),
+        lambda status: all_active_and_idle(status, application, certificate_provider_application),
+        delay=5,
+        successes=6,
         timeout=JUJU_WAIT_TIMEOUT,
     )
     return application
@@ -153,15 +137,12 @@ def configured_application_with_tls_fixture(
 
 @pytest.fixture(name="any_charm_ingress_per_unit_requirer")
 def any_charm_ingress_per_unit_requirer_fixture(
-    pytestconfig: pytest.Config, juju: jubilant.Juju, configured_application_with_tls: str
+    juju: jubilant.Juju, configured_application_with_tls: str
 ) -> str:
     """Deploy any-charm and configure it to serve as a requirer for the ingress-per-unit
     interface.
     """
-    if (
-        pytestconfig.getoption("--no-deploy")
-        and ANY_CHARM_INGRESS_PER_UNIT_REQUIRER in juju.status().apps
-    ):
+    if ANY_CHARM_INGRESS_PER_UNIT_REQUIRER in juju.status().apps:
         logger.warning("Using existing application: %s", ANY_CHARM_INGRESS_PER_UNIT_REQUIRER)
         return ANY_CHARM_INGRESS_PER_UNIT_REQUIRER
 
@@ -185,7 +166,7 @@ def any_charm_ingress_per_unit_requirer_fixture(
     )
 
     juju.wait(
-        lambda status: (jubilant.all_active(status, ANY_CHARM_INGRESS_PER_UNIT_REQUIRER)),
+        lambda status: jubilant.all_active(status, ANY_CHARM_INGRESS_PER_UNIT_REQUIRER),
         timeout=JUJU_WAIT_TIMEOUT,
     )
     return ANY_CHARM_INGRESS_PER_UNIT_REQUIRER
@@ -193,9 +174,7 @@ def any_charm_ingress_per_unit_requirer_fixture(
 
 @pytest.fixture(scope="module", name="any_charm_haproxy_route_requirer_base")
 @pytestconfig_arg_no_deploy(application=ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)
-def any_charm_haproxy_route_requirer_base_fixture(
-    _pytestconfig: pytest.Config, juju: jubilant.Juju
-):
+def any_charm_haproxy_route_requirer_base_fixture(juju: jubilant.Juju):
     """Deploy any-charm and configure it to serve as a requirer for the haproxy-route
     integration.
     """
@@ -239,8 +218,8 @@ def any_charm_haproxy_route_requirer_base_fixture(
             },
         )
         juju.wait(
-            lambda status: (
-                jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION)
+            lambda status: jubilant.all_active(
+                status, ANY_CHARM_HAPROXY_ROUTE_REQUIRER_APPLICATION
             ),
             timeout=JUJU_WAIT_TIMEOUT,
         )
@@ -269,33 +248,36 @@ def any_charm_haproxy_route_requirer_fixture(
 
 @pytest.fixture(scope="module", name="any_charm_haproxy_route_tcp_requirer_base")
 @pytestconfig_arg_no_deploy(application=ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION)
-def any_charm_haproxy_route_tcp_requirer_base_fixture(
-    _pytestconfig: pytest.Config, juju: jubilant.Juju
-):
+def any_charm_haproxy_route_tcp_requirer_base_fixture(juju: jubilant.Juju):
     """Deploy any-charm and configure it to serve as a requirer for the haproxy-route
     integration.
     """
-    juju.deploy(
-        "any-charm",
-        app=ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION,
-        channel="beta",
-        config={
-            "src-overwrite": json.dumps(
-                {
-                    "any_charm.py": pathlib.Path(HAPROXY_ROUTE_TCP_REQUIRER_SRC).read_text(
-                        encoding="utf-8"
-                    ),
-                    "haproxy_route_tcp.py": pathlib.Path(HAPROXY_ROUTE_TCP_LIB_SRC).read_text(
-                        encoding="utf-8"
-                    ),
-                }
+    src_overwrite = json.dumps(
+        {
+            "any_charm.py": pathlib.Path(HAPROXY_ROUTE_TCP_REQUIRER_SRC).read_text(
+                encoding="utf-8"
             ),
-            "python-packages": "pydantic~=2.10\nvalidators",
-        },
+            "haproxy_route_tcp.py": pathlib.Path(HAPROXY_ROUTE_TCP_LIB_SRC).read_text(
+                encoding="utf-8"
+            ),
+        }
     )
+    # Write large src-overwrite to a file to avoid ARG_MAX CLI limit
+    with tempfile.NamedTemporaryFile(dir=".") as tf:
+        tf.write(src_overwrite.encode("utf-8"))
+        tf.flush()
+        juju.deploy(
+            "any-charm",
+            app=ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION,
+            channel="beta",
+            config={
+                "src-overwrite": f"@{tf.name}",
+                "python-packages": "pydantic~=2.10\nvalidators",
+            },
+        )
     juju.wait(
-        lambda status: (
-            jubilant.all_active(status, ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION)
+        lambda status: jubilant.all_active(
+            status, ANY_CHARM_HAPROXY_ROUTE_TCP_REQUIRER_APPLICATION
         ),
         timeout=JUJU_WAIT_TIMEOUT,
     )
