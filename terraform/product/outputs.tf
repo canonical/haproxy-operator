@@ -70,7 +70,7 @@ output "provides" {
     }
     logging_provider = {
       kind       = "endpoint"
-      name       = module.haproxy.app_name
+      name       = juju_application.grafana_agent.name
       endpoint   = "logging-provider"
       controller = null
     }
