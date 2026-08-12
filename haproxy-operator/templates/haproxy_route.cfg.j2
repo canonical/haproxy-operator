@@ -4,7 +4,7 @@
 frontend haproxy
     mode http
     bind [::]:80 v4v6
-    bind [::]:443 v4v6 ssl crt {{ haproxy_crt_dir }} alpn h2,http/1.1
+    bind [::]:443 v4v6 ssl crt {{ haproxy_crt_dir }} alpn h2,http/1.1 strict-sni
 
 {{ ddos_protection_rules() }}
 
