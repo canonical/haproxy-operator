@@ -730,8 +730,7 @@ class HAProxyCharm(ops.CharmBase):
         """
         if not file_exists(HAPROXY_CONFIG):
             event.fail(
-                f"HAProxy configuration file {HAPROXY_CONFIG} does not exist yet. "
-                "Ensure the charm is configured and integrated before running this action."
+                f"HAProxy configuration file at {HAPROXY_CONFIG} not found. "
             )
             return
         configuration = read_file(HAPROXY_CONFIG)
@@ -739,8 +738,7 @@ class HAProxyCharm(ops.CharmBase):
         if self._configuration_is_default(configuration):
             event.log(
                 "The HAProxy configuration matches the default configuration. This usually "
-                "means no proxy backends are configured (e.g. no haproxy-route, ingress, or "
-                "reverseproxy relations)."
+                "means no proxy backends are configured."
             )
 
         event.set_results({"configuration": configuration, "source": "disk"})
