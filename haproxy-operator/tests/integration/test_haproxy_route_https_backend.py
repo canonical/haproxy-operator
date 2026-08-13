@@ -155,7 +155,7 @@ def test_haproxy_route_https_with_different_transport_protocols(
     juju.run(
         f"{any_charm_haproxy_route_requirer}/0",
         "rpc",
-        {"method": "start_ssl_server", "protocols": "h2"},
+        {"method": "start_ssl_server", "kwargs": json.dumps({"protocols": "h2"})},
     )
 
     request_id = str(uuid.uuid4())
