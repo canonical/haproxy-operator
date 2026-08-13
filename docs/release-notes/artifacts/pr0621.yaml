@@ -1,9 +1,9 @@
 version_schema: 2
 
 changes:
-  - title: Fail TLS connections when SNI does not match a configured certificate
+  - title: Rejected TLS connections when SNI does not match a configured certificate
     author: Copilot
-    type: minor
+    type: breaking
     description: >
       Added `strict-sni` to the global `ssl-default-bind-options` so HAProxy
       rejects TLS connections whose SNI does not match any configured
