@@ -14,9 +14,8 @@ import ops.testing
 import pytest
 import scenario
 
-import charm as charm_module
 import tls_relation
-from charm import HAProxyCharm
+from charm import CharmStateValidationBaseError, HAProxyCharm
 from tests.unit.conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 
 from .conftest import build_haproxy_route_relation, build_spoe_auth_relation
@@ -484,8 +483,8 @@ class TestGetConfigurationAction:
         assert: the on-disk file content is returned unchanged.
         """
         content = "global\n    maxconn 4096\n\nfrontend default\n    bind :80\n"
-        monkeypatch.setattr(charm_module, "file_exists", lambda _: True)
-        monkeypatch.setattr(charm_module, "read_file", lambda _: content)
+        monkeypatch.setattr("charm.file_exists", MagicMock(return_value=True))
+        monkeypatch.setattr("charm.read_file", MagicMock(return_value=content))
         context = ops.testing.Context(HAProxyCharm)
         state = ops.testing.State(leader=True)
 
@@ -499,7 +498,7 @@ class TestGetConfigurationAction:
         act: trigger the get-configuration action.
         assert: the action fails with a clear message rather than returning empty.
         """
-        monkeypatch.setattr(charm_module, "file_exists", lambda _: False)
+        monkeypatch.setattr("charm.file_exists", MagicMock(return_value=False))
         context = ops.testing.Context(HAProxyCharm)
         state = ops.testing.State(leader=True)
 
@@ -508,49 +507,50 @@ class TestGetConfigurationAction:
 
         assert "not found" in exc_info.value.message
 
-    def test_warns_when_config_is_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """
-        arrange: mock the on-disk config to equal the rendered default config.
-        act: trigger the get-configuration action.
-        assert: a warning is logged and the configuration is still returned.
-        """
-        default_config = "global\n    maxconn 4096\n"
-        monkeypatch.setattr(charm_module, "file_exists", lambda _: True)
-        monkeypatch.setattr(charm_module, "read_file", lambda _: default_config)
-        monkeypatch.setattr(
-            charm_module.HAProxyService, "render_default_config", lambda self, _: default_config
-        )
-        context = ops.testing.Context(HAProxyCharm)
-        state = ops.testing.State(leader=True)
-
-        context.run(context.on.action("get-configuration"), state)
-
-        assert context.action_results == {"configuration": default_config, "source": "disk"}
-        assert any("default configuration" in log.lower() for log in context.action_logs)
-
-    def test_no_warning_when_config_differs_from_default(
-        self, monkeypatch: pytest.MonkeyPatch
+    @pytest.mark.parametrize(
+        "on_disk_config, rendered_default, expect_default_warning",
+        [
+            pytest.param(
+                "global\n    maxconn 4096\n",
+                "global\n    maxconn 4096\n",
+                True,
+                id="matches-default",
+            ),
+            pytest.param(
+                "frontend haproxy\n    bind :80\n",
+                "global\n    maxconn 4096\n",
+                False,
+                id="differs-from-default",
+            ),
+        ],
+    )
+    def test_default_configuration_warning(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        on_disk_config: str,
+        rendered_default: str,
+        expect_default_warning: bool,
     ) -> None:
         """
-        arrange: mock the on-disk config to differ from the rendered default config.
+        arrange: mock the on-disk config to either match or differ from the rendered default.
         act: trigger the get-configuration action.
-        assert: no default-configuration warning is logged.
+        assert: the configuration is returned, and the "matches default" warning is logged
+            only when the config is the default.
         """
-        monkeypatch.setattr(charm_module, "file_exists", lambda _: True)
+        monkeypatch.setattr("charm.file_exists", MagicMock(return_value=True))
+        monkeypatch.setattr("charm.read_file", MagicMock(return_value=on_disk_config))
         monkeypatch.setattr(
-            charm_module, "read_file", lambda _: "frontend haproxy\n    bind :80\n"
-        )
-        monkeypatch.setattr(
-            charm_module.HAProxyService,
-            "render_default_config",
-            lambda self, _: "global\n    maxconn 4096\n",
+            "charm.HAProxyService.render_default_config",
+            MagicMock(return_value=rendered_default),
         )
         context = ops.testing.Context(HAProxyCharm)
         state = ops.testing.State(leader=True)
 
         context.run(context.on.action("get-configuration"), state)
 
-        assert not any("default configuration" in log.lower() for log in context.action_logs)
+        assert context.action_results == {"configuration": on_disk_config, "source": "disk"}
+        warned = any("default configuration" in log.lower() for log in context.action_logs)
+        assert warned == expect_default_warning
 
     def test_notes_when_charm_state_cannot_be_built(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """
@@ -560,13 +560,12 @@ class TestGetConfigurationAction:
             logged instead of silently claiming it is not the default.
         """
         content = "frontend haproxy\n    bind :80\n"
-        monkeypatch.setattr(charm_module, "file_exists", lambda _: True)
-        monkeypatch.setattr(charm_module, "read_file", lambda _: content)
-
-        def _raise(*_args: object, **_kwargs: object) -> charm_module.CharmState:
-            raise charm_module.CharmStateValidationBaseError("invalid config")
-
-        monkeypatch.setattr(charm_module.CharmState, "from_charm", _raise)
+        monkeypatch.setattr("charm.file_exists", MagicMock(return_value=True))
+        monkeypatch.setattr("charm.read_file", MagicMock(return_value=content))
+        monkeypatch.setattr(
+            "charm.CharmState.from_charm",
+            MagicMock(side_effect=CharmStateValidationBaseError("invalid config")),
+        )
         context = ops.testing.Context(HAProxyCharm)
         state = ops.testing.State(leader=True)
 
