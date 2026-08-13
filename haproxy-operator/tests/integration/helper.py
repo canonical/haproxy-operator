@@ -198,7 +198,7 @@ def get_http_version_from_apache2_logs(
     """
     last_httpx_log_entry = juju.exec(
         f"grep '{request_id}' /var/log/apache2/access.log | tail -n 1",
-        unit=f"{app_name}/0",
+        unit=f"{app_name}/leader",
     ).stdout
 
     match = pattern.search(last_httpx_log_entry)
