@@ -5,45 +5,20 @@
 """Integration tests for haproxy charm actions."""
 
 import json
-import time
 
 import jubilant
 import pytest
 
 
-def _integrate_haproxy_route(juju: jubilant.Juju, provider_endpoint: str, requirer: str) -> None:
-    """Integrate haproxy-route, retrying while a prior relation is still being removed.
-
-    Tests in this module add and remove the same haproxy-route relation. Because
-    relation removal is asynchronous, a subsequent integrate can race with it and
-    fail with "already exists"; retry until the previous relation has cleared.
-
-    Args:
-        juju: Jubilant juju instance.
-        provider_endpoint: The haproxy-route provider endpoint (e.g. "haproxy:haproxy-route").
-        requirer: The requirer application name.
-    """
-    deadline = time.monotonic() + 120
-    while True:
-        try:
-            juju.integrate(provider_endpoint, requirer)
-            return
-        except jubilant.CLIError as exc:
-            if "already exists" in str(exc) and time.monotonic() < deadline:
-                time.sleep(2)
-                continue
-            raise
-
-
 @pytest.mark.abort_on_fail
-def test_get_proxied_endpoints_action(
+def test_action(
     configured_application_with_tls: str,
     any_charm_haproxy_route_requirer: str,
     juju: jubilant.Juju,
 ):
     """arrange: Deploy the charm integrated with any_charm haproxy-route.
-    act: Trigger the action 'get-proxied-endpoints.
-    assert: The correct proxied endpoints are returned.
+    act: Trigger the charm's actions (get-proxied-endpoints and get-configuration).
+    assert: Each action returns the expected result.
     """
     juju.integrate(
         f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
@@ -73,6 +48,7 @@ def test_get_proxied_endpoints_action(
         )
     )
 
+    # get-proxied-endpoints returns an endpoint for every hostname/path combination.
     expected_endpoints = {
         "https://ok.haproxy.internal/v1",
         "https://ok.haproxy.internal/v2",
@@ -82,21 +58,19 @@ def test_get_proxied_endpoints_action(
         "https://ok3.haproxy.internal/v2",
     }
 
-    # Test without backend param
+    # Test without a backend param (filter)
     task = juju.run(f"{configured_application_with_tls}/0", "get-proxied-endpoints")
-
     endpoints = set(json.loads(task.results["endpoints"]))
     assert endpoints == expected_endpoints, task.results
 
-    # Test with backend param
+    # Test with a backend param (filter)
     task = juju.run(
         f"{configured_application_with_tls}/0", "get-proxied-endpoints", {"backend": "any_charm"}
     )
-
     endpoints = set(json.loads(task.results["endpoints"]))
     assert endpoints == expected_endpoints, task.results
 
-    # Test with backend param with non existing backend
+    # Test with a non-existing backend
     task = juju.run(
         f"{configured_application_with_tls}/0",
         "get-proxied-endpoints",
@@ -104,52 +78,8 @@ def test_get_proxied_endpoints_action(
     )
     assert task.results == {"endpoints": "[]"}, task.results
 
-    juju.remove_relation(
-        f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
-    )
-
-
-@pytest.mark.abort_on_fail
-def test_get_configuration_action(
-    configured_application_with_tls: str,
-    any_charm_haproxy_route_requirer: str,
-    juju: jubilant.Juju,
-):
-    """arrange: Deploy the charm integrated with any_charm haproxy-route.
-    act: Trigger the 'get-configuration' action.
-    assert: The returned configuration matches the on-disk haproxy.cfg.
-    """
-    _integrate_haproxy_route(
-        juju, f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
-    )
-
-    service_name = "any_charm"
-    juju.run(
-        f"{any_charm_haproxy_route_requirer}/0",
-        "rpc",
-        {
-            "method": "update_relation",
-            "args": json.dumps(
-                [
-                    {
-                        "service": service_name,
-                        "ports": [80],
-                        "hostname": "ok.haproxy.internal",
-                        "paths": ["/v1"],
-                    }
-                ]
-            ),
-        },
-    )
-    juju.wait(
-        lambda status: jubilant.all_active(
-            status, configured_application_with_tls, any_charm_haproxy_route_requirer
-        )
-    )
-
+    # get-configuration returns exactly the configuration currently on disk.
     on_disk = juju.ssh(f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg")
-
-    # The action returns exactly the configuration currently on disk.
     task = juju.run(f"{configured_application_with_tls}/0", "get-configuration")
     assert task.results["source"] == "disk", task.results
     assert task.results["configuration"].splitlines() == on_disk.splitlines(), task.results
