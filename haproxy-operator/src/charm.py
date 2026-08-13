@@ -738,7 +738,7 @@ class HAProxyCharm(ops.CharmBase):
         except CharmStateValidationBaseError:
             event.log(
                 "Could not determine whether this is the default configuration because the "
-                "charm state is invalid; see `juju status` for the blocking condition."
+                "charm state is invalid."
             )
             configuration_is_default = False
         if configuration_is_default:
