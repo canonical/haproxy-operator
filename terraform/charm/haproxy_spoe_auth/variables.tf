@@ -7,6 +7,12 @@ variable "app_name" {
   default     = "haproxy-spoe-auth"
 }
 
+variable "base" {
+  description = "Base of the haproxy-spoe-auth charm."
+  type        = string
+  default     = "ubuntu@24.04"
+}
+
 variable "channel" {
   description = "Channel of the haproxy-spoe-auth charm."
   type        = string
@@ -40,10 +46,4 @@ variable "units" {
   description = "Number of haproxy-spoe-auth units."
   type        = number
   default     = 1
-}
-
-variable "base" {
-  description = "Base of the haproxy-spoe-auth charm."
-  type        = string
-  default     = "ubuntu@24.04"
 }
