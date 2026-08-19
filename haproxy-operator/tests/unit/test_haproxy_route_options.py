@@ -14,7 +14,7 @@ from charm import HAProxyCharm
 from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
-@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls", "mocks_tls_ca_write")
 def test_protocol_https(
     monkeypatch: pytest.MonkeyPatch, certificates_integration, receive_ca_certs_relation
 ):
@@ -77,7 +77,7 @@ def test_protocol_https(
     assert out.app_status == ActiveStatus("")
 
 
-@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls", "mocks_tls_ca_write")
 def test_protocol_https_with_health_check(
     monkeypatch: pytest.MonkeyPatch, certificates_integration, receive_ca_certs_relation
 ):
@@ -207,7 +207,7 @@ def test_protocol_https_no_ca(monkeypatch: pytest.MonkeyPatch, certificates_inte
     assert out.app_status == ActiveStatus("")
 
 
-@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls", "mocks_tls_ca_write")
 def test_grpc_backend(
     monkeypatch: pytest.MonkeyPatch, certificates_integration, receive_ca_certs_relation
 ):
