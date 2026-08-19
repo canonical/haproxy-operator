@@ -7,6 +7,12 @@ variable "app_name" {
   default     = "haproxy-ddos-protection-configurator"
 }
 
+variable "base" {
+  description = "Base of the haproxy-ddos-protection-configurator charm."
+  type        = string
+  default     = "ubuntu@24.04"
+}
+
 variable "channel" {
   description = "Channel of the haproxy-ddos-protection-configurator charm."
   type        = string
@@ -40,10 +46,4 @@ variable "units" {
   description = "Number of haproxy-ddos-protection-configurator units."
   type        = number
   default     = 1
-}
-
-variable "base" {
-  description = "Base of the haproxy-ddos-protection-configurator charm."
-  type        = string
-  default     = "ubuntu@24.04"
 }

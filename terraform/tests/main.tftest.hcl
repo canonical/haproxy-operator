@@ -22,7 +22,7 @@ run "basic_deploy" {
 
     haproxy_ddos_protection_configurator = {
       # renovate: depName="haproxy-ddos-protection-configurator"
-      revision = 165
+      revision = 196
     }
 
     protected_hostnames_configuration = [
@@ -30,7 +30,7 @@ run "basic_deploy" {
         hostname = "one.example.com"
         haproxy_spoe_auth = {
           # renovate: depName="haproxy-spoe-auth"
-          revision = 160
+          revision = 169
         }
         oauth_external_idp_integrator = {
           # renovate: depName="oauth-external-idp-integrator"
@@ -53,7 +53,7 @@ run "basic_deploy" {
         haproxy_spoe_auth = {
           channel = "latest/edge"
           # renovate: depName="haproxy-spoe-auth"
-          revision = 160
+          revision = 169
         }
       }
     ]
@@ -67,5 +67,20 @@ run "basic_deploy" {
   assert {
     condition     = length(output.haproxy_spoe_auth_app_names_map) == 2
     error_message = "Two haproxy-spoe-auth should be deployed"
+  }
+
+  assert {
+    condition     = output.models["haproxy"].model_uuid == run.setup_tests.model_uuid
+    error_message = "models output should expose the deployed model_uuid"
+  }
+
+  assert {
+    condition     = contains(keys(output.models["haproxy"].components), "haproxy")
+    error_message = "models.components should include the haproxy application"
+  }
+
+  assert {
+    condition     = output.metadata.version == "1.0.0"
+    error_message = "metadata.version should default to 1.0.0"
   }
 }
