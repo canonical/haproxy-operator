@@ -108,6 +108,7 @@ class HAProxyService:
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
             "services": services,
+            "log_hash_client_ip": charm_state.log_hash_client_ip,
         }
         self._render_haproxy_config(HAPROXY_LEGACY_CONFIG_TEMPLATE, template_context)
         self._validate_haproxy_config()
@@ -144,6 +145,7 @@ class HAProxyService:
             "peer_units_address": ingress_requirers_information.peers,
             "ip_allow_list_file": IP_ALLOW_LIST_FILE,
             "deny_paths_file": DENY_PATHS_FILE,
+            "log_hash_client_ip": charm_state.log_hash_client_ip,
         }
         template = (
             HAPROXY_INGRESS_CONFIG_TEMPLATE
@@ -175,6 +177,7 @@ class HAProxyService:
 
         valid_backends = haproxy_route_requirers_information.valid_backends()
         template_context = {
+            "log_hash_client_ip": charm_state.log_hash_client_ip,
             "config_global_max_connection": charm_state.global_max_connection,
             "enable_hsts": charm_state.enable_hsts,
             "ddos_protection": charm_state.ddos_protection,
@@ -221,6 +224,7 @@ class HAProxyService:
             {
                 "config_global_max_connection": charm_state.global_max_connection,
                 "ddos_protection": charm_state.ddos_protection,
+                "log_hash_client_ip": charm_state.log_hash_client_ip,
             },
         )
         self._validate_haproxy_config()

@@ -596,6 +596,7 @@ def test_charm_state_ddos_protection(ddos_protection, expected_value):
         "global-maxconn": 4096,
         "enable-hsts": False,
         "ddos-protection": ddos_protection,
+        "log-hash-client-ip": False,
     }.get(key)
 
     ingress_provider_mock = MagicMock()
