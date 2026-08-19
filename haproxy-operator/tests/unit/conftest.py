@@ -13,6 +13,7 @@ import pytest
 import scenario
 from charmlibs.interfaces.tls_certificates import (
     Certificate,
+    CertificateRequestAttributes,
     CertificateSigningRequest,
     PrivateKey,
     generate_ca,
@@ -580,3 +581,31 @@ def haproxy_route_relation_data_fixture() -> typing.Callable[..., HaproxyRouteRe
         )
 
     return generate_requirer_data
+
+
+@pytest.fixture(name="dns_record_relation")
+def dns_record_relation_fixture():
+    """DNS record relation fixture."""
+    return scenario.Relation(endpoint="dns-record", remote_app_name="bind-operator")
+
+
+@pytest.fixture(name="context_with_dns_mock")
+def context_with_dns_mock_fixture():
+    """Context fixture with dns_record and haproxy service mocked."""
+    with (
+        patch("haproxy.HAProxyService.install"),
+        patch("haproxy.HAProxyService.reconcile_default"),
+        patch("haproxy.HAProxyService.reconcile_ingress"),
+        patch("tls_relation.TLSRelationService.write_certificate_to_unit"),
+        # Patch the class so its __init__ (which creates a Juju secret) is never called
+        patch("charm.DNSRecordRequires"),
+        patch("dns_record.DNSRecordService.update_dns_records") as update_dns_mock,
+        patch(
+            "charm.HAProxyCharm._get_certificate_requests",
+            return_value=[CertificateRequestAttributes(common_name=TEST_EXTERNAL_HOSTNAME_CONFIG)],
+        ),
+    ):
+        yield (
+            Context(charm_type=HAProxyCharm),
+            update_dns_mock,
+        )

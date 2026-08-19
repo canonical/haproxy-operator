@@ -7,7 +7,7 @@ import json
 import logging
 import pathlib
 import re
-from unittest.mock import ANY, MagicMock
+from unittest.mock import ANY, MagicMock, patch
 
 import ops
 import ops.testing
@@ -470,3 +470,92 @@ def test_spoe_auth_invalid_data(monkeypatch: pytest.MonkeyPatch, certificates_in
     assert render_file_mock.call_count == 0
     assert out.unit_status.name == ops.testing.BlockedStatus.name
     assert spoe_auth_relation.remote_app_name in out.unit_status.message
+
+
+def test_dns_record_relation_joined_triggers_reconcile(
+    context_with_dns_mock, base_state, dns_record_relation
+):
+    """
+    arrange: charm state with dns-record relation
+    act: dns_record_relation_joined event fires
+    assert: DNSRecordService.update_dns_records is called (via reconcile)
+    """
+    context, update_dns_mock = context_with_dns_mock
+    state = ops.testing.State(
+        **{
+            **base_state,
+            "relations": [*base_state.get("relations", []), dns_record_relation],
+            "leader": True,
+        }
+    )
+    context.run(context.on.relation_joined(dns_record_relation), state)
+    update_dns_mock.assert_called_once()
+
+
+def test_dns_record_relation_created_triggers_reconcile(
+    context_with_dns_mock, base_state, dns_record_relation
+):
+    """
+    arrange: charm state with dns-record relation
+    act: dns_record_relation_created event fires
+    assert: DNSRecordService.update_dns_records is called (via reconcile)
+    """
+    context, update_dns_mock = context_with_dns_mock
+    state = ops.testing.State(
+        **{
+            **base_state,
+            "relations": [*base_state.get("relations", []), dns_record_relation],
+            "leader": True,
+        }
+    )
+    context.run(context.on.relation_created(dns_record_relation), state)
+    update_dns_mock.assert_called_once()
+
+
+def test_dns_update_uses_vip_when_ha_active(
+    context_with_dns_mock, base_state, dns_record_relation
+):
+    """
+    arrange: HA relation active with vip config set
+    act: config_changed fires
+    assert: update_dns_records is called with the VIP as the IP
+    """
+    context, update_dns_mock = context_with_dns_mock
+    ha_relation = scenario.Relation(
+        endpoint="ha",
+        remote_app_name="hacluster",
+        remote_units_data={0: {}},
+    )
+    state = ops.testing.State(
+        config={"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "vip": "192.168.1.100"},
+        relations=[*base_state.get("relations", []), dns_record_relation, ha_relation],
+        leader=True,
+    )
+    context.run(context.on.config_changed(), state)
+
+    calls = update_dns_mock.call_args_list
+    assert any(call_args.args[1] == "192.168.1.100" for call_args in calls)
+
+
+def test_dns_update_uses_binding_ip_when_no_ha(
+    context_with_dns_mock, base_state, dns_record_relation
+):
+    """
+    arrange: no HA relation, standard network binding
+    act: config_changed fires
+    assert: update_dns_records is called with the binding ingress address
+    """
+    context, update_dns_mock = context_with_dns_mock
+    state = ops.testing.State(
+        config={"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG},
+        relations=[*base_state.get("relations", []), dns_record_relation],
+        leader=True,
+    )
+    with patch("ops.model.Model.get_binding") as mock_binding:
+        mock_network = MagicMock()
+        mock_network.network.ingress_addresses = ["10.0.0.5"]
+        mock_binding.return_value = mock_network
+        context.run(context.on.config_changed(), state)
+
+    calls = update_dns_mock.call_args_list
+    assert any(call_args.args[1] == "10.0.0.5" for call_args in calls)
