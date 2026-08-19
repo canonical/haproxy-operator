@@ -51,9 +51,9 @@ def test_haproxy_route_any_charm_requirer(
             status, configured_application_with_tls, any_charm_haproxy_route_requirer
         )
     )
-    haproxy_config = juju.ssh(
-        f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
-    )
+    haproxy_config = juju.exec(
+        "cat /etc/haproxy/haproxy.cfg", unit=f"{configured_application_with_tls}/0"
+    ).stdout
     assert all(
         entry in haproxy_config
         for entry in [
