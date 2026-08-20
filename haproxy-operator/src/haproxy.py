@@ -221,11 +221,6 @@ class HAProxyService:
         """
         self._render_haproxy_config(
             HAPROXY_DEFAULT_CONFIG_TEMPLATE,
-            {
-                "config_global_max_connection": charm_state.global_max_connection,
-                "ddos_protection": charm_state.ddos_protection,
-                "log_hash_client_ip": charm_state.log_hash_client_ip,
-            },
             self._build_default_template_context(charm_state),
         )
         self._validate_haproxy_config()
@@ -260,6 +255,7 @@ class HAProxyService:
         return {
             "config_global_max_connection": charm_state.global_max_connection,
             "ddos_protection": charm_state.ddos_protection,
+            "log_hash_client_ip": charm_state.log_hash_client_ip,
         }
 
     def _render_haproxy_config(self, template_file_path: str, context: dict) -> None:
