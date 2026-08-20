@@ -1,0 +1,25 @@
+version_schema: 2
+
+changes:
+  - title: Removed event deferral and moved TLS/ingress handling into the reconcile loop
+    author: tphan025
+    type: minor
+    description: >
+      Stopped deferring TLS-related events (`_on_certificate_available`,
+      `_on_ca_certificates_updated`, `_on_ca_certificates_removed` and
+      `_ensure_tls` now use `validate_config_and_tls(defer=False)`) so the
+      charm no longer replays stale events and instead relies on the holistic
+      reconcile loop. Moved `update_trusted_cas` out of the individual CA
+      handlers and into `_reconcile`, and replaced the inline ingress URL
+      publishing in `_on_ingress_data_provided` with a dedicated
+      `_publish_ingress_url` method that iterates over all ingress relations,
+      guards against `DataValidationError`, and is called from the reconcile
+      loop. Added a `mocks_tls_ca_write` unit-test fixture and updated the
+      affected haproxy-route option tests.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/626
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false
