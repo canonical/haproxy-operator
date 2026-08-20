@@ -1,0 +1,19 @@
+version_schema: 2
+
+changes:
+  - title: Switched PROXY protocol to v2 for haproxy-route-tcp backends
+    author: tushar5526
+    type: bugfix
+    description: >
+      Backend server lines for the haproxy-route-tcp interface now use
+      send-proxy-v2 instead of send-proxy when PROXY protocol is enabled.
+      PROXY protocol v2's binary format correctly handles dual-stack and
+      IPv4-mapped IPv6 addresses, resolving an AH03500 invalid
+      client-address error observed when fronting Apache instances.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/627
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false
