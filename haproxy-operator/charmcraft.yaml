@@ -151,6 +151,9 @@ actions:
         description: |
           The name of the backend for which to get the endpoints.
           If no backend with this name is present, an empty list is returned.
+  get-configuration:
+    description: |
+      Return the rendered haproxy configuration currently on the haproxy unit. Intended for debugging purposes.
 
 charm-libs:
   - lib: traefik_k8s.ingress_per_unit

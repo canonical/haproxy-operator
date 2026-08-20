@@ -47,7 +47,7 @@ from interface_hacluster.ops_ha_interface import HAServiceRequires
 from ops.charm import ActionEvent
 from ops.model import Port, SecretNotFoundError
 
-from haproxy import HAPROXY_SERVICE, HAProxyService
+from haproxy import HAPROXY_CONFIG, HAPROXY_SERVICE, HAProxyService, file_exists, read_file
 from http_interface import (
     HTTPBackendAvailableEvent,
     HTTPBackendRemovedEvent,
@@ -217,6 +217,7 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(
             self.on.get_proxied_endpoints_action, self._on_get_proxied_endpoints_action
         )
+        self.framework.observe(self.on.get_configuration_action, self._on_get_configuration_action)
         # Hook peer relation events so non-leader units reconcile when the leader
         # publishes certificate data to the peer relation app databag.
         self.framework.observe(
@@ -716,6 +717,63 @@ class HAProxyCharm(ops.CharmBase):
         ]
 
         event.set_results({"endpoints": json.dumps(proxied_endpoints)})
+
+    def _on_get_configuration_action(self, event: ActionEvent) -> None:
+        """Return the on-disk haproxy configuration for debugging.
+
+        Reads the rendered configuration currently on disk
+        (/etc/haproxy/haproxy.cfg) that haproxy is running. Does not write to
+        disk or reload the service.
+
+        Args:
+            event: Juju event
+        """
+        if not file_exists(HAPROXY_CONFIG):
+            event.fail(f"HAProxy configuration file at {HAPROXY_CONFIG} not found. ")
+            return
+        configuration = read_file(HAPROXY_CONFIG)
+
+        try:
+            configuration_is_default = self._configuration_is_default(configuration)
+        except CharmStateValidationBaseError:
+            event.log(
+                "Could not determine whether this is the default configuration because the "
+                "charm state is invalid."
+            )
+            configuration_is_default = False
+        if configuration_is_default:
+            event.log(
+                "The HAProxy configuration matches the default configuration. This usually "
+                "means no proxy backends are configured."
+            )
+
+        event.set_results({"configuration": configuration, "source": "disk"})
+
+    def _configuration_is_default(self, configuration: str) -> bool:
+        """Return whether the given configuration matches the default configuration.
+
+        Args:
+            configuration: The configuration to compare against the default.
+
+        Raises:
+            CharmStateValidationBaseError: When the charm state needed to render
+                the default configuration cannot be built.
+
+        Returns:
+            True if it is identical to the rendered default configuration.
+        """
+        default_configuration = self.haproxy_service.render_default_config(
+            CharmState.from_charm(
+                self,
+                self._ingress_provider,
+                self._ingress_per_unit_provider,
+                self.haproxy_route_provider,
+                self.haproxy_route_tcp_provider,
+                self.reverseproxy_requirer,
+                self.haproxy_route_policy,
+            )
+        )
+        return configuration == default_configuration
 
     def _publish_haproxy_route_proxied_endpoints(
         self, haproxy_route_requirers_information: HaproxyRouteRequirersInformation
