@@ -113,7 +113,7 @@ def test_haproxy_route_tcp(
     haproxy_config = juju.ssh(
         f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
     )
-    assert "send-proxy" in haproxy_config
+    assert "send-proxy-v2" in haproxy_config
 
     # Test with port range binding
     juju.run(
