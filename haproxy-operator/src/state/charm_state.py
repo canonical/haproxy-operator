@@ -75,6 +75,17 @@ class CharmState:
     global_max_connection: int = Field(gt=0, alias="global_max_connection")
     ddos_protection: bool = True
     log_hash_client_ip: bool = False
+    # TODO(ISD-6248): "demo-salt-value" is a placeholder. Replace with a salt
+    # sourced from a Juju user secret (IS-only access)
+    http_log_format: str = '%[src,concat(,,\\"demo-salt-value\\"),sha2(256),hex]:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs %{+Q}r'
+    # error-log-format mirrors HAProxy's default error line, hashing only the
+    # client IP; it covers pre-stream connection errors (SSL handshake, PROXY
+    # protocol) that bypass log-format. %[so_id] reproduces the default
+    # frontend/bind-id field; (%[ssl_fc_err_str]) reproduces the SSL error
+    # detail and renders as (-) for non-SSL errors (log-format has no
+    # conditionals).
+    error_log_format: str = '%[src,concat(,,\\"demo-salt-value\\"),sha2(256),hex]:%cp [%tr] %[fe_name]/%[so_id]: %[fc_err_str] (%[ssl_fc_err_str])'
+    tcp_log_format: str = '%[src,concat(,,\\"demo-salt-value\\"),sha2(256),hex]:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq'
 
     @field_validator("global_max_connection")
     @classmethod

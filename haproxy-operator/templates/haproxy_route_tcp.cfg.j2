@@ -24,7 +24,7 @@ frontend haproxy_route_tcp_{{ frontend.bind_port }}
     # option tcplog above would otherwise override the defaults log-format and
     # log plaintext client IPs; this is the tcplog default with only %ci
     # replaced by the salted hash.
-    log-format "%[src,concat(,,\"demo-salt-value\"),sha2(256),hex]:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq"
+    log-format "{{ tcp_log_format }}"
 {% endif %}
     bind [::]:{{ frontend.bind_port }} v4v6 {% if frontend.tls_terminate %} ssl crt {{ haproxy_crt_dir }} {% endif +%}
 
