@@ -123,8 +123,8 @@ config:
       default: false
       type: boolean
       description: |
-        Replaces the client IP in HAProxy access logs with a salted SHA-256
-        hash. Opt-in, off by default; only the client IP field is affected.
+        Replaces the client IP in HAProxy access and error logs with a salted
+        SHA-256 hash. Opt-in, off by default; only the client IP field is affected.
 
 actions:
   get-certificate:
