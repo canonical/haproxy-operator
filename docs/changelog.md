@@ -12,6 +12,10 @@ Each revision is versioned by the date of the revision.
 
 - Switched from PROXY protocol v1 to v2.
 
+## 2026-07-17
+
+- Added a `get-configuration` action to inspect the effective HAProxy configuration.
+
 ## 2026-07-06
 
 - docs: Add a how-to guide for configuring the backend protocol.
