@@ -626,6 +626,71 @@ def test_charm_state_ddos_protection(ddos_protection, expected_value):
 
 
 @pytest.mark.parametrize(
+    "log_hash_client_ip,expected_value",
+    [(False, False), (True, True)],
+    ids=["hashing_disabled", "hashing_enabled"],
+)
+def test_charm_state_log_hash_client_ip(log_hash_client_ip, expected_value):
+    """
+    arrange: Setup a mock charm with log-hash-client-ip config.
+    act: Initialize the CharmState from the charm.
+    assert: The log_hash_client_ip field matches the expected value.
+    """
+    charm_mock = MagicMock(spec=ops.CharmBase)
+    charm_mock.config.get.side_effect = lambda key: {
+        "global-maxconn": 4096,
+        "enable-hsts": False,
+        "ddos-protection": False,
+        "log-hash-client-ip": log_hash_client_ip,
+    }.get(key)
+
+    ingress_provider_mock = MagicMock()
+    ingress_provider_mock.relations = []
+    ingress_per_unit_provider_mock = MagicMock()
+    ingress_per_unit_provider_mock.relations = []
+    haproxy_route_provider_mock = MagicMock()
+    haproxy_route_provider_mock.relations = []
+    haproxy_route_tcp_provider_mock = MagicMock()
+    haproxy_route_tcp_provider_mock.relations = []
+    reverseproxy_requirer_mock = MagicMock()
+    reverseproxy_requirer_mock.relations = []
+    haproxy_route_policy_requirer_mock = MagicMock()
+    haproxy_route_policy_requirer_mock.relation = None
+
+    charm_state = CharmState.from_charm(
+        charm=charm_mock,
+        ingress_provider=ingress_provider_mock,
+        ingress_per_unit_provider=ingress_per_unit_provider_mock,
+        haproxy_route_provider=haproxy_route_provider_mock,
+        haproxy_route_tcp_provider=haproxy_route_tcp_provider_mock,
+        reverseproxy_requirer=reverseproxy_requirer_mock,
+        haproxy_route_policy=haproxy_route_policy_requirer_mock,
+    )
+
+    assert charm_state.log_hash_client_ip is expected_value
+
+
+def test_charm_state_log_format_defaults_hash_client_ip():
+    """
+    arrange: Initialize the CharmState with minimal configuration.
+    act: Access the default log format fields.
+    assert: All formats replace the client IP with a salted SHA-256 hash of src.
+    """
+    charm_state = CharmState(
+        mode=ProxyMode.LEGACY,
+        enable_hsts=False,
+        global_max_connection=4096,
+    )
+
+    for log_format in (
+        charm_state.http_log_format,
+        charm_state.error_log_format,
+        charm_state.tcp_log_format,
+    ):
+        assert '%[src,concat(,,\\"demo-salt-value\\"),sha2(256),hex]' in log_format
+
+
+@pytest.mark.parametrize(
     "ddos_kwargs, expected",
     [
         (
@@ -2154,3 +2219,89 @@ def test_haproxy_route_tcp_port_range_config_rendering(
     assert "set-dst-port dst_port,add(1000)" in rendered
     # Server entries should not have a port suffix when a port range is used
     assert "server tcp-route-requirer-0" in rendered
+
+
+@pytest.mark.parametrize(
+    "log_hash_client_ip,expected_log_format",
+    [
+        (False, False),
+        (True, True),
+    ],
+    ids=["hashing_disabled", "hashing_enabled"],
+)
+def test_haproxy_route_tcp_template_log_hash_client_ip(
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+    log_hash_client_ip: bool,
+    expected_log_format: bool,
+):
+    """
+    arrange: Generate TCP relation data and parse it into frontends.
+    act: Render the TCP template with log_hash_client_ip enabled or disabled.
+    assert: The rendered config overrides log-format to hash the client IP only
+        when log_hash_client_ip is enabled.
+    """
+    tcp_requirers = HaproxyRouteTcpRequirersData(
+        requirers_data=[haproxy_route_tcp_relation_data(port=5000)],
+        relation_ids_with_invalid_data=set(),
+    )
+    frontends = parse_haproxy_route_tcp_requirers_data(tcp_requirers)
+
+    env = Environment(
+        loader=FileSystemLoader("templates"),
+        autoescape=select_autoescape(),
+        keep_trailing_newline=True,
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
+    template = env.get_template("haproxy_route_tcp.cfg.j2")
+    rendered = template.render(
+        tcp_frontends=frontends,
+        haproxy_crt_dir="/etc/haproxy/certs",
+        ddos_protection_config=DDosProtection(),
+        ip_allow_list_file="/etc/haproxy/ip_allow_list",
+        log_hash_client_ip=log_hash_client_ip,
+        tcp_log_format=CharmState(
+            mode=ProxyMode.LEGACY,
+            enable_hsts=False,
+            global_max_connection=4096,
+        ).tcp_log_format,
+    )
+
+    assert ('log-format "%[src,concat(,,\\"demo-salt-value\\"),sha2(256),hex]' in rendered) is (
+        expected_log_format
+    )
+
+
+HASHED_SRC = '%[src,concat(,,\\"demo-salt-value\\"),sha2(256),hex]:%cp'
+
+
+def test_charm_state_http_log_format_matches_haproxy_default():
+    """
+    arrange: Access the default http_log_format.
+    act: Compare it with HAProxy's default HTTP log format.
+    assert: Only the %ci:%cp client field is replaced by the salted hash; every
+        other variable matches the HAProxy default.
+    """
+    haproxy_default = "%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs %{+Q}r"
+
+    log_format = CharmState(
+        mode=ProxyMode.LEGACY, enable_hsts=False, global_max_connection=4096
+    ).http_log_format
+
+    assert log_format == haproxy_default.replace("%ci:%cp", HASHED_SRC, 1)
+
+
+def test_charm_state_tcp_log_format_matches_haproxy_default():
+    """
+    arrange: Access the default tcp_log_format.
+    act: Compare it with HAProxy's default TCP log format (option tcplog).
+    assert: Only the %ci:%cp client field is replaced by the salted hash; every
+        other variable matches the HAProxy default.
+    """
+    haproxy_default = "%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq"
+
+    log_format = CharmState(
+        mode=ProxyMode.LEGACY, enable_hsts=False, global_max_connection=4096
+    ).tcp_log_format
+
+    assert log_format == haproxy_default.replace("%ci:%cp", HASHED_SRC, 1)
