@@ -153,18 +153,13 @@ class HTTPRequirer(_IntegrationInterfaceBaseClass):
             event.unit,
         )
 
-    def get_services(self, tcp_log_format: str = "") -> list:
+    def get_services(self) -> list:
         """Return the haproxy config for all services in the relation data.
-
-        Args:
-            tcp_log_format: Optional log-format override applied to TCP services
-                so client IPs are hashed when log-hash-client-ip is enabled.
-                Empty string leaves service logging at the HAProxy default.
 
         Returns:
             list: The list of haproxy config stanzas for all services in the relation data.
         """
-        return legacy.generate_service_config(self.get_services_definition(), tcp_log_format)
+        return legacy.generate_service_config(self.get_services_definition())
 
     def get_services_definition(self) -> dict:
         """Augment services_dict with service definitions from relation data.

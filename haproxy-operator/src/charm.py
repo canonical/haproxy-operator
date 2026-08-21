@@ -376,10 +376,7 @@ class HAProxyCharm(ops.CharmBase):
 
         self.unit.set_ports(*required_ports)
         self.haproxy_service.reconcile_legacy(
-            charm_state,
-            self.reverseproxy_requirer.get_services(
-                tcp_log_format=charm_state.tcp_log_format if charm_state.log_hash_client_ip else ""
-            ),
+            charm_state, self.reverseproxy_requirer.get_services()
         )
 
     def _configure_haproxy_route(
