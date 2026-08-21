@@ -141,7 +141,8 @@ class HAProxyService:
             "config_external_hostname": external_hostname,
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
             "ddos_protection_config": ddos_protection_config,
-            "peer_units_address": ingress_requirers_information.peers,
+            "peer_units_address": ingress_requirers_information.formatted_peer_entries,
+            "peer_tcp_port": ingress_requirers_information.peer_tcp_port,
             "ip_allow_list_file": IP_ALLOW_LIST_FILE,
             "deny_paths_file": DENY_PATHS_FILE,
         }
@@ -191,7 +192,8 @@ class HAProxyService:
                 if backend.application_data.external_grpc_port
             ],
             "stick_table_entries": haproxy_route_requirers_information.stick_table_entries,
-            "peer_units_address": haproxy_route_requirers_information.peers,
+            "peer_units_address": haproxy_route_requirers_information.formatted_peer_entries,
+            "peer_tcp_port": haproxy_route_requirers_information.peer_tcp_port,
             "haproxy_crt_dir": HAPROXY_CERTS_DIR,
             "acls_for_allow_http": haproxy_route_requirers_information.acls_for_allow_http,
             "spoe_auth_info_list": spoe_oauth_info_list,
