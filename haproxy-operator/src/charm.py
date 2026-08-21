@@ -39,6 +39,7 @@ from charms.traefik_k8s.v1.ingress_per_unit import (
     IngressPerUnitProvider,
 )
 from charms.traefik_k8s.v2.ingress import (
+    DataValidationError,
     IngressPerAppDataProvidedEvent,
     IngressPerAppDataRemovedEvent,
     IngressPerAppProvider,
@@ -47,7 +48,7 @@ from interface_hacluster.ops_ha_interface import HAServiceRequires
 from ops.charm import ActionEvent
 from ops.model import Port, SecretNotFoundError
 
-from haproxy import HAPROXY_SERVICE, HAProxyService
+from haproxy import HAPROXY_CONFIG, HAPROXY_SERVICE, HAProxyService, file_exists, read_file
 from http_interface import (
     HTTPBackendAvailableEvent,
     HTTPBackendRemovedEvent,
@@ -217,6 +218,7 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(
             self.on.get_proxied_endpoints_action, self._on_get_proxied_endpoints_action
         )
+        self.framework.observe(self.on.get_configuration_action, self._on_get_configuration_action)
         # Hook peer relation events so non-leader units reconcile when the leader
         # publishes certificate data to the peer relation app databag.
         self.framework.observe(
@@ -245,7 +247,7 @@ class HAProxyCharm(ops.CharmBase):
         """Handle the config-changed event."""
         self._reconcile()
 
-    @validate_config_and_tls(defer=True)
+    @validate_config_and_tls(defer=False)
     def _on_certificate_available(self, _: CertificateAvailableEvent) -> None:
         """Handle the TLS Certificate available event."""
         self._reconcile()
@@ -305,6 +307,8 @@ class HAProxyCharm(ops.CharmBase):
         ha_information = HAInformation.from_charm(self)
         self._reconcile_ha(ha_information)
 
+        self._tls.update_trusted_cas()
+
         status_message = ""
         match proxy_mode:
             case ProxyMode.INGRESS:
@@ -351,6 +355,7 @@ class HAProxyCharm(ops.CharmBase):
             ddos_protection_config,
         )
         self._publish_certificate_to_peer_units(tls_information)
+        self._publish_ingress_url(tls_information)
 
     def _configure_legacy(self, charm_state: CharmState) -> None:
         """Configure the legacy mode."""
@@ -549,16 +554,14 @@ class HAProxyCharm(ops.CharmBase):
             )
         ]
 
-    @validate_config_and_tls(defer=True)
+    @validate_config_and_tls(defer=False)
     def _on_ca_certificates_updated(self, _: CertificatesAvailableEvent) -> None:
         """Handle the CA certificates available event."""
-        self._tls.update_trusted_cas()
         self._reconcile()
 
-    @validate_config_and_tls(defer=True)
+    @validate_config_and_tls(defer=False)
     def _on_ca_certificates_removed(self, _: CertificatesRemovedEvent) -> None:
         """Handle the CA certificates removed event."""
-        self._tls.update_trusted_cas()
         self._reconcile()
 
     @validate_config_and_tls(defer=False)
@@ -583,7 +586,7 @@ class HAProxyCharm(ops.CharmBase):
                         f"https://{tls_information.hostnames[0]}/{path_prefix}",
                     )
 
-    @validate_config_and_tls(defer=True)
+    @validate_config_and_tls(defer=False)
     def _on_ingress_data_provided(self, event: IngressPerAppDataProvidedEvent) -> None:
         """Handle the data-provided event.
 
@@ -591,13 +594,6 @@ class HAProxyCharm(ops.CharmBase):
             event: Juju event.
         """
         self._reconcile()
-        if self.unit.is_leader():
-            tls_information = TLSInformation.from_charm(self, self.certificates)
-            integration_data = self._ingress_provider.get_data(event.relation)
-            path_prefix = f"{integration_data.app.model}-{integration_data.app.name}"
-            self._ingress_provider.publish_url(
-                event.relation, f"https://{tls_information.hostnames[0]}/{path_prefix}/"
-            )
 
     @validate_config_and_tls(defer=False)
     def _on_ingress_data_removed(
@@ -632,7 +628,7 @@ class HAProxyCharm(ops.CharmBase):
         self.hacluster.bind_resources()
         peer_relation.data[self.unit].update({"vip": str(ha_information.vip)})
 
-    @validate_config_and_tls(defer=True)
+    @validate_config_and_tls(defer=False)
     def _ensure_tls(self, _: ops.EventBase) -> None:
         """Ensure that the charm is ready to handle TLS-related events."""
         TLSInformation.validate(self, self.certificates)
@@ -717,6 +713,63 @@ class HAProxyCharm(ops.CharmBase):
 
         event.set_results({"endpoints": json.dumps(proxied_endpoints)})
 
+    def _on_get_configuration_action(self, event: ActionEvent) -> None:
+        """Return the on-disk haproxy configuration for debugging.
+
+        Reads the rendered configuration currently on disk
+        (/etc/haproxy/haproxy.cfg) that haproxy is running. Does not write to
+        disk or reload the service.
+
+        Args:
+            event: Juju event
+        """
+        if not file_exists(HAPROXY_CONFIG):
+            event.fail(f"HAProxy configuration file at {HAPROXY_CONFIG} not found. ")
+            return
+        configuration = read_file(HAPROXY_CONFIG)
+
+        try:
+            configuration_is_default = self._configuration_is_default(configuration)
+        except CharmStateValidationBaseError:
+            event.log(
+                "Could not determine whether this is the default configuration because the "
+                "charm state is invalid."
+            )
+            configuration_is_default = False
+        if configuration_is_default:
+            event.log(
+                "The HAProxy configuration matches the default configuration. This usually "
+                "means no proxy backends are configured."
+            )
+
+        event.set_results({"configuration": configuration, "source": "disk"})
+
+    def _configuration_is_default(self, configuration: str) -> bool:
+        """Return whether the given configuration matches the default configuration.
+
+        Args:
+            configuration: The configuration to compare against the default.
+
+        Raises:
+            CharmStateValidationBaseError: When the charm state needed to render
+                the default configuration cannot be built.
+
+        Returns:
+            True if it is identical to the rendered default configuration.
+        """
+        default_configuration = self.haproxy_service.render_default_config(
+            CharmState.from_charm(
+                self,
+                self._ingress_provider,
+                self._ingress_per_unit_provider,
+                self.haproxy_route_provider,
+                self.haproxy_route_tcp_provider,
+                self.reverseproxy_requirer,
+                self.haproxy_route_policy,
+            )
+        )
+        return configuration == default_configuration
+
     def _publish_haproxy_route_proxied_endpoints(
         self, haproxy_route_requirers_information: HaproxyRouteRequirersInformation
     ) -> None:
@@ -795,6 +848,28 @@ class HAProxyCharm(ops.CharmBase):
                 obj=tls_information.tls_cert_and_ca_chain,
                 dst=self.app,
                 encoder=haproxy_peer_relation_app_data_encoder,
+            )
+
+    def _publish_ingress_url(self, tls_information: TLSInformation) -> None:
+        """Publish the ingress URL to the ingress relation."""
+        if not self.unit.is_leader():
+            return
+
+        tls_information = TLSInformation.from_charm(self, self.certificates)
+        for relation in self._ingress_provider.relations:
+            try:
+                integration_data = self._ingress_provider.get_data(relation)
+            except DataValidationError as e:
+                logger.warning(
+                    "Ingress integration data validation error for relation %s: %s. Skipping.",
+                    relation.id,
+                    e,
+                )
+                continue
+
+            path_prefix = f"{integration_data.app.model}-{integration_data.app.name}"
+            self._ingress_provider.publish_url(
+                relation, f"https://{tls_information.hostnames[0]}/{path_prefix}/"
             )
 
 
