@@ -3,7 +3,7 @@ version_schema: 2
 changes:
   - title: Removed event deferral and moved TLS/ingress handling into the reconcile loop
     author: tphan025
-    type: minor
+    type: bugfix
     description: >
       Stopped deferring TLS-related events (`_on_certificate_available`,
       `_on_ca_certificates_updated`, `_on_ca_certificates_removed` and
