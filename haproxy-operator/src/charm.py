@@ -39,6 +39,7 @@ from charms.traefik_k8s.v1.ingress_per_unit import (
     IngressPerUnitProvider,
 )
 from charms.traefik_k8s.v2.ingress import (
+    DataValidationError,
     IngressPerAppDataProvidedEvent,
     IngressPerAppDataRemovedEvent,
     IngressPerAppProvider,
@@ -246,7 +247,7 @@ class HAProxyCharm(ops.CharmBase):
         """Handle the config-changed event."""
         self._reconcile()
 
-    @validate_config_and_tls(defer=True)
+    @validate_config_and_tls(defer=False)
     def _on_certificate_available(self, _: CertificateAvailableEvent) -> None:
         """Handle the TLS Certificate available event."""
         self._reconcile()
@@ -306,6 +307,8 @@ class HAProxyCharm(ops.CharmBase):
         ha_information = HAInformation.from_charm(self)
         self._reconcile_ha(ha_information)
 
+        self._tls.update_trusted_cas()
+
         status_message = ""
         match proxy_mode:
             case ProxyMode.INGRESS:
@@ -352,6 +355,7 @@ class HAProxyCharm(ops.CharmBase):
             ddos_protection_config,
         )
         self._publish_certificate_to_peer_units(tls_information)
+        self._publish_ingress_url(tls_information)
 
     def _configure_legacy(self, charm_state: CharmState) -> None:
         """Configure the legacy mode."""
@@ -550,16 +554,14 @@ class HAProxyCharm(ops.CharmBase):
             )
         ]
 
-    @validate_config_and_tls(defer=True)
+    @validate_config_and_tls(defer=False)
     def _on_ca_certificates_updated(self, _: CertificatesAvailableEvent) -> None:
         """Handle the CA certificates available event."""
-        self._tls.update_trusted_cas()
         self._reconcile()
 
-    @validate_config_and_tls(defer=True)
+    @validate_config_and_tls(defer=False)
     def _on_ca_certificates_removed(self, _: CertificatesRemovedEvent) -> None:
         """Handle the CA certificates removed event."""
-        self._tls.update_trusted_cas()
         self._reconcile()
 
     @validate_config_and_tls(defer=False)
@@ -584,7 +586,7 @@ class HAProxyCharm(ops.CharmBase):
                         f"https://{tls_information.hostnames[0]}/{path_prefix}",
                     )
 
-    @validate_config_and_tls(defer=True)
+    @validate_config_and_tls(defer=False)
     def _on_ingress_data_provided(self, event: IngressPerAppDataProvidedEvent) -> None:
         """Handle the data-provided event.
 
@@ -592,13 +594,6 @@ class HAProxyCharm(ops.CharmBase):
             event: Juju event.
         """
         self._reconcile()
-        if self.unit.is_leader():
-            tls_information = TLSInformation.from_charm(self, self.certificates)
-            integration_data = self._ingress_provider.get_data(event.relation)
-            path_prefix = f"{integration_data.app.model}-{integration_data.app.name}"
-            self._ingress_provider.publish_url(
-                event.relation, f"https://{tls_information.hostnames[0]}/{path_prefix}/"
-            )
 
     @validate_config_and_tls(defer=False)
     def _on_ingress_data_removed(
@@ -633,7 +628,7 @@ class HAProxyCharm(ops.CharmBase):
         self.hacluster.bind_resources()
         peer_relation.data[self.unit].update({"vip": str(ha_information.vip)})
 
-    @validate_config_and_tls(defer=True)
+    @validate_config_and_tls(defer=False)
     def _ensure_tls(self, _: ops.EventBase) -> None:
         """Ensure that the charm is ready to handle TLS-related events."""
         TLSInformation.validate(self, self.certificates)
@@ -853,6 +848,28 @@ class HAProxyCharm(ops.CharmBase):
                 obj=tls_information.tls_cert_and_ca_chain,
                 dst=self.app,
                 encoder=haproxy_peer_relation_app_data_encoder,
+            )
+
+    def _publish_ingress_url(self, tls_information: TLSInformation) -> None:
+        """Publish the ingress URL to the ingress relation."""
+        if not self.unit.is_leader():
+            return
+
+        tls_information = TLSInformation.from_charm(self, self.certificates)
+        for relation in self._ingress_provider.relations:
+            try:
+                integration_data = self._ingress_provider.get_data(relation)
+            except DataValidationError as e:
+                logger.warning(
+                    "Ingress integration data validation error for relation %s: %s. Skipping.",
+                    relation.id,
+                    e,
+                )
+                continue
+
+            path_prefix = f"{integration_data.app.model}-{integration_data.app.name}"
+            self._ingress_provider.publish_url(
+                relation, f"https://{tls_information.hostnames[0]}/{path_prefix}/"
             )
 
 
