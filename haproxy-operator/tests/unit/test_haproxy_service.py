@@ -10,6 +10,7 @@ import pytest
 import legacy
 from haproxy import HAPROXY_DH_PARAM, HAPROXY_DHCONFIG, HAProxyService
 from state.charm_state import CharmState, ProxyMode
+from state.log_formats import LOG_HASHED_CLIENT_ADDRESS
 
 
 @pytest.mark.usefixtures("systemd_mock")
@@ -49,8 +50,8 @@ def test_render_default_config_hashes_client_ip_when_enabled():
     """
     config = HAProxyService().render_default_config(_charm_state(log_hash_client_ip=True))
 
-    assert 'log-format "%[src,concat(,,\\"demo-salt-value\\"),sha2(256),hex]' in config
-    assert 'error-log-format "%[src,concat(,,\\"demo-salt-value\\"),sha2(256),hex]' in config
+    assert f'log-format "{LOG_HASHED_CLIENT_ADDRESS}' in config
+    assert f'error-log-format "{LOG_HASHED_CLIENT_ADDRESS}' in config
 
 
 def test_render_default_config_logs_plaintext_client_ip_when_disabled():
@@ -92,7 +93,7 @@ def test_legacy_tcp_service_with_tcplog_gets_hashed_log_format():
         _legacy_tcp_service(["mode tcp", "option tcplog"]), tcp_log_format
     )[0]
 
-    assert 'log-format "%[src,concat(,,\\"demo-salt-value\\"),sha2(256),hex]' in stanza
+    assert f'log-format "{LOG_HASHED_CLIENT_ADDRESS}' in stanza
 
 
 def test_legacy_tcp_service_without_tcplog_inherits_defaults_log_format():

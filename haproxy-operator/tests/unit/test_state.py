@@ -59,6 +59,11 @@ from state.ingress_per_unit import (
     IngressPerUnitIntegrationDataValidationError,
     IngressPerUnitRequirersInformation,
 )
+from state.log_formats import (
+    LOG_CONNECTION_COUNTERS,
+    LOG_HASHED_CLIENT_ADDRESS,
+    LOG_QUEUE_SIZES,
+)
 from state.tls import TLSInformation
 
 
@@ -687,7 +692,7 @@ def test_charm_state_log_format_defaults_hash_client_ip():
         charm_state.error_log_format,
         charm_state.tcp_log_format,
     ):
-        assert '%[src,concat(,,\\"demo-salt-value\\"),sha2(256),hex]' in log_format
+        assert LOG_HASHED_CLIENT_ADDRESS in log_format
 
 
 @pytest.mark.parametrize(
@@ -2267,12 +2272,7 @@ def test_haproxy_route_tcp_template_log_hash_client_ip(
         ).tcp_log_format,
     )
 
-    assert ('log-format "%[src,concat(,,\\"demo-salt-value\\"),sha2(256),hex]' in rendered) is (
-        expected_log_format
-    )
-
-
-HASHED_SRC = '%[src,concat(,,\\"demo-salt-value\\"),sha2(256),hex]:%cp'
+    assert (f'log-format "{LOG_HASHED_CLIENT_ADDRESS}' in rendered) is expected_log_format
 
 
 def test_charm_state_http_log_format_matches_haproxy_default():
@@ -2282,13 +2282,16 @@ def test_charm_state_http_log_format_matches_haproxy_default():
     assert: Only the %ci:%cp client field is replaced by the salted hash; every
         other variable matches the HAProxy default.
     """
-    haproxy_default = "%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs %{+Q}r"
+    haproxy_default = (
+        f"%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc "
+        f"{LOG_CONNECTION_COUNTERS} {LOG_QUEUE_SIZES} %hr %hs %{{+Q}}r"
+    )
 
     log_format = CharmState(
         mode=ProxyMode.LEGACY, enable_hsts=False, global_max_connection=4096
     ).http_log_format
 
-    assert log_format == haproxy_default.replace("%ci:%cp", HASHED_SRC, 1)
+    assert log_format == haproxy_default.replace("%ci:%cp", LOG_HASHED_CLIENT_ADDRESS, 1)
 
 
 def test_charm_state_tcp_log_format_matches_haproxy_default():
@@ -2298,10 +2301,12 @@ def test_charm_state_tcp_log_format_matches_haproxy_default():
     assert: Only the %ci:%cp client field is replaced by the salted hash; every
         other variable matches the HAProxy default.
     """
-    haproxy_default = "%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq"
+    haproxy_default = (
+        f"%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts {LOG_CONNECTION_COUNTERS} {LOG_QUEUE_SIZES}"
+    )
 
     log_format = CharmState(
         mode=ProxyMode.LEGACY, enable_hsts=False, global_max_connection=4096
     ).tcp_log_format
 
-    assert log_format == haproxy_default.replace("%ci:%cp", HASHED_SRC, 1)
+    assert log_format == haproxy_default.replace("%ci:%cp", LOG_HASHED_CLIENT_ADDRESS, 1)

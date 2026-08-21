@@ -10,7 +10,7 @@ import jubilant
 
 from tests.integration.legacy.conftest import all_active_and_idle
 
-# Keep in sync with the salt placeholder in src/state/charm_state.py (ISD-6248).
+# Keep in sync with LOG_SALT_PLACEHOLDER in src/state/charm_state.py (ISD-6248).
 LOG_HASH_SALT = "demo-salt-value"
 
 
