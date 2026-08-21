@@ -6,9 +6,9 @@ changes:
     type: minor
     description: >
       Added a `log-hash-client-ip` configuration option that, when enabled,
-      replaces client IP addresses in haproxy logs with their SHA-256 hashes.
+      replaces client IP addresses in HAProxy logs with their SHA-256 hashes.
       This allows operators to retain log analytics capabilities while
-      anonymising personally identifiable information to meet privacy
+      anonymizing personally identifiable information to meet privacy
       requirements.
     urls:
       pr:

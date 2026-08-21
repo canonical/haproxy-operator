@@ -8,6 +8,8 @@ import time
 
 import jubilant
 
+from tests.integration.legacy.conftest import all_active_and_idle
+
 # Keep in sync with the salt placeholder in src/state/charm_state.py (ISD-6248).
 LOG_HASH_SALT = "demo-salt-value"
 
@@ -68,7 +70,7 @@ def test_log_hash_client_ip(application: str, juju: jubilant.Juju):
     expected_hash = hashlib.sha256(client_ip.encode() + LOG_HASH_SALT.encode()).hexdigest().upper()
 
     juju.config(application, {"log-hash-client-ip": "false"})
-    juju.wait(lambda status: jubilant.all_active(status, application))
+    juju.wait(lambda status: all_active_and_idle(status, application))
     config = juju.ssh(unit, "cat /etc/haproxy/haproxy.cfg")
     assert "log-format" not in config
     assert "error-log-format" not in config
@@ -78,7 +80,7 @@ def test_log_hash_client_ip(application: str, juju: jubilant.Juju):
     assert expected_hash not in plaintext_log
 
     juju.config(application, {"log-hash-client-ip": "true"})
-    juju.wait(lambda status: jubilant.all_active(status, application))
+    juju.wait(lambda status: all_active_and_idle(status, application))
     config = juju.ssh(unit, "cat /etc/haproxy/haproxy.cfg")
     assert "log-format" in config
     assert "error-log-format" in config
@@ -89,10 +91,17 @@ def test_log_hash_client_ip(application: str, juju: jubilant.Juju):
     assert f"{client_ip}:" not in hashed_log
 
     # The hashed log line must follow HAProxy's default HTTP log format with
-    # only the client IP replaced by the hash; compare the entries field by
-    # field, skipping the per-request client port and timestamps.
+    # only the client IP replaced by the hash. The two lines come from separate
+    # requests, so per-request values (timers, counters, bytes) can legitimately
+    # differ; compare only the stable, format-defining fields and structure.
+    # Default httplog fields: client[0] timestamp[1] frontend[2] backend/server[3]
+    # timers[4] status[5] bytes[6] cookie[7] cookie[8] termination[9] counters[10]
+    # queue[11] request[12:14].
     plaintext_fields = plaintext_log.split("haproxy", 1)[1].split(None, 1)[1].split()
     hashed_fields = hashed_log.split("haproxy", 1)[1].split(None, 1)[1].split()
     assert plaintext_fields[0].startswith(f"{client_ip}:")
     assert hashed_fields[0].startswith(f"{expected_hash}:")
-    assert plaintext_fields[2:] == hashed_fields[2:]
+    assert len(plaintext_fields) == len(hashed_fields)
+    # frontend name, backend/server, and the request line are stable across requests
+    for index in (2, 3, 12, 13, 14):
+        assert plaintext_fields[index] == hashed_fields[index]

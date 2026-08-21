@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+import legacy
 from haproxy import HAPROXY_DH_PARAM, HAPROXY_DHCONFIG, HAProxyService
 from state.charm_state import CharmState, ProxyMode
 
@@ -62,3 +63,47 @@ def test_render_default_config_logs_plaintext_client_ip_when_disabled():
 
     assert "log-format" not in config
     assert "error-log-format" not in config
+
+
+def _legacy_tcp_service(service_options):
+    return {
+        "myapp": {
+            "service_name": "myapp",
+            "service_host": "0.0.0.0",
+            "service_port": 9000,
+            "service_options": service_options,
+            "servers": [["s1", "10.0.0.1", 9000, "check"]],
+        }
+    }
+
+
+def test_legacy_tcp_service_with_tcplog_gets_hashed_log_format():
+    """
+    arrange: A legacy TCP service that sets option tcplog (which would override the
+        defaults log-format with the plaintext TCP default).
+    act: Generate its config stanza with a hashed TCP log format.
+    assert: The stanza sets the hashed log-format explicitly on the frontend.
+    """
+    tcp_log_format = CharmState(
+        mode=ProxyMode.LEGACY, enable_hsts=False, global_max_connection=1024
+    ).tcp_log_format
+    stanza = legacy.generate_service_config(
+        _legacy_tcp_service(["mode tcp", "option tcplog"]), tcp_log_format
+    )[0]
+
+    assert 'log-format "%[src,concat(,,\\"demo-salt-value\\"),sha2(256),hex]' in stanza
+
+
+def test_legacy_tcp_service_without_tcplog_inherits_defaults_log_format():
+    """
+    arrange: A legacy TCP service that does not set option tcplog (it inherits the
+        defaults log-format, preserving its log structure).
+    act: Generate its config stanza with a hashed TCP log format.
+    assert: No log-format is injected, so it keeps the defaults structure.
+    """
+    tcp_log_format = CharmState(
+        mode=ProxyMode.LEGACY, enable_hsts=False, global_max_connection=1024
+    ).tcp_log_format
+    stanza = legacy.generate_service_config(_legacy_tcp_service(["mode tcp"]), tcp_log_format)[0]
+
+    assert "log-format" not in stanza

@@ -330,11 +330,21 @@ def _append_backend(service_config, name, options, errorfiles, server_entries): 
 def create_listen_stanza(service_name=None, service_ip=None,
                          service_port=None, service_options=None,
                          server_entries=None, service_errorfiles=None,
-                         service_crts=None, service_backends=None): # noqa
+                         service_crts=None, service_backends=None,
+                         tcp_log_format=""): # noqa
     if service_name is None or service_ip is None or service_port is None:
         return None
     fe_options = []
     be_options = []
+    # Only a service that sets option tcplog overrides the defaults log-format
+    # with the plaintext TCP default, so only it needs the hashed TCP format set
+    # explicitly. A service without option tcplog inherits the defaults format
+    # and must keep it, to avoid changing its log structure when hashing is on.
+    uses_tcplog = service_options is not None and any(
+        o.strip().startswith("option tcplog") for o in service_options
+    )
+    if uses_tcplog and tcp_log_format:
+        fe_options.append('log-format "%s"' % tcp_log_format)
     if service_options is not None:
         # For options that should be duplicated in both frontend and backend,
         # copy them to both.
@@ -405,7 +415,7 @@ def create_listen_stanza(service_name=None, service_ip=None,
     return '\n'.join(service_config)
 
 
-def generate_service_config(services_dict): # noqa
+def generate_service_config(services_dict, tcp_log_format=""): # noqa
     generated_config = []
     # Construct the new haproxy.cfg file
     for service_key, service_config in services_dict.items():
@@ -443,7 +453,8 @@ def generate_service_config(services_dict): # noqa
                 service_config['service_host'],
                 service_config['service_port'],
                 service_config.get('service_options', []),
-                server_entries, errorfiles, crts, backends
+                server_entries, errorfiles, crts, backends,
+                tcp_log_format=tcp_log_format,
             )
         )
     return generated_config
