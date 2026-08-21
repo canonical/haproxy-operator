@@ -29,17 +29,23 @@ def test_config(application: str, juju: jubilant.Juju):
     assert "maxconn 1024" in stdout
 
 
-def _wait_for_haproxy_log_line(
-    juju: jubilant.Juju, unit: str, pattern: str, timeout: int = 30
+def _generate_traffic_until_logged(
+    juju: jubilant.Juju, unit: str, pattern: str, timeout: int = 60
 ) -> str | None:
-    """Poll the unit's haproxy log for a line matching pattern, return the match or None."""
+    """Generate loopback HTTP traffic until a matching line appears in the haproxy log.
+
+    Traffic generation is retried inside the poll loop because the unit can
+    report active/idle while haproxy is still (re)starting after a config
+    change, so a single request may be dropped before the service is ready.
+    """
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
+        juju.ssh(unit, "curl -s --interface 127.0.0.1 http://127.0.0.1/ > /dev/null || true")
+        time.sleep(2)
         logs = juju.ssh(unit, f"grep '{pattern}' /var/log/haproxy.log || true")
         lines = [line for line in logs.splitlines() if pattern in line]
         if lines:
             return lines[-1]
-        time.sleep(2)
     return None
 
 
@@ -64,8 +70,7 @@ def test_log_hash_client_ip(application: str, juju: jubilant.Juju):
     assert "log-format" not in config
     assert "error-log-format" not in config
 
-    juju.ssh(unit, "curl -s --interface 127.0.0.1 http://127.0.0.1/ > /dev/null")
-    plaintext_log = _wait_for_haproxy_log_line(juju, unit, "127.0.0.1")
+    plaintext_log = _generate_traffic_until_logged(juju, unit, "127.0.0.1")
     assert plaintext_log, "expected a plaintext 127.0.0.1 client IP in the access log"
     assert expected_hash not in plaintext_log
 
@@ -76,8 +81,7 @@ def test_log_hash_client_ip(application: str, juju: jubilant.Juju):
     assert "error-log-format" in config
     assert "sha2(256)" in config
 
-    juju.ssh(unit, "curl -s --interface 127.0.0.1 http://127.0.0.1/ > /dev/null")
-    hashed_log = _wait_for_haproxy_log_line(juju, unit, expected_hash)
+    hashed_log = _generate_traffic_until_logged(juju, unit, expected_hash)
     assert hashed_log, "expected the salted hash of 127.0.0.1 in the access log"
     assert f"{client_ip}:" not in hashed_log
 
