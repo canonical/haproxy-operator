@@ -20,6 +20,6 @@ changes:
       pr:
         - https://github.com/canonical/haproxy-operator/pull/626
       related_doc:
-      related_issue:
+      related_issue: https://github.com/canonical/haproxy-operator/issues/618
     visibility: public
     highlight: false
