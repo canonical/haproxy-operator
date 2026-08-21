@@ -69,6 +69,7 @@ def _legacy_tcp_service(service_options):
     return {
         "myapp": {
             "service_name": "myapp",
+            # nosec B104: test fixture, the host value is never used to bind a socket
             "service_host": "0.0.0.0",
             "service_port": 9000,
             "service_options": service_options,
