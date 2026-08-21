@@ -37,12 +37,15 @@ def _generate_traffic_until_logged(
     Traffic generation is retried inside the poll loop because the unit can
     report active/idle while haproxy is still (re)starting after a config
     change, so a single request may be dropped before the service is ready.
+    Logs are read from the journal rather than /var/log/haproxy.log because
+    rsyslog file routing does not work in all environments (e.g. nested
+    containers), while journald always captures haproxy's syslog output.
     """
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         juju.ssh(unit, "curl -s --interface 127.0.0.1 http://127.0.0.1/ > /dev/null || true")
         time.sleep(2)
-        logs = juju.ssh(unit, f"grep '{pattern}' /var/log/haproxy.log || true")
+        logs = juju.ssh(unit, f"journalctl -u haproxy --no-pager | grep '{pattern}' || true")
         lines = [line for line in logs.splitlines() if pattern in line]
         if lines:
             return lines[-1]
