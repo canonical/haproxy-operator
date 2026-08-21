@@ -586,7 +586,7 @@ class HAProxyCharm(ops.CharmBase):
                         f"https://{tls_information.hostnames[0]}/{path_prefix}",
                     )
 
-    @validate_config_and_tls(defer=True)
+    @validate_config_and_tls(defer=False)
     def _on_ingress_data_provided(self, event: IngressPerAppDataProvidedEvent) -> None:
         """Handle the data-provided event.
 
