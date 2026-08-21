@@ -38,6 +38,37 @@ def test_install(context_with_install_mock, base_state):
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+@pytest.mark.parametrize(
+    "log_hash_client_ip,expected_present",
+    [(False, False), (True, True)],
+    ids=["hashing_disabled", "hashing_enabled"],
+)
+def test_config_changed_log_hash_client_ip(
+    monkeypatch: pytest.MonkeyPatch, peer_relation, log_hash_client_ip, expected_present
+):
+    """
+    arrange: prepare a state with peer relation and the log-hash-client-ip config set.
+    act: run config-changed.
+    assert: the rendered haproxy config contains the hashed log-format only when
+        log-hash-client-ip is enabled.
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    ctx = ops.testing.Context(HAProxyCharm)
+    state = ops.testing.State(
+        relations=[peer_relation],
+        leader=True,
+        config={"log-hash-client-ip": log_hash_client_ip},
+    )
+
+    ctx.run(ctx.on.config_changed(), state)
+
+    rendered = render_file_mock.call_args.args[1]
+    assert ('log-format "' in rendered) is expected_present
+    assert ("error-log-format" in rendered) is expected_present
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
 def test_non_leader_waiting_for_peer_data(peer_relation, certificates_integration):
     """
     arrange: prepare state as non-leader with peer relation but no cert data in databag.

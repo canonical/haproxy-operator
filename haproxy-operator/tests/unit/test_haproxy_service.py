@@ -32,34 +32,40 @@ def test_deploy(monkeypatch: pytest.MonkeyPatch):
     render_file_mock.assert_called_once_with(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
 
 
-def _charm_state(log_hash_client_ip: bool) -> CharmState:
-    return CharmState(
-        mode=ProxyMode.LEGACY,
-        enable_hsts=False,
-        global_max_connection=1024,
-        log_hash_client_ip=log_hash_client_ip,
-    )
+@pytest.fixture(name="charm_state")
+def charm_state_fixture():
+    """Return a factory building a minimal CharmState rendering the default config."""
+
+    def build(log_hash_client_ip: bool) -> CharmState:
+        return CharmState(
+            mode=ProxyMode.NOPROXY,
+            enable_hsts=False,
+            global_max_connection=1024,
+            log_hash_client_ip=log_hash_client_ip,
+        )
+
+    return build
 
 
-def test_render_default_config_hashes_client_ip_when_enabled():
+def test_render_default_config_hashes_client_ip_when_enabled(charm_state):
     """
     arrange: Given a charm state with log_hash_client_ip enabled.
     act: Render the default haproxy configuration.
     assert: The config overrides log-format and error-log-format to hash the client IP.
     """
-    config = HAProxyService().render_default_config(_charm_state(log_hash_client_ip=True))
+    config = HAProxyService().render_default_config(charm_state(log_hash_client_ip=True))
 
     assert f'log-format "{LOG_HASHED_CLIENT_ADDRESS}' in config
     assert f'error-log-format "{LOG_HASHED_CLIENT_ADDRESS}' in config
 
 
-def test_render_default_config_logs_plaintext_client_ip_when_disabled():
+def test_render_default_config_logs_plaintext_client_ip_when_disabled(charm_state):
     """
     arrange: Given a charm state with log_hash_client_ip disabled.
     act: Render the default haproxy configuration.
     assert: No log-format overrides are set, so client IPs are logged in plaintext.
     """
-    config = HAProxyService().render_default_config(_charm_state(log_hash_client_ip=False))
+    config = HAProxyService().render_default_config(charm_state(log_hash_client_ip=False))
 
     assert "log-format" not in config
     assert "error-log-format" not in config
