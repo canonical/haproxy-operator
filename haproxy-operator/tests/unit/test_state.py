@@ -9,9 +9,7 @@ from unittest.mock import MagicMock, Mock
 
 import ops
 import pytest
-from charmlibs.interfaces.tls_certificates import (
-    TLSCertificatesRequiresV4,
-)
+from charmlibs.interfaces.tls_certificates import TLSCertificatesRequiresV4
 from charms.haproxy.v0.ddos_protection import (
     DDoSProtectionInvalidRelationDataError,
     DDoSProtectionProviderAppData,
@@ -59,6 +57,7 @@ from state.ingress_per_unit import (
     IngressPerUnitIntegrationDataValidationError,
     IngressPerUnitRequirersInformation,
 )
+from state.log_formats import LOG_HASHED_CLIENT_ADDRESS
 from state.tls import TLSInformation
 
 
@@ -596,6 +595,7 @@ def test_charm_state_ddos_protection(ddos_protection, expected_value):
         "global-maxconn": 4096,
         "enable-hsts": False,
         "ddos-protection": ddos_protection,
+        "log-hash-client-ip": False,
     }.get(key)
 
     ingress_provider_mock = MagicMock()
@@ -622,6 +622,26 @@ def test_charm_state_ddos_protection(ddos_protection, expected_value):
     )
 
     assert charm_state.ddos_protection is expected_value
+
+
+def test_charm_state_log_format_defaults_hash_client_ip():
+    """
+    arrange: Initialize the CharmState with minimal configuration.
+    act: Access the default log format fields.
+    assert: All formats replace the client IP with a salted SHA-256 hash of src.
+    """
+    charm_state = CharmState(
+        mode=ProxyMode.LEGACY,
+        enable_hsts=False,
+        global_max_connection=4096,
+    )
+
+    for log_format in (
+        charm_state.http_log_format,
+        charm_state.error_log_format,
+        charm_state.tcp_log_format,
+    ):
+        assert LOG_HASHED_CLIENT_ADDRESS in log_format
 
 
 @pytest.mark.parametrize(
@@ -768,7 +788,12 @@ def test_haproxy_route_backend_wildcard_hostname_acls(
                 maxconn=None,
             )
         ],
-        hostname_acls={"example.com", "*.example.com", "test.example.com", "*.test.com"},
+        hostname_acls={
+            "example.com",
+            "*.example.com",
+            "test.example.com",
+            "*.test.com",
+        },
     )
 
     wildcard_acls = backend.wildcard_hostname_acls
@@ -801,7 +826,12 @@ def test_haproxy_route_backend_standard_hostname_acls(
                 maxconn=None,
             )
         ],
-        hostname_acls={"example.com", "*.example.com", "test.example.com", "*.test.com"},
+        hostname_acls={
+            "example.com",
+            "*.example.com",
+            "test.example.com",
+            "*.test.com",
+        },
     )
 
     standard_acls = backend.standard_hostname_acls
@@ -2153,3 +2183,38 @@ def test_haproxy_route_tcp_port_range_config_rendering(
     assert "set-dst-port dst_port,add(1000)" in rendered
     # Server entries should not have a port suffix when a port range is used
     assert "server tcp-route-requirer-0" in rendered
+
+
+def test_charm_state_http_log_format_matches_haproxy_default():
+    """
+    arrange: Access the default http_log_format.
+    act: Compare it with HAProxy's default HTTP log format.
+    assert: Only the %ci:%cp client field is replaced by the salted hash; every
+        other variable matches the HAProxy default.
+    """
+    haproxy_default = (
+        "%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc "
+        "%ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs %{+Q}r"
+    )
+
+    log_format = CharmState(
+        mode=ProxyMode.LEGACY, enable_hsts=False, global_max_connection=4096
+    ).http_log_format
+
+    assert log_format == haproxy_default.replace("%ci:%cp", LOG_HASHED_CLIENT_ADDRESS, 1)
+
+
+def test_charm_state_tcp_log_format_matches_haproxy_default():
+    """
+    arrange: Access the default tcp_log_format.
+    act: Compare it with HAProxy's default TCP log format (option tcplog).
+    assert: Only the %ci:%cp client field is replaced by the salted hash; every
+        other variable matches the HAProxy default.
+    """
+    haproxy_default = "%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq"
+
+    log_format = CharmState(
+        mode=ProxyMode.LEGACY, enable_hsts=False, global_max_connection=4096
+    ).tcp_log_format
+
+    assert log_format == haproxy_default.replace("%ci:%cp", LOG_HASHED_CLIENT_ADDRESS, 1)

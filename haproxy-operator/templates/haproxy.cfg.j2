@@ -74,6 +74,10 @@ defaults
 {% endif %}
     timeout connect 5000
     timeout server 50000
+{% if log_hash_client_ip %}
+    log-format "{{ http_log_format }}"
+    error-log-format "{{ error_log_format }}"
+{% endif %}
 
 frontend prometheus
     bind :8404

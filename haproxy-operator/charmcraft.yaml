@@ -13,14 +13,14 @@ parts:
     source: .
     plugin: uv
     build-snaps:
-    - astral-uv
+      - astral-uv
     build-packages:
-    - git
+      - git
   templates:
     plugin: dump
     source: .
     stage:
-    - templates
+      - templates
 name: haproxy
 title: HAProxy charm.
 description: |
@@ -41,10 +41,10 @@ links:
   issues: https://github.com/canonical/haproxy-operator/issues
   source: https://github.com/canonical/haproxy-operator
   contact:
-  - https://launchpad.net/~canonical-is-devops
+    - https://launchpad.net/~canonical-is-devops
 
 assumes:
-- juju >= 3.3
+  - juju >= 3.3
 requires:
   certificates:
     interface: tls-certificates
@@ -69,7 +69,6 @@ requires:
     interface: haproxy-route-policy
     optional: true
     limit: 1
-
 
 provides:
   ingress:
@@ -120,6 +119,12 @@ config:
         Send the http response header Strict-Transport-Security for domains provided
         through the `haproxy-route` relation without the allow_http attribute.
         The Strict-Transport-Security header value is "max-age=2592000;".
+    log-hash-client-ip:
+      default: false
+      type: boolean
+      description: |
+        Replaces the client IP in HAProxy access and error logs with a salted
+        SHA-256 hash. Opt-in, off by default; only the client IP field is affected.
 
 actions:
   get-certificate:
@@ -134,7 +139,7 @@ actions:
         description: Whether the certificate is a wildcard certificate.
         default: false
     required:
-    - hostname
+      - hostname
   get-proxied-endpoints:
     description: |
       Return a list of endpoints
@@ -151,9 +156,9 @@ actions:
       Return the rendered haproxy configuration currently on the haproxy unit. Intended for debugging purposes.
 
 charm-libs:
-- lib: traefik_k8s.ingress_per_unit
-  version: "1"
-- lib: haproxy.ddos_protection
-  version: "0"
-- lib: haproxy_route_policy.haproxy_route_policy
-  version: "0"
+  - lib: traefik_k8s.ingress_per_unit
+    version: "1"
+  - lib: haproxy.ddos_protection
+    version: "0"
+  - lib: haproxy_route_policy.haproxy_route_policy
+    version: "0"

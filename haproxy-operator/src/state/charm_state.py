@@ -15,7 +15,9 @@ from subprocess import STDOUT, CalledProcessError, check_output  # nosec
 import ops
 from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpProvider
 from charms.haproxy.v2.haproxy_route import HaproxyRouteProvider
-from charms.haproxy_route_policy.v0.haproxy_route_policy import HaproxyRoutePolicyRequirer
+from charms.haproxy_route_policy.v0.haproxy_route_policy import (
+    HaproxyRoutePolicyRequirer,
+)
 from charms.traefik_k8s.v1.ingress_per_unit import IngressPerUnitProvider
 from charms.traefik_k8s.v2.ingress import IngressPerAppProvider
 from pydantic import Field, ValidationError, field_validator
@@ -24,6 +26,7 @@ from pydantic.dataclasses import dataclass
 from http_interface import HTTPRequirer
 
 from .exception import CharmStateValidationBaseError
+from .log_formats import ERROR_LOG_FORMAT, HTTP_LOG_FORMAT, TCP_LOG_FORMAT
 
 logger = logging.getLogger()
 
@@ -65,12 +68,17 @@ class CharmState:
         global_max_connection: The maximum per-process number of concurrent connections.
         Must be between 0 and "fs.nr_open" sysctl config.
         ddos_protection: Whether to enable basic DDoS protection mechanisms.
+        log_hash_client_ip: Whether to hash the client IP address in the logs.
     """
 
     mode: ProxyMode
     enable_hsts: bool
     global_max_connection: int = Field(gt=0, alias="global_max_connection")
     ddos_protection: bool = True
+    log_hash_client_ip: bool = False
+    http_log_format: str = HTTP_LOG_FORMAT
+    error_log_format: str = ERROR_LOG_FORMAT
+    tcp_log_format: str = TCP_LOG_FORMAT
 
     @field_validator("global_max_connection")
     @classmethod
@@ -89,7 +97,9 @@ class CharmState:
         try:
             # No user input so we're disabling bandit rule here as it's considered safe
             output = check_output(  # nosec: B603
-                ["/usr/sbin/sysctl", "fs.file-max"], stderr=STDOUT, universal_newlines=True
+                ["/usr/sbin/sysctl", "fs.file-max"],
+                stderr=STDOUT,
+                universal_newlines=True,
             ).splitlines()
         except CalledProcessError:
             logger.exception("Cannot get system's max file descriptor value, skipping check.")
@@ -199,6 +209,7 @@ class CharmState:
         global_max_connection = typing.cast(int, charm.config.get("global-maxconn"))
         enable_hsts = typing.cast(bool, charm.config.get("enable-hsts"))
         ddos_protection = typing.cast(bool, charm.config.get("ddos-protection"))
+        log_hash_client_ip = typing.cast(bool, charm.config.get("log-hash-client-ip"))
         try:
             return cls(
                 mode=cls._validate_state(
@@ -212,6 +223,7 @@ class CharmState:
                 global_max_connection=global_max_connection,
                 enable_hsts=enable_hsts,
                 ddos_protection=ddos_protection,
+                log_hash_client_ip=log_hash_client_ip,
             )
         except ValidationError as exc:
             error_field_str = ",".join(f"{field}" for field in get_invalid_config_fields(exc))
