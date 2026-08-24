@@ -16,6 +16,7 @@ import scenario
 
 import tls_relation
 from charm import CharmStateValidationBaseError, HAProxyCharm
+from state.charm_state import LOG_HASHED_CLIENT_ADDRESS
 from tests.unit.conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 
 from .conftest import build_haproxy_route_relation, build_spoe_auth_relation
@@ -54,18 +55,19 @@ def test_config_changed_log_hash_client_ip(
     """
     render_file_mock = MagicMock()
     monkeypatch.setattr("haproxy.render_file", render_file_mock)
-    ctx = ops.testing.Context(HAProxyCharm)
+    context = ops.testing.Context(HAProxyCharm)
     state = ops.testing.State(
         relations=[peer_relation],
         leader=True,
         config={"log-hash-client-ip": log_hash_client_ip},
     )
 
-    ctx.run(ctx.on.config_changed(), state)
+    context.run(context.on.config_changed(), state)
 
-    rendered = render_file_mock.call_args.args[1]
-    assert ('log-format "' in rendered) is expected_present
-    assert ("error-log-format" in rendered) is expected_present
+    render_file_mock.assert_called_once()
+    config_content = render_file_mock.call_args.args[1]
+    assert (f'log-format "{LOG_HASHED_CLIENT_ADDRESS}' in config_content) is expected_present
+    assert (f'error-log-format "{LOG_HASHED_CLIENT_ADDRESS}' in config_content) is expected_present
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")

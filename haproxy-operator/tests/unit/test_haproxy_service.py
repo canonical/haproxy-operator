@@ -8,8 +8,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from haproxy import HAPROXY_DH_PARAM, HAPROXY_DHCONFIG, HAProxyService
-from state.charm_state import CharmState, ProxyMode
-from state.log_formats import LOG_HASHED_CLIENT_ADDRESS
+from state.charm_state import LOG_HASHED_CLIENT_ADDRESS, CharmState, ProxyMode
 
 
 @pytest.mark.usefixtures("systemd_mock")
@@ -32,8 +31,8 @@ def test_deploy(monkeypatch: pytest.MonkeyPatch):
     render_file_mock.assert_called_once_with(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
 
 
-@pytest.fixture(name="charm_state")
-def charm_state_fixture():
+@pytest.fixture(name="charm_state_factory")
+def charm_state_factory_fixture():
     """Return a factory building a minimal CharmState rendering the default config."""
 
     def build(log_hash_client_ip: bool) -> CharmState:
@@ -47,25 +46,25 @@ def charm_state_fixture():
     return build
 
 
-def test_render_default_config_hashes_client_ip_when_enabled(charm_state):
+def test_render_default_config_hashes_client_ip_when_enabled(charm_state_factory):
     """
     arrange: Given a charm state with log_hash_client_ip enabled.
     act: Render the default haproxy configuration.
     assert: The config overrides log-format and error-log-format to hash the client IP.
     """
-    config = HAProxyService().render_default_config(charm_state(log_hash_client_ip=True))
+    config = HAProxyService().render_default_config(charm_state_factory(log_hash_client_ip=True))
 
     assert f'log-format "{LOG_HASHED_CLIENT_ADDRESS}' in config
     assert f'error-log-format "{LOG_HASHED_CLIENT_ADDRESS}' in config
 
 
-def test_render_default_config_logs_plaintext_client_ip_when_disabled(charm_state):
+def test_render_default_config_logs_plaintext_client_ip_when_disabled(charm_state_factory):
     """
     arrange: Given a charm state with log_hash_client_ip disabled.
     act: Render the default haproxy configuration.
     assert: No log-format overrides are set, so client IPs are logged in plaintext.
     """
-    config = HAProxyService().render_default_config(charm_state(log_hash_client_ip=False))
+    config = HAProxyService().render_default_config(charm_state_factory(log_hash_client_ip=False))
 
     assert "log-format" not in config
     assert "error-log-format" not in config

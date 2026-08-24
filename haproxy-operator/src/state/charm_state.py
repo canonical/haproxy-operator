@@ -26,7 +26,6 @@ from pydantic.dataclasses import dataclass
 from http_interface import HTTPRequirer
 
 from .exception import CharmStateValidationBaseError
-from .log_formats import ERROR_LOG_FORMAT, HTTP_LOG_FORMAT, TCP_LOG_FORMAT
 
 logger = logging.getLogger()
 
@@ -59,6 +58,16 @@ class InvalidCharmConfigError(CharmStateValidationBaseError):
     """Exception raised when a charm configuration is found to be invalid."""
 
 
+# TODO(ISD-6248): "demo-salt-value" is a placeholder. Replace with a salt
+# sourced from a Juju user secret (IS-only access).
+LOG_SALT_PLACEHOLDER = "demo-salt-value"
+LOG_HASHED_CLIENT_IP = f'%[src,concat(,,\\"{LOG_SALT_PLACEHOLDER}\\"),sha2(256),hex]'
+LOG_CLIENT_PORT = "%cp"
+LOG_HASHED_CLIENT_ADDRESS = f"{LOG_HASHED_CLIENT_IP}:{LOG_CLIENT_PORT}"
+LOG_CONNECTIONS_STATUS = "%ac/%fc/%bc/%sc/%rc"
+LOG_QUEUE_STATUS = "%sq/%bq"
+
+
 @dataclass(frozen=True)
 class CharmState:
     """A component of charm state that contains the charm's configuration and mode.
@@ -76,9 +85,31 @@ class CharmState:
     global_max_connection: int = Field(gt=0, alias="global_max_connection")
     ddos_protection: bool = True
     log_hash_client_ip: bool = False
-    http_log_format: str = HTTP_LOG_FORMAT
-    error_log_format: str = ERROR_LOG_FORMAT
-    tcp_log_format: str = TCP_LOG_FORMAT
+
+    @property
+    def http_log_format(self) -> str:
+        """Return HAProxy's default HTTP log format with a hashed client IP."""
+        return (
+            f"{LOG_HASHED_CLIENT_ADDRESS} [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta "
+            f"%ST %B %CC %CS %tsc {LOG_CONNECTIONS_STATUS} {LOG_QUEUE_STATUS} "
+            "%hr %hs %{+Q}r"
+        )
+
+    @property
+    def error_log_format(self) -> str:
+        """Return HAProxy's default error log format with a hashed client IP."""
+        return (
+            f"{LOG_HASHED_CLIENT_ADDRESS} [%tr] %[fe_name]/%[so_id]: "
+            "%[fc_err_str] (%[ssl_fc_err_str])"
+        )
+
+    @property
+    def tcp_log_format(self) -> str:
+        """Return HAProxy's default TCP log format with a hashed client IP."""
+        return (
+            f"{LOG_HASHED_CLIENT_ADDRESS} [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts "
+            f"{LOG_CONNECTIONS_STATUS} {LOG_QUEUE_STATUS}"
+        )
 
     @field_validator("global_max_connection")
     @classmethod

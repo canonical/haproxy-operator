@@ -11,7 +11,7 @@ import requests
 from .conftest import all_active_and_idle
 from .helper import get_unit_address
 
-# Keep in sync with LOG_SALT_PLACEHOLDER in src/state/log_formats.py (ISD-6248).
+# Keep in sync with LOG_SALT_PLACEHOLDER in src/state/charm_state.py (ISD-6248).
 LOG_HASH_SALT = "demo-salt-value"
 
 

@@ -34,7 +34,7 @@ from charms.traefik_k8s.v1.ingress_per_unit import (
 from charms.traefik_k8s.v2.ingress import DataValidationError as V2DataValidationError
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from state.charm_state import CharmState, ProxyMode
+from state.charm_state import LOG_HASHED_CLIENT_ADDRESS, CharmState, ProxyMode
 from state.ddos_protection import DDosProtection, DDosProtectionValidationError
 from state.haproxy_route import (
     HAProxyRouteBackend,
@@ -57,7 +57,6 @@ from state.ingress_per_unit import (
     IngressPerUnitIntegrationDataValidationError,
     IngressPerUnitRequirersInformation,
 )
-from state.log_formats import LOG_HASHED_CLIENT_ADDRESS
 from state.tls import TLSInformation
 
 
@@ -631,7 +630,7 @@ def test_charm_state_log_format_defaults_hash_client_ip():
     assert: All formats replace the client IP with a salted SHA-256 hash of src.
     """
     charm_state = CharmState(
-        mode=ProxyMode.LEGACY,
+        mode=ProxyMode.NOPROXY,
         enable_hsts=False,
         global_max_connection=4096,
     )
@@ -2198,8 +2197,24 @@ def test_charm_state_http_log_format_matches_haproxy_default():
     )
 
     log_format = CharmState(
-        mode=ProxyMode.LEGACY, enable_hsts=False, global_max_connection=4096
+        mode=ProxyMode.NOPROXY, enable_hsts=False, global_max_connection=4096
     ).http_log_format
+
+    assert log_format == haproxy_default.replace("%ci:%cp", LOG_HASHED_CLIENT_ADDRESS, 1)
+
+
+def test_charm_state_error_log_format_matches_haproxy_default():
+    """
+    arrange: Access the default error_log_format.
+    act: Compare it with HAProxy's default error log format.
+    assert: Only the %ci:%cp client field is replaced by the salted hash; every
+        other variable matches the HAProxy default.
+    """
+    haproxy_default = "%ci:%cp [%tr] %[fe_name]/%[so_id]: %[fc_err_str] (%[ssl_fc_err_str])"
+
+    log_format = CharmState(
+        mode=ProxyMode.NOPROXY, enable_hsts=False, global_max_connection=4096
+    ).error_log_format
 
     assert log_format == haproxy_default.replace("%ci:%cp", LOG_HASHED_CLIENT_ADDRESS, 1)
 
@@ -2214,7 +2229,7 @@ def test_charm_state_tcp_log_format_matches_haproxy_default():
     haproxy_default = "%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq"
 
     log_format = CharmState(
-        mode=ProxyMode.LEGACY, enable_hsts=False, global_max_connection=4096
+        mode=ProxyMode.NOPROXY, enable_hsts=False, global_max_connection=4096
     ).tcp_log_format
 
     assert log_format == haproxy_default.replace("%ci:%cp", LOG_HASHED_CLIENT_ADDRESS, 1)
