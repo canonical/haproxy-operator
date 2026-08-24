@@ -2,7 +2,7 @@ version_schema: 2
 
 changes:
   - title: Pinned canonical/charm-ci to v1.0.0 and made opcli pin Renovate-manageable
-    author: copilot
+    author: javierdelapuente
     type: minor
     description: >
       Moved the opcli git dependency in every pyproject.toml (root,
