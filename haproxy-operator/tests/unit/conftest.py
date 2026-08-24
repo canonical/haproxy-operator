@@ -54,6 +54,12 @@ def mocks_external_calls_fixture(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr("haproxy.pin_haproxy_package_version", MagicMock())
 
 
+@pytest.fixture(scope="function", name="mocks_tls_ca_write")
+def mocks_tls_ca_write_fixture(monkeypatch: pytest.MonkeyPatch):
+    """Mock TLS CA write."""
+    monkeypatch.setattr("charm.TLSRelationService.update_trusted_cas", MagicMock())
+
+
 @pytest.fixture(scope="function", name="ca_certificate_and_key")
 def ca_certificate_and_key_fixture() -> typing.Tuple[Certificate, PrivateKey]:
     """Ca Certificate and private key."""
