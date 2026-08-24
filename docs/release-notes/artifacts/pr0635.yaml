@@ -1,0 +1,23 @@
+version_schema: 2
+
+changes:
+  - title: Pinned canonical/charm-ci to v1.0.0 and made opcli pin Renovate-manageable
+    author: copilot
+    type: minor
+    description: >
+      Moved the opcli git dependency in every pyproject.toml (root,
+      haproxy-operator, haproxy-ddos-protection-configurator,
+      haproxy-route-policy-operator, haproxy-spoe-auth-operator) into
+      [tool.uv.sources], which Renovate's uv-sources parser can track and
+      bump via the git-tags datasource. The previous inline PEP 508 git URL
+      was invisible to Renovate's PyPI-only dependency parser. Also bumped
+      the opcli pin and all canonical/charm-ci reusable workflow refs
+      (integration-test.yml, publish-artifacts.yml, doc-test.yml) from
+      v0.0.1-alpha.10 to the new v1.0.0 stable release.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/635
+      related_doc:
+      related_issue:
+    visibility: hidden
+    highlight: false
