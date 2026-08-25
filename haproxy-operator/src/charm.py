@@ -95,6 +95,7 @@ RECV_CA_CERTS_RELATION = "receive-ca-certs"
 SPOE_AUTH_RELATION = "spoe-auth"
 HAPROXY_ROUTE_TCP_RELATION = "haproxy-route-tcp"
 HAPROXY_ROUTE_POLICY_RELATION_NAME = "haproxy-route-policy"
+REDACTED_LOG_HASH_SALT = "<redacted>"
 
 
 class HaproxyUnitAddressNotAvailableError(CharmStateValidationBaseError):
@@ -115,6 +116,13 @@ def _validate_port(port: int) -> bool:
         bool: True if valid, False otherwise.
     """
     return 0 <= port <= 65535
+
+
+def _redact_log_hash_salt(configuration: str, log_hash_salt: str | None) -> str:
+    """Redact client IP hash salts from a rendered HAProxy configuration."""
+    if not log_hash_salt:
+        return configuration
+    return configuration.replace(log_hash_salt, REDACTED_LOG_HASH_SALT)
 
 
 # pylint: disable=too-many-instance-attributes
@@ -743,6 +751,14 @@ class HAProxyCharm(ops.CharmBase):
         configuration = read_file(HAPROXY_CONFIG)
 
         try:
+            log_hash_salt = CharmState.get_log_hash_salt(self)
+        except CharmStateValidationBaseError:
+            log_hash_salt = None
+            event.log(
+                "Could not redact the client IP hash salt because its configuration is invalid."
+            )
+
+        try:
             configuration_is_default = self._configuration_is_default(configuration)
         except CharmStateValidationBaseError:
             event.log(
@@ -756,7 +772,12 @@ class HAProxyCharm(ops.CharmBase):
                 "means no proxy backends are configured."
             )
 
-        event.set_results({"configuration": configuration, "source": "disk"})
+        event.set_results(
+            {
+                "configuration": _redact_log_hash_salt(configuration, log_hash_salt),
+                "source": "disk",
+            }
+        )
 
     def _configuration_is_default(self, configuration: str) -> bool:
         """Return whether the given configuration matches the default configuration.
