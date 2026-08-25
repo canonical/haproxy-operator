@@ -193,6 +193,7 @@ class HAProxyCharm(ops.CharmBase):
         self.hacluster = HAServiceRequires(self, HACLUSTER_INTEGRATION)
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on.secret_changed, self._on_secret_changed)
         self.framework.observe(self.on.upgrade_charm, self._on_install)
         self.framework.observe(self.on.get_certificate_action, self._on_get_certificate_action)
         self.framework.observe(
@@ -270,6 +271,13 @@ class HAProxyCharm(ops.CharmBase):
     @validate_config_and_tls(defer=False)
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
+        self._reconcile()
+
+    @validate_config_and_tls(defer=False)
+    def _on_secret_changed(self, event: ops.SecretChangedEvent) -> None:
+        """Reconcile when the configured client IP hash salt changes."""
+        if event.secret.id != self.config.get("client-ip-hash-salt"):
+            return
         self._reconcile()
 
     @validate_config_and_tls(defer=False)

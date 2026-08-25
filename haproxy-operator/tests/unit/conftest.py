@@ -47,8 +47,16 @@ def hashed_charm_state_fixture() -> CharmState:
         mode=ProxyMode.NOPROXY,
         enable_hsts=False,
         global_max_connection=1024,
-        log_hash_client_ip=True,
-        log_hash_salt=TEST_LOG_HASH_SALT,
+        client_ip_hash_salt=TEST_LOG_HASH_SALT,
+    )
+
+
+@pytest.fixture(name="expected_log_hash_client_address")
+def expected_log_hash_client_address_fixture() -> str:
+    """Return the expected HAProxy expression for a hashed client address."""
+    return (
+        "%[src,concat(,,),regsub(^::ffff:,),"
+        f'concat(,,\\"{TEST_LOG_HASH_SALT}\\"),sha2(256),hex]:%cp'
     )
 
 

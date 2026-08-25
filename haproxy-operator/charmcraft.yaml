@@ -119,29 +119,17 @@ config:
         Send the http response header Strict-Transport-Security for domains provided
         through the `haproxy-route` relation without the allow_http attribute.
         The Strict-Transport-Security header value is "max-age=2592000;".
-    log-hash-client-ip:
-      default: false
-      type: boolean
-      description: |
-        Replaces the client IP in HAProxy access and error logs with a salted
-        SHA-256 hash. This option is disabled by default and affects only the
-        client IP field.
-        When enabled, set `log-hash-salt` to a user-owned Juju secret containing
-        a `salt` key. Choose a confidential salt carefully and set it only once.
-        Salt rotation is not supported because changing the salt changes the
-        generated IP address hashes. The charm checks that the secret exists, is
-        accessible, and contains a non-empty, non-whitespace-only string. It
-        rejects control characters, DEL, double quotes, and backslashes. It does
-        not validate the salt's length or entropy.
-    log-hash-salt:
+    client-ip-hash-salt:
       type: secret
       description: |
-        Secret containing the salt used to hash client IPs in HAProxy access and
-        error logs. The secret must contain a `salt` key with a string value that
-        is not empty or only whitespace. The value must not contain control
-        characters, DEL, double quotes, or backslashes. When `log-hash-client-ip`
-        is enabled, the charm remains blocked until a valid, accessible secret is
-        configured.
+        User-owned Juju secret containing the salt used to hash client IPs in
+        HAProxy access and error logs. Setting this option enables salted SHA-256
+        hashing; removing it restores plaintext client IP logging. The secret must
+        contain a `salt` key with a string value that is not empty or only
+        whitespace. The value must not contain control characters, DEL, double
+        quotes, or backslashes. The charm does not validate salt length or entropy.
+        Secret revisions are supported, but rotation is not recommended because
+        hashes generated after rotation will not match hashes in earlier logs.
 
 actions:
   get-certificate:

@@ -264,12 +264,12 @@ class HAProxyService:
     ) -> dict[str, bool | str | None]:
         """Build log-format values only when client IP hashing is enabled."""
         context: dict[str, bool | str | None] = {
-            "log_hash_client_ip": charm_state.log_hash_client_ip,
+            "hash_client_ip_in_logs": charm_state.hash_client_ip_in_logs,
             "http_log_format": None,
             "error_log_format": None,
             "tcp_log_format": None,
         }
-        if charm_state.log_hash_client_ip:
+        if charm_state.hash_client_ip_in_logs:
             context.update(
                 {
                     "http_log_format": charm_state.http_log_format,

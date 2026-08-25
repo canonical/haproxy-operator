@@ -20,7 +20,7 @@ send-proxy-v2
 frontend haproxy_route_tcp_{{ frontend.bind_port }}
     mode tcp
     option tcplog
-{% if log_hash_client_ip %}
+{% if hash_client_ip_in_logs %}
     # option tcplog above would otherwise override the defaults log-format and
     # log plaintext client IPs; this is the tcplog default with only %ci
     # replaced by the salted hash.

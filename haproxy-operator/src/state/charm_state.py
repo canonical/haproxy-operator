@@ -73,24 +73,26 @@ class CharmState:
         global_max_connection: The maximum per-process number of concurrent connections.
         Must be between 0 and "fs.nr_open" sysctl config.
         ddos_protection: Whether to enable basic DDoS protection mechanisms.
-        log_hash_client_ip: Whether to hash the client IP address in the logs.
+        client_ip_hash_salt: Salt used to hash client IP addresses in logs.
     """
 
     mode: ProxyMode
     enable_hsts: bool
     global_max_connection: int = Field(gt=0, alias="global_max_connection")
     ddos_protection: bool = True
-    log_hash_client_ip: bool = False
-    log_hash_salt: str | None = Field(default=None, repr=False)
+    client_ip_hash_salt: str | None = Field(default=None, repr=False)
+
+    @property
+    def hash_client_ip_in_logs(self) -> bool:
+        """Return whether client IP hashing is enabled."""
+        return self.client_ip_hash_salt is not None
 
     @property
     def log_hash_client_address(self) -> str:
         """Return the log format for a hashed client address."""
-        if not self.log_hash_client_ip or not self.log_hash_salt:
-            raise ValueError(
-                "log_hash_client_address requires log_hash_client_ip and log_hash_salt."
-            )
-        hashed_client_ip = LOG_HASHED_CLIENT_IP_TEMPLATE.format(salt=self.log_hash_salt)
+        if not self.client_ip_hash_salt:
+            raise ValueError("log_hash_client_address requires client_ip_hash_salt.")
+        hashed_client_ip = LOG_HASHED_CLIENT_IP_TEMPLATE.format(salt=self.client_ip_hash_salt)
         return f"{hashed_client_ip}:{LOG_CLIENT_PORT}"
 
     @property
@@ -120,38 +122,33 @@ class CharmState:
         )
 
     @staticmethod
-    def _get_log_hash_salt(charm: ops.CharmBase, log_hash_client_ip: bool) -> str | None:
+    def _get_client_ip_hash_salt(charm: ops.CharmBase) -> str | None:
         """Return and validate the configured client IP hash salt."""
-        if not log_hash_client_ip:
+        secret_uri = typing.cast(str | None, charm.config.get("client-ip-hash-salt"))
+        if not secret_uri:
             return None
 
-        secret_uri = typing.cast(str | None, charm.config.get("log-hash-salt"))
-        if not secret_uri:
-            raise InvalidCharmConfigError(
-                "log-hash-salt must be set when log-hash-client-ip is enabled."
-            )
-
         try:
-            secret_content = charm.model.get_secret(id=secret_uri).get_content()
+            secret_content = charm.model.get_secret(id=secret_uri).get_content(refresh=True)
         except (ops.SecretNotFoundError, ops.ModelError) as exc:
             raise InvalidCharmConfigError(
-                "The log-hash-salt secret does not exist or cannot be accessed."
+                "The client-ip-hash-salt secret does not exist or cannot be accessed."
             ) from exc
 
-        log_hash_salt = secret_content.get("salt")
-        if not isinstance(log_hash_salt, str) or not log_hash_salt.strip():
+        client_ip_hash_salt = secret_content.get("salt")
+        if not isinstance(client_ip_hash_salt, str) or not client_ip_hash_salt.strip():
             raise InvalidCharmConfigError(
-                "The log-hash-salt secret must contain a non-empty 'salt' value."
+                "The client-ip-hash-salt secret must contain a non-empty 'salt' value."
             )
         if any(
             character in {'"', "\\"} or ord(character) < 32 or ord(character) == 127
-            for character in log_hash_salt
+            for character in client_ip_hash_salt
         ):
             raise InvalidCharmConfigError(
-                "The log-hash-salt secret must not contain control characters, "
+                "The client-ip-hash-salt secret must not contain control characters, "
                 "double quotes, or backslashes."
             )
-        return log_hash_salt
+        return client_ip_hash_salt
 
     @field_validator("global_max_connection")
     @classmethod
@@ -282,8 +279,7 @@ class CharmState:
         global_max_connection = typing.cast(int, charm.config.get("global-maxconn"))
         enable_hsts = typing.cast(bool, charm.config.get("enable-hsts"))
         ddos_protection = typing.cast(bool, charm.config.get("ddos-protection"))
-        log_hash_client_ip = typing.cast(bool, charm.config.get("log-hash-client-ip"))
-        log_hash_salt = cls._get_log_hash_salt(charm, log_hash_client_ip)
+        client_ip_hash_salt = cls._get_client_ip_hash_salt(charm)
 
         try:
             return cls(
@@ -298,8 +294,7 @@ class CharmState:
                 global_max_connection=global_max_connection,
                 enable_hsts=enable_hsts,
                 ddos_protection=ddos_protection,
-                log_hash_client_ip=log_hash_client_ip,
-                log_hash_salt=log_hash_salt,
+                client_ip_hash_salt=client_ip_hash_salt,
             )
         except ValidationError as exc:
             error_field_str = ",".join(f"{field}" for field in get_invalid_config_fields(exc))

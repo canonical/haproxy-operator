@@ -42,32 +42,30 @@ def test_install(context_with_install_mock, base_state):
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
 @pytest.mark.parametrize(
-    "log_hash_client_ip,expected_present",
+    "configure_salt,expected_present",
     [(False, False), (True, True)],
-    ids=["hashing_disabled", "hashing_enabled"],
+    ids=["salt_removed", "salt_configured"],
 )
-def test_config_changed_log_hash_client_ip(
-    monkeypatch: pytest.MonkeyPatch, peer_relation, log_hash_client_ip, expected_present
+def test_config_changed_client_ip_hash_salt(
+    monkeypatch: pytest.MonkeyPatch, peer_relation, configure_salt, expected_present
 ):
     """
-    arrange: prepare a state with peer relation and the log-hash-client-ip config set.
+    arrange: prepare a state with or without a client IP hash salt.
     act: run config-changed.
-    assert: the rendered haproxy config contains the hashed log-format only when
-        log-hash-client-ip is enabled.
+    assert: the rendered config hashes client IPs only when the salt is configured.
     """
     render_file_mock = MagicMock()
     monkeypatch.setattr("haproxy.render_file", render_file_mock)
     context = ops.testing.Context(HAProxyCharm)
     log_hash_salt = ops.testing.Secret(tracked_content={"salt": TEST_LOG_HASH_SALT})
-    state = ops.testing.State(
-        relations=[peer_relation],
-        leader=True,
-        config={
-            "log-hash-client-ip": log_hash_client_ip,
-            "log-hash-salt": log_hash_salt.id,
-        },
-        secrets=[log_hash_salt],
-    )
+    state = ops.testing.State(relations=[peer_relation], leader=True)
+    if configure_salt:
+        state = ops.testing.State(
+            relations=[peer_relation],
+            leader=True,
+            config={"client-ip-hash-salt": log_hash_salt.id},
+            secrets=[log_hash_salt],
+        )
 
     context.run(context.on.config_changed(), state)
 
@@ -80,33 +78,7 @@ def test_config_changed_log_hash_client_ip(
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
-def test_config_changed_log_hash_client_ip_requires_salt(
-    monkeypatch: pytest.MonkeyPatch, peer_relation
-):
-    """
-    arrange: prepare a state with client IP hashing enabled without a salt secret.
-    act: run config-changed.
-    assert: the unit is blocked and the haproxy config is not rendered.
-    """
-    render_file_mock = MagicMock()
-    monkeypatch.setattr("haproxy.render_file", render_file_mock)
-    context = ops.testing.Context(HAProxyCharm)
-    state = ops.testing.State(
-        relations=[peer_relation],
-        leader=True,
-        config={"log-hash-client-ip": True},
-    )
-
-    out = context.run(context.on.config_changed(), state)
-
-    assert out.unit_status == ops.testing.BlockedStatus(
-        "log-hash-salt must be set when log-hash-client-ip is enabled."
-    )
-    render_file_mock.assert_not_called()
-
-
-@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
-def test_config_changed_log_hash_client_ip_rejects_inaccessible_salt(
+def test_config_changed_client_ip_hash_salt_rejects_inaccessible_secret(
     monkeypatch: pytest.MonkeyPatch, peer_relation
 ):
     """
@@ -121,16 +93,13 @@ def test_config_changed_log_hash_client_ip_rejects_inaccessible_salt(
     state = ops.testing.State(
         relations=[peer_relation],
         leader=True,
-        config={
-            "log-hash-client-ip": True,
-            "log-hash-salt": inaccessible_secret.id,
-        },
+        config={"client-ip-hash-salt": inaccessible_secret.id},
     )
 
     out = context.run(context.on.config_changed(), state)
 
     assert out.unit_status == ops.testing.BlockedStatus(
-        "The log-hash-salt secret does not exist or cannot be accessed."
+        "The client-ip-hash-salt secret does not exist or cannot be accessed."
     )
     render_file_mock.assert_not_called()
 
@@ -144,7 +113,7 @@ def test_config_changed_log_hash_client_ip_rejects_inaccessible_salt(
         pytest.param({"salt": "   "}, id="whitespace"),
     ],
 )
-def test_config_changed_log_hash_client_ip_rejects_blank_salt(
+def test_config_changed_client_ip_hash_salt_rejects_blank_value(
     monkeypatch: pytest.MonkeyPatch,
     peer_relation,
     secret_content: dict[str, str],
@@ -161,17 +130,14 @@ def test_config_changed_log_hash_client_ip_rejects_blank_salt(
     state = ops.testing.State(
         relations=[peer_relation],
         leader=True,
-        config={
-            "log-hash-client-ip": True,
-            "log-hash-salt": log_hash_salt.id,
-        },
+        config={"client-ip-hash-salt": log_hash_salt.id},
         secrets=[log_hash_salt],
     )
 
     out = context.run(context.on.config_changed(), state)
 
     assert out.unit_status == ops.testing.BlockedStatus(
-        "The log-hash-salt secret must contain a non-empty 'salt' value."
+        "The client-ip-hash-salt secret must contain a non-empty 'salt' value."
     )
     render_file_mock.assert_not_called()
 
@@ -185,7 +151,7 @@ def test_config_changed_log_hash_client_ip_rejects_blank_salt(
         pytest.param("unsafe\nsalt", id="control_character"),
     ],
 )
-def test_config_changed_log_hash_client_ip_rejects_unsafe_salt(
+def test_config_changed_client_ip_hash_salt_rejects_unsafe_value(
     monkeypatch: pytest.MonkeyPatch,
     peer_relation,
     salt: str,
@@ -202,19 +168,74 @@ def test_config_changed_log_hash_client_ip_rejects_unsafe_salt(
     state = ops.testing.State(
         relations=[peer_relation],
         leader=True,
-        config={
-            "log-hash-client-ip": True,
-            "log-hash-salt": log_hash_salt.id,
-        },
+        config={"client-ip-hash-salt": log_hash_salt.id},
         secrets=[log_hash_salt],
     )
 
     out = context.run(context.on.config_changed(), state)
 
     assert out.unit_status == ops.testing.BlockedStatus(
-        "The log-hash-salt secret must not contain control characters, "
+        "The client-ip-hash-salt secret must not contain control characters, "
         "double quotes, or backslashes."
     )
+    render_file_mock.assert_not_called()
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_secret_changed_refreshes_client_ip_hash_salt(
+    monkeypatch: pytest.MonkeyPatch, peer_relation
+) -> None:
+    """
+    arrange: configure a salt secret with a newer revision.
+    act: emit secret-changed.
+    assert: the rendered HAProxy config uses the latest salt revision.
+    """
+    old_salt = "old-salt"
+    new_salt = "new-salt"
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    context = ops.testing.Context(HAProxyCharm)
+    log_hash_salt = ops.testing.Secret(
+        tracked_content={"salt": old_salt},
+        latest_content={"salt": new_salt},
+    )
+    state = ops.testing.State(
+        relations=[peer_relation],
+        leader=True,
+        config={"client-ip-hash-salt": log_hash_salt.id},
+        secrets=[log_hash_salt],
+    )
+
+    context.run(context.on.secret_changed(log_hash_salt), state)
+
+    config_content = render_file_mock.call_args.args[1]
+    assert new_salt in config_content
+    assert old_salt not in config_content
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_secret_changed_ignores_unrelated_secret(
+    monkeypatch: pytest.MonkeyPatch, peer_relation
+) -> None:
+    """
+    arrange: configure a client IP hash salt alongside an unrelated secret.
+    act: emit secret-changed for the unrelated secret.
+    assert: the HAProxy config is not rendered.
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    context = ops.testing.Context(HAProxyCharm)
+    log_hash_salt = ops.testing.Secret(tracked_content={"salt": TEST_LOG_HASH_SALT})
+    unrelated_secret = ops.testing.Secret(tracked_content={"value": "unrelated"})
+    state = ops.testing.State(
+        relations=[peer_relation],
+        leader=True,
+        config={"client-ip-hash-salt": log_hash_salt.id},
+        secrets=[log_hash_salt, unrelated_secret],
+    )
+
+    context.run(context.on.secret_changed(unrelated_secret), state)
+
     render_file_mock.assert_not_called()
 
 
@@ -691,10 +712,7 @@ def test_get_configuration_redacts_log_hash_salt(monkeypatch: pytest.MonkeyPatch
     log_hash_salt = ops.testing.Secret(tracked_content={"salt": "different-current-salt"})
     state = ops.testing.State(
         leader=True,
-        config={
-            "log-hash-client-ip": True,
-            "log-hash-salt": log_hash_salt.id,
-        },
+        config={"client-ip-hash-salt": log_hash_salt.id},
         secrets=[log_hash_salt],
     )
 

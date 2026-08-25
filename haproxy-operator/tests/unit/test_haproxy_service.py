@@ -33,7 +33,7 @@ def test_deploy(monkeypatch: pytest.MonkeyPatch):
 
 def test_render_default_config_hashes_client_ip_when_enabled(hashed_charm_state):
     """
-    arrange: Given a charm state with log_hash_client_ip enabled.
+    arrange: Given a charm state with hash_client_ip_in_logs enabled.
     act: Render the default haproxy configuration.
     assert: The config overrides log-format and error-log-format to hash the client IP.
     """
@@ -45,11 +45,11 @@ def test_render_default_config_hashes_client_ip_when_enabled(hashed_charm_state)
 
 def test_render_default_config_logs_plaintext_client_ip_when_disabled(hashed_charm_state):
     """
-    arrange: Given a charm state with log_hash_client_ip disabled.
+    arrange: Given a charm state without a client IP hash salt.
     act: Render the default haproxy configuration.
     assert: No log-format overrides are set, so client IPs are logged in plaintext.
     """
-    charm_state = replace(hashed_charm_state, log_hash_client_ip=False, log_hash_salt=None)
+    charm_state = replace(hashed_charm_state, client_ip_hash_salt=None)
     config = HAProxyService().render_default_config(charm_state)
 
     assert "log-format" not in config

@@ -1,7 +1,7 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Integration test for the log-hash-client-ip config option."""
+"""Integration test for client IP log hashing."""
 
 import hashlib
 import socket
@@ -47,13 +47,12 @@ def log_hash_secret_fixture(
     juju.grant_secret(secret_uri, configured_application_with_tls)
     yield secret_uri
 
-    juju.config(configured_application_with_tls, {"log-hash-client-ip": "false"})
-    juju.cli("config", configured_application_with_tls, "--reset", "log-hash-salt")
+    juju.cli("config", configured_application_with_tls, "--reset", "client-ip-hash-salt")
     juju.wait(lambda status: all_active_and_idle(status, configured_application_with_tls))
     juju.remove_secret(secret_uri)
 
 
-def test_log_hash_client_ip(
+def test_client_ip_hash_salt(
     configured_application_with_tls: str,
     any_charm_haproxy_route_tcp_requirer: str,
     log_hash_secret,
@@ -68,31 +67,40 @@ def test_log_hash_client_ip(
     unit = f"{application}/0"
     juju.wait(lambda status: all_active_and_idle(status, application))
     address = get_unit_address(juju, application)
-    juju.config(application, {"log-hash-client-ip": "false"})
-    juju.wait(lambda status: all_active_and_idle(status, application))
-
-    plaintext_marker = f"plaintext-{uuid.uuid4().hex}"
-    response = requests.get(f"{address}/?{plaintext_marker}", timeout=10)
-    assert response.status_code == 200
-    client_ip = _last_client_field(juju, unit, plaintext_marker).rsplit(":", 1)[0]
-    ip_address(client_ip)
 
     juju.config(
         application,
-        {
-            "log-hash-client-ip": "true",
-            "log-hash-salt": str(log_hash_secret),
-        },
+        {"client-ip-hash-salt": str(log_hash_secret)},
     )
     juju.wait(lambda status: all_active_and_idle(status, application))
 
-    # HAProxy's hex converter outputs uppercase.
-    expected_hash = hashlib.sha256(client_ip.encode() + LOG_HASH_SALT.encode()).hexdigest().upper()
     response = requests.get(f"{address}/?default-hash", verify=False, timeout=30)  # nosec
     assert response.status_code == 200
     hashed_http_client = _last_client_field(juju, unit, "default-hash")
+
+    juju.cli("config", application, "--reset", "client-ip-hash-salt")
+    juju.wait(lambda status: all_active_and_idle(status, application))
+
+    restored_plaintext_marker = f"restored-plaintext-{uuid.uuid4().hex}"
+    response = requests.get(f"{address}/?{restored_plaintext_marker}", timeout=10)
+    assert response.status_code == 200
+    restored_client_ip = _last_client_field(juju, unit, restored_plaintext_marker).rsplit(":", 1)[
+        0
+    ]
+    ip_address(restored_client_ip)
+
+    # HAProxy's hex converter outputs uppercase.
+    expected_hash = (
+        hashlib.sha256(restored_client_ip.encode() + LOG_HASH_SALT.encode()).hexdigest().upper()
+    )
     assert hashed_http_client.startswith(f"{expected_hash}:")
-    assert not hashed_http_client.startswith(f"{client_ip}:")
+    assert not hashed_http_client.startswith(f"{restored_client_ip}:")
+
+    juju.config(
+        application,
+        {"client-ip-hash-salt": str(log_hash_secret)},
+    )
+    juju.wait(lambda status: all_active_and_idle(status, application))
 
     tcp_relation = (
         f"{application}:haproxy-route-tcp",
@@ -123,4 +131,4 @@ def test_log_hash_client_ip(
 
     hashed_tcp_client = _last_client_field(juju, unit, "haproxy_route_tcp_4444")
     assert hashed_tcp_client.startswith(f"{expected_hash}:")
-    assert not hashed_tcp_client.startswith(f"{client_ip}:")
+    assert not hashed_tcp_client.startswith(f"{restored_client_ip}:")
