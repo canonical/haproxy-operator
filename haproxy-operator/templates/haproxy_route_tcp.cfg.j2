@@ -20,7 +20,7 @@ send-proxy-v2
 frontend haproxy_route_tcp_{{ frontend.bind_port }}
     mode tcp
     option tcplog
-    bind [::]:{{ frontend.bind_port }} v4v6 {% if frontend.tls_terminate %} ssl crt {{ haproxy_crt_dir }} {% endif +%}
+    bind [::]:{{ frontend.bind_port }} v4v6 {% if frontend.tls_terminate %} ssl crt {{ haproxy_crt_dir }} strict-sni {% endif +%}
 
 {# DDOS protection configuration. #}
 {% if ddos_protection_config.client_timeout %}

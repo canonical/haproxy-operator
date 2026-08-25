@@ -1,7 +1,7 @@
 {% for backend in grpc_backends %}
 frontend {{ backend.backend_name }}
     mode http
-    bind [::]:{{ backend.application_data.external_grpc_port }} v4v6 ssl crt /var/lib/haproxy/certs alpn h2
+    bind [::]:{{ backend.application_data.external_grpc_port }} v4v6 ssl crt /var/lib/haproxy/certs alpn h2 strict-sni
     acl acl_host_{{ backend.backend_name }} req.hdr(host),field(1,:) -i {% for hostname in backend.hostname_acls %}{{hostname}} {% endfor +%}
     {% if backend.path_acl_required %}
     acl acl_path_{{ backend.backend_name }} path_beg -i {% for path in backend.application_data.paths %}{{ path }} {% endfor +%}
