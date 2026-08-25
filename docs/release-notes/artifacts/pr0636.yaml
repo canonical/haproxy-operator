@@ -5,10 +5,11 @@ changes:
     author: Ignavar
     type: minor
     description: >
-      Client IP hashing now uses a user-provided Juju secret as its salt,
-      and the salt is redacted from the get-configuration action output.
-      Secret rotation is intentionally unsupported because changing the salt
-      changes the hashes and prevents correlation with existing logs.
+      Setting the `client-ip-hash-salt` option to a user-provided Juju secret
+      now enables client IP hashing, while removing it restores plaintext
+      logging. Secret revisions are supported, but rotation is not recommended
+      because changing the salt prevents correlation with earlier logs. The salt
+      is redacted from the get-configuration action output.
     urls:
       pr:
         - https://github.com/canonical/haproxy-operator/pull/636
