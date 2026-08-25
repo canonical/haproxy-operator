@@ -2217,7 +2217,11 @@ def test_haproxy_route_tcp_config_hashes_client_ip(
         tcp_log_format=hashed_charm_state.tcp_log_format,
     )
 
-    assert f'log-format "{hashed_charm_state.tcp_log_format}"' in rendered
+    expected_client_address = (
+        "%[src,concat(,,),regsub(^::ffff:,),"
+        f'concat(,,\\"{hashed_charm_state.log_hash_salt}\\"),sha2(256),hex]:%cp'
+    )
+    assert f'log-format "{expected_client_address} ' in rendered
 
 
 def test_charm_state_http_log_format_matches_haproxy_default(hashed_charm_state):
