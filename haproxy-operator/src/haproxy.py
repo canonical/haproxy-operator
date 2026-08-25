@@ -286,18 +286,21 @@ class HAProxyService:
             template_file_path: Path of the template to load.
             context: Context needed to render the template.
         """
-        self._render_config_file(template_file_path, context, HAPROXY_CONFIG)
+        self._render_config_file(template_file_path, context, HAPROXY_CONFIG, mode=0o600)
 
-    def _render_config_file(self, template_file_path: str, context: dict, path: Path) -> None:
+    def _render_config_file(
+        self, template_file_path: str, context: dict, path: Path, mode: int = 0o644
+    ) -> None:
         """Render configuration file based on a template.
 
         Args:
             template_file_path: Path of the template to load.
             context: Context needed to render the template.
             path: Path of the file to render.
+            mode: Access permission mask for the rendered file.
         """
         rendered = self._render_to_string(template_file_path, context)
-        render_file(path, rendered, 0o644)
+        render_file(path, rendered, mode)
 
     def _render_to_string(self, template_file_path: str, context: dict) -> str:
         """Render a template to a string without writing it to disk.

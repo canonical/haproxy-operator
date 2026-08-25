@@ -106,6 +106,36 @@ def test_config_changed_log_hash_client_ip_requires_salt(
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_config_changed_log_hash_client_ip_rejects_inaccessible_salt(
+    monkeypatch: pytest.MonkeyPatch, peer_relation
+):
+    """
+    arrange: configure an ID for a salt secret that is not available to the charm.
+    act: run config-changed.
+    assert: the unit is blocked and the HAProxy config is not rendered.
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    context = ops.testing.Context(HAProxyCharm)
+    inaccessible_secret = ops.testing.Secret(tracked_content={"salt": TEST_LOG_HASH_SALT})
+    state = ops.testing.State(
+        relations=[peer_relation],
+        leader=True,
+        config={
+            "log-hash-client-ip": True,
+            "log-hash-salt": inaccessible_secret.id,
+        },
+    )
+
+    out = context.run(context.on.config_changed(), state)
+
+    assert out.unit_status == ops.testing.BlockedStatus(
+        "The log-hash-salt secret does not exist or cannot be accessed."
+    )
+    render_file_mock.assert_not_called()
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
 @pytest.mark.parametrize(
     "secret_content",
     [
@@ -644,9 +674,9 @@ def test_get_configuration_returns_disk_config(monkeypatch: pytest.MonkeyPatch) 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
 def test_get_configuration_redacts_log_hash_salt(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    arrange: mock the on-disk config with HTTP, error, and TCP salted hash formats.
+    arrange: mock on-disk formats containing a salt different from the current secret.
     act: trigger the get-configuration action.
-    assert: every salt is redacted without changing the rest of the configuration.
+    assert: every on-disk salt is redacted without changing the rest of the configuration.
     """
     content = "\n".join(
         [
@@ -658,7 +688,7 @@ def test_get_configuration_redacts_log_hash_salt(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr("charm.file_exists", MagicMock(return_value=True))
     monkeypatch.setattr("charm.read_file", MagicMock(return_value=content))
     context = ops.testing.Context(HAProxyCharm)
-    log_hash_salt = ops.testing.Secret(tracked_content={"salt": TEST_LOG_HASH_SALT})
+    log_hash_salt = ops.testing.Secret(tracked_content={"salt": "different-current-salt"})
     state = ops.testing.State(
         leader=True,
         config={
@@ -744,9 +774,9 @@ def test_get_configuration_default_warning(
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
 def test_get_configuration_notes_invalid_charm_state(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    arrange: a valid salt is configured, but building the full charm state raises.
+    arrange: the disk config contains a salt, but no salt is configured and full state is invalid.
     act: trigger the get-configuration action.
-    assert: the salt is still redacted, and a "could not determine" note is logged.
+    assert: the on-disk salt is still redacted, and a "could not determine" note is logged.
     """
     content = f'log-format "{TEST_LOG_HASH_CLIENT_ADDRESS}"\n'
     monkeypatch.setattr("charm.file_exists", MagicMock(return_value=True))
@@ -756,15 +786,7 @@ def test_get_configuration_notes_invalid_charm_state(monkeypatch: pytest.MonkeyP
         MagicMock(side_effect=CharmStateValidationBaseError("invalid config")),
     )
     context = ops.testing.Context(HAProxyCharm)
-    log_hash_salt = ops.testing.Secret(tracked_content={"salt": TEST_LOG_HASH_SALT})
-    state = ops.testing.State(
-        leader=True,
-        config={
-            "log-hash-client-ip": True,
-            "log-hash-salt": log_hash_salt.id,
-        },
-        secrets=[log_hash_salt],
-    )
+    state = ops.testing.State(leader=True)
 
     context.run(context.on.action("get-configuration"), state)
 

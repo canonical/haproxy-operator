@@ -120,9 +120,8 @@ class CharmState:
         )
 
     @staticmethod
-    def get_log_hash_salt(charm: ops.CharmBase) -> str | None:
+    def _get_log_hash_salt(charm: ops.CharmBase, log_hash_client_ip: bool) -> str | None:
         """Return and validate the configured client IP hash salt."""
-        log_hash_client_ip = typing.cast(bool, charm.config.get("log-hash-client-ip"))
         if not log_hash_client_ip:
             return None
 
@@ -284,7 +283,7 @@ class CharmState:
         enable_hsts = typing.cast(bool, charm.config.get("enable-hsts"))
         ddos_protection = typing.cast(bool, charm.config.get("ddos-protection"))
         log_hash_client_ip = typing.cast(bool, charm.config.get("log-hash-client-ip"))
-        log_hash_salt = cls.get_log_hash_salt(charm)
+        log_hash_salt = cls._get_log_hash_salt(charm, log_hash_client_ip)
 
         try:
             return cls(
