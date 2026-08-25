@@ -34,8 +34,22 @@ from charms.haproxy.v2.haproxy_route import (
 from ops.testing import Context
 
 from charm import HAProxyCharm
+from state.charm_state import CharmState, ProxyMode
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
+TEST_LOG_HASH_SALT = "test-salt"
+
+
+@pytest.fixture(name="hashed_charm_state")
+def hashed_charm_state_fixture() -> CharmState:
+    """Return a minimal CharmState with client IP hashing enabled."""
+    return CharmState(
+        mode=ProxyMode.NOPROXY,
+        enable_hsts=False,
+        global_max_connection=1024,
+        log_hash_client_ip=True,
+        log_hash_salt=TEST_LOG_HASH_SALT,
+    )
 
 
 @pytest.fixture(scope="function", name="systemd_mock")

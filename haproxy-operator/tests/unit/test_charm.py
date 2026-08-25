@@ -16,13 +16,15 @@ import scenario
 
 import tls_relation
 from charm import CharmStateValidationBaseError, HAProxyCharm
-from state.charm_state import LOG_HASHED_CLIENT_ADDRESS
-from tests.unit.conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
+from tests.unit.conftest import TEST_EXTERNAL_HOSTNAME_CONFIG, TEST_LOG_HASH_SALT
 
 from .conftest import build_haproxy_route_relation, build_spoe_auth_relation
 from .helper import RegexMatcher
 
 logger = logging.getLogger(__name__)
+TEST_LOG_HASH_CLIENT_ADDRESS = (
+    f'%[src,concat(,,),regsub(^::ffff:,),concat(,,\\"{TEST_LOG_HASH_SALT}\\"),sha2(256),hex]:%cp'
+)
 
 
 def test_install(context_with_install_mock, base_state):
@@ -56,18 +58,134 @@ def test_config_changed_log_hash_client_ip(
     render_file_mock = MagicMock()
     monkeypatch.setattr("haproxy.render_file", render_file_mock)
     context = ops.testing.Context(HAProxyCharm)
+    log_hash_salt = ops.testing.Secret(tracked_content={"salt": TEST_LOG_HASH_SALT})
     state = ops.testing.State(
         relations=[peer_relation],
         leader=True,
-        config={"log-hash-client-ip": log_hash_client_ip},
+        config={
+            "log-hash-client-ip": log_hash_client_ip,
+            "log-hash-salt": log_hash_salt.id,
+        },
+        secrets=[log_hash_salt],
     )
 
     context.run(context.on.config_changed(), state)
 
     render_file_mock.assert_called_once()
     config_content = render_file_mock.call_args.args[1]
-    assert (f'log-format "{LOG_HASHED_CLIENT_ADDRESS}' in config_content) is expected_present
-    assert (f'error-log-format "{LOG_HASHED_CLIENT_ADDRESS}' in config_content) is expected_present
+    assert (f'log-format "{TEST_LOG_HASH_CLIENT_ADDRESS}' in config_content) is expected_present
+    assert (
+        f'error-log-format "{TEST_LOG_HASH_CLIENT_ADDRESS}' in config_content
+    ) is expected_present
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_config_changed_log_hash_client_ip_requires_salt(
+    monkeypatch: pytest.MonkeyPatch, peer_relation
+):
+    """
+    arrange: prepare a state with client IP hashing enabled without a salt secret.
+    act: run config-changed.
+    assert: the unit is blocked and the haproxy config is not rendered.
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    context = ops.testing.Context(HAProxyCharm)
+    state = ops.testing.State(
+        relations=[peer_relation],
+        leader=True,
+        config={"log-hash-client-ip": True},
+    )
+
+    out = context.run(context.on.config_changed(), state)
+
+    assert out.unit_status == ops.testing.BlockedStatus(
+        "log-hash-salt must be set when log-hash-client-ip is enabled."
+    )
+    render_file_mock.assert_not_called()
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+@pytest.mark.parametrize(
+    "secret_content",
+    [
+        pytest.param({"other": "value"}, id="missing_key"),
+        pytest.param({"salt": ""}, id="empty"),
+        pytest.param({"salt": "   "}, id="whitespace"),
+    ],
+)
+def test_config_changed_log_hash_client_ip_rejects_blank_salt(
+    monkeypatch: pytest.MonkeyPatch,
+    peer_relation,
+    secret_content: dict[str, str],
+):
+    """
+    arrange: prepare a state with hashing enabled and a missing or blank salt.
+    act: run config-changed.
+    assert: the unit is blocked and the HAProxy config is not rendered.
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    context = ops.testing.Context(HAProxyCharm)
+    log_hash_salt = ops.testing.Secret(tracked_content=secret_content)
+    state = ops.testing.State(
+        relations=[peer_relation],
+        leader=True,
+        config={
+            "log-hash-client-ip": True,
+            "log-hash-salt": log_hash_salt.id,
+        },
+        secrets=[log_hash_salt],
+    )
+
+    out = context.run(context.on.config_changed(), state)
+
+    assert out.unit_status == ops.testing.BlockedStatus(
+        "The log-hash-salt secret must contain a non-empty 'salt' value."
+    )
+    render_file_mock.assert_not_called()
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+@pytest.mark.parametrize(
+    "salt",
+    [
+        pytest.param('unsafe"salt', id="quote"),
+        pytest.param("unsafe\\salt", id="backslash"),
+        pytest.param("unsafe\nsalt", id="control_character"),
+    ],
+)
+def test_config_changed_log_hash_client_ip_rejects_unsafe_salt(
+    monkeypatch: pytest.MonkeyPatch,
+    peer_relation,
+    salt: str,
+):
+    """
+    arrange: prepare a state with hashing enabled and a salt containing an unsafe character.
+    act: run config-changed.
+    assert: the unit is blocked and the HAProxy config is not rendered.
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    context = ops.testing.Context(HAProxyCharm)
+    log_hash_salt = ops.testing.Secret(tracked_content={"salt": salt})
+    state = ops.testing.State(
+        relations=[peer_relation],
+        leader=True,
+        config={
+            "log-hash-client-ip": True,
+            "log-hash-salt": log_hash_salt.id,
+        },
+        secrets=[log_hash_salt],
+    )
+
+    out = context.run(context.on.config_changed(), state)
+
+    assert out.unit_status == ops.testing.BlockedStatus(
+        "The log-hash-salt secret must not contain control characters, "
+        "double quotes, or backslashes."
+    )
+    render_file_mock.assert_not_called()
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")

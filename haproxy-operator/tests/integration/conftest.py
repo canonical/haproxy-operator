@@ -23,6 +23,8 @@ TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/haproxy_route_requirer.py"
 HAPROXY_ROUTE_LIB_SRC = "lib/charms/haproxy/v2/haproxy_route.py"
 APT_LIB_SRC = "lib/charms/operator_libs_linux/v0/apt.py"
+ANY_CHARM_INGRESS_REQUIRER = "ingress-requirer-any"
+ANY_CHARM_INGRESS_REQUIRER_SRC = "tests/integration/ingress_requirer.py"
 ANY_CHARM_INGRESS_PER_UNIT_REQUIRER = "ingress-per-unit-requirer-any"
 ANY_CHARM_INGRESS_PER_UNIT_REQUIRER_SRC = "tests/integration/ingress_per_unit_requirer.py"
 JUJU_WAIT_TIMEOUT = 10 * 60  # 10 minutes
@@ -133,6 +135,31 @@ def configured_application_with_tls_fixture(
     certificates relation for reuse across tests.
     """
     yield configured_application_with_tls_base
+
+
+@pytest.fixture(name="any_charm_ingress_requirer")
+def any_charm_ingress_requirer_fixture(juju: jubilant.Juju) -> str:
+    """Deploy any-charm as an ingress per app requirer."""
+    if ANY_CHARM_INGRESS_REQUIRER in juju.status().apps:
+        logger.warning("Using existing application: %s", ANY_CHARM_INGRESS_REQUIRER)
+    else:
+        source_overwrite = {
+            "any_charm.py": Path(ANY_CHARM_INGRESS_REQUIRER_SRC).read_text(encoding="utf-8"),
+            "ingress.py": Path("lib/charms/traefik_k8s/v2/ingress.py").read_text(encoding="utf-8"),
+            "apt.py": Path(APT_LIB_SRC).read_text(encoding="utf-8"),
+        }
+        juju.deploy(
+            "any-charm",
+            app=ANY_CHARM_INGRESS_REQUIRER,
+            channel="beta",
+            config={
+                "src-overwrite": json.dumps(source_overwrite),
+                "python-packages": "pydantic<2.0",
+            },
+        )
+    juju.wait(lambda status: jubilant.all_active(status, ANY_CHARM_INGRESS_REQUIRER))
+    juju.run(f"{ANY_CHARM_INGRESS_REQUIRER}/0", "rpc", {"method": "start_server"})
+    return ANY_CHARM_INGRESS_REQUIRER
 
 
 @pytest.fixture(name="any_charm_ingress_per_unit_requirer")

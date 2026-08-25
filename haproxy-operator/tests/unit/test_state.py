@@ -4,6 +4,7 @@
 """Unit tests for the states of different modes."""
 
 import typing
+from dataclasses import replace
 from ipaddress import IPv4Address
 from unittest.mock import MagicMock, Mock
 
@@ -34,7 +35,7 @@ from charms.traefik_k8s.v1.ingress_per_unit import (
 from charms.traefik_k8s.v2.ingress import DataValidationError as V2DataValidationError
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from state.charm_state import LOG_HASHED_CLIENT_ADDRESS, CharmState, ProxyMode
+from state.charm_state import CharmState, ProxyMode
 from state.ddos_protection import DDosProtection, DDosProtectionValidationError
 from state.haproxy_route import (
     HAProxyRouteBackend,
@@ -154,8 +155,15 @@ def test_proxy_mode_tcp():
     haproxy_route_tcp_provider_mock.relations = [MagicMock(spec=ops.Relation)]
     reverseproxy_requirer_mock = MagicMock()
     reverseproxy_requirer_mock.relations = []
+    charm_mock = MagicMock(spec=ops.CharmBase)
+    charm_mock.config = {
+        "global-maxconn": 4096,
+        "enable-hsts": False,
+        "ddos-protection": True,
+        "log-hash-client-ip": False,
+    }
     charm_state = CharmState.from_charm(
-        charm=MagicMock(spec=ops.CharmBase),
+        charm=charm_mock,
         ingress_provider=ingress_provider_mock,
         ingress_per_unit_provider=ingress_per_unit_provider_mock,
         haproxy_route_provider=haproxy_route_provider_mock,
@@ -623,24 +631,18 @@ def test_charm_state_ddos_protection(ddos_protection, expected_value):
     assert charm_state.ddos_protection is expected_value
 
 
-def test_charm_state_log_format_defaults_hash_client_ip():
+def test_charm_state_log_format_defaults_hash_client_ip(hashed_charm_state):
     """
     arrange: Initialize the CharmState with minimal configuration.
     act: Access the default log format fields.
     assert: All formats replace the client IP with a salted SHA-256 hash of src.
     """
-    charm_state = CharmState(
-        mode=ProxyMode.NOPROXY,
-        enable_hsts=False,
-        global_max_connection=4096,
-    )
-
     for log_format in (
-        charm_state.http_log_format,
-        charm_state.error_log_format,
-        charm_state.tcp_log_format,
+        hashed_charm_state.http_log_format,
+        hashed_charm_state.error_log_format,
+        hashed_charm_state.tcp_log_format,
     ):
-        assert LOG_HASHED_CLIENT_ADDRESS in log_format
+        assert hashed_charm_state.log_hash_client_address in log_format
 
 
 @pytest.mark.parametrize(
@@ -2184,7 +2186,41 @@ def test_haproxy_route_tcp_port_range_config_rendering(
     assert "server tcp-route-requirer-0" in rendered
 
 
-def test_charm_state_http_log_format_matches_haproxy_default():
+def test_haproxy_route_tcp_config_hashes_client_ip(
+    hashed_charm_state,
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Generate a TCP frontend and enable client IP hashing.
+    act: Render the TCP frontend template.
+    assert: The TCP log format contains the salted client address hash.
+    """
+    tcp_requirers = HaproxyRouteTcpRequirersData(
+        requirers_data=[haproxy_route_tcp_relation_data(port=4444)],
+        relation_ids_with_invalid_data=set(),
+    )
+    frontends = parse_haproxy_route_tcp_requirers_data(tcp_requirers)
+    env = Environment(
+        loader=FileSystemLoader("templates"),
+        autoescape=select_autoescape(),
+        keep_trailing_newline=True,
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
+
+    rendered = env.get_template("haproxy_route_tcp.cfg.j2").render(
+        tcp_frontends=frontends,
+        haproxy_crt_dir="/etc/haproxy/certs",
+        ddos_protection_config=DDosProtection(),
+        ip_allow_list_file="/etc/haproxy/ip_allow_list",
+        log_hash_client_ip=True,
+        tcp_log_format=hashed_charm_state.tcp_log_format,
+    )
+
+    assert f'log-format "{hashed_charm_state.tcp_log_format}"' in rendered
+
+
+def test_charm_state_http_log_format_matches_haproxy_default(hashed_charm_state):
     """
     arrange: Access the default http_log_format.
     act: Compare it with HAProxy's default HTTP log format.
@@ -2196,14 +2232,12 @@ def test_charm_state_http_log_format_matches_haproxy_default():
         "%ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs %{+Q}r"
     )
 
-    log_format = CharmState(
-        mode=ProxyMode.NOPROXY, enable_hsts=False, global_max_connection=4096
-    ).http_log_format
-
-    assert log_format == haproxy_default.replace("%ci:%cp", LOG_HASHED_CLIENT_ADDRESS, 1)
+    assert hashed_charm_state.http_log_format == haproxy_default.replace(
+        "%ci:%cp", hashed_charm_state.log_hash_client_address, 1
+    )
 
 
-def test_charm_state_error_log_format_matches_haproxy_default():
+def test_charm_state_error_log_format_matches_haproxy_default(hashed_charm_state):
     """
     arrange: Access the default error_log_format.
     act: Compare it with HAProxy's default error log format.
@@ -2212,14 +2246,26 @@ def test_charm_state_error_log_format_matches_haproxy_default():
     """
     haproxy_default = "%ci:%cp [%tr] %[fe_name]/%[so_id]: %[fc_err_str] (%[ssl_fc_err_str])"
 
-    log_format = CharmState(
-        mode=ProxyMode.NOPROXY, enable_hsts=False, global_max_connection=4096
-    ).error_log_format
-
-    assert log_format == haproxy_default.replace("%ci:%cp", LOG_HASHED_CLIENT_ADDRESS, 1)
+    assert hashed_charm_state.error_log_format == haproxy_default.replace(
+        "%ci:%cp", hashed_charm_state.log_hash_client_address, 1
+    )
 
 
-def test_charm_state_tcp_log_format_matches_haproxy_default():
+def test_charm_state_error_log_format_supports_tcp_frontends(hashed_charm_state):
+    """
+    arrange: Use client IP hashing in the mixed HTTP and TCP proxy mode.
+    act: Access the error log format inherited by all frontends.
+    assert: The timestamp uses the mode-neutral HAProxy variable.
+    """
+    charm_state = replace(hashed_charm_state, mode=ProxyMode.HAPROXY_ROUTE)
+
+    assert charm_state.error_log_format == (
+        f"{charm_state.log_hash_client_address} [%t] "
+        "%[fe_name]/%[so_id]: %[fc_err_str] (%[ssl_fc_err_str])"
+    )
+
+
+def test_charm_state_tcp_log_format_matches_haproxy_default(hashed_charm_state):
     """
     arrange: Access the default tcp_log_format.
     act: Compare it with HAProxy's default TCP log format (option tcplog).
@@ -2228,8 +2274,6 @@ def test_charm_state_tcp_log_format_matches_haproxy_default():
     """
     haproxy_default = "%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq"
 
-    log_format = CharmState(
-        mode=ProxyMode.NOPROXY, enable_hsts=False, global_max_connection=4096
-    ).tcp_log_format
-
-    assert log_format == haproxy_default.replace("%ci:%cp", LOG_HASHED_CLIENT_ADDRESS, 1)
+    assert hashed_charm_state.tcp_log_format == haproxy_default.replace(
+        "%ci:%cp", hashed_charm_state.log_hash_client_address, 1
+    )
