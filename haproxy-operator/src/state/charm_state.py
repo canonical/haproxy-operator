@@ -56,6 +56,8 @@ class InvalidCharmConfigError(CharmStateValidationBaseError):
     """Exception raised when a charm configuration is found to be invalid."""
 
 
+# See https://docs.haproxy.org/2.8/configuration.html#7.3.1 for the converters
+# used here (concat, regsub, sha2, hex).
 LOG_HASHED_CLIENT_IP_TEMPLATE = (
     '%[src,concat(,,),regsub(^::ffff:,),concat(,,\\"{salt}\\"),sha2(256),hex]'
 )
@@ -95,6 +97,7 @@ class CharmState:
         hashed_client_ip = LOG_HASHED_CLIENT_IP_TEMPLATE.format(salt=self.client_ip_hash_salt)
         return f"{hashed_client_ip}:{LOG_CLIENT_PORT}"
 
+    # See https://docs.haproxy.org/2.8/configuration.html#8.2.3 "HTTP log format".
     @property
     def http_log_format(self) -> str:
         """Return HAProxy's default HTTP log format with a hashed client IP."""
@@ -104,6 +107,7 @@ class CharmState:
             "%hr %hs %{+Q}r"
         )
 
+    # See https://docs.haproxy.org/2.8/configuration.html#8.2.5 "Error log format".
     @property
     def error_log_format(self) -> str:
         """Return HAProxy's default error log format with a hashed client IP."""
@@ -113,6 +117,7 @@ class CharmState:
             "%[fc_err_str] (%[ssl_fc_err_str])"
         )
 
+    # See https://docs.haproxy.org/2.8/configuration.html#8.2.2 "TCP log format".
     @property
     def tcp_log_format(self) -> str:
         """Return HAProxy's default TCP log format with a hashed client IP."""
