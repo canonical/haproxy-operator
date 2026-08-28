@@ -13,10 +13,8 @@ import jubilant
 import pytest
 import requests
 
-from .conftest import all_active_and_idle
+from .conftest import LOG_HASH_SALT, all_active_and_idle
 from .helper import get_unit_address, get_unit_ip_address
-
-LOG_HASH_SALT = "demo-salt-value"
 
 
 def _last_client_field(juju: jubilant.Juju, unit: str, marker: str) -> str:
@@ -34,29 +32,11 @@ def _last_client_field(juju: jubilant.Juju, unit: str, marker: str) -> str:
     return message.split()[0]
 
 
-@pytest.fixture(name="log_hash_secret")
-def log_hash_secret_fixture(
-    configured_application_with_tls: str,
-    juju: jubilant.Juju,
-):
-    """Provide a granted log hash secret and restore the application configuration."""
-    secret_uri = juju.add_secret(
-        f"haproxy-log-hash-{uuid.uuid4().hex}",
-        {"salt": LOG_HASH_SALT},
-    )
-    juju.grant_secret(secret_uri, configured_application_with_tls)
-    yield secret_uri
-
-    juju.cli("config", configured_application_with_tls, "--reset", "client-ip-hash-salt")
-    juju.wait(lambda status: all_active_and_idle(status, configured_application_with_tls))
-    juju.remove_secret(secret_uri)
-
-
 def test_client_ip_hash_salt(
     configured_application_with_tls: str,
-    any_charm_haproxy_route_tcp_requirer: str,
     log_hash_secret,
     juju: jubilant.Juju,
+    request: pytest.FixtureRequest,
 ):
     """
     arrange: Deploy the charm.
@@ -102,23 +82,7 @@ def test_client_ip_hash_salt(
     )
     juju.wait(lambda status: all_active_and_idle(status, application))
 
-    tcp_relation = (
-        f"{application}:haproxy-route-tcp",
-        any_charm_haproxy_route_tcp_requirer,
-    )
-    juju.integrate(*tcp_relation)
-    juju.run(
-        f"{any_charm_haproxy_route_tcp_requirer}/0",
-        "rpc",
-        {"method": "update_relation"},
-    )
-    juju.wait(
-        lambda status: all_active_and_idle(
-            status,
-            application,
-            any_charm_haproxy_route_tcp_requirer,
-        )
-    )
+    request.getfixturevalue("haproxy_route_tcp_relation")
 
     haproxy_ip_address = get_unit_ip_address(juju, application)
     context = ssl._create_unverified_context()  # pylint: disable=protected-access  # nosec

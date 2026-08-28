@@ -33,9 +33,7 @@ from charms.haproxy.v0.ddos_protection import (
 from charms.haproxy.v0.spoe_auth import SpoeAuthRequirer
 from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpProvider
 from charms.haproxy.v2.haproxy_route import HaproxyRouteProvider
-from charms.haproxy_route_policy.v0.haproxy_route_policy import (
-    HaproxyRoutePolicyRequirer,
-)
+from charms.haproxy_route_policy.v0.haproxy_route_policy import HaproxyRoutePolicyRequirer
 from charms.traefik_k8s.v1.ingress_per_unit import (
     IngressDataReadyEvent,
     IngressDataRemovedEvent,
@@ -51,13 +49,7 @@ from interface_hacluster.ops_ha_interface import HAServiceRequires
 from ops.charm import ActionEvent
 from ops.model import Port, SecretNotFoundError
 
-from haproxy import (
-    HAPROXY_CONFIG,
-    HAPROXY_SERVICE,
-    HAProxyService,
-    file_exists,
-    read_file,
-)
+from haproxy import HAPROXY_CONFIG, HAPROXY_SERVICE, HAProxyService, file_exists, read_file
 from http_interface import (
     HTTPBackendAvailableEvent,
     HTTPBackendRemovedEvent,
@@ -200,12 +192,10 @@ class HAProxyCharm(ops.CharmBase):
             self.certificates.on.certificate_available, self._on_certificate_available
         )
         self.framework.observe(
-            self.reverseproxy_requirer.on.http_backend_available,
-            self._on_http_backend_available,
+            self.reverseproxy_requirer.on.http_backend_available, self._on_http_backend_available
         )
         self.framework.observe(
-            self.reverseproxy_requirer.on.http_backend_removed,
-            self._on_http_backend_removed,
+            self.reverseproxy_requirer.on.http_backend_removed, self._on_http_backend_removed
         )
         self.framework.observe(
             self._ingress_provider.on.data_provided, self._on_ingress_data_provided
@@ -218,13 +208,11 @@ class HAProxyCharm(ops.CharmBase):
             self._on_ingress_per_unit_data_provided,
         )
         self.framework.observe(
-            self._ingress_per_unit_provider.on.data_removed,
-            self._on_ingress_data_removed,
+            self._ingress_per_unit_provider.on.data_removed, self._on_ingress_data_removed
         )
         self.framework.observe(self.hacluster.on.ha_ready, self._on_config_changed)
         self.framework.observe(
-            self.recv_ca_certs.on.certificate_set_updated,
-            self._on_ca_certificates_updated,
+            self.recv_ca_certs.on.certificate_set_updated, self._on_ca_certificates_updated
         )
         self.framework.observe(
             self.recv_ca_certs.on.certificates_removed, self._on_ca_certificates_removed
@@ -276,8 +264,6 @@ class HAProxyCharm(ops.CharmBase):
     @validate_config_and_tls(defer=False)
     def _on_secret_changed(self, event: ops.SecretChangedEvent) -> None:
         """Reconcile when the configured client IP hash salt changes."""
-        if event.secret.id != self.config.get("client-ip-hash-salt"):
-            return
         self._reconcile()
 
     @validate_config_and_tls(defer=False)
@@ -437,11 +423,9 @@ class HAProxyCharm(ops.CharmBase):
         if self.unit.is_leader() and self.haproxy_route_policy.relation is not None:
             self.haproxy_route_policy.provide_haproxy_route_policy_requests(
                 haproxy_route_requirers_information.backend_requests_for_policy,
-                (
-                    haproxy_route_requirers_information.policy_provider_backend.hostname
-                    if haproxy_route_requirers_information.policy_provider_backend
-                    else None
-                ),
+                haproxy_route_requirers_information.policy_provider_backend.hostname
+                if haproxy_route_requirers_information.policy_provider_backend
+                else None,
             )
         # We ONLY allow the charm to run with no certificate requested if:
         # 1. there's only haproxy-route-tcp relations

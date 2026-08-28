@@ -125,7 +125,7 @@ class CharmState:
     def _get_client_ip_hash_salt(charm: ops.CharmBase) -> str | None:
         """Return and validate the configured client IP hash salt."""
         secret_uri = typing.cast(str | None, charm.config.get("client-ip-hash-salt"))
-        if not secret_uri:
+        if not isinstance(secret_uri, str) or not secret_uri.strip():
             return None
 
         try:
@@ -167,9 +167,7 @@ class CharmState:
         try:
             # No user input so we're disabling bandit rule here as it's considered safe
             output = check_output(  # nosec: B603
-                ["/usr/sbin/sysctl", "fs.file-max"],
-                stderr=STDOUT,
-                universal_newlines=True,
+                ["/usr/sbin/sysctl", "fs.file-max"], stderr=STDOUT, universal_newlines=True
             ).splitlines()
         except CalledProcessError:
             logger.exception("Cannot get system's max file descriptor value, skipping check.")

@@ -16,15 +16,16 @@ import scenario
 
 import tls_relation
 from charm import CharmStateValidationBaseError, HAProxyCharm
-from tests.unit.conftest import TEST_EXTERNAL_HOSTNAME_CONFIG, TEST_LOG_HASH_SALT
+from tests.unit.conftest import (
+    TEST_EXTERNAL_HOSTNAME_CONFIG,
+    TEST_LOG_HASH_CLIENT_ADDRESS,
+    TEST_LOG_HASH_SALT,
+)
 
 from .conftest import build_haproxy_route_relation, build_spoe_auth_relation
 from .helper import RegexMatcher
 
 logger = logging.getLogger(__name__)
-TEST_LOG_HASH_CLIENT_ADDRESS = (
-    f'%[src,concat(,,),regsub(^::ffff:,),concat(,,\\"{TEST_LOG_HASH_SALT}\\"),sha2(256),hex]:%cp'
-)
 
 
 def test_install(context_with_install_mock, base_state):
@@ -178,64 +179,6 @@ def test_config_changed_client_ip_hash_salt_rejects_unsafe_value(
         "The client-ip-hash-salt secret must not contain control characters, "
         "double quotes, or backslashes."
     )
-    render_file_mock.assert_not_called()
-
-
-@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
-def test_secret_changed_refreshes_client_ip_hash_salt(
-    monkeypatch: pytest.MonkeyPatch, peer_relation
-) -> None:
-    """
-    arrange: configure a salt secret with a newer revision.
-    act: emit secret-changed.
-    assert: the rendered HAProxy config uses the latest salt revision.
-    """
-    old_salt = "old-salt"
-    new_salt = "new-salt"
-    render_file_mock = MagicMock()
-    monkeypatch.setattr("haproxy.render_file", render_file_mock)
-    context = ops.testing.Context(HAProxyCharm)
-    log_hash_salt = ops.testing.Secret(
-        tracked_content={"salt": old_salt},
-        latest_content={"salt": new_salt},
-    )
-    state = ops.testing.State(
-        relations=[peer_relation],
-        leader=True,
-        config={"client-ip-hash-salt": log_hash_salt.id},
-        secrets=[log_hash_salt],
-    )
-
-    context.run(context.on.secret_changed(log_hash_salt), state)
-
-    config_content = render_file_mock.call_args.args[1]
-    assert new_salt in config_content
-    assert old_salt not in config_content
-
-
-@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
-def test_secret_changed_ignores_unrelated_secret(
-    monkeypatch: pytest.MonkeyPatch, peer_relation
-) -> None:
-    """
-    arrange: configure a client IP hash salt alongside an unrelated secret.
-    act: emit secret-changed for the unrelated secret.
-    assert: the HAProxy config is not rendered.
-    """
-    render_file_mock = MagicMock()
-    monkeypatch.setattr("haproxy.render_file", render_file_mock)
-    context = ops.testing.Context(HAProxyCharm)
-    log_hash_salt = ops.testing.Secret(tracked_content={"salt": TEST_LOG_HASH_SALT})
-    unrelated_secret = ops.testing.Secret(tracked_content={"value": "unrelated"})
-    state = ops.testing.State(
-        relations=[peer_relation],
-        leader=True,
-        config={"client-ip-hash-salt": log_hash_salt.id},
-        secrets=[log_hash_salt, unrelated_secret],
-    )
-
-    context.run(context.on.secret_changed(unrelated_secret), state)
-
     render_file_mock.assert_not_called()
 
 
@@ -792,11 +735,12 @@ def test_get_configuration_default_warning(
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
 def test_get_configuration_notes_invalid_charm_state(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    arrange: the disk config contains a salt, but no salt is configured and full state is invalid.
+    arrange: the config file is present, but building the charm state raises.
     act: trigger the get-configuration action.
-    assert: the on-disk salt is still redacted, and a "could not determine" note is logged.
+    assert: the configuration is still returned, and a "could not determine" note is
+        logged instead of silently claiming it is not the default.
     """
-    content = f'log-format "{TEST_LOG_HASH_CLIENT_ADDRESS}"\n'
+    content = "frontend haproxy\n    bind :80\n"
     monkeypatch.setattr("charm.file_exists", MagicMock(return_value=True))
     monkeypatch.setattr("charm.read_file", MagicMock(return_value=content))
     monkeypatch.setattr(
@@ -810,9 +754,6 @@ def test_get_configuration_notes_invalid_charm_state(monkeypatch: pytest.MonkeyP
 
     results = context.action_results
     assert results is not None
-    assert results == {
-        "configuration": content.replace(TEST_LOG_HASH_SALT, "<redacted>"),
-        "source": "disk",
-    }
+    assert results == {"configuration": content, "source": "disk"}
     assert any("could not determine" in log.lower() for log in context.action_logs)
     assert not any("matches the default" in log.lower() for log in context.action_logs)

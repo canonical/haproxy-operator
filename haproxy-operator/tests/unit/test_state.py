@@ -10,7 +10,9 @@ from unittest.mock import MagicMock, Mock
 
 import ops
 import pytest
-from charmlibs.interfaces.tls_certificates import TLSCertificatesRequiresV4
+from charmlibs.interfaces.tls_certificates import (
+    TLSCertificatesRequiresV4,
+)
 from charms.haproxy.v0.ddos_protection import (
     DDoSProtectionInvalidRelationDataError,
     DDoSProtectionProviderAppData,
@@ -59,6 +61,8 @@ from state.ingress_per_unit import (
     IngressPerUnitRequirersInformation,
 )
 from state.tls import TLSInformation
+
+from .conftest import TEST_LOG_HASH_CLIENT_ADDRESS
 
 
 def test_ingress_per_unit_from_provider():
@@ -155,14 +159,8 @@ def test_proxy_mode_tcp():
     haproxy_route_tcp_provider_mock.relations = [MagicMock(spec=ops.Relation)]
     reverseproxy_requirer_mock = MagicMock()
     reverseproxy_requirer_mock.relations = []
-    charm_mock = MagicMock(spec=ops.CharmBase)
-    charm_mock.config = {
-        "global-maxconn": 4096,
-        "enable-hsts": False,
-        "ddos-protection": True,
-    }
     charm_state = CharmState.from_charm(
-        charm=charm_mock,
+        charm=MagicMock(spec=ops.CharmBase),
         ingress_provider=ingress_provider_mock,
         ingress_per_unit_provider=ingress_per_unit_provider_mock,
         haproxy_route_provider=haproxy_route_provider_mock,
@@ -629,22 +627,6 @@ def test_charm_state_ddos_protection(ddos_protection, expected_value):
     assert charm_state.ddos_protection is expected_value
 
 
-def test_charm_state_log_format_defaults_hash_client_ip(
-    hashed_charm_state, expected_log_hash_client_address
-):
-    """
-    arrange: Initialize the CharmState with minimal configuration.
-    act: Access the default log format fields.
-    assert: All formats replace the client IP with a salted SHA-256 hash of src.
-    """
-    for log_format in (
-        hashed_charm_state.http_log_format,
-        hashed_charm_state.error_log_format,
-        hashed_charm_state.tcp_log_format,
-    ):
-        assert expected_log_hash_client_address in log_format
-
-
 @pytest.mark.parametrize(
     "ddos_kwargs, expected",
     [
@@ -789,12 +771,7 @@ def test_haproxy_route_backend_wildcard_hostname_acls(
                 maxconn=None,
             )
         ],
-        hostname_acls={
-            "example.com",
-            "*.example.com",
-            "test.example.com",
-            "*.test.com",
-        },
+        hostname_acls={"example.com", "*.example.com", "test.example.com", "*.test.com"},
     )
 
     wildcard_acls = backend.wildcard_hostname_acls
@@ -827,12 +804,7 @@ def test_haproxy_route_backend_standard_hostname_acls(
                 maxconn=None,
             )
         ],
-        hostname_acls={
-            "example.com",
-            "*.example.com",
-            "test.example.com",
-            "*.test.com",
-        },
+        hostname_acls={"example.com", "*.example.com", "test.example.com", "*.test.com"},
     )
 
     standard_acls = backend.standard_hostname_acls
@@ -2188,7 +2160,6 @@ def test_haproxy_route_tcp_port_range_config_rendering(
 
 def test_haproxy_route_tcp_config_hashes_client_ip(
     hashed_charm_state,
-    expected_log_hash_client_address,
     haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
 ):
     """
@@ -2218,12 +2189,10 @@ def test_haproxy_route_tcp_config_hashes_client_ip(
         tcp_log_format=hashed_charm_state.tcp_log_format,
     )
 
-    assert f'log-format "{expected_log_hash_client_address} ' in rendered
+    assert f'log-format "{TEST_LOG_HASH_CLIENT_ADDRESS} ' in rendered
 
 
-def test_charm_state_http_log_format_matches_haproxy_default(
-    hashed_charm_state, expected_log_hash_client_address
-):
+def test_charm_state_http_log_format_matches_haproxy_default(hashed_charm_state):
     """
     arrange: Access the default http_log_format.
     act: Compare it with HAProxy's default HTTP log format.
@@ -2235,13 +2204,11 @@ def test_charm_state_http_log_format_matches_haproxy_default(
         "%ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs %{+Q}r"
     )
     assert hashed_charm_state.http_log_format == haproxy_default.replace(
-        "%ci:%cp", expected_log_hash_client_address, 1
+        "%ci:%cp", TEST_LOG_HASH_CLIENT_ADDRESS, 1
     )
 
 
-def test_charm_state_error_log_format_matches_haproxy_default(
-    hashed_charm_state, expected_log_hash_client_address
-):
+def test_charm_state_error_log_format_matches_haproxy_default(hashed_charm_state):
     """
     arrange: Access the default error_log_format.
     act: Compare it with HAProxy's default error log format.
@@ -2250,13 +2217,11 @@ def test_charm_state_error_log_format_matches_haproxy_default(
     """
     haproxy_default = "%ci:%cp [%tr] %[fe_name]/%[so_id]: %[fc_err_str] (%[ssl_fc_err_str])"
     assert hashed_charm_state.error_log_format == haproxy_default.replace(
-        "%ci:%cp", expected_log_hash_client_address, 1
+        "%ci:%cp", TEST_LOG_HASH_CLIENT_ADDRESS, 1
     )
 
 
-def test_charm_state_error_log_format_supports_tcp_frontends(
-    hashed_charm_state, expected_log_hash_client_address
-):
+def test_charm_state_error_log_format_supports_tcp_frontends(hashed_charm_state):
     """
     arrange: Use client IP hashing in the mixed HTTP and TCP proxy mode.
     act: Access the error log format inherited by all frontends.
@@ -2265,14 +2230,12 @@ def test_charm_state_error_log_format_supports_tcp_frontends(
     charm_state = replace(hashed_charm_state, mode=ProxyMode.HAPROXY_ROUTE)
 
     assert charm_state.error_log_format == (
-        f"{expected_log_hash_client_address} [%t] "
+        f"{TEST_LOG_HASH_CLIENT_ADDRESS} [%t] "
         "%[fe_name]/%[so_id]: %[fc_err_str] (%[ssl_fc_err_str])"
     )
 
 
-def test_charm_state_tcp_log_format_matches_haproxy_default(
-    hashed_charm_state, expected_log_hash_client_address
-):
+def test_charm_state_tcp_log_format_matches_haproxy_default(hashed_charm_state):
     """
     arrange: Access the default tcp_log_format.
     act: Compare it with HAProxy's default TCP log format (option tcplog).
@@ -2281,5 +2244,5 @@ def test_charm_state_tcp_log_format_matches_haproxy_default(
     """
     haproxy_default = "%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq"
     assert hashed_charm_state.tcp_log_format == haproxy_default.replace(
-        "%ci:%cp", expected_log_hash_client_address, 1
+        "%ci:%cp", TEST_LOG_HASH_CLIENT_ADDRESS, 1
     )

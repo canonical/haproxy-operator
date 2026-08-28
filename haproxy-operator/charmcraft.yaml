@@ -13,14 +13,14 @@ parts:
     source: .
     plugin: uv
     build-snaps:
-      - astral-uv
+    - astral-uv
     build-packages:
-      - git
+    - git
   templates:
     plugin: dump
     source: .
     stage:
-      - templates
+    - templates
 name: haproxy
 title: HAProxy charm.
 description: |
@@ -41,10 +41,10 @@ links:
   issues: https://github.com/canonical/haproxy-operator/issues
   source: https://github.com/canonical/haproxy-operator
   contact:
-    - https://launchpad.net/~canonical-is-devops
+  - https://launchpad.net/~canonical-is-devops
 
 assumes:
-  - juju >= 3.3
+- juju >= 3.3
 requires:
   certificates:
     interface: tls-certificates
@@ -69,6 +69,7 @@ requires:
     interface: haproxy-route-policy
     optional: true
     limit: 1
+
 
 provides:
   ingress:
@@ -128,8 +129,6 @@ config:
         contain a `salt` key with a string value that is not empty or only
         whitespace. The value must not contain control characters, DEL, double
         quotes, or backslashes. The charm does not validate salt length or entropy.
-        Secret revisions are supported, but rotation is not recommended because
-        hashes generated after rotation will not match hashes in earlier logs.
 
 actions:
   get-certificate:
@@ -144,7 +143,7 @@ actions:
         description: Whether the certificate is a wildcard certificate.
         default: false
     required:
-      - hostname
+    - hostname
   get-proxied-endpoints:
     description: |
       Return a list of endpoints
@@ -162,9 +161,9 @@ actions:
       Client IP hash salts are redacted. Intended for debugging purposes.
 
 charm-libs:
-  - lib: traefik_k8s.ingress_per_unit
-    version: "1"
-  - lib: haproxy.ddos_protection
-    version: "0"
-  - lib: haproxy_route_policy.haproxy_route_policy
-    version: "0"
+- lib: traefik_k8s.ingress_per_unit
+  version: "1"
+- lib: haproxy.ddos_protection
+  version: "0"
+- lib: haproxy_route_policy.haproxy_route_policy
+  version: "0"
