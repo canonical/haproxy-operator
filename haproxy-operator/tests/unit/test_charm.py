@@ -150,6 +150,7 @@ def test_config_changed_client_ip_hash_salt_rejects_blank_value(
         pytest.param('unsafe"salt', id="quote"),
         pytest.param("unsafe\\salt", id="backslash"),
         pytest.param("unsafe\nsalt", id="control_character"),
+        pytest.param("unsafe$salt", id="dollar_sign"),
     ],
 )
 def test_config_changed_client_ip_hash_salt_rejects_unsafe_value(
@@ -177,7 +178,7 @@ def test_config_changed_client_ip_hash_salt_rejects_unsafe_value(
 
     assert out.unit_status == ops.testing.BlockedStatus(
         "The client-ip-hash-salt secret must not contain control characters, "
-        "double quotes, or backslashes."
+        "double quotes, backslashes, or dollar signs."
     )
     render_file_mock.assert_not_called()
 

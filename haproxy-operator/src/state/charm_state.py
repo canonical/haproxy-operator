@@ -145,13 +145,16 @@ class CharmState:
             raise InvalidCharmConfigError(
                 "The client-ip-hash-salt secret must contain a non-empty 'salt' value."
             )
+        # "$" is rejected because HAProxy expands "$NAME"/"${NAME}" as an environment
+        # variable inside double-quoted strings (see configuration.html#2.3), which
+        # would either silently change the effective salt or fail config validation.
         if any(
-            character in {'"', "\\"} or ord(character) < 32 or ord(character) == 127
+            character in {'"', "\\", "$"} or ord(character) < 32 or ord(character) == 127
             for character in client_ip_hash_salt
         ):
             raise InvalidCharmConfigError(
                 "The client-ip-hash-salt secret must not contain control characters, "
-                "double quotes, or backslashes."
+                "double quotes, backslashes, or dollar signs."
             )
         return client_ip_hash_salt
 

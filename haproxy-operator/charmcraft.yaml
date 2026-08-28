@@ -128,7 +128,8 @@ config:
         hashing; removing it restores plaintext client IP logging. The secret must
         contain a `salt` key with a string value that is not empty or only
         whitespace. The value must not contain control characters, DEL, double
-        quotes, or backslashes. The charm does not validate salt length or entropy.
+        quotes, backslashes, or dollar signs. The charm does not validate salt
+        length or entropy.
 
 actions:
   get-certificate:

@@ -17,21 +17,6 @@ from .conftest import LOG_HASH_SALT, all_active_and_idle
 from .helper import get_unit_address, get_unit_ip_address
 
 
-def _last_client_field(juju: jubilant.Juju, unit: str, marker: str) -> str:
-    """Return the client address field (IP:port) of the most recent haproxy access log.
-
-    Logs are read from the journal rather than /var/log/haproxy.log because
-    rsyslog file routing does not work in all environments (e.g. nested
-    containers), while journald always captures haproxy's syslog output.
-    """
-    logs = juju.ssh(unit, "journalctl -u haproxy --no-pager -n 50")
-    lines = [line for line in logs.splitlines() if " haproxy" in line and marker in line]
-    assert lines, "no haproxy access log lines found"
-
-    message = lines[-1].split("haproxy", 1)[1].split(None, 1)[1]
-    return message.split()[0]
-
-
 def test_client_ip_hash_salt(
     configured_application_with_tls: str,
     log_hash_secret,
@@ -96,3 +81,18 @@ def test_client_ip_hash_salt(
     hashed_tcp_client = _last_client_field(juju, unit, "haproxy_route_tcp_4444")
     assert hashed_tcp_client.startswith(f"{expected_hash}:")
     assert not hashed_tcp_client.startswith(f"{restored_client_ip}:")
+
+
+def _last_client_field(juju: jubilant.Juju, unit: str, marker: str) -> str:
+    """Return the client address field (IP:port) of the most recent haproxy access log.
+
+    Logs are read from the journal rather than /var/log/haproxy.log because
+    rsyslog file routing does not work in all environments (e.g. nested
+    containers), while journald always captures haproxy's syslog output.
+    """
+    logs = juju.ssh(unit, "journalctl -u haproxy --no-pager -n 50")
+    lines = [line for line in logs.splitlines() if " haproxy" in line and marker in line]
+    assert lines, "no haproxy access log lines found"
+
+    message = lines[-1].split("haproxy", 1)[1].split(None, 1)[1]
+    return message.split()[0]
