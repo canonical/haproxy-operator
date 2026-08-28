@@ -20,6 +20,12 @@ send-proxy-v2
 frontend haproxy_route_tcp_{{ frontend.bind_port }}
     mode tcp
     option tcplog
+{% if hash_client_ip_in_logs %}
+    # option tcplog above would otherwise override the defaults log-format and
+    # log plaintext client IPs; this is the tcplog default with only %ci
+    # replaced by the salted hash.
+    log-format "{{ tcp_log_format }}"
+{% endif %}
     bind [::]:{{ frontend.bind_port }} v4v6 {% if frontend.tls_terminate %} ssl crt {{ haproxy_crt_dir }} {% endif +%}
 
 {# DDOS protection configuration. #}

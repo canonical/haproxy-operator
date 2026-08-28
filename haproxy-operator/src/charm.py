@@ -9,6 +9,7 @@
 
 import json
 import logging
+import re
 import typing
 
 import ops
@@ -87,6 +88,10 @@ RECV_CA_CERTS_RELATION = "receive-ca-certs"
 SPOE_AUTH_RELATION = "spoe-auth"
 HAPROXY_ROUTE_TCP_RELATION = "haproxy-route-tcp"
 HAPROXY_ROUTE_POLICY_RELATION_NAME = "haproxy-route-policy"
+REDACTED_LOG_HASH_SALT = "<redacted>"
+LOG_HASH_SALT_PATTERN = re.compile(
+    r'(?P<prefix>concat\(,,\\")[^"\\\r\n]+(?P<suffix>\\"\),sha2\(256\))'
+)
 
 
 class HaproxyUnitAddressNotAvailableError(CharmStateValidationBaseError):
@@ -107,6 +112,14 @@ def _validate_port(port: int) -> bool:
         bool: True if valid, False otherwise.
     """
     return 0 <= port <= 65535
+
+
+def _redact_log_hash_salt(configuration: str) -> str:
+    """Redact client IP hash salts from a rendered HAProxy configuration."""
+    return LOG_HASH_SALT_PATTERN.sub(
+        lambda match: (f"{match.group('prefix')}{REDACTED_LOG_HASH_SALT}{match.group('suffix')}"),
+        configuration,
+    )
 
 
 # pylint: disable=too-many-instance-attributes
@@ -172,6 +185,7 @@ class HAProxyCharm(ops.CharmBase):
         self.hacluster = HAServiceRequires(self, HACLUSTER_INTEGRATION)
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on.secret_changed, self._on_secret_changed)
         self.framework.observe(self.on.upgrade_charm, self._on_install)
         self.framework.observe(self.on.get_certificate_action, self._on_get_certificate_action)
         self.framework.observe(
@@ -245,6 +259,11 @@ class HAProxyCharm(ops.CharmBase):
     @validate_config_and_tls(defer=False)
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
+        self._reconcile()
+
+    @validate_config_and_tls(defer=False)
+    def _on_secret_changed(self, event: ops.SecretChangedEvent) -> None:
+        """Reconcile when the configured client IP hash salt changes."""
         self._reconcile()
 
     @validate_config_and_tls(defer=False)
@@ -742,7 +761,12 @@ class HAProxyCharm(ops.CharmBase):
                 "means no proxy backends are configured."
             )
 
-        event.set_results({"configuration": configuration, "source": "disk"})
+        event.set_results(
+            {
+                "configuration": _redact_log_hash_salt(configuration),
+                "source": "disk",
+            }
+        )
 
     def _configuration_is_default(self, configuration: str) -> bool:
         """Return whether the given configuration matches the default configuration.

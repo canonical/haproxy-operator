@@ -56,6 +56,16 @@ class InvalidCharmConfigError(CharmStateValidationBaseError):
     """Exception raised when a charm configuration is found to be invalid."""
 
 
+# See https://docs.haproxy.org/2.8/configuration.html#7.3.1 for the converters
+# used here (concat, regsub, sha2, hex).
+LOG_HASHED_CLIENT_IP_TEMPLATE = (
+    '%[src,concat(,,),regsub(^::ffff:,),concat(,,\\"{salt}\\"),sha2(256),hex]'
+)
+LOG_CLIENT_PORT = "%cp"
+LOG_CONNECTIONS_STATUS = "%ac/%fc/%bc/%sc/%rc"
+LOG_QUEUE_STATUS = "%sq/%bq"
+
+
 @dataclass(frozen=True)
 class CharmState:
     """A component of charm state that contains the charm's configuration and mode.
@@ -65,12 +75,88 @@ class CharmState:
         global_max_connection: The maximum per-process number of concurrent connections.
         Must be between 0 and "fs.nr_open" sysctl config.
         ddos_protection: Whether to enable basic DDoS protection mechanisms.
+        client_ip_hash_salt: Salt used to hash client IP addresses in logs.
     """
 
     mode: ProxyMode
     enable_hsts: bool
     global_max_connection: int = Field(gt=0, alias="global_max_connection")
     ddos_protection: bool = True
+    client_ip_hash_salt: str | None = Field(default=None, repr=False)
+
+    @property
+    def hash_client_ip_in_logs(self) -> bool:
+        """Return whether client IP hashing is enabled."""
+        return self.client_ip_hash_salt is not None
+
+    @property
+    def log_hash_client_address(self) -> str:
+        """Return the log format for a hashed client address."""
+        if not self.client_ip_hash_salt:
+            raise ValueError("log_hash_client_address requires client_ip_hash_salt.")
+        hashed_client_ip = LOG_HASHED_CLIENT_IP_TEMPLATE.format(salt=self.client_ip_hash_salt)
+        return f"{hashed_client_ip}:{LOG_CLIENT_PORT}"
+
+    # See https://docs.haproxy.org/2.8/configuration.html#8.2.3 "HTTP log format".
+    @property
+    def http_log_format(self) -> str:
+        """Return HAProxy's default HTTP log format with a hashed client IP."""
+        return (
+            f"{self.log_hash_client_address} [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta "
+            f"%ST %B %CC %CS %tsc {LOG_CONNECTIONS_STATUS} {LOG_QUEUE_STATUS} "
+            "%hr %hs %{+Q}r"
+        )
+
+    # See https://docs.haproxy.org/2.8/configuration.html#8.2.5 "Error log format".
+    @property
+    def error_log_format(self) -> str:
+        """Return HAProxy's default error log format with a hashed client IP."""
+        timestamp = "%t" if self.mode == ProxyMode.HAPROXY_ROUTE else "%tr"
+        return (
+            f"{self.log_hash_client_address} [{timestamp}] %[fe_name]/%[so_id]: "
+            "%[fc_err_str] (%[ssl_fc_err_str])"
+        )
+
+    # See https://docs.haproxy.org/2.8/configuration.html#8.2.2 "TCP log format".
+    @property
+    def tcp_log_format(self) -> str:
+        """Return HAProxy's default TCP log format with a hashed client IP."""
+        return (
+            f"{self.log_hash_client_address} [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts "
+            f"{LOG_CONNECTIONS_STATUS} {LOG_QUEUE_STATUS}"
+        )
+
+    @staticmethod
+    def _get_client_ip_hash_salt(charm: ops.CharmBase) -> str | None:
+        """Return and validate the configured client IP hash salt."""
+        secret_uri = typing.cast(str | None, charm.config.get("client-ip-hash-salt"))
+        if not isinstance(secret_uri, str) or not secret_uri.strip():
+            return None
+
+        try:
+            secret_content = charm.model.get_secret(id=secret_uri).get_content(refresh=True)
+        except (ops.SecretNotFoundError, ops.ModelError) as exc:
+            raise InvalidCharmConfigError(
+                "The client-ip-hash-salt secret does not exist or cannot be accessed."
+            ) from exc
+
+        client_ip_hash_salt = secret_content.get("salt")
+        if not isinstance(client_ip_hash_salt, str) or not client_ip_hash_salt.strip():
+            raise InvalidCharmConfigError(
+                "The client-ip-hash-salt secret must contain a non-empty 'salt' value."
+            )
+        # "$" is rejected because HAProxy expands "$NAME"/"${NAME}" as an environment
+        # variable inside double-quoted strings (see configuration.html#2.3), which
+        # would either silently change the effective salt or fail config validation.
+        if any(
+            character in {'"', "\\", "$"} or ord(character) < 32 or ord(character) == 127
+            for character in client_ip_hash_salt
+        ):
+            raise InvalidCharmConfigError(
+                "The client-ip-hash-salt secret must not contain control characters, "
+                "double quotes, backslashes, or dollar signs."
+            )
+        return client_ip_hash_salt
 
     @field_validator("global_max_connection")
     @classmethod
@@ -199,6 +285,8 @@ class CharmState:
         global_max_connection = typing.cast(int, charm.config.get("global-maxconn"))
         enable_hsts = typing.cast(bool, charm.config.get("enable-hsts"))
         ddos_protection = typing.cast(bool, charm.config.get("ddos-protection"))
+        client_ip_hash_salt = cls._get_client_ip_hash_salt(charm)
+
         try:
             return cls(
                 mode=cls._validate_state(
@@ -212,6 +300,7 @@ class CharmState:
                 global_max_connection=global_max_connection,
                 enable_hsts=enable_hsts,
                 ddos_protection=ddos_protection,
+                client_ip_hash_salt=client_ip_hash_salt,
             )
         except ValidationError as exc:
             error_field_str = ",".join(f"{field}" for field in get_invalid_config_fields(exc))
