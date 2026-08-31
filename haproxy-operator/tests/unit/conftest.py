@@ -34,8 +34,24 @@ from charms.haproxy.v2.haproxy_route import (
 from ops.testing import Context
 
 from charm import HAProxyCharm
+from state.charm_state import CharmState, ProxyMode
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
+TEST_LOG_HASH_SALT = "test-salt"
+TEST_LOG_HASH_CLIENT_ADDRESS = (
+    f'%[src,concat(,,),regsub(^::ffff:,),concat(,,\\"{TEST_LOG_HASH_SALT}\\"),sha2(256),hex]:%cp'
+)
+
+
+@pytest.fixture(name="hashed_charm_state")
+def hashed_charm_state_fixture() -> CharmState:
+    """Return a minimal CharmState with client IP hashing enabled."""
+    return CharmState(
+        mode=ProxyMode.NOPROXY,
+        enable_hsts=False,
+        global_max_connection=1024,
+        client_ip_hash_salt=TEST_LOG_HASH_SALT,
+    )
 
 
 @pytest.fixture(scope="function", name="systemd_mock")
@@ -52,6 +68,12 @@ def mocks_external_calls_fixture(monkeypatch: pytest.MonkeyPatch):
     """Mock external calls."""
     monkeypatch.setattr("haproxy.HAProxyService._validate_haproxy_config", MagicMock())
     monkeypatch.setattr("haproxy.pin_haproxy_package_version", MagicMock())
+
+
+@pytest.fixture(scope="function", name="mocks_tls_ca_write")
+def mocks_tls_ca_write_fixture(monkeypatch: pytest.MonkeyPatch):
+    """Mock TLS CA write."""
+    monkeypatch.setattr("charm.TLSRelationService.update_trusted_cas", MagicMock())
 
 
 @pytest.fixture(scope="function", name="ca_certificate_and_key")
