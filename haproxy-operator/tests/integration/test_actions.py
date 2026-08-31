@@ -9,6 +9,8 @@ import json
 import jubilant
 import pytest
 
+from .helper import wait_for_relation
+
 
 @pytest.mark.abort_on_fail
 def test_action(
@@ -22,6 +24,14 @@ def test_action(
     """
     juju.integrate(
         f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
+    )
+    # On Juju 4 the relation may not be usable by the requirer right after
+    # integrate returns, so wait for it before writing relation data.
+    wait_for_relation(
+        juju,
+        any_charm_haproxy_route_requirer,
+        "require-haproxy-route",
+        configured_application_with_tls,
     )
 
     juju.run(
@@ -79,7 +89,9 @@ def test_action(
     assert task.results == {"endpoints": "[]"}, task.results
 
     # get-configuration returns exactly the configuration currently on disk.
-    on_disk = juju.ssh(f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg")
+    on_disk = juju.exec(
+        "cat /etc/haproxy/haproxy.cfg", unit=f"{configured_application_with_tls}/0"
+    ).stdout
     task = juju.run(f"{configured_application_with_tls}/0", "get-configuration")
     assert task.results["source"] == "disk", task.results
     assert task.results["configuration"].splitlines() == on_disk.splitlines(), task.results

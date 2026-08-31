@@ -7,7 +7,7 @@ import jubilant
 import pytest
 from requests import Session
 
-from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG, get_unit_ip_address
+from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG, get_unit_ip_address, wait_for_relation
 from .helper import DNSResolverHTTPSAdapter
 
 HAPROXY_ROUTE_REQUIRER_HOSTNAME = f"ok.{TEST_EXTERNAL_HOSTNAME_CONFIG}"
@@ -27,6 +27,11 @@ def test_haproxy_route_integration(
     juju.integrate(
         f"{configured_application_with_tls}:haproxy-route",
         f"{haproxy_route_requirer}:require-haproxy-route",
+    )
+    # On Juju 4 the relation may not be usable by the requirer right after
+    # integrate returns, so wait for it before writing relation data.
+    wait_for_relation(
+        juju, haproxy_route_requirer, "require-haproxy-route", configured_application_with_tls
     )
     juju.run(f"{haproxy_route_requirer}/0", "rpc", {"method": "update_relation"})
 

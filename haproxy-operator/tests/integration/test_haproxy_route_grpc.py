@@ -12,7 +12,7 @@ from grpc_reflection.v1alpha import reflection_pb2, reflection_pb2_grpc
 
 from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 from .grpc_server import echo_pb2, echo_pb2_grpc
-from .helper import get_unit_ip_address
+from .helper import get_unit_ip_address, wait_for_unit_file
 
 
 @pytest.mark.abort_on_fail
@@ -45,6 +45,15 @@ def test_haproxy_route_grpcs_support(
         lambda status: jubilant.all_active(
             status, any_charm_haproxy_route_requirer, certificate_provider_application
         )
+    )
+    # The any-charm writes its TLS certificate and key to disk once the
+    # certificates relation delivers them. Wait for the files so the SSL
+    # server started below does not fail due to a missing certificate.
+    wait_for_unit_file(
+        juju, f"{any_charm_haproxy_route_requirer}/0", "/etc/ssl/private/ssl-cert-anycharm.key"
+    )
+    wait_for_unit_file(
+        juju, f"{any_charm_haproxy_route_requirer}/0", "/etc/ssl/certs/ssl-cert-anycharm.pem"
     )
 
     # Start gRPC SSL server

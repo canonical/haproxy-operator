@@ -11,7 +11,8 @@ import jubilant
 import pytest
 import requests
 
-from .helper import get_unit_ip_address
+from .conftest import all_active_and_idle
+from .helper import get_unit_ip_address, wait_for_relation
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,14 @@ def test_haproxy_route_policy(
         lambda status: not status.apps[HAPROXY_ROUTE_REQUIRER_NAME].is_waiting,
         timeout=5 * 60,
     )
+    # On Juju 4 the relation may not be usable by the requirer right after
+    # integrate returns, so wait for it before writing relation data.
+    wait_for_relation(
+        lxd_juju,
+        HAPROXY_ROUTE_REQUIRER_NAME,
+        "require-haproxy-route",
+        configured_application_with_tls,
+    )
     lxd_juju.run(
         f"{HAPROXY_ROUTE_REQUIRER_NAME}/leader",
         "rpc",
@@ -62,7 +71,9 @@ def test_haproxy_route_policy(
             ),
         },
     )
-    lxd_juju.wait(jubilant.all_active)
+    # Wait for all apps to be active and idle so haproxy has finished rendering
+    # the policy route before we send requests to it.
+    lxd_juju.wait(all_active_and_idle)
     admin_credentials = lxd_juju.run(
         f"{haproxy_route_policy}/leader",
         "get-admin-credentials",

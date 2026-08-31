@@ -136,6 +136,33 @@ def get_unit_ip_address(
     return ipaddress.ip_address(address)
 
 
+def wait_for_relation(
+    juju: jubilant.Juju,
+    application: str,
+    endpoint: str,
+    remote_application: str,
+) -> None:
+    """Wait for a relation between an application endpoint and a remote application.
+
+    On Juju 4, `juju integrate` may return before the relation is visible to
+    the remote charm, so relation data writes performed right after the
+    integration would silently no-op. Waiting for the relation to show up in
+    the model status avoids that race.
+
+    Args:
+        juju: Jubilant Juju instance.
+        application: The name of the application exposing the endpoint.
+        endpoint: The name of the endpoint on the application.
+        remote_application: The name of the remote application.
+    """
+    juju.wait(
+        lambda status: any(
+            relation.related_app == remote_application
+            for relation in status.apps[application].relations.get(endpoint, [])
+        )
+    )
+
+
 def get_unit_address(juju: jubilant.Juju, application: str) -> str:
     """Get the HTTP URL for the first unit of a Juju application.
 
