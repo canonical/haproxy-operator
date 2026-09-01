@@ -51,7 +51,9 @@ Update the secret's content to rotate the salt.
 juju update-secret client-ip-hash-salt salt=<new-salt-value>
 ```
 
+```{note}
 Secret revisions are supported, but rotating the salt changes the hash produced for a given client IP address. Logs recorded before the rotation cannot be correlated with logs recorded afterwards.
+```
 
 ## Verify client IP hashing is applied
 
