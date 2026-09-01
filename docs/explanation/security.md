@@ -75,7 +75,9 @@ By default, HAProxy records the client IP address of every request in its logs. 
 
 ### Good practices
 
-Configure the `client-ip-hash-salt` charm configuration option to replace plaintext client IP addresses in logs with a salted SHA-256 hash, provided through a Juju secret granted only to the `haproxy` application. Requests from the same client IP address still produce the same hash, so logs remain useful for correlation, for example to detect abuse, without storing the client IP address itself. Refer to the {ref}`Hash client IP addresses in logs <how_to_hash_client_ip_addresses_in_logs>` guide for configuration steps. Avoid rotating the salt unless necessary, since rotation prevents correlating logs recorded before and after the change.
+Configure the `client-ip-hash-salt` charm configuration option to replace plaintext client IP addresses in logs with a salted SHA-256 hash, provided through a Juju secret granted only to the `haproxy` application. Requests from the same client IP address still produce the same hash; even though the logs don't store the client IP addresses, the logs remain useful for correlation, for example to detect abuse. Avoid rotating the salt unless necessary, since rotation prevents correlating logs recorded before and after the change.
+
+Refer to the {ref}`Hash client IP addresses in logs <how_to_hash_client_ip_addresses_in_logs>` guide for configuration steps.
 
 ### Summary
 
