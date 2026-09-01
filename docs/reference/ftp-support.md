@@ -14,7 +14,7 @@ For a complete working example, see {ref}`How to load balance an FTP server <how
 
 ## How it works
 
-passive FTP uses a control port a range of data ports. The operator needs to setup a dedicated frontend for the control port and another dedicated frontend for the data ports.
+Passive FTP uses a control port a range of data ports. The operator needs to setup a dedicated frontend for the control port and another dedicated frontend for the data ports.
 
 ## FTPS and SFTP
 
