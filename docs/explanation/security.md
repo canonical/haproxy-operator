@@ -71,7 +71,7 @@ The charm offers several ways to protect against DoS attacks:
 
 ## Client IP privacy and data protection compliance
 
-HAProxy access and error logs record the client IP address of every request by default. Client IP addresses are personal data under regulations such as the GDPR, so retaining them in logs can create data minimization and storage limitation obligations.
+HAProxy logs record the client IP address of every request by default. Client IP addresses are personal data under regulations such as the GDPR, so retaining them in logs can create data minimization and storage limitation obligations.
 
 ### Good practices
 

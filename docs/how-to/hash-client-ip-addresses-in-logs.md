@@ -2,7 +2,7 @@
 
 # Hash client IP addresses in logs
 
-This guide walks you through enabling salted hashing of client IP addresses in HAProxy access and error logs. Hashing client IP addresses helps protect user privacy in logs, see {ref}`Security <explanation_security>` for background on why this matters.
+This guide walks you through enabling salted hashing of client IP addresses in HAProxy logs. Hashing client IP addresses helps protect user privacy in logs, see {ref}`Security <explanation_security>` for background on why this matters.
 
 ## Deploy and configure the `haproxy` charm
 
