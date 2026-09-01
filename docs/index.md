@@ -28,7 +28,7 @@ This operator is built for **IaaS/VM** and is not supported in **Kubernetes** en
 * - **Integrations**
   - {ref}`Relation endpoints <reference_relation_endpoints>` | {ref}`Integrate with non-charmed workloads <how_to_integrate_with_non_charm_workload>` | {ref}`Configure ingress requirers <how_to_provide_extra_configurations_for_ingress_requirer_charms>`
 * - **Other supported protocols** 
-  - {ref}`FTP <how_to_loadbalancing_for_an_ftp_server>` | {ref}`gRPC <how_to_loadbalancing_for_a_grpc_server>` | {ref}`HTTP/2 <reference_http2_support>`
+  - {ref}`FTP <reference_ftp_support>` | {ref}`gRPC <how_to_loadbalancing_for_a_grpc_server>` | {ref}`HTTP/2 <reference_http2_support>`
 * - **Security**
   - {ref}`Overview <explanation_security>` | {ref}`Enable DDoS protection <how_to_enable_ddos_protection>` | {ref}`Protect a hostname <how_to_protect_hostname_spoe_auth>` | {ref}`Configure HTTPS backend protocol <how_to_configure_backend_protocol>`
 ```
