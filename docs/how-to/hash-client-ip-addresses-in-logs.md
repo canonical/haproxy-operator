@@ -41,8 +41,6 @@ The `add-secret` command prints the secret's URI. Set the charm configuration to
 juju config haproxy client-ip-hash-salt=<secret-uri>
 ```
 
-The salt must be a non-empty string. It must not contain control characters, the DEL character, double quotes (`"`), backslashes (`\`), or dollar signs (`$`); the charm rejects a secret containing any of these characters.
-
 ## Disable client IP hashing
 
 Remove the configuration option to restore plaintext client IP logging.
