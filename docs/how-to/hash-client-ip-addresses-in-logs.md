@@ -61,7 +61,7 @@ Secret revisions are supported, but rotating the salt changes the hash produced 
 
 ## Verify client IP hashing is applied
 
-Send a request to HAProxy, using the unit's public address:
+Send a request to HAProxy using the unit's public address:
 
 ```shell
 HAPROXY_IP=$(juju status --format json | jq -r '.applications.haproxy.units."haproxy/0"."public-address"')
