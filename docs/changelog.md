@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-09-01
+
+- docs: Added a how-to guide for hashing client IP addresses in logs and a GDPR/privacy section on security practices.
+
+## 2026-08-28
+
+- Added a `client-ip-hash-salt` configuration option to hash client IP addresses in HAProxy logs.
+
 ## 2026-08-19
 
 - Switched from PROXY protocol v1 to v2.
