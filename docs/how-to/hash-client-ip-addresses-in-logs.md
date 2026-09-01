@@ -8,7 +8,7 @@ myst:
 
 # How to hash client IP addresses in logs
 
-Use the `client-ip-salt-hash` configuration option to enable salted hashing of client IP addresses in HAProxy logs. Hashing client IP addresses helps protect user privacy in logs, see {ref}`Security <explanation_security>` for background on why this matters.
+Use the `client-ip-salt-hash` configuration option to enable salted hashing of client IP addresses in HAProxy logs. Hashing client IP addresses helps protect user privacy in logs; see {ref}`Security <explanation_security>` for details.
 
 ## Deploy and configure the `haproxy` charm
 
