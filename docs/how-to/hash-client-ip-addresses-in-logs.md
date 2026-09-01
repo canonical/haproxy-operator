@@ -26,7 +26,7 @@ This feature hashes client IP addresses using SHA-256 combined with a salt that 
 openssl rand -hex 32
 ```
 
-The salt must be a non-empty string. It must not contain control characters, the DEL character (`\x7f`), double quotes (`"`), backslashes (`\`), or dollar signs (`$`); if the secret contains any of these characters, the charm enters a blocked state.
+The salt must be a non-empty string. It must not contain control characters, double quotes (`"`), backslashes (`\`), or dollar signs (`$`); if the secret contains any of these characters, the charm enters a blocked state.
 
 Create a secret containing a `salt` key, and grant the `haproxy` application access to it.
 
