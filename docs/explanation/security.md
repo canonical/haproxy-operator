@@ -82,4 +82,4 @@ Refer to the {ref}`Hash client IP addresses in logs <how_to_hash_client_ip_addre
 ### Summary
 
 - Enable the `client-ip-hash-salt` configuration option to hash client IP addresses in logs instead of storing them in plaintext.
-- Protect the salt secret, anyone with the salt and a candidate IP address can recompute its hash.
+- Protect the salt secret. Anyone with the salt and a candidate IP address can recompute its hash.
