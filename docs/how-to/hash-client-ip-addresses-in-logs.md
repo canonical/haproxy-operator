@@ -10,14 +10,6 @@ myst:
 
 Use the `client-ip-salt-hash` configuration option to enable salted hashing of client IP addresses in HAProxy logs. Hashing client IP addresses helps protect user privacy in logs; see {ref}`Security <explanation_security>` for details.
 
-## Deploy and configure the `haproxy` charm
-
-Deploy the `haproxy` charm. Refer to the {ref}`Tutorial <tutorial_getting_started>` for a more detailed explanation.
-
-```shell
-juju deploy haproxy --channel=2.8/edge
-```
-
 ## Enable client IP hashing
 
 This feature hashes client IP addresses using SHA-256 combined with a salt that you provide through a Juju secret. Generate a random salt with sufficient entropy, for example using `openssl`:
@@ -40,6 +32,8 @@ The `add-secret` command prints the secret's URI. Set the charm configuration to
 ```shell
 juju config haproxy client-ip-hash-salt=<secret-uri>
 ```
+
+The salt must be a non-empty string. It must not contain control characters, the DEL character, double quotes (`"`), backslashes (`\`), or dollar signs (`$`); the charm rejects a secret containing any of these characters.
 
 ## Disable client IP hashing
 
