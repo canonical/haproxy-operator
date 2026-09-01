@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    "description lang=en": "Learn how to enable salted hashing of client IP addresses in the HAProxy charm logs."
+---
+
 (how_to_hash_client_ip_addresses_in_logs)=
 
 # Hash client IP addresses in logs
