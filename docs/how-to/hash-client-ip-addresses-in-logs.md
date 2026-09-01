@@ -59,7 +59,13 @@ HAPROXY_IP=$(juju status --format json | jq -r '.applications.haproxy.units."hap
 curl $HAPROXY_IP
 ```
 
-Then inspect the access log. Before enabling hashing, the client IP address appears in plaintext.
+Then inspect the access log:
+
+```
+juju ssh haproxy/0 -- sudo journalctl -u haproxy -n 5
+```
+
+Before enabling hashing, the client IP address appears in plaintext.
 
 ```
 192.0.2.10:54321 [31/Aug/2026:20:15:42.123] haproxy~ default/default 0/0/1/2/3 200 1312 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
