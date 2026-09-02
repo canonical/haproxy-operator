@@ -342,9 +342,9 @@ class HaproxyRoutePolicyProviderBackend:
                 provider_data = relation.load(HaproxyRoutePolicyProviderAppData, relation.app)
                 provider_unit_addresses = [
                     # explicitly cast to IPvAnyAddress because we already filtered out None values.
-                    cast(IPvAnyAddress, relation.data[unit].get("private-address"))
+                    cast(IPvAnyAddress, unit_address)
                     for unit in relation.units
-                    if relation.data[unit].get("private-address") is not None
+                    if (unit_address := relation.data[unit].get("ingress-address")) is not None
                 ]
                 return cls(
                     policy_backend_port=provider_data.policy_backend_port,
