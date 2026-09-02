@@ -9,7 +9,7 @@ import ssl
 import jubilant
 import pytest
 
-from .helper import get_unit_ip_address, wait_for_relation
+from .helper import get_unit_ip_address
 
 
 @pytest.mark.abort_on_fail
@@ -24,14 +24,6 @@ def test_haproxy_route_tcp(
     """
     juju.integrate(
         f"{configured_application_with_tls}:haproxy-route-tcp",
-        any_charm_haproxy_route_tcp_requirer,
-    )
-    # On Juju 4 the relation may not be usable by the requirer right after
-    # integrate returns, so wait for it before writing relation data.
-    wait_for_relation(
-        juju,
-        configured_application_with_tls,
-        "haproxy-route-tcp",
         any_charm_haproxy_route_tcp_requirer,
     )
     # We set the removed retry-interval config option here as

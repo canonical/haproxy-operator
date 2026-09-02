@@ -8,8 +8,6 @@ import json
 import jubilant
 import pytest
 
-from .helper import wait_for_relation
-
 
 @pytest.mark.abort_on_fail
 def test_haproxy_route_any_charm_requirer(
@@ -25,14 +23,6 @@ def test_haproxy_route_any_charm_requirer(
 
     juju.integrate(
         f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
-    )
-    # On Juju 4 the relation may not be usable by the requirer right after
-    # integrate returns, so wait for it before writing relation data.
-    wait_for_relation(
-        juju,
-        any_charm_haproxy_route_requirer,
-        "require-haproxy-route",
-        configured_application_with_tls,
     )
     # We set the removed retry-interval config option here as
     # ingress-configurator is not yet synced with the updated lib. This will be removed.

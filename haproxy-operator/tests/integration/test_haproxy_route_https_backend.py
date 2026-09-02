@@ -14,8 +14,6 @@ from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 from .helper import (
     get_http_version_from_apache2_logs,
     get_unit_ip_address,
-    wait_for_relation,
-    wait_for_unit_file,
 )
 
 
@@ -48,23 +46,6 @@ def test_haproxy_route_https_with_different_transport_protocols(
         lambda status: jubilant.all_active(
             status, any_charm_haproxy_route_requirer, certificate_provider_application
         )
-    )
-    # The any-charm writes its TLS certificate and key to disk once the
-    # certificates relation delivers them. Wait for the files so the SSL
-    # server started below does not fail due to a missing certificate.
-    wait_for_unit_file(
-        juju, f"{any_charm_haproxy_route_requirer}/0", "/etc/ssl/private/ssl-cert-anycharm.key"
-    )
-    wait_for_unit_file(
-        juju, f"{any_charm_haproxy_route_requirer}/0", "/etc/ssl/certs/ssl-cert-anycharm.pem"
-    )
-    # On Juju 4 the relation may not be usable by the requirer right after
-    # integrate returns, so wait for it before writing relation data.
-    wait_for_relation(
-        juju,
-        any_charm_haproxy_route_requirer,
-        "require-haproxy-route",
-        configured_application_with_tls,
     )
 
     juju.run(f"{any_charm_haproxy_route_requirer}/leader", "rpc", {"method": "start_ssl_server"})

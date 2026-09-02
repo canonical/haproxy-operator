@@ -9,7 +9,7 @@ import jubilant
 import pytest
 import requests
 
-from .conftest import get_unit_address, wait_for_relation
+from .conftest import get_unit_address
 
 
 @pytest.mark.abort_on_fail
@@ -27,9 +27,6 @@ def test_reverseproxy_relation(
     juju.run(f"{any_charm_requirer}/0", "rpc", {"method": "start_server"})
 
     juju.integrate(f"{application}:reverseproxy", any_charm_requirer)
-    # On Juju 4 the relation may not be usable by the requirer right after
-    # integrate returns, so wait for it before writing relation data.
-    wait_for_relation(juju, any_charm_requirer, "provide-http", application)
     juju.run(f"{any_charm_requirer}/0", "rpc", {"method": "update_relation_data"})
     juju.wait(lambda status: jubilant.all_active(status, application, any_charm_requirer))
 

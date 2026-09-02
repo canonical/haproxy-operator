@@ -18,7 +18,7 @@ from playwright.sync_api import (  # type: ignore[import-not-found]
     sync_playwright,
 )
 
-from .helper import get_unit_ip_address, wait_for_relation
+from .helper import get_unit_ip_address
 
 logger = logging.getLogger(__name__)
 
@@ -68,11 +68,6 @@ def test_oauth_spoe(
         lxd_juju.wait(
             lambda status: not status.apps[host_config.requirer].is_waiting,
             timeout=5 * 60,
-        )
-        # On Juju 4 the relation may not be usable by the requirer right after
-        # integrate returns, so wait for it before writing relation data.
-        wait_for_relation(
-            lxd_juju, host_config.requirer, "require-haproxy-route", "haproxy"
         )
         lxd_juju.run(
             f"{host_config.requirer}/0",

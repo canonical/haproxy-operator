@@ -123,57 +123,6 @@ def get_unit_ip_address(
     return ipaddress.ip_address(address)
 
 
-def wait_for_relation(
-    juju: jubilant.Juju,
-    application: str,
-    endpoint: str,
-    remote_application: str,
-) -> None:
-    """Wait for a relation between an application endpoint and a remote application.
-
-    On Juju 4, `juju integrate` may return before the relation is visible to
-    the remote charm, so relation data writes performed right after the
-    integration would silently no-op. Waiting for the relation to show up in
-    the model status avoids that race.
-
-    Args:
-        juju: Jubilant Juju instance.
-        application: The name of the application exposing the endpoint.
-        endpoint: The name of the endpoint on the application.
-        remote_application: The name of the remote application.
-    """
-    juju.wait(
-        lambda status: any(
-            relation.related_app == remote_application
-            for relation in status.apps[application].relations.get(endpoint, [])
-        )
-    )
-
-
-def wait_for_unit_file(juju: jubilant.Juju, unit: str, path: str, timeout: int = 600) -> None:
-    """Wait until a file exists on a unit.
-
-    Args:
-        juju: Jubilant Juju instance.
-        unit: The unit name (e.g. "app/0").
-        path: Path of the file to wait for.
-        timeout: Seconds to wait before raising TimeoutError.
-
-    Raises:
-        TimeoutError: If the file did not appear within the timeout.
-    """
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        # The command always succeeds so that juju.exec does not raise a
-        # TaskError while the file does not exist yet; the output tells
-        # whether the file is there.
-        task = juju.exec(f"test -f {path} && echo exists || echo missing", unit=unit)
-        if task.stdout.strip() == "exists":
-            return
-        time.sleep(5)
-    raise TimeoutError(f"file {path} did not appear on {unit} within {timeout}s")
-
-
 def get_unit_address(juju: jubilant.Juju, application: str) -> str:
     """Get the HTTP address of the first unit of a Juju application.
 
