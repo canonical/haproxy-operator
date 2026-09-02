@@ -8,6 +8,7 @@ import json
 import logging
 import pathlib
 import tempfile
+import uuid
 from pathlib import Path
 
 import jubilant
@@ -35,6 +36,7 @@ GRPC_SERVER_DIR = pathlib.Path("tests/integration/grpc_server")
 GRPC_SERVER_SRC = GRPC_SERVER_DIR / "__main__.py"
 GRPC_MESSAGE_STUB_SRC = GRPC_SERVER_DIR / "echo_pb2.py"
 GRPC_SERVICE_STUB_SRC = GRPC_SERVER_DIR / "echo_pb2_grpc.py"
+LOG_HASH_SALT = "demo-salt-value"
 
 
 def all_active_and_idle(status: jubilant.Status, *apps: str) -> bool:
@@ -301,3 +303,47 @@ def any_charm_haproxy_route_tcp_requirer_fixture(
     app_name = any_charm_haproxy_route_tcp_requirer_base
     if app_name not in juju.status().apps:
         return
+
+
+@pytest.fixture(name="log_hash_secret")
+def log_hash_secret_fixture(
+    configured_application_with_tls: str,
+    juju: jubilant.Juju,
+):
+    """Provide a granted log hash secret and restore the application configuration."""
+    secret_uri = juju.add_secret(
+        f"haproxy-log-hash-{uuid.uuid4().hex}",
+        {"salt": LOG_HASH_SALT},
+    )
+    juju.grant_secret(secret_uri, configured_application_with_tls)
+    yield secret_uri
+
+    juju.cli("config", configured_application_with_tls, "--reset", "client-ip-hash-salt")
+    juju.wait(lambda status: all_active_and_idle(status, configured_application_with_tls))
+    juju.remove_secret(secret_uri)
+
+
+@pytest.fixture(name="haproxy_route_tcp_relation")
+def haproxy_route_tcp_relation_fixture(
+    configured_application_with_tls: str,
+    any_charm_haproxy_route_tcp_requirer: str,
+    juju: jubilant.Juju,
+) -> str:
+    """Integrate the TCP requirer with haproxy and wait for both to settle."""
+    juju.integrate(
+        f"{configured_application_with_tls}:haproxy-route-tcp",
+        any_charm_haproxy_route_tcp_requirer,
+    )
+    juju.run(
+        f"{any_charm_haproxy_route_tcp_requirer}/0",
+        "rpc",
+        {"method": "update_relation"},
+    )
+    juju.wait(
+        lambda status: all_active_and_idle(
+            status,
+            configured_application_with_tls,
+            any_charm_haproxy_route_tcp_requirer,
+        )
+    )
+    return any_charm_haproxy_route_tcp_requirer

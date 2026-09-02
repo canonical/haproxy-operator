@@ -108,6 +108,7 @@ class HAProxyService:
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
             "services": services,
+            **self._build_log_template_context(charm_state),
         }
         self._render_haproxy_config(HAPROXY_LEGACY_CONFIG_TEMPLATE, template_context)
         self._validate_haproxy_config()
@@ -144,6 +145,7 @@ class HAProxyService:
             "peer_units_address": ingress_requirers_information.peers,
             "ip_allow_list_file": IP_ALLOW_LIST_FILE,
             "deny_paths_file": DENY_PATHS_FILE,
+            **self._build_log_template_context(charm_state),
         }
         template = (
             HAPROXY_INGRESS_CONFIG_TEMPLATE
@@ -198,6 +200,7 @@ class HAProxyService:
             "ip_allow_list_file": IP_ALLOW_LIST_FILE,
             "deny_paths_file": DENY_PATHS_FILE,
             "policy_provider_backend": haproxy_route_requirers_information.policy_provider_backend,
+            **self._build_log_template_context(charm_state),
         }
         self._render_haproxy_config(HAPROXY_ROUTE_CONFIG_TEMPLATE, template_context)
         if spoe_oauth_info_list:
@@ -252,7 +255,29 @@ class HAProxyService:
         return {
             "config_global_max_connection": charm_state.global_max_connection,
             "ddos_protection": charm_state.ddos_protection,
+            **self._build_log_template_context(charm_state),
         }
+
+    @staticmethod
+    def _build_log_template_context(
+        charm_state: CharmState,
+    ) -> dict[str, bool | str | None]:
+        """Build log-format values only when client IP hashing is enabled."""
+        context: dict[str, bool | str | None] = {
+            "hash_client_ip_in_logs": charm_state.hash_client_ip_in_logs,
+            "http_log_format": None,
+            "error_log_format": None,
+            "tcp_log_format": None,
+        }
+        if charm_state.hash_client_ip_in_logs:
+            context.update(
+                {
+                    "http_log_format": charm_state.http_log_format,
+                    "error_log_format": charm_state.error_log_format,
+                    "tcp_log_format": charm_state.tcp_log_format,
+                }
+            )
+        return context
 
     def _render_haproxy_config(self, template_file_path: str, context: dict) -> None:
         """Render the haproxy configuration file.

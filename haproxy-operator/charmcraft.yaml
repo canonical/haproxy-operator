@@ -120,6 +120,16 @@ config:
         Send the http response header Strict-Transport-Security for domains provided
         through the `haproxy-route` relation without the allow_http attribute.
         The Strict-Transport-Security header value is "max-age=2592000;".
+    client-ip-hash-salt:
+      type: secret
+      description: |
+        User-owned Juju secret containing the salt used to hash client IPs in
+        HAProxy access and error logs. Setting this option enables salted SHA-256
+        hashing; removing it restores plaintext client IP logging. The secret must
+        contain a `salt` key with a string value that is not empty or only
+        whitespace. The value must not contain control characters, DEL, double
+        quotes, backslashes, or dollar signs. The charm does not validate salt
+        length or entropy.
 
 actions:
   get-certificate:
@@ -148,7 +158,8 @@ actions:
           If no backend with this name is present, an empty list is returned.
   get-configuration:
     description: |
-      Return the rendered haproxy configuration currently on the haproxy unit. Intended for debugging purposes.
+      Return the rendered haproxy configuration currently on the haproxy unit.
+      Client IP hash salts are redacted. Intended for debugging purposes.
 
 charm-libs:
 - lib: traefik_k8s.ingress_per_unit
