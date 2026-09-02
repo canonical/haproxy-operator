@@ -30,7 +30,7 @@ This operator is built for **IaaS/VM** and is not supported in **Kubernetes** en
 * - **Other supported protocols** 
   - {ref}`FTP <reference_ftp_support>` | {ref}`gRPC <how_to_loadbalancing_for_a_grpc_server>` | {ref}`HTTP/2 <reference_http2_support>`
 * - **Security**
-  - {ref}`Overview <explanation_security>` | {ref}`Enable DDoS protection <how_to_enable_ddos_protection>` | {ref}`Protect a hostname <how_to_protect_hostname_spoe_auth>` | {ref}`Configure HTTPS backend protocol <how_to_configure_backend_protocol>`
+  - {ref}`Overview <explanation_security>` | {ref}`Enable DDoS protection <how_to_enable_ddos_protection>` | {ref}`Protect a hostname <how_to_protect_hostname_spoe_auth>` | {ref}`Configure HTTPS backend protocol <how_to_configure_backend_protocol>` | {ref}`Hash client IP addresses in logs <how_to_hash_client_ip_addresses_in_logs>`
 ```
 
 ## How this documentation is organized

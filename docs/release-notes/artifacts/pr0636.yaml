@@ -14,6 +14,7 @@ changes:
       pr:
         - https://github.com/canonical/haproxy-operator/pull/636
       related_doc:
+        https://github.com/canonical/haproxy-operator/blob/main/docs/how-to/hash-client-ip-addresses-in-logs.md
       related_issue:
     visibility: public
     highlight: false
