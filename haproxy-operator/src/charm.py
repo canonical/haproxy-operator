@@ -117,7 +117,7 @@ def _validate_port(port: int) -> bool:
 def _redact_log_hash_salt(configuration: str) -> str:
     """Redact client IP hash salts from a rendered HAProxy configuration."""
     return LOG_HASH_SALT_PATTERN.sub(
-        lambda match: (f"{match.group('prefix')}{REDACTED_LOG_HASH_SALT}{match.group('suffix')}"),
+        lambda match: f"{match.group('prefix')}{REDACTED_LOG_HASH_SALT}{match.group('suffix')}",
         configuration,
     )
 
