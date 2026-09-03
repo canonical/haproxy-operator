@@ -6,12 +6,12 @@
 from unittest.mock import MagicMock
 
 import pytest
+
 from charms.dns_integrator.v0.dns_record import (
     CreateRecordRequestError,
     DNSRecordRequires,
     RecordRequest,
 )
-
 from dns_record import DNSRecordService
 
 

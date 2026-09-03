@@ -5,12 +5,13 @@
 
 import logging
 
+from ops.model import Model
+
 from charms.dns_integrator.v0.dns_record import (
     CreateRecordRequestError,
     DNSRecordRequires,
     RecordRequest,
 )
-from ops.model import Model
 
 DNS_RECORD_RELATION = "dns-record"
 

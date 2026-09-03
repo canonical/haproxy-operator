@@ -25,7 +25,6 @@ from charms.certificate_transfer_interface.v1.certificate_transfer import (
     CertificatesRemovedEvent,
     CertificateTransferRequires,
 )
-from charms.dns_integrator.v0.dns_record import DNSRecordRequires
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from charms.haproxy.v0.ddos_protection import (
     DDOS_PROTECTION_RELATION_NAME,
@@ -50,6 +49,7 @@ from interface_hacluster.ops_ha_interface import HAServiceRequires
 from ops.charm import ActionEvent
 from ops.model import Port, SecretNotFoundError
 
+from charms.dns_integrator.v0.dns_record import DNSRecordRequires
 from dns_record import DNS_RECORD_RELATION, DNSRecordService
 from haproxy import HAPROXY_CONFIG, HAPROXY_SERVICE, HAProxyService, file_exists, read_file
 from http_interface import (
