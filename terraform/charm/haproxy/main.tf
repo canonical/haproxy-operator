@@ -18,3 +18,5 @@ resource "juju_application" "haproxy" {
 
   expose {}
 }
+
+
