@@ -4,6 +4,7 @@
 """Unit tests for the states of different modes."""
 
 import typing
+from dataclasses import replace
 from ipaddress import IPv4Address
 from unittest.mock import MagicMock, Mock
 
@@ -60,6 +61,8 @@ from state.ingress_per_unit import (
     IngressPerUnitRequirersInformation,
 )
 from state.tls import TLSInformation
+
+from .conftest import TEST_LOG_HASH_CLIENT_ADDRESS
 
 
 def test_ingress_per_unit_from_provider():
@@ -2153,3 +2156,93 @@ def test_haproxy_route_tcp_port_range_config_rendering(
     assert "set-dst-port dst_port,add(1000)" in rendered
     # Server entries should not have a port suffix when a port range is used
     assert "server tcp-route-requirer-0" in rendered
+
+
+def test_haproxy_route_tcp_config_hashes_client_ip(
+    hashed_charm_state,
+    haproxy_route_tcp_relation_data: typing.Callable[..., HaproxyRouteTcpRequirerData],
+):
+    """
+    arrange: Generate a TCP frontend and enable client IP hashing.
+    act: Render the TCP frontend template.
+    assert: The TCP log format contains the salted client address hash.
+    """
+    tcp_requirers = HaproxyRouteTcpRequirersData(
+        requirers_data=[haproxy_route_tcp_relation_data(port=4444)],
+        relation_ids_with_invalid_data=set(),
+    )
+    frontends = parse_haproxy_route_tcp_requirers_data(tcp_requirers)
+    env = Environment(
+        loader=FileSystemLoader("templates"),
+        autoescape=select_autoescape(),
+        keep_trailing_newline=True,
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
+
+    rendered = env.get_template("haproxy_route_tcp.cfg.j2").render(
+        tcp_frontends=frontends,
+        haproxy_crt_dir="/etc/haproxy/certs",
+        ddos_protection_config=DDosProtection(),
+        ip_allow_list_file="/etc/haproxy/ip_allow_list",
+        hash_client_ip_in_logs=True,
+        tcp_log_format=hashed_charm_state.tcp_log_format,
+    )
+
+    assert f'log-format "{TEST_LOG_HASH_CLIENT_ADDRESS} ' in rendered
+
+
+def test_charm_state_http_log_format_matches_haproxy_default(hashed_charm_state):
+    """
+    arrange: Access the default http_log_format.
+    act: Compare it with HAProxy's default HTTP log format.
+    assert: Only the %ci:%cp client field is replaced by the salted hash; every
+        other variable matches the HAProxy default.
+    """
+    haproxy_default = (
+        "%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc "
+        "%ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs %{+Q}r"
+    )
+    assert hashed_charm_state.http_log_format == haproxy_default.replace(
+        "%ci:%cp", TEST_LOG_HASH_CLIENT_ADDRESS, 1
+    )
+
+
+def test_charm_state_error_log_format_matches_haproxy_default(hashed_charm_state):
+    """
+    arrange: Access the default error_log_format.
+    act: Compare it with HAProxy's default error log format.
+    assert: Only the %ci:%cp client field is replaced by the salted hash; every
+        other variable matches the HAProxy default.
+    """
+    haproxy_default = "%ci:%cp [%tr] %[fe_name]/%[so_id]: %[fc_err_str] (%[ssl_fc_err_str])"
+    assert hashed_charm_state.error_log_format == haproxy_default.replace(
+        "%ci:%cp", TEST_LOG_HASH_CLIENT_ADDRESS, 1
+    )
+
+
+def test_charm_state_error_log_format_supports_tcp_frontends(hashed_charm_state):
+    """
+    arrange: Use client IP hashing in the mixed HTTP and TCP proxy mode.
+    act: Access the error log format inherited by all frontends.
+    assert: The timestamp uses the mode-neutral HAProxy variable.
+    """
+    charm_state = replace(hashed_charm_state, mode=ProxyMode.HAPROXY_ROUTE)
+
+    assert charm_state.error_log_format == (
+        f"{TEST_LOG_HASH_CLIENT_ADDRESS} [%t] "
+        "%[fe_name]/%[so_id]: %[fc_err_str] (%[ssl_fc_err_str])"
+    )
+
+
+def test_charm_state_tcp_log_format_matches_haproxy_default(hashed_charm_state):
+    """
+    arrange: Access the default tcp_log_format.
+    act: Compare it with HAProxy's default TCP log format (option tcplog).
+    assert: Only the %ci:%cp client field is replaced by the salted hash; every
+        other variable matches the HAProxy default.
+    """
+    haproxy_default = "%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq"
+    assert hashed_charm_state.tcp_log_format == haproxy_default.replace(
+        "%ci:%cp", TEST_LOG_HASH_CLIENT_ADDRESS, 1
+    )

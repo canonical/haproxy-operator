@@ -11,14 +11,14 @@ import pytest
 
 
 @pytest.mark.abort_on_fail
-def test_get_proxied_endpoints_action(
+def test_action(
     configured_application_with_tls: str,
     any_charm_haproxy_route_requirer: str,
     juju: jubilant.Juju,
 ):
     """arrange: Deploy the charm integrated with any_charm haproxy-route.
-    act: Trigger the action 'get-proxied-endpoints.
-    assert: The correct proxied endpoints are returned.
+    act: Trigger the charm's actions (get-proxied-endpoints and get-configuration).
+    assert: Each action returns the expected result.
     """
     juju.integrate(
         f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
@@ -48,6 +48,7 @@ def test_get_proxied_endpoints_action(
         )
     )
 
+    # get-proxied-endpoints returns an endpoint for every hostname/path combination.
     expected_endpoints = {
         "https://ok.haproxy.internal/v1",
         "https://ok.haproxy.internal/v2",
@@ -57,27 +58,31 @@ def test_get_proxied_endpoints_action(
         "https://ok3.haproxy.internal/v2",
     }
 
-    # Test without backend param
+    # Test without a backend param (filter)
     task = juju.run(f"{configured_application_with_tls}/0", "get-proxied-endpoints")
-
     endpoints = set(json.loads(task.results["endpoints"]))
     assert endpoints == expected_endpoints, task.results
 
-    # Test with backend param
+    # Test with a backend param (filter)
     task = juju.run(
         f"{configured_application_with_tls}/0", "get-proxied-endpoints", {"backend": "any_charm"}
     )
-
     endpoints = set(json.loads(task.results["endpoints"]))
     assert endpoints == expected_endpoints, task.results
 
-    # Test with backend param with non existing backend
+    # Test with a non-existing backend
     task = juju.run(
         f"{configured_application_with_tls}/0",
         "get-proxied-endpoints",
         {"backend": "other_charm"},
     )
     assert task.results == {"endpoints": "[]"}, task.results
+
+    # get-configuration returns exactly the configuration currently on disk.
+    on_disk = juju.ssh(f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg")
+    task = juju.run(f"{configured_application_with_tls}/0", "get-configuration")
+    assert task.results["source"] == "disk", task.results
+    assert task.results["configuration"].splitlines() == on_disk.splitlines(), task.results
 
     juju.remove_relation(
         f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer

@@ -8,6 +8,7 @@ hardcoded
 hostnames
 IPs
 monorepo
+plaintext
 proxied
 proxying
 Requirers

@@ -9,6 +9,9 @@ on:
 jobs:
   terraform-docs:
     name: Update Terraform documentation
+    permissions:
+      contents: write
+      pull-requests: write
     uses: canonical/operator-workflows/.github/workflows/generate_terraform_docs.yaml@main
     secrets: inherit
     with:
