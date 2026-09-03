@@ -9,6 +9,8 @@ import json
 import jubilant
 import pytest
 
+from .conftest import all_active_and_idle
+
 
 @pytest.mark.abort_on_fail
 def test_action(
@@ -22,6 +24,14 @@ def test_action(
     """
     juju.integrate(
         f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
+    )
+    juju.wait(
+        lambda status: (
+            status.apps[configured_application_with_tls].is_blocked
+            and jubilant.all_agents_idle(
+                status, configured_application_with_tls, any_charm_haproxy_route_requirer
+            )
+        ),
     )
 
     juju.run(
@@ -43,7 +53,7 @@ def test_action(
         },
     )
     juju.wait(
-        lambda status: jubilant.all_active(
+        lambda status: all_active_and_idle(
             status, configured_application_with_tls, any_charm_haproxy_route_requirer
         )
     )
@@ -79,7 +89,9 @@ def test_action(
     assert task.results == {"endpoints": "[]"}, task.results
 
     # get-configuration returns exactly the configuration currently on disk.
-    on_disk = juju.ssh(f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg")
+    on_disk = juju.exec(
+        "cat /etc/haproxy/haproxy.cfg", unit=f"{configured_application_with_tls}/0"
+    ).stdout
     task = juju.run(f"{configured_application_with_tls}/0", "get-configuration")
     assert task.results["source"] == "disk", task.results
     assert task.results["configuration"].splitlines() == on_disk.splitlines(), task.results

@@ -10,8 +10,11 @@ import httpx
 import jubilant
 import pytest
 
-from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
-from .helper import get_http_version_from_apache2_logs, get_unit_ip_address
+from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG, all_active_and_idle
+from .helper import (
+    get_http_version_from_apache2_logs,
+    get_unit_ip_address,
+)
 
 
 @pytest.mark.abort_on_fail
@@ -31,24 +34,41 @@ def test_haproxy_route_https_with_different_transport_protocols(
         f"{any_charm_haproxy_route_requirer}:require-tls-certificates",
         f"{certificate_provider_application}:certificates",
     )
+    juju.wait(
+        lambda status: all_active_and_idle(
+            status, any_charm_haproxy_route_requirer, certificate_provider_application
+        ),
+        delay=5,
+        successes=6,
+    )
     juju.integrate(
         f"{configured_application_with_tls}:receive-ca-certs",
         f"{certificate_provider_application}:send-ca-cert",
+    )
+    juju.wait(
+        lambda status: all_active_and_idle(
+            status, configured_application_with_tls, certificate_provider_application
+        ),
+        delay=5,
+        successes=6,
     )
     juju.integrate(
         f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
     )
 
     juju.wait(
-        lambda status: jubilant.all_active(
-            status, any_charm_haproxy_route_requirer, certificate_provider_application
-        )
+        lambda status: (
+            status.apps[configured_application_with_tls].is_blocked
+            and jubilant.all_agents_idle(
+                status, configured_application_with_tls, any_charm_haproxy_route_requirer
+            )
+        ),
     )
 
-    juju.run(f"{any_charm_haproxy_route_requirer}/0", "rpc", {"method": "start_ssl_server"})
+    juju.run(f"{any_charm_haproxy_route_requirer}/leader", "rpc", {"method": "start_ssl_server"})
 
     juju.run(
-        f"{any_charm_haproxy_route_requirer}/0",
+        f"{any_charm_haproxy_route_requirer}/leader",
         "rpc",
         {
             "method": "update_relation",
@@ -70,7 +90,7 @@ def test_haproxy_route_https_with_different_transport_protocols(
     )
 
     juju.wait(
-        lambda status: jubilant.all_active(
+        lambda status: all_active_and_idle(
             status, configured_application_with_tls, any_charm_haproxy_route_requirer
         ),
         delay=5,
@@ -125,7 +145,7 @@ def test_haproxy_route_https_with_different_transport_protocols(
     )
 
     # Test HTTP/2 with http/2 support on backend
-    juju.run(f"{any_charm_haproxy_route_requirer}/0", "rpc", {"method": "enable_http2"})
+    juju.run(f"{any_charm_haproxy_route_requirer}/leader", "rpc", {"method": "enable_http2"})
 
     request_id = str(uuid.uuid4())
     with httpx.Client(http2=True, verify=False) as client:  # nosec: B501
@@ -153,9 +173,9 @@ def test_haproxy_route_https_with_different_transport_protocols(
 
     # Test HTTP/1.1 without http/1.1 support on backend
     juju.run(
-        f"{any_charm_haproxy_route_requirer}/0",
+        f"{any_charm_haproxy_route_requirer}/leader",
         "rpc",
-        {"method": "start_ssl_server", "protocols": "h2"},
+        {"method": "start_ssl_server", "kwargs": json.dumps({"protocols": "h2"})},
     )
 
     request_id = str(uuid.uuid4())

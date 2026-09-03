@@ -185,7 +185,14 @@ class HTTPProvider(_IntegrationInterfaceBaseClass):
             event: relation-changed event.
         """
         event.relation.data[self.charm.unit].update(
-            {"hostname": self.bind_address, "port": f"{DEFAULT_HAPROXY_PORT}"}
+            {
+                "hostname": self.bind_address,
+                "port": f"{DEFAULT_HAPROXY_PORT}",
+                # Juju >= 4.0 no longer populates `private-address` in unit
+                # relation data automatically. Write it explicitly so legacy
+                # charms integrating over the http interface keep working.
+                "private-address": self.bind_address,
+            }
         )
 
     # We add a placeholder implementation of this method because of parent class
