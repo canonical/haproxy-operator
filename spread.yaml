@@ -28,6 +28,8 @@ integration-suites:
   haproxy-operator/tests/integration/:
     summary: haproxy-operator integration tests
     working-dir: haproxy-operator/
+    environment:
+      CONCIERGE/legacy_test_ha: concierge-lxd-juju3.yaml
     backends:
     - integration-test
     systems: [ubuntu-24.04]

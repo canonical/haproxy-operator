@@ -4,13 +4,11 @@
 """Integration test for haproxy charm."""
 
 import jubilant
-import pytest
 import requests
 
 from .conftest import get_unit_ip_address
 
 
-@pytest.mark.xfail(reason="hacluster is not compatible with Juju 4")
 def test_ha(application: str, hacluster: str, juju: jubilant.Juju):
     """
     arrange: deploy the haproxy charm.
