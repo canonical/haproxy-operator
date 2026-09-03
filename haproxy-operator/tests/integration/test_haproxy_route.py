@@ -8,6 +8,8 @@ import json
 import jubilant
 import pytest
 
+from .conftest import all_active_and_idle
+
 
 @pytest.mark.abort_on_fail
 def test_haproxy_route_any_charm_requirer(
@@ -23,6 +25,14 @@ def test_haproxy_route_any_charm_requirer(
 
     juju.integrate(
         f"{configured_application_with_tls}:haproxy-route", any_charm_haproxy_route_requirer
+    )
+    juju.wait(
+        lambda status: (
+            status.apps[configured_application_with_tls].is_blocked
+            and jubilant.all_agents_idle(
+                status, configured_application_with_tls, any_charm_haproxy_route_requirer
+            )
+        ),
     )
     # We set the removed retry-interval config option here as
     # ingress-configurator is not yet synced with the updated lib. This will be removed.
@@ -47,7 +57,7 @@ def test_haproxy_route_any_charm_requirer(
         },
     )
     juju.wait(
-        lambda status: jubilant.all_active(
+        lambda status: all_active_and_idle(
             status, configured_application_with_tls, any_charm_haproxy_route_requirer
         )
     )

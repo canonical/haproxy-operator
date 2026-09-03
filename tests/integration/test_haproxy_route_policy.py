@@ -33,23 +33,53 @@ def test_haproxy_route_policy(
         configured_application_with_tls, {"external-hostname": TEST_HOSTNAME}
     )
     any_charm_haproxy_route_deployer(HAPROXY_ROUTE_REQUIRER_NAME)
-    lxd_juju.integrate(f"{haproxy_route_policy}:database", f"{postgresql}:database")
-    lxd_juju.integrate(
-        f"{configured_application_with_tls}:haproxy-route-policy",
-        haproxy_route_policy,
-    )
     lxd_juju.integrate(
         f"{HAPROXY_ROUTE_REQUIRER_NAME}:require-haproxy-route",
         configured_application_with_tls,
     )
     # Wait for any-charm to settle before running the action
     lxd_juju.wait(
-        lambda status: not status.apps[HAPROXY_ROUTE_REQUIRER_NAME].is_waiting,
-        timeout=5 * 60,
+        lambda status: (
+            status.apps[configured_application_with_tls].is_blocked
+            and jubilant.all_agents_idle(
+                status, configured_application_with_tls, HAPROXY_ROUTE_REQUIRER_NAME
+            )
+        ),
+        timeout=10 * 60,
+    )
+    lxd_juju.run(
+        f"{HAPROXY_ROUTE_REQUIRER_NAME}/leader",
+        "rpc",
+        {
+            "method": "update_relation",
+            "args": json.dumps(
+                [
+                    {
+                        "service": HAPROXY_ROUTE_REQUIRER_NAME,
+                        "ports": [80],
+                        "hostname": TEST_HOSTNAME,
+                    }
+                ]
+            ),
+        },
+    )
+    lxd_juju.integrate(f"{haproxy_route_policy}:database", f"{postgresql}:database")
+    lxd_juju.integrate(
+        f"{configured_application_with_tls}:haproxy-route-policy",
+        haproxy_route_policy,
     )
     # Wait for all apps to be active and idle so haproxy has finished rendering
     # the policy route before we send requests to it.
-    lxd_juju.wait(all_active_and_idle)
+    lxd_juju.wait(
+        lambda status: all_active_and_idle(
+            status,
+            configured_application_with_tls,
+            haproxy_route_policy,
+            postgresql,
+            HAPROXY_ROUTE_REQUIRER_NAME,
+            "self-signed-certificates",
+        )
+    )
     admin_credentials = lxd_juju.run(
         f"{haproxy_route_policy}/leader",
         "get-admin-credentials",

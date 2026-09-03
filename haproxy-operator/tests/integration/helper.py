@@ -7,7 +7,6 @@
 import ipaddress
 import json
 import re
-import time
 import typing
 from urllib.parse import ParseResult, urlparse
 

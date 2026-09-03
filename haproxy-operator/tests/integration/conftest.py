@@ -337,6 +337,14 @@ def haproxy_route_tcp_relation_fixture(
         f"{configured_application_with_tls}:haproxy-route-tcp",
         any_charm_haproxy_route_tcp_requirer,
     )
+    juju.wait(
+        lambda status: (
+            status.apps[configured_application_with_tls].is_blocked
+            and jubilant.all_agents_idle(
+                status, configured_application_with_tls, any_charm_haproxy_route_tcp_requirer
+            )
+        ),
+    )
     juju.run(
         f"{any_charm_haproxy_route_tcp_requirer}/0",
         "rpc",
