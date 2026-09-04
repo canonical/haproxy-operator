@@ -43,9 +43,6 @@ apps:
     command: bin/gunicorn-start
     daemon: simple
     restart-condition: always
-    # The database configuration is not available until the configure hook
-    # runs, so avoid auto-starting (and crash-looping) on install.
-    install-mode: disable
     plugs:
       - network
       - network-bind
