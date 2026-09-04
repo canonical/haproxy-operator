@@ -456,7 +456,7 @@ def test_get_proxied_endpoints_with_backend_filter_non_existing_backend() -> Non
     """
     arrange: create state with a haproxy-route relation for a specific backend.
     act: trigger the get-proxied-endpoints action with a non-existing backend name.
-    assert: raises ActionFailed indicating the backend does not exist.
+    assert: returns an empty list when the backend does not exist.
     """
     service_name = "haproxy-tutorial-ingress-configurator"
     context = ops.testing.Context(HAProxyCharm)
