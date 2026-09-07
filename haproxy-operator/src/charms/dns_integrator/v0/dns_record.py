@@ -1,5 +1,5 @@
 # Copyright 2026 Canonical Ltd.
-# Licensed under the Apache2.0. See LICENSE file in charm source for details.
+# See LICENSE file for licensing details.
 
 r"""Library to manage the integration with a primary DNS charm.
 
