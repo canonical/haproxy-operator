@@ -14,9 +14,10 @@ resource "juju_application" "haproxy" {
     base     = var.base
   }
 
-
   config      = var.config
   constraints = var.constraints
 
   expose {}
 }
+
+
