@@ -105,3 +105,21 @@ run "haproxy_units_and_machines_are_mutually_exclusive" {
 
   expect_failures = [var.haproxy]
 }
+
+run "haproxy_deploys_on_existing_machine" {
+  command = plan
+
+  module {
+    source = "../charm/haproxy"
+  }
+
+  variables {
+    model_uuid = run.setup_tests.model_uuid
+    machines   = [run.setup_tests.machine_id]
+  }
+
+  assert {
+    condition     = output.app_name == "haproxy"
+    error_message = "haproxy should be deployed on the existing machine"
+  }
+}
