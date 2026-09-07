@@ -10,6 +10,11 @@ import jubilant
 logger = logging.getLogger(__name__)
 
 
+def _unit_address(unit) -> str:
+    """Return a reachable unit address from Juju status."""
+    return unit.address or unit.public_address
+
+
 def _dig(juju: jubilant.Juju, unit: str, nameserver: str, hostname: str) -> str:
     """Run a DNS query via dig from within a Juju unit.
 
@@ -37,10 +42,10 @@ def test_dns_record_resolves_via_bind(
     """
     status = juju.status()
     bind_units = status.apps[bind_operator].units
-    bind_ip = next(iter(bind_units.values())).address
+    bind_ip = _unit_address(next(iter(bind_units.values())))
 
     haproxy_units = status.apps[configured_application_with_tls].units
-    haproxy_ip = next(iter(haproxy_units.values())).address
+    haproxy_ip = _unit_address(next(iter(haproxy_units.values())))
 
     dig_output = _dig(juju, f"{configured_application_with_tls}/0", bind_ip, "haproxy.internal")
 
@@ -65,10 +70,10 @@ def test_dns_record_updated_on_hostname_change(
 
     status = juju.status()
     bind_units = status.apps[bind_operator].units
-    bind_ip = next(iter(bind_units.values())).address
+    bind_ip = _unit_address(next(iter(bind_units.values())))
 
     haproxy_units = status.apps[configured_application_with_tls].units
-    haproxy_ip = next(iter(haproxy_units.values())).address
+    haproxy_ip = _unit_address(next(iter(haproxy_units.values())))
 
     dig_output = _dig(juju, f"{configured_application_with_tls}/0", bind_ip, new_hostname)
 
