@@ -89,7 +89,7 @@ run "haproxy_units_and_machines_are_mutually_exclusive" {
   command = plan
 
   module {
-    source = "../product"
+    source = "./product"
   }
 
   variables {
@@ -110,7 +110,7 @@ run "haproxy_deploys_on_existing_machine" {
   command = plan
 
   module {
-    source = "../charm/haproxy"
+    source = "./charm/haproxy"
   }
 
   variables {
