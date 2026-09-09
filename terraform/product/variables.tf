@@ -29,9 +29,14 @@ variable "haproxy" {
     constraints = optional(string, "arch=amd64")
     revision    = optional(number)
     base        = optional(string, "ubuntu@24.04")
-    units       = optional(number, 1)
+    units       = optional(number)
+    machines    = optional(set(string))
   })
   default = {}
+  validation {
+    condition     = var.haproxy.machines == null || var.haproxy.units == null
+    error_message = "haproxy machines and units cannot both be set."
+  }
 }
 
 variable "haproxy_ddos_protection_configurator" {
