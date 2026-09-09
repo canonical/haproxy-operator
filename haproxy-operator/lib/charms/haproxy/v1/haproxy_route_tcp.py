@@ -1,3 +1,6 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
 # pylint: disable=too-many-lines,duplicate-code
 """Haproxy-route interface library.
 
