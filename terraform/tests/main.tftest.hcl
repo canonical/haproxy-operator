@@ -93,7 +93,7 @@ run "haproxy_units_and_machines_are_mutually_exclusive" {
   }
 
   variables {
-    model_uuid = "test-model"
+    model_uuid = "00000000-0000-0000-0000-000000000000"
 
     haproxy = {
       units    = 1
