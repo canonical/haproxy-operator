@@ -305,6 +305,30 @@ def any_charm_haproxy_route_tcp_requirer_fixture(
         return
 
 
+BIND_OPERATOR_APP_NAME = "bind"
+
+
+@pytest.fixture(scope="module", name="bind_operator")
+def bind_operator_fixture(juju: jubilant.Juju, configured_application_with_tls_base: str) -> str:
+    """Deploy bind-operator and integrate with haproxy.
+
+    Returns:
+        The bind-operator application name.
+    """
+    juju.deploy(
+        "bind",
+        app=BIND_OPERATOR_APP_NAME,
+        base="ubuntu@22.04",
+        channel="latest/edge",
+    )
+    juju.integrate(
+        f"{configured_application_with_tls_base}:dns-record",
+        f"{BIND_OPERATOR_APP_NAME}:dns-record",
+    )
+    juju.wait(jubilant.all_active, timeout=10 * 60)
+    return BIND_OPERATOR_APP_NAME
+
+
 @pytest.fixture(name="log_hash_secret")
 def log_hash_secret_fixture(
     configured_application_with_tls: str,
