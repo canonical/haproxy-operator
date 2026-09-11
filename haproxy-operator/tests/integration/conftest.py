@@ -92,7 +92,10 @@ def certificate_provider_application_fixture(
         logger.warning("Using existing application: %s", SELF_SIGNED_CERTIFICATES_APP_NAME)
         return SELF_SIGNED_CERTIFICATES_APP_NAME
     juju.deploy(
-        "self-signed-certificates", app=SELF_SIGNED_CERTIFICATES_APP_NAME, channel="1/edge"
+        "self-signed-certificates",
+        app=SELF_SIGNED_CERTIFICATES_APP_NAME,
+        channel="1/edge",
+        force=True,
     )
     return SELF_SIGNED_CERTIFICATES_APP_NAME
 
@@ -333,6 +336,14 @@ def haproxy_route_tcp_relation_fixture(
     juju.integrate(
         f"{configured_application_with_tls}:haproxy-route-tcp",
         any_charm_haproxy_route_tcp_requirer,
+    )
+    juju.wait(
+        lambda status: (
+            status.apps[configured_application_with_tls].is_blocked
+            and jubilant.all_agents_idle(
+                status, configured_application_with_tls, any_charm_haproxy_route_tcp_requirer
+            )
+        ),
     )
     juju.run(
         f"{any_charm_haproxy_route_tcp_requirer}/0",

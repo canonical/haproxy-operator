@@ -7,7 +7,7 @@ import jubilant
 import pytest
 import requests
 
-from .conftest import get_unit_address
+from .conftest import all_active_and_idle, get_unit_address
 
 
 @pytest.mark.abort_on_fail
@@ -22,7 +22,19 @@ def test_website_relation(
     assert: Requests to reverseproxy-requirer return the default haproxy page.
     """
     juju.integrate(f"{application}:website", f"{reverseproxy_requirer}:reverseproxy")
-    juju.wait(lambda status: jubilant.all_active(status, application, reverseproxy_requirer))
+    juju.wait(
+        lambda status: (
+            any(
+                relation.related_app == application
+                for relation in status.apps[reverseproxy_requirer].relations.get(
+                    "reverseproxy", []
+                )
+            )
+            and all_active_and_idle(status, application, reverseproxy_requirer)
+        ),
+        delay=5,
+        successes=6,
+    )
 
     unit_address = get_unit_address(juju, reverseproxy_requirer)
     response = requests.get(unit_address, timeout=5)

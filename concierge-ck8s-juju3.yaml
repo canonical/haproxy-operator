@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 juju:
-  channel: 4.1/edge
+  channel: 3/stable
   model-defaults:
     test-mode: "true"
     automatically-retry-hooks: "false"
@@ -11,9 +11,12 @@ providers:
   lxd:
     enable: true
     bootstrap: true
-
-host:
-  snaps:
-    charmcraft:
-      channel: latest/stable
-      classic: true
+  k8s:
+    enable: true
+    bootstrap: false
+    channel: 1.32-classic/stable
+    features:
+      load-balancer:
+        enabled: true
+        l2-mode: true
+        cidrs: 10.43.45.0/24

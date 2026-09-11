@@ -19,5 +19,5 @@ def test_config(application: str, juju: jubilant.Juju):
     juju.config(application, {"global-maxconn": "1024"})
     juju.wait(lambda status: jubilant.all_active(status, application))
 
-    stdout = juju.ssh(f"{application}/0", "cat /etc/haproxy/haproxy.cfg")
+    stdout = juju.exec("cat /etc/haproxy/haproxy.cfg", unit=f"{application}/0").stdout
     assert "maxconn 1024" in stdout

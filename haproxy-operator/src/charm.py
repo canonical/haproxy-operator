@@ -668,7 +668,7 @@ class HAProxyCharm(ops.CharmBase):
             for unit in haproxy_peer_integration.units:
                 if unit != self.unit:
                     if peer_unit_address := haproxy_peer_integration.data[unit].get(
-                        "private-address"
+                        "ingress-address"
                     ):
                         peer_units_address.append(peer_unit_address)
                     else:

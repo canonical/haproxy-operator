@@ -18,10 +18,10 @@ def test_snap_installed(application: str, juju: jubilant.Juju):
     Assert:
         The snap is installed on the unit and the configuration file is present.
     """
-    result = juju.ssh(f"{application}/0", "snap list haproxy-spoe-auth")
+    result = juju.exec("snap list haproxy-spoe-auth", unit=f"{application}/0").stdout
     assert "haproxy-spoe-auth" in result
-    result = juju.ssh(
-        f"{application}/0",
+    result = juju.exec(
         "test -f /var/snap/haproxy-spoe-auth/current/config.yaml && echo 'exists'",
-    )
+        unit=f"{application}/0",
+    ).stdout
     assert "exists" in result

@@ -7,7 +7,7 @@ import jubilant
 import pytest
 from requests import Session
 
-from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG, get_unit_ip_address
+from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG, all_active_and_idle, get_unit_ip_address
 from .helper import DNSResolverHTTPSAdapter
 
 HAPROXY_ROUTE_REQUIRER_HOSTNAME = f"ok.{TEST_EXTERNAL_HOSTNAME_CONFIG}"
@@ -28,10 +28,18 @@ def test_haproxy_route_integration(
         f"{configured_application_with_tls}:haproxy-route",
         f"{haproxy_route_requirer}:require-haproxy-route",
     )
+    juju.wait(
+        lambda status: (
+            status.apps[configured_application_with_tls].is_blocked
+            and jubilant.all_agents_idle(
+                status, configured_application_with_tls, haproxy_route_requirer
+            )
+        ),
+    )
     juju.run(f"{haproxy_route_requirer}/0", "rpc", {"method": "update_relation"})
 
     juju.wait(
-        lambda status: jubilant.all_active(
+        lambda status: all_active_and_idle(
             status, configured_application_with_tls, haproxy_route_requirer
         )
     )

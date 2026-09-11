@@ -311,7 +311,7 @@ def test_tcp_proxied_endpoints_sni_takes_priority_over_ha(
             None,
             ["10.0.0.3:5000", "10.0.0.1:5000", "10.0.0.2:5000"],
             ["10.0.0.1:5000", "10.0.0.2:5000", "10.0.0.3:5000"],
-            {1: {"private-address": "10.0.0.2"}, 2: {"private-address": "10.0.0.3"}},
+            {1: {"ingress-address": "10.0.0.2"}, 2: {"ingress-address": "10.0.0.3"}},
             id="different_order_no_update",
         ),
         pytest.param(
