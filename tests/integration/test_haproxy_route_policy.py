@@ -40,7 +40,7 @@ def test_haproxy_route_policy(
     # Wait for any-charm to settle before running the action
     lxd_juju.wait(
         lambda status: (
-            status.apps[configured_application_with_tls].is_blocked
+            jubilant.all_blocked(status, configured_application_with_tls)
             and jubilant.all_agents_idle(
                 status, configured_application_with_tls, HAPROXY_ROUTE_REQUIRER_NAME
             )

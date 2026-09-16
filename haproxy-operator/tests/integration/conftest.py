@@ -363,7 +363,7 @@ def haproxy_route_tcp_relation_fixture(
     )
     juju.wait(
         lambda status: (
-            status.apps[configured_application_with_tls].is_blocked
+            jubilant.all_blocked(status, configured_application_with_tls)
             and jubilant.all_agents_idle(
                 status, configured_application_with_tls, any_charm_haproxy_route_tcp_requirer
             )
