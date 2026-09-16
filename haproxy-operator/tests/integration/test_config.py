@@ -29,9 +29,9 @@ def test_client_ip_hash_salt(
         {"client-ip-hash-salt": str(log_hash_secret)},
     )
     juju.wait(lambda status: all_active_and_idle(status, application))
-    juju.exec(unit, "curl -Lk 127.0.0.1")
+    juju.exec("curl -Lk 127.0.0.1", unit=unit)
 
     # HAProxy's hex converter outputs uppercase.
     expected_hash = hashlib.sha256(("127.0.0.1" + LOG_HASH_SALT).encode()).hexdigest().upper()
-    haproxy_logs = juju.exec(unit, "journalctl -u haproxy --no-pager -n 50")
+    haproxy_logs = juju.exec("journalctl -u haproxy --no-pager -n 50", unit=unit).stdout
     assert expected_hash in haproxy_logs
