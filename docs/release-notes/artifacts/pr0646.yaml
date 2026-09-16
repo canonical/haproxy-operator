@@ -1,0 +1,17 @@
+version_schema: 2
+
+changes:
+  - title: Refactored get-proxied-endpoints action tests
+    author: minulo
+    type: minor
+    description: >
+      Refactored the get-proxied-endpoints Juju action tests to follow the
+      same style as the rest of the test suite. No user-facing behavior
+      changed.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/646
+      related_doc:
+      related_issue:
+    visibility: internal
+    highlight: false

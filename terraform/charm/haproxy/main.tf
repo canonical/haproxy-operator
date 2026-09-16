@@ -4,7 +4,8 @@
 resource "juju_application" "haproxy" {
   name       = var.app_name
   model_uuid = var.model_uuid
-  units      = var.units
+  units      = var.machines == null ? coalesce(var.units, 1) : null
+  machines   = var.machines
 
   charm {
     name     = "haproxy"
