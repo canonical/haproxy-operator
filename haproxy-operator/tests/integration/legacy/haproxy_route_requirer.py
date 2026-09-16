@@ -6,8 +6,8 @@
 
 import pathlib
 
-import apt  # type: ignore
 import ops
+from charmlibs import apt
 from any_charm_base import AnyCharmBase  # type: ignore
 from haproxy_route import HaproxyRouteRequirer  # type: ignore
 
