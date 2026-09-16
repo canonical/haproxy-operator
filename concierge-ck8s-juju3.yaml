@@ -14,7 +14,7 @@ providers:
   k8s:
     enable: true
     bootstrap: false
-    channel: 1.32-classic/stable
+    channel: 1.35-classic/stable
     features:
       load-balancer:
         enabled: true
