@@ -18,8 +18,8 @@ import textwrap
 from subprocess import CalledProcessError  # nosec: B404
 
 import ops
-from charmlibs import apt
 from any_charm_base import AnyCharmBase
+from charmlibs import apt
 from haproxy_route import HaproxyRouteRequirer
 from tls_certificates import (
     CertificateRequestAttributes,

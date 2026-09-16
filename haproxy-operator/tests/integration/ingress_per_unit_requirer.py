@@ -7,8 +7,8 @@
 import pathlib
 
 import ops
-from charmlibs import apt
 from any_charm_base import AnyCharmBase
+from charmlibs import apt
 from ingress_per_unit import IngressPerUnitReadyForUnitEvent, IngressPerUnitRequirer
 
 
