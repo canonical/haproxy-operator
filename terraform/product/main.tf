@@ -14,6 +14,7 @@ module "haproxy" {
   revision    = var.haproxy.revision
   base        = var.haproxy.base
   units       = var.haproxy.units
+  machines    = var.haproxy.machines
   constraints = var.haproxy.constraints
   config      = var.haproxy.config
 }

@@ -45,7 +45,17 @@ variable "revision" {
 variable "units" {
   description = "Number of haproxy units. If hacluster is enabled, it is recommended to use a value > 3 to ensure a quorum."
   type        = number
-  default     = 1
+  default     = null
 }
 
+variable "machines" {
+  description = "Machines to deploy haproxy units to. Mutually exclusive with units."
+  type        = set(string)
+  default     = null
+
+  validation {
+    condition     = var.machines == null || var.units == null
+    error_message = "machines and units cannot both be set."
+  }
+}
 

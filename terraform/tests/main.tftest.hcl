@@ -84,3 +84,42 @@ run "basic_deploy" {
     error_message = "metadata.version should default to 1.0.0"
   }
 }
+
+run "haproxy_units_and_machines_are_mutually_exclusive" {
+  command = plan
+
+  module {
+    source = "./product"
+  }
+
+  variables {
+    model_uuid = "00000000-0000-0000-0000-000000000000"
+
+    haproxy = {
+      units    = 1
+      machines = ["0"]
+    }
+
+    protected_hostnames_configuration = []
+  }
+
+  expect_failures = [var.haproxy]
+}
+
+run "haproxy_deploys_on_existing_machine" {
+  command = plan
+
+  module {
+    source = "./charm/haproxy"
+  }
+
+  variables {
+    model_uuid = run.setup_tests.model_uuid
+    machines   = [run.setup_tests.machine_id]
+  }
+
+  assert {
+    condition     = output.app_name == "haproxy"
+    error_message = "haproxy should be deployed on the existing machine"
+  }
+}

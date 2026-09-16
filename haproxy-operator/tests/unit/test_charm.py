@@ -7,7 +7,7 @@ import json
 import logging
 import pathlib
 import re
-from unittest.mock import ANY, MagicMock
+from unittest.mock import ANY, MagicMock, patch
 
 import ops
 import ops.testing
@@ -342,144 +342,150 @@ def test_ca_certificates_removed(monkeypatch: pytest.MonkeyPatch, receive_ca_cer
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
-class TestGetProxiedEndpointsAction:
-    """Test "get-proxied-endpoints" Action"""
+def test_get_proxied_endpoints_no_backend_filter() -> None:
+    """
+    arrange: create state with one haproxy-route relation containing
+        hostname, additional_hostnames, and paths.
+    act: trigger the get-proxied-endpoints action without a backend filter.
+    assert: returns a list of all proxied endpoints for every hostname/path combination.
+    """
+    context = ops.testing.Context(HAProxyCharm)
 
-    def test_no_backend_filter(self) -> None:
-        """
-        arrange: create state with one haproxy-route relation containing
-            hostname, additional_hostnames, and paths.
-        act: trigger the get-proxied-endpoints action without a backend filter.
-        assert: returns a list of all proxied endpoints for every hostname/path combination.
-        """
-        context = ops.testing.Context(HAProxyCharm)
+    haproxy_route_relation = ops.testing.Relation(
+        "haproxy-route",
+        remote_app_data={
+            "hostname": f'"{TEST_EXTERNAL_HOSTNAME_CONFIG}"',
+            "additional_hostnames": json.dumps(
+                [
+                    f"ok2.{TEST_EXTERNAL_HOSTNAME_CONFIG}",
+                    f"ok3.{TEST_EXTERNAL_HOSTNAME_CONFIG}",
+                ]
+            ),
+            "paths": '["/v1", "/v2"]',
+            "ports": "[443]",
+            "protocol": '"http"',
+            "service": '"haproxy-tutorial-ingress-configurator"',
+        },
+        remote_units_data={0: {"address": '"10.75.1.129"'}},
+    )
+    charm_state = ops.testing.State(
+        relations=[haproxy_route_relation],
+        leader=True,
+        model=ops.testing.Model(name="haproxy-tutorial"),
+        app_status=ops.testing.ActiveStatus(),
+        unit_status=ops.testing.ActiveStatus(),
+    )
 
-        haproxy_route_relation = ops.testing.Relation(
-            "haproxy-route",
-            remote_app_data={
-                "hostname": f'"{TEST_EXTERNAL_HOSTNAME_CONFIG}"',
-                "additional_hostnames": json.dumps(
-                    [
-                        f"ok2.{TEST_EXTERNAL_HOSTNAME_CONFIG}",
-                        f"ok3.{TEST_EXTERNAL_HOSTNAME_CONFIG}",
-                    ]
-                ),
-                "paths": '["/v1", "/v2"]',
-                "ports": "[443]",
-                "protocol": '"http"',
-                "service": '"haproxy-tutorial-ingress-configurator"',
-            },
-            remote_units_data={0: {"address": '"10.75.1.129"'}},
-        )
-        charm_state = ops.testing.State(
-            relations=[haproxy_route_relation],
-            leader=True,
-            model=ops.testing.Model(name="haproxy-tutorial"),
-            app_status=ops.testing.ActiveStatus(),
-            unit_status=ops.testing.ActiveStatus(),
-        )
-        context.run(context.on.action("get-proxied-endpoints"), charm_state)
+    context.run(context.on.action("get-proxied-endpoints"), charm_state)
 
-        out = context.action_results
-        assert out is not None
+    out = context.action_results
+    assert out is not None
 
-        assert set(json.loads(out["endpoints"])) == {
-            "https://haproxy.internal/v1",
-            "https://haproxy.internal/v2",
-            "https://ok2.haproxy.internal/v1",
-            "https://ok2.haproxy.internal/v2",
-            "https://ok3.haproxy.internal/v1",
-            "https://ok3.haproxy.internal/v2",
-        }
+    assert set(json.loads(out["endpoints"])) == {
+        "https://haproxy.internal/v1",
+        "https://haproxy.internal/v2",
+        "https://ok2.haproxy.internal/v1",
+        "https://ok2.haproxy.internal/v2",
+        "https://ok3.haproxy.internal/v1",
+        "https://ok3.haproxy.internal/v2",
+    }
 
-    def test_no_backend_filter_no_endpoints(self) -> None:
-        """
-        arrange: create state with no haproxy-route relations.
-        act: trigger the get-proxied-endpoints action without a backend filter.
-        assert: returns an empty list.
-        """
-        context = ops.testing.Context(HAProxyCharm)
-        charm_state = ops.testing.State(
-            relations=[],
-            leader=True,
-            model=ops.testing.Model(name="haproxy-tutorial"),
-            app_status=ops.testing.ActiveStatus(),
-            unit_status=ops.testing.ActiveStatus(),
-        )
-        context.run(context.on.action("get-proxied-endpoints"), charm_state)
 
-        out = context.action_results
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_get_proxied_endpoints_no_backend_filter_no_endpoints() -> None:
+    """
+    arrange: create state with no haproxy-route relations.
+    act: trigger the get-proxied-endpoints action without a backend filter.
+    assert: returns an empty list.
+    """
+    context = ops.testing.Context(HAProxyCharm)
+    charm_state = ops.testing.State(
+        relations=[],
+        leader=True,
+        model=ops.testing.Model(name="haproxy-tutorial"),
+        app_status=ops.testing.ActiveStatus(),
+        unit_status=ops.testing.ActiveStatus(),
+    )
 
-        assert out == {"endpoints": "[]"}
+    context.run(context.on.action("get-proxied-endpoints"), charm_state)
 
-    def test_with_backend_filter(self) -> None:
-        """
-        arrange: create state with a haproxy-route relation for a specific backend.
-        act: trigger the get-proxied-endpoints action with the backend filter.
-        assert: returns a list containing the endpoint for that backend.
-        """
-        service_name = "haproxy-tutorial-ingress-configurator"
-        context = ops.testing.Context(HAProxyCharm)
-        haproxy_route_relation = ops.testing.Relation(
-            "haproxy-route",
-            remote_app_data={
-                "hostname": f'"{TEST_EXTERNAL_HOSTNAME_CONFIG}"',
-                "ports": "[443]",
-                "protocol": '"http"',
-                "service": f'"{service_name}"',
-            },
-            remote_units_data={0: {"address": '"10.75.1.129"'}},
-        )
-        charm_state = ops.testing.State(
-            relations=[haproxy_route_relation],
-            leader=True,
-            model=ops.testing.Model(name="haproxy-tutorial"),
-            app_status=ops.testing.ActiveStatus(),
-            unit_status=ops.testing.ActiveStatus(),
-        )
-        context.run(
-            context.on.action("get-proxied-endpoints", params={"backend": service_name}),
-            charm_state,
-        )
+    out = context.action_results
 
-        out = context.action_results
+    assert out == {"endpoints": "[]"}
 
-        assert out == {"endpoints": f'["https://{TEST_EXTERNAL_HOSTNAME_CONFIG}"]'}
 
-    def test_with_backend_filter_non_existing_backend(self) -> None:
-        """
-        arrange: create state with a haproxy-route relation for a specific backend.
-        act: trigger the get-proxied-endpoints action with a non-existing backend name.
-        assert: raises ActionFailed indicating the backend does not exist.
-        """
-        service_name = "haproxy-tutorial-ingress-configurator"
-        context = ops.testing.Context(HAProxyCharm)
-        haproxy_route_relation = ops.testing.Relation(
-            "haproxy-route",
-            remote_app_data={
-                "hostname": f'"{TEST_EXTERNAL_HOSTNAME_CONFIG}"',
-                "ports": "[443]",
-                "protocol": '"http"',
-                "service": f'"{service_name}"',
-            },
-            remote_units_data={0: {"address": '"10.75.1.129"'}},
-        )
-        charm_state = ops.testing.State(
-            relations=[haproxy_route_relation],
-            leader=True,
-            model=ops.testing.Model(name="haproxy-tutorial"),
-            app_status=ops.testing.ActiveStatus(),
-            unit_status=ops.testing.ActiveStatus(),
-        )
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_get_proxied_endpoints_with_backend_filter() -> None:
+    """
+    arrange: create state with a haproxy-route relation for a specific backend.
+    act: trigger the get-proxied-endpoints action with the backend filter.
+    assert: returns a list containing the endpoint for that backend.
+    """
+    service_name = "haproxy-tutorial-ingress-configurator"
+    context = ops.testing.Context(HAProxyCharm)
+    haproxy_route_relation = ops.testing.Relation(
+        "haproxy-route",
+        remote_app_data={
+            "hostname": f'"{TEST_EXTERNAL_HOSTNAME_CONFIG}"',
+            "ports": "[443]",
+            "protocol": '"http"',
+            "service": f'"{service_name}"',
+        },
+        remote_units_data={0: {"address": '"10.75.1.129"'}},
+    )
+    charm_state = ops.testing.State(
+        relations=[haproxy_route_relation],
+        leader=True,
+        model=ops.testing.Model(name="haproxy-tutorial"),
+        app_status=ops.testing.ActiveStatus(),
+        unit_status=ops.testing.ActiveStatus(),
+    )
 
-        context.run(
-            context.on.action("get-proxied-endpoints", params={"backend": "random_name"}),
-            charm_state,
-        )
+    context.run(
+        context.on.action("get-proxied-endpoints", params={"backend": service_name}),
+        charm_state,
+    )
 
-        out = context.action_results
+    out = context.action_results
 
-        assert out == {"endpoints": "[]"}
+    assert out == {"endpoints": f'["https://{TEST_EXTERNAL_HOSTNAME_CONFIG}"]'}
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_get_proxied_endpoints_with_backend_filter_non_existing_backend() -> None:
+    """
+    arrange: create state with a haproxy-route relation for a specific backend.
+    act: trigger the get-proxied-endpoints action with a non-existing backend name.
+    assert: returns an empty list when the backend does not exist.
+    """
+    service_name = "haproxy-tutorial-ingress-configurator"
+    context = ops.testing.Context(HAProxyCharm)
+    haproxy_route_relation = ops.testing.Relation(
+        "haproxy-route",
+        remote_app_data={
+            "hostname": f'"{TEST_EXTERNAL_HOSTNAME_CONFIG}"',
+            "ports": "[443]",
+            "protocol": '"http"',
+            "service": f'"{service_name}"',
+        },
+        remote_units_data={0: {"address": '"10.75.1.129"'}},
+    )
+    charm_state = ops.testing.State(
+        relations=[haproxy_route_relation],
+        leader=True,
+        model=ops.testing.Model(name="haproxy-tutorial"),
+        app_status=ops.testing.ActiveStatus(),
+        unit_status=ops.testing.ActiveStatus(),
+    )
+
+    context.run(
+        context.on.action("get-proxied-endpoints", params={"backend": "random_name"}),
+        charm_state,
+    )
+
+    out = context.action_results
+
+    assert out == {"endpoints": "[]"}
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
@@ -616,6 +622,95 @@ def test_spoe_auth_invalid_data(monkeypatch: pytest.MonkeyPatch, certificates_in
     assert render_file_mock.call_count == 0
     assert out.unit_status.name == ops.testing.BlockedStatus.name
     assert spoe_auth_relation.remote_app_name in out.unit_status.message
+
+
+def test_dns_record_relation_joined_triggers_reconcile(
+    context_with_dns_mock, base_state, dns_record_relation
+):
+    """
+    arrange: charm state with dns-record relation
+    act: dns_record_relation_joined event fires
+    assert: DNSRecordService.update_dns_records is called (via reconcile)
+    """
+    context, update_dns_mock = context_with_dns_mock
+    state = ops.testing.State(
+        **{
+            **base_state,
+            "relations": [*base_state.get("relations", []), dns_record_relation],
+            "leader": True,
+        }
+    )
+    context.run(context.on.relation_joined(dns_record_relation), state)
+    update_dns_mock.assert_called_once()
+
+
+def test_dns_record_relation_created_triggers_reconcile(
+    context_with_dns_mock, base_state, dns_record_relation
+):
+    """
+    arrange: charm state with dns-record relation
+    act: dns_record_relation_created event fires
+    assert: DNSRecordService.update_dns_records is called (via reconcile)
+    """
+    context, update_dns_mock = context_with_dns_mock
+    state = ops.testing.State(
+        **{
+            **base_state,
+            "relations": [*base_state.get("relations", []), dns_record_relation],
+            "leader": True,
+        }
+    )
+    context.run(context.on.relation_created(dns_record_relation), state)
+    update_dns_mock.assert_called_once()
+
+
+def test_dns_update_uses_vip_when_ha_active(
+    context_with_dns_mock, base_state, dns_record_relation
+):
+    """
+    arrange: HA relation active with vip config set
+    act: config_changed fires
+    assert: update_dns_records is called with the VIP as the IP
+    """
+    context, update_dns_mock = context_with_dns_mock
+    ha_relation = scenario.Relation(
+        endpoint="ha",
+        remote_app_name="hacluster",
+        remote_units_data={0: {}},
+    )
+    state = ops.testing.State(
+        config={"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "vip": "192.168.1.100"},
+        relations=[*base_state.get("relations", []), dns_record_relation, ha_relation],
+        leader=True,
+    )
+    context.run(context.on.config_changed(), state)
+
+    calls = update_dns_mock.call_args_list
+    assert any(call_args.args[1] == "192.168.1.100" for call_args in calls)
+
+
+def test_dns_update_uses_binding_ip_when_no_ha(
+    context_with_dns_mock, base_state, dns_record_relation
+):
+    """
+    arrange: no HA relation, standard network binding
+    act: config_changed fires
+    assert: update_dns_records is called with the binding ingress address
+    """
+    context, update_dns_mock = context_with_dns_mock
+    state = ops.testing.State(
+        config={"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG},
+        relations=[*base_state.get("relations", []), dns_record_relation],
+        leader=True,
+    )
+    with patch("ops.model.Model.get_binding") as mock_binding:
+        mock_network = MagicMock()
+        mock_network.network.ingress_addresses = ["10.0.0.5"]
+        mock_binding.return_value = mock_network
+        context.run(context.on.config_changed(), state)
+
+    calls = update_dns_mock.call_args_list
+    assert any(call_args.args[1] == "10.0.0.5" for call_args in calls)
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
