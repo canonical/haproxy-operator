@@ -147,14 +147,18 @@ def configured_application_without_tls_fixture(application: str, juju: jubilant.
     """Configure the haproxy application without a TLS provider."""
     juju.config(application, {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
     certificates_relations = juju.status().apps[application].relations.get("certificates", [])
+    for relation in certificates_relations:
+        juju.remove_relation(f"{application}:certificates", relation.related_app)
+    juju.wait(
+        lambda status: (
+            not status.apps[application].relations.get("certificates")
+            and all_active_and_idle(status, application)
+        ),
+        timeout=JUJU_WAIT_TIMEOUT,
+    )
+    certificates_relations = juju.status().apps[application].relations.get("certificates", [])
     assert not certificates_relations, (
         f"Expected {application} to have no certificates relation, found {certificates_relations}"
-    )
-    juju.wait(
-        lambda status: all_active_and_idle(status, application),
-        delay=5,
-        successes=6,
-        timeout=JUJU_WAIT_TIMEOUT,
     )
     return application
 
@@ -462,4 +466,20 @@ def haproxy_route_tcp_plain_tcp_relation_fixture(
         juju.remove_relation(
             f"{configured_application_without_tls}:haproxy-route-tcp",
             any_charm_haproxy_route_tcp_requirer,
+        )
+        juju.wait(
+            lambda status: (
+                not any(
+                    relation.related_app == any_charm_haproxy_route_tcp_requirer
+                    for relation in status.apps[configured_application_without_tls].relations.get(
+                        "haproxy-route-tcp", []
+                    )
+                )
+                and all_active_and_idle(
+                    status,
+                    configured_application_without_tls,
+                    any_charm_haproxy_route_tcp_requirer,
+                )
+            ),
+            timeout=JUJU_WAIT_TIMEOUT,
         )

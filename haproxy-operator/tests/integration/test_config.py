@@ -45,7 +45,8 @@ def test_client_ip_hash_salt(
 
     request.getfixturevalue("haproxy_route_tcp_plain_tcp_relation")
     # Fix the source port because %cp logs the client port, not the listener port.
-    juju.exec("printf 'ping\\n' | nc -p 45555 127.0.0.1 4444", unit=unit)
+    nc_result = juju.exec("printf 'ping\\n' | nc -p 45555 127.0.0.1 4444", unit=unit)
+    assert "pong" in nc_result.stdout
 
     expected_tcp_log = f"{expected_hash}:45555"
     deadline = time.monotonic() + 30
