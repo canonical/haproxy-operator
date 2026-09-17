@@ -38,7 +38,6 @@ GRPC_SERVER_SRC = GRPC_SERVER_DIR / "__main__.py"
 GRPC_MESSAGE_STUB_SRC = GRPC_SERVER_DIR / "echo_pb2.py"
 GRPC_SERVICE_STUB_SRC = GRPC_SERVER_DIR / "echo_pb2_grpc.py"
 LOG_HASH_SALT = "demo-salt-value"
-NO_TLS_LOG_HASH_SECRET_LABEL = "haproxy-no-tls-log-hash"
 
 
 def all_active_and_idle(status: jubilant.Status, *apps: str) -> bool:
@@ -140,27 +139,6 @@ def configured_application_with_tls_fixture(
     certificates relation for reuse across tests.
     """
     yield configured_application_with_tls_base
-
-
-@pytest.fixture(scope="module", name="configured_application_without_tls")
-def configured_application_without_tls_fixture(application: str, juju: jubilant.Juju) -> str:
-    """Configure the haproxy application without a TLS provider."""
-    juju.config(application, {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
-    certificates_relations = juju.status().apps[application].relations.get("certificates", [])
-    for relation in certificates_relations:
-        juju.remove_relation(f"{application}:certificates", relation.related_app)
-    juju.wait(
-        lambda status: (
-            not status.apps[application].relations.get("certificates")
-            and all_active_and_idle(status, application)
-        ),
-        timeout=JUJU_WAIT_TIMEOUT,
-    )
-    certificates_relations = juju.status().apps[application].relations.get("certificates", [])
-    assert not certificates_relations, (
-        f"Expected {application} to have no certificates relation, found {certificates_relations}"
-    )
-    return application
 
 
 @pytest.fixture(name="any_charm_ingress_per_unit_requirer")
@@ -373,23 +351,6 @@ def log_hash_secret_fixture(
     juju.remove_secret(secret_uri)
 
 
-@pytest.fixture(name="log_hash_secret_without_tls")
-def log_hash_secret_without_tls_fixture(
-    configured_application_without_tls: str,
-    juju: jubilant.Juju,
-):
-    """Provide a granted log hash secret for the no-TLS application."""
-    secret_uri = juju.add_secret(
-        f"{NO_TLS_LOG_HASH_SECRET_LABEL}-{uuid.uuid4().hex}",
-        {"salt": LOG_HASH_SALT},
-    )
-    juju.grant_secret(secret_uri, configured_application_without_tls)
-    yield secret_uri
-    juju.cli("config", configured_application_without_tls, "--reset", "client-ip-hash-salt")
-    juju.wait(lambda status: all_active_and_idle(status, configured_application_without_tls))
-    juju.remove_secret(secret_uri)
-
-
 @pytest.fixture(name="haproxy_route_tcp_relation")
 def haproxy_route_tcp_relation_fixture(
     configured_application_with_tls: str,
@@ -426,20 +387,20 @@ def haproxy_route_tcp_relation_fixture(
 
 @pytest.fixture(name="haproxy_route_tcp_plain_tcp_relation")
 def haproxy_route_tcp_plain_tcp_relation_fixture(
-    configured_application_without_tls: str,
+    configured_application_with_tls: str,
     any_charm_haproxy_route_tcp_requirer: str,
     juju: jubilant.Juju,
 ) -> Iterator[str]:
-    """Integrate the TCP requirer with the no-TLS haproxy application."""
+    """Integrate the TCP requirer with the haproxy application without TLS termination."""
     juju.integrate(
-        f"{configured_application_without_tls}:haproxy-route-tcp",
+        f"{configured_application_with_tls}:haproxy-route-tcp",
         any_charm_haproxy_route_tcp_requirer,
     )
     juju.wait(
         lambda status: (
-            jubilant.all_blocked(status, configured_application_without_tls)
+            jubilant.all_blocked(status, configured_application_with_tls)
             and jubilant.all_agents_idle(
-                status, configured_application_without_tls, any_charm_haproxy_route_tcp_requirer
+                status, configured_application_with_tls, any_charm_haproxy_route_tcp_requirer
             )
         ),
     )
@@ -451,33 +412,31 @@ def haproxy_route_tcp_plain_tcp_relation_fixture(
     juju.wait(
         lambda status: all_active_and_idle(
             status,
-            configured_application_without_tls,
+            configured_application_with_tls,
             any_charm_haproxy_route_tcp_requirer,
         )
     )
     yield any_charm_haproxy_route_tcp_requirer
 
     relations = (
-        juju.status()
-        .apps[configured_application_without_tls]
-        .relations.get("haproxy-route-tcp", [])
+        juju.status().apps[configured_application_with_tls].relations.get("haproxy-route-tcp", [])
     )
     if any(relation.related_app == any_charm_haproxy_route_tcp_requirer for relation in relations):
         juju.remove_relation(
-            f"{configured_application_without_tls}:haproxy-route-tcp",
+            f"{configured_application_with_tls}:haproxy-route-tcp",
             any_charm_haproxy_route_tcp_requirer,
         )
         juju.wait(
             lambda status: (
                 not any(
                     relation.related_app == any_charm_haproxy_route_tcp_requirer
-                    for relation in status.apps[configured_application_without_tls].relations.get(
+                    for relation in status.apps[configured_application_with_tls].relations.get(
                         "haproxy-route-tcp", []
                     )
                 )
                 and all_active_and_idle(
                     status,
-                    configured_application_without_tls,
+                    configured_application_with_tls,
                     any_charm_haproxy_route_tcp_requirer,
                 )
             ),
