@@ -44,9 +44,10 @@ def test_client_ip_hash_salt(
         assert expected_hash in haproxy_logs
 
     request.getfixturevalue("haproxy_route_tcp_plain_tcp_relation")
-    juju.exec("printf 'ping\\n' | nc 127.0.0.1 4444", unit=unit)
+    # Fix the source port because %cp logs the client port, not the listener port.
+    juju.exec("printf 'ping\\n' | nc -p 45555 127.0.0.1 4444", unit=unit)
 
-    expected_tcp_log = f"{expected_hash}:4444"
+    expected_tcp_log = f"{expected_hash}:45555"
     deadline = time.monotonic() + 30
     while time.monotonic() < deadline:
         haproxy_logs = juju.exec("journalctl -u haproxy --no-pager -n 50", unit=unit).stdout
