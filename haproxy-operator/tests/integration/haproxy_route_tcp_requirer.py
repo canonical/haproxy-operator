@@ -99,7 +99,6 @@ class AnyCharm(AnyCharmBase):
         self._haproxy_route_tcp.provide_haproxy_route_tcp_requirements(
             port=4444,
             backend_port=4000,
-            sni=None,
             enforce_tls=False,
             tls_terminate=False,
             check_type=TCPHealthCheckType.GENERIC,

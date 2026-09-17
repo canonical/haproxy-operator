@@ -446,4 +446,15 @@ def haproxy_route_tcp_plain_tcp_relation_fixture(
             any_charm_haproxy_route_tcp_requirer,
         )
     )
-    return any_charm_haproxy_route_tcp_requirer
+    yield any_charm_haproxy_route_tcp_requirer
+
+    relations = juju.status().apps[configured_application_without_tls].relations.get(
+        "haproxy-route-tcp", []
+    )
+    if any(
+        relation.related_app == any_charm_haproxy_route_tcp_requirer for relation in relations
+    ):
+        juju.remove_relation(
+            f"{configured_application_without_tls}:haproxy-route-tcp",
+            any_charm_haproxy_route_tcp_requirer,
+        )
