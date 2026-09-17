@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/haproxy_route_requirer.py"
 HAPROXY_ROUTE_LIB_SRC = "lib/charms/haproxy/v2/haproxy_route.py"
-APT_LIB_SRC = "lib/charms/operator_libs_linux/v0/apt.py"
 ANY_CHARM_INGRESS_PER_UNIT_REQUIRER = "ingress-per-unit-requirer-any"
 ANY_CHARM_INGRESS_PER_UNIT_REQUIRER_SRC = "tests/integration/ingress_per_unit_requirer.py"
 JUJU_WAIT_TIMEOUT = 10 * 60  # 10 minutes
@@ -156,7 +155,6 @@ def any_charm_ingress_per_unit_requirer_fixture(
         "ingress_per_unit.py": Path("lib/charms/traefik_k8s/v1/ingress_per_unit.py").read_text(
             encoding="utf-8"
         ),
-        "apt.py": Path("lib/charms/operator_libs_linux/v0/apt.py").read_text(encoding="utf-8"),
     }
 
     juju.deploy(
@@ -165,7 +163,7 @@ def any_charm_ingress_per_unit_requirer_fixture(
         channel="beta",
         config={
             "src-overwrite": json.dumps(any_charm_src_overwrite),
-            "python-packages": "pydantic<2.0",
+            "python-packages": "charmlibs-apt~=1.0\npydantic<2.0",
         },
         num_units=2,
     )
@@ -190,7 +188,6 @@ def any_charm_haproxy_route_requirer_base_fixture(juju: jubilant.Juju):
             "tls_certificates.py": pathlib.Path(
                 "lib/charms/tls_certificates_interface/v4/tls_certificates.py"
             ).read_text(encoding="utf-8"),
-            "apt.py": pathlib.Path(APT_LIB_SRC).read_text(encoding="utf-8"),
             "grpc_server/__main__.py": pathlib.Path(GRPC_SERVER_DIR / "__main__.py").read_text(
                 encoding="utf-8"
             ),
@@ -213,6 +210,7 @@ def any_charm_haproxy_route_requirer_base_fixture(juju: jubilant.Juju):
                 "src-overwrite": f"@{tf.name}",
                 "python-packages": "\n".join(
                     [
+                        "charmlibs-apt~=1.0",
                         "pydantic",
                         "cryptography==45.0.6",
                         "grpcio",

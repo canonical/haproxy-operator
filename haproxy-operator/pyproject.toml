@@ -14,6 +14,7 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
+  "charmlibs-apt~=1.0",
   "charmlibs-interfaces-tls-certificates>=1.8.1",
   "cosl==1.10.3",
   "cryptography==50.0.1",
