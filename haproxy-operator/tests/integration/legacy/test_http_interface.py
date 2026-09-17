@@ -9,7 +9,7 @@ import jubilant
 import pytest
 import requests
 
-from .conftest import get_unit_address
+from .conftest import all_active_and_idle, get_unit_address
 
 
 @pytest.mark.abort_on_fail
@@ -27,8 +27,17 @@ def test_reverseproxy_relation(
     juju.run(f"{any_charm_requirer}/0", "rpc", {"method": "start_server"})
 
     juju.integrate(f"{application}:reverseproxy", any_charm_requirer)
+    juju.wait(
+        lambda status: (
+            any(
+                relation.related_app == application
+                for relation in status.apps[any_charm_requirer].relations.get("provide-http", [])
+            )
+            and jubilant.all_agents_idle(status, application, any_charm_requirer)
+        )
+    )
     juju.run(f"{any_charm_requirer}/0", "rpc", {"method": "update_relation_data"})
-    juju.wait(lambda status: jubilant.all_active(status, application, any_charm_requirer))
+    juju.wait(lambda status: all_active_and_idle(status, application, any_charm_requirer))
 
     unit_address = get_unit_address(juju, application)
 

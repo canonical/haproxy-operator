@@ -28,6 +28,8 @@ integration-suites:
   haproxy-operator/tests/integration/:
     summary: haproxy-operator integration tests
     working-dir: haproxy-operator/
+    environment:
+      CONCIERGE/legacy_test_ha: concierge-lxd-juju3.yaml
     backends:
     - integration-test
     systems: [ubuntu-24.04]
@@ -73,8 +75,9 @@ integration-suites:
     systems: [ubuntu-24.04]
     environment:
       CONCIERGE: concierge-ck8s.yaml
+      CONCIERGE/test_oauth_spoe: concierge-ck8s-juju3.yaml
     prepare: |
-      k8s config | sudo -u ubuntu juju add-k8s ck8s --client
+      k8s config | sudo -u ubuntu juju add-k8s ck8s --client --storage csi-rawfile-default
     pytest-arguments-template: *default-pytest-args
 suites:
   tests/spread/tutorial/:
