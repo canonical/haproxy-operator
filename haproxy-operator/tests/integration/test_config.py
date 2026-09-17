@@ -34,14 +34,21 @@ def test_client_ip_hash_salt(
 
     # HAProxy's hex converter outputs uppercase.
     expected_hash = hashlib.sha256(("127.0.0.1" + LOG_HASH_SALT).encode()).hexdigest().upper()
-    haproxy_logs = juju.exec("journalctl -u haproxy --no-pager -n 50", unit=unit).stdout
-    assert expected_hash in haproxy_logs
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        haproxy_logs = juju.exec("journalctl -u haproxy --no-pager -n 50", unit=unit).stdout
+        if expected_hash in haproxy_logs:
+            break
+        time.sleep(1)
+    else:
+        assert expected_hash in haproxy_logs
 
     request.getfixturevalue("haproxy_route_tcp_plain_tcp_relation")
     juju.exec("printf 'ping\\n' | nc 127.0.0.1 4444", unit=unit)
 
     expected_tcp_log = f"{expected_hash}:4444"
-    for _ in range(10):
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
         haproxy_logs = juju.exec("journalctl -u haproxy --no-pager -n 50", unit=unit).stdout
         if expected_tcp_log in haproxy_logs:
             break

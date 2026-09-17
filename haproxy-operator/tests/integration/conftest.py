@@ -145,6 +145,10 @@ def configured_application_with_tls_fixture(
 def configured_application_without_tls_fixture(application: str, juju: jubilant.Juju) -> str:
     """Configure the haproxy application without a TLS provider."""
     juju.config(application, {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG})
+    certificates_relations = juju.status().apps[application].relations.get("certificates", [])
+    assert not certificates_relations, (
+        f"Expected {application} to have no certificates relation, found {certificates_relations}"
+    )
     juju.wait(
         lambda status: all_active_and_idle(status, application),
         delay=5,
@@ -448,12 +452,12 @@ def haproxy_route_tcp_plain_tcp_relation_fixture(
     )
     yield any_charm_haproxy_route_tcp_requirer
 
-    relations = juju.status().apps[configured_application_without_tls].relations.get(
-        "haproxy-route-tcp", []
+    relations = (
+        juju.status()
+        .apps[configured_application_without_tls]
+        .relations.get("haproxy-route-tcp", [])
     )
-    if any(
-        relation.related_app == any_charm_haproxy_route_tcp_requirer for relation in relations
-    ):
+    if any(relation.related_app == any_charm_haproxy_route_tcp_requirer for relation in relations):
         juju.remove_relation(
             f"{configured_application_without_tls}:haproxy-route-tcp",
             any_charm_haproxy_route_tcp_requirer,
