@@ -10,6 +10,7 @@ import pathlib
 import tempfile
 import uuid
 from pathlib import Path
+from typing import Iterator
 
 import jubilant
 import pytest
@@ -424,7 +425,7 @@ def haproxy_route_tcp_plain_tcp_relation_fixture(
     configured_application_without_tls: str,
     any_charm_haproxy_route_tcp_requirer: str,
     juju: jubilant.Juju,
-) -> str:
+) -> Iterator[str]:
     """Integrate the TCP requirer with the no-TLS haproxy application."""
     juju.integrate(
         f"{configured_application_without_tls}:haproxy-route-tcp",
