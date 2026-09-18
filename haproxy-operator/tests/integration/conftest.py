@@ -10,7 +10,6 @@ import pathlib
 import tempfile
 import uuid
 from pathlib import Path
-from typing import Iterator
 
 import jubilant
 import pytest
@@ -390,7 +389,7 @@ def haproxy_route_tcp_plain_tcp_relation_fixture(
     configured_application_with_tls: str,
     any_charm_haproxy_route_tcp_requirer: str,
     juju: jubilant.Juju,
-) -> Iterator[str]:
+) -> str:
     """Integrate the TCP requirer with the haproxy application without TLS termination."""
     juju.integrate(
         f"{configured_application_with_tls}:haproxy-route-tcp",
@@ -416,29 +415,4 @@ def haproxy_route_tcp_plain_tcp_relation_fixture(
             any_charm_haproxy_route_tcp_requirer,
         )
     )
-    yield any_charm_haproxy_route_tcp_requirer
-
-    relations = (
-        juju.status().apps[configured_application_with_tls].relations.get("haproxy-route-tcp", [])
-    )
-    if any(relation.related_app == any_charm_haproxy_route_tcp_requirer for relation in relations):
-        juju.remove_relation(
-            f"{configured_application_with_tls}:haproxy-route-tcp",
-            any_charm_haproxy_route_tcp_requirer,
-        )
-        juju.wait(
-            lambda status: (
-                not any(
-                    relation.related_app == any_charm_haproxy_route_tcp_requirer
-                    for relation in status.apps[configured_application_with_tls].relations.get(
-                        "haproxy-route-tcp", []
-                    )
-                )
-                and all_active_and_idle(
-                    status,
-                    configured_application_with_tls,
-                    any_charm_haproxy_route_tcp_requirer,
-                )
-            ),
-            timeout=JUJU_WAIT_TIMEOUT,
-        )
+    return any_charm_haproxy_route_tcp_requirer

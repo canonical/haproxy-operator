@@ -4,7 +4,6 @@
 """Integration test for client IP log hashing."""
 
 import hashlib
-import time
 
 import jubilant
 import pytest
@@ -34,14 +33,8 @@ def test_client_ip_hash_salt(
 
     # HAProxy's hex converter outputs uppercase.
     expected_hash = hashlib.sha256(("127.0.0.1" + LOG_HASH_SALT).encode()).hexdigest().upper()
-    deadline = time.monotonic() + 30
-    while time.monotonic() < deadline:
-        haproxy_logs = juju.exec("journalctl -u haproxy --no-pager -n 50", unit=unit).stdout
-        if expected_hash in haproxy_logs:
-            break
-        time.sleep(1)
-    else:
-        assert expected_hash in haproxy_logs
+    haproxy_logs = juju.exec("journalctl -u haproxy --no-pager -n 50", unit=unit).stdout
+    assert expected_hash in haproxy_logs
 
     request.getfixturevalue("haproxy_route_tcp_plain_tcp_relation")
     # Fix the source port because %cp logs the client port, not the listener port.
@@ -49,11 +42,5 @@ def test_client_ip_hash_salt(
     assert "pong" in nc_result.stdout
 
     expected_tcp_log = f"{expected_hash}:45555"
-    deadline = time.monotonic() + 30
-    while time.monotonic() < deadline:
-        haproxy_logs = juju.exec("journalctl -u haproxy --no-pager -n 50", unit=unit).stdout
-        if expected_tcp_log in haproxy_logs:
-            break
-        time.sleep(1)
-    else:
-        assert expected_tcp_log in haproxy_logs
+    haproxy_logs = juju.exec("journalctl -u haproxy --no-pager -n 50", unit=unit).stdout
+    assert expected_tcp_log in haproxy_logs
