@@ -10,7 +10,8 @@ html_favicon: ''
 license_name: ''
 license_url: ''
 linkcheck_timeout: 30
-llms_txt_description: ''
+llms_txt_description: This is the documentation for the HAProxy charms, a set of Juju
+    charms that deploy and manage HAProxy for IaaS/VMs.
 matrix: https://matrix.to/#/#charmhub-charmdev:ubuntu.com
 mattermost: ''
 new_domain: canonical.com/juju/docs/haproxy-charm
