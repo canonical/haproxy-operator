@@ -158,7 +158,7 @@ rediraffe_dir_only = True
 # product docs.
 llms_txt_description = textwrap.dedent(
     """\
-    
+    This is the documentation for the HAProxy charms, a set of Juju charms that deploy and manage HAProxy for IaaS/VMs.
     """
 )
 
