@@ -9,7 +9,7 @@ changes:
       [platform-engineering-documentation-files](https://github.com/canonical/platform-engineering-documentation-files),
       a Copier-based solution for managing common files across Platform Engineering documentation projects.
     urls:
-      pr:
+      pr: https://github.com/canonical/haproxy-operator/pull/665
       related_doc:
       related_issue:
     visibility: internal
