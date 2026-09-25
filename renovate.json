@@ -5,7 +5,9 @@
     "config:recommended",
     "group:allNonMajor"
   ],
-  "ignorePaths": [],
+  "ignorePaths": [
+    "docs/**"
+  ],
   "customDatasources": {
     "charmhub": {
       "defaultRegistryUrlTemplate": "https://api.charmhub.io/v2/charms/info/{{packageName}}?fields=channel-map",

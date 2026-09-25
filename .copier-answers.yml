@@ -1,0 +1,25 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: 5875bae
+_src_path: gh:canonical/platform-engineering-documentation-files.git
+author: Canonical Ltd.
+discourse: https://discourse.charmhub.io
+display_contributors: false
+docs_host: canonical.com
+github_url: https://github.com/canonical/haproxy-operator
+html_favicon: ''
+license_name: ''
+license_url: ''
+linkcheck_timeout: 30
+llms_txt_description: ''
+matrix: https://matrix.to/#/#charmhub-charmdev:ubuntu.com
+mattermost: ''
+new_domain: canonical.com/juju/docs/haproxy-charm
+ogp_image: https://assets.ubuntu.com/v1/cc828679-docs_illustration.svg
+old_domain: canonical-haproxy-juju-charm.readthedocs-hosted.com
+product_page: charmhub.io/haproxy
+product_tag: ''
+project: HAProxy charm
+repo_default_branch: main
+repo_folder: /docs/
+rtd_slug: juju/docs/haproxy-charm
+source_edit_link: https://github.com/canonical/haproxy-operator
