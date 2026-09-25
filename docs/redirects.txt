@@ -9,3 +9,7 @@
 "getting-started" "tutorial/getting-started"
 "tutorial/loadbalancing-for-a-grpc-server" "how-to/loadbalancing-for-a-grpc-server"
 "tutorial/loadbalancing-for-an-ftp-server" "how-to/loadbalancing-for-an-ftp-server"
+"reference/doc-cheat-sheet-myst" "reference"
+"reference/doc-cheat-sheet" "reference"
+"reference/style-guide-myst" "reference"
+"reference/style-guide" "reference"
