@@ -36,6 +36,7 @@ header:
     - '**/*_pb2_grpc.py'
     - '**/*_pb2.py'
     - '.readthedocs.yaml'
+    - '.copier-answers.yml'
     - 'docs/**'
     - '.lycheeignore'
     - 'haproxy-route-policy/policy/migrations/*.py'
