@@ -7,8 +7,8 @@ display_contributors: false
 docs_host: canonical.com
 github_url: https://github.com/canonical/haproxy-operator
 html_favicon: ''
-license_name: ''
-license_url: ''
+license_name: Apache-2.0
+license_url: https://github.com/canonical/haproxy-operator/blob/main/LICENSE
 linkcheck_timeout: 30
 llms_txt_description: This is the documentation for the HAProxy charms, a set of Juju
     charms that deploy and manage HAProxy for IaaS/VMs.

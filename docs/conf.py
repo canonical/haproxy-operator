@@ -80,8 +80,8 @@ html_context = {
     "author": author,
     # Documentation license information
     "license": {
-        "name": "",
-        "url": "",
+        "name": "Apache-2.0",
+        "url": "https://github.com/canonical/haproxy-operator/blob/main/LICENSE",
     },
 }
 
