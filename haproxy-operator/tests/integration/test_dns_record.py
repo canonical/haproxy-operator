@@ -27,7 +27,7 @@ def _dig(juju: jubilant.Juju, unit: str, nameserver: str, hostname: str) -> str:
     Returns:
         Raw dig output.
     """
-    return juju.ssh(unit, f"dig +short @{nameserver} {hostname} A")
+    return juju.exec(f"dig +short @{nameserver} {hostname} A", unit=unit).stdout
 
 
 def test_dns_record_resolves_via_bind(

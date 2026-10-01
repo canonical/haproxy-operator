@@ -4,6 +4,7 @@
 
 """Fixtures for haproxy charm integration tests."""
 
+import base64
 import json
 import logging
 import pathlib
@@ -218,6 +219,7 @@ def certificate_provider_application_fixture(
         "self-signed-certificates",
         app=SELF_SIGNED_CERTIFICATES_APP_NAME,
         channel="1/edge",
+        force=True,
     )
     return SELF_SIGNED_CERTIFICATES_APP_NAME
 
@@ -230,15 +232,16 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
         logger.info("identity-platform is already deployed")
         return
     k8s_juju.deploy(
-        "self-signed-certificates", channel="1/stable", revision=317, trust=True
+        "self-signed-certificates", channel="1/stable", revision=317, trust=True, force=True
     )
-    k8s_juju.deploy("hydra", channel="latest/edge", revision=399, trust=True)
-    k8s_juju.deploy("kratos", channel="latest/edge", revision=567, trust=True)
+    k8s_juju.deploy("hydra", channel="latest/edge", revision=399, trust=True, force=True)
+    k8s_juju.deploy("kratos", channel="latest/edge", revision=567, trust=True, force=True)
     k8s_juju.deploy(
         "identity-platform-login-ui-operator",
         channel="latest/edge",
         revision=200,
         trust=True,
+        force=True,
     )
     k8s_juju.deploy(
         "traefik-k8s",
@@ -246,12 +249,14 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
         channel="latest/edge",
         revision=270,
         trust=True,
+        force=True,
     )
     k8s_juju.deploy(
         "postgresql-k8s",
         channel="14/edge",
         base="ubuntu@22.04",
         trust=True,
+        force=True,
         config={
             "profile": "testing",
             "plugin_hstore_enable": "true",
@@ -387,17 +392,12 @@ def deploy_spoe_auth(
 
 def inject_ca_certificate(lxd_juju, unit_name, ca_cert: str):
     """Inject a ca certificate into a juju unit and run update-ca-certificates."""
-    juju = lxd_juju
-    with tempfile.NamedTemporaryFile(dir=".") as tf:
-        tf.write(ca_cert.encode("utf-8"))
-        tf.flush()
-        # the unit could be not the number 0.
-        juju.scp(tf.name, f"{unit_name}:/home/ubuntu/iam.crt")
-        juju.exec(
-            command="sudo mv /home/ubuntu/iam.crt /usr/local/share/ca-certificates",
-            unit=unit_name,
-        )
-        juju.exec(command="sudo update-ca-certificates", unit=unit_name)
+    cert_b64 = base64.b64encode(ca_cert.encode("utf-8")).decode("ascii")
+    lxd_juju.exec(
+        f"echo {cert_b64} | base64 -d | sudo tee /usr/local/share/ca-certificates/iam.crt",
+        unit=unit_name,
+    )
+    lxd_juju.exec(command="sudo update-ca-certificates", unit=unit_name)
 
 
 @pytest.fixture(scope="session")
@@ -426,6 +426,7 @@ def postgresql_fixture(lxd_juju: jubilant.Juju):
         app=POSTGRESQL_APPLICATION,
         channel="16/edge",
         base="ubuntu@24.04",
+        force=True,
     )
     lxd_juju.wait(
         lambda status: jubilant.all_active(status, POSTGRESQL_APPLICATION),
