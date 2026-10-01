@@ -341,6 +341,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/5a/f5/2ed2c938671e1305f05102888231f618af927f79c721f8aed2af5b459697/charmhelpers-1.2.1.tar.gz", hash = "sha256:298bb9e90d9392e2b66d10a5199b1b2d459dc8d5434b897913325904989dd2d7", size = 610181, upload-time = "2022-04-01T13:03:26.021Z" }
 
 [[package]]
+name = "charmlibs-apt"
+version = "1.0.0.post1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "opentelemetry-api" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/77/79/2dfe3a6931c06081492de8ff97043a337339896401e910f46d4613d0a7d0/charmlibs_apt-1.0.0.post1.tar.gz", hash = "sha256:d332959b633f9aa1a3b7c5ec274ff2ef7a5d4482de4ce4d96c36e1dd1b97625d", size = 32034, upload-time = "2026-06-16T05:39:50.799Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/12/e9/da1c8b57de65484ae47b0808ce5c0b2fcf947ebbcdf7abccd2f898411e97/charmlibs_apt-1.0.0.post1-py3-none-any.whl", hash = "sha256:5682758b9de1273d59e7a94f8e861d57ccd4360c510d598610a69b758e5076d1", size = 19282, upload-time = "2026-06-16T05:39:49.474Z" },
+]
+
+[[package]]
 name = "charmlibs-interfaces-tls-certificates"
 version = "1.10.1"
 source = { registry = "https://pypi.org/simple" }
@@ -853,6 +865,7 @@ name = "haproxy-operator"
 version = "0.0.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "charmlibs-apt" },
     { name = "charmlibs-interfaces-tls-certificates" },
     { name = "cosl" },
     { name = "cryptography" },
@@ -918,6 +931,7 @@ unit = [
 
 [package.metadata]
 requires-dist = [
+    { name = "charmlibs-apt", specifier = "~=1.0" },
     { name = "charmlibs-interfaces-tls-certificates", specifier = ">=1.8.1" },
     { name = "cosl", specifier = "==1.10.3" },
     { name = "cryptography", specifier = "==50.0.1" },
