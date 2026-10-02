@@ -1,0 +1,13 @@
+schema_version: 1
+changes:
+  - title: Run Allure workflow only on schedule
+    author: swetha1654
+    type: minor
+    description: |
+      Run Allure workflow only on schedule. Currently it runs for every PR creation.
+    urls:
+      pr: https://github.com/canonical/haproxy-operator/pull/253
+      related_doc:
+      related_issue: https://warthogs.atlassian.net/browse/ISD-4414
+    visibility: hidden
+    highlight: false

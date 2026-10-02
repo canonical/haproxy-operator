@@ -1,0 +1,11 @@
+on:
+  pull_request:
+
+jobs:
+  rtd-docs-checks:
+    uses: canonical/operator-workflows/.github/workflows/docs_rtd.yaml@main
+    secrets: inherit
+    with:
+      enable-sphinx-python-dependency-build-checks: false
+      python-version: '3.12'
+

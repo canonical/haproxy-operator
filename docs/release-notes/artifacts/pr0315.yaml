@@ -1,0 +1,16 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+changes:
+  - title: Added documentation for `haproxy-spoe-auth`
+    author: javierdelapuente
+    type: minor
+    description: |
+      Now the documentation contains a how-to guide and reference page on using HAProxy as a forward
+      authentication proxy with OpenID Connect.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/315
+      related_doc: 
+      related_issue: 
+    visibility: public
+    highlight: false

@@ -1,0 +1,20 @@
+version_schema: 2
+
+changes:
+  - title: Added requests management REST API for haproxy-route-policy app
+    author: tphan025
+    type: minor
+    description: >
+      Added the policy Django app with a BackendRequest model and REST API endpoints
+      for managing backend requests. Implemented GET /api/v1/requests (list with optional
+      status filter), POST /api/v1/requests (bulk create with all requests set to pending),
+      GET /api/v1/requests/<id> (retrieve by ID), and DELETE /api/v1/requests/<id>
+      (idempotent delete). Included hostname validation, test settings with in-memory
+      SQLite, and unit and integration tests for models and views.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/399
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false

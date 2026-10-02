@@ -1,0 +1,16 @@
+schema_version: 1
+changes:
+  - title: Updated Terraform documentation and workflows
+    author: weiiwang01
+    type: minor
+    description: |
+       The Terraform documentation for the code repository has been updated,
+       and a new `terraform-docs` workflow was added. The workflow will
+       automatically add documentation for all the Terraform modules
+       contained in the repository.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/194
+      related_doc: https://github.com/canonical/haproxy-operator/blob/main/terraform/charm/README.md
+      related_issue: 
+    visibility: hidden
+    highlight: false

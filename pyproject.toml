@@ -1,0 +1,51 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+[project]
+name = "haproxy-operator-monorepo"
+version = "0.1.0"
+requires-python = ">=3.12"
+readme = "README.md"
+
+[dependency-groups]
+fmt = [ "ruff" ]
+lint = [
+  "codespell",
+  "jinja2==3.1.6",
+  "jubilant==1.13.0",
+  "mypy",
+  "ops[testing]",
+  "pep8-naming",
+  "pytest",
+  "pytest-jubilant>=2,<3",
+  "requests",
+  "ruff",
+  "snowballstemmer<4",
+  "types-pyyaml",
+  "types-requests",
+]
+integration = [
+  "allure-pytest>=2.8.18",
+  "allure-pytest-collection-report @ git+https://github.com/canonical/data-platform-workflows@v24.0.0#subdirectory=python/pytest_plugins/allure_pytest_collection_report",
+  "httpx[http2]==0.28.1",
+  "jinja2==3.1.6",
+  "jubilant==1.13.0",
+  "juju==3.6.1.3",
+  "opcli",
+  "protobuf==6.33.6",
+  "playwright==1.62.0",
+  "pytest",
+  "pytest-jubilant>=2,<3",
+  "requests==2.34.2",
+  "websockets<18",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+# opcli is published only from the charm-ci git repository, not PyPI.
+opcli = { git = "https://github.com/canonical/charm-ci.git", tag = "v1.0.1" }
+
+[tool.codespell]
+skip = "haproxy-operator"

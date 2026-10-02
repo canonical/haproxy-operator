@@ -1,0 +1,87 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "automerge": true,
+  "extends": [
+    "config:recommended",
+    "group:allNonMajor"
+  ],
+  "ignorePaths": [],
+  "customDatasources": {
+    "charmhub": {
+      "defaultRegistryUrlTemplate": "https://api.charmhub.io/v2/charms/info/{{packageName}}?fields=channel-map",
+      "format": "json",
+      "transformTemplates": [
+        "{\"releases\": [{\"version\": $string($$.(`channel-map`[channel.risk = 'edge' and channel.track = 'latest' and channel.base.architecture = 'amd64' and channel.base.channel = '24.04'].revision.revision))}]}"
+      ]
+    }
+  },
+  "packageRules": [
+    {
+      "enabled": false,
+      "matchFileNames": ["docs/**"]
+    },
+    {
+      "enabled": true,
+      "matchDatasources": [
+        "docker"
+      ],
+      "pinDigests": true
+    },
+    {
+      "matchDatasources": [
+        "custom.charmhub"
+      ],
+      "automerge": true,
+      "enabled": true
+    },
+    {
+      "enabled": false,
+      "matchFileNames": [
+        "rockcraft.yaml"
+      ],
+      "matchUpdateTypes": [
+        "major",
+        "minor",
+        "patch"
+      ]
+    },
+    {
+      "groupName": "charm-ci",
+      "description": "Keep the opcli git dependency (pyproject.toml/uv.lock) and the canonical/charm-ci reusable workflow refs (.github/workflows) in lockstep, since they must always point at the same charm-ci release.",
+      "matchPackageNames": [
+        "opcli",
+        "canonical/charm-ci",
+        "*charm-ci*"
+      ]
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "datasourceTemplate": "docker",
+      "description": "Update base image references",
+      "managerFilePatterns": [
+        "/(^|/)rockcraft.yaml$/"
+      ],
+      "matchStrings": [
+        "# renovate: build-base:\\s+(?<depName>[^:]*):(?<currentValue>[^\\s@]*)(@(?<currentDigest>sha256:[0-9a-f]*))?",
+        "# renovate: base:\\s+(?<depName>[^:]*):(?<currentValue>[^\\s@]*)(@(?<currentDigest>sha256:[0-9a-f]*))?"
+      ],
+      "matchStringsStrategy": "any",
+      "versioningTemplate": "ubuntu"
+    },
+    {
+      "customType": "regex",
+      "fileMatch": ["\\.tftest\\.hcl$", "\\.tf$"],
+      "matchStrings": ["# renovate: depName=\"(?<packageName>[^\"]+)\"\\s*\\n\\s*(?<fieldName>[a-zA-Z0-9_]+)\\s*=\\s*(?<currentValue>\\d+)"],
+      "versioningTemplate": "semver-coerced",
+      "datasourceTemplate": "custom.charmhub"
+    }
+  ],
+  "schedule": [
+    "* * * * 0,6"
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true
+  }
+}

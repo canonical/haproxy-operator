@@ -1,0 +1,13 @@
+schema_version: 1
+changes:
+  - title: Fixed handling of `haproxy-route-tcp` requirer data
+    author: Thanhphan1147
+    type: bugfix
+    description: |
+       Fixed handling of `haproxy-route-tcp` requirer data
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/215
+      related_doc: 
+      related_issue: 
+    visibility: public
+    highlight: true

@@ -1,0 +1,13 @@
+version_schema: 2
+changes:
+  - title: Added missing settings from haproxy-route-tcp relation template
+    author: skatsaounis
+    type: bugfix
+    description: >
+      Added missing settings to the haproxy-route-tcp relation template,
+      including backend timeouts.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/470
+    visibility: public
+    highlight: false

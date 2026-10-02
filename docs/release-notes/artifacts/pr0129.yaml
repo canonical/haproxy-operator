@@ -1,0 +1,14 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+changes:
+  - title: Fixed an ambiguous endpoint in an integration test
+    author: Thanhphan1147
+    type: bugfix
+    description: Fixed an ambiguous endpoint in an integration test.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/129
+      related_doc: 
+      related_issue: 
+    visibility: internal
+    highlight: false

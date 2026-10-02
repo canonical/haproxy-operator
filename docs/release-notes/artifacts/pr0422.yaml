@@ -1,0 +1,21 @@
+version_schema: 2
+
+changes:
+  - title: Added leader-managed Django secrets and admin user bootstrap for route-policy operator
+    author: tphan025
+    type: minor
+    description: >
+      Updated the `haproxy-route-policy-operator` charm to generate and share
+      Django runtime secrets from the leader unit, including a secret key and
+      admin credentials. During reconcile, the charm now configures the snap
+      with the generated secret key and upserts the Django admin user via the
+      snap management command. Non-leader units now wait until shared secrets are
+      available. Added unit tests covering reconcile behavior with existing,
+      missing, and leader-generated secrets.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/422
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false

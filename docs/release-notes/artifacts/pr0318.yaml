@@ -1,0 +1,17 @@
+# --- Release notes change artifact ----
+
+schema_version: 1
+changes:
+  - title: Added the provider side of the `ddos-protection` interface.
+    author: swetha1654
+    type: major
+    description: |
+      Added the provider side of the `ddos-protection` interface and introduced a new
+      validation in the interface provider to ensure that limit policy is not set when the
+      rate limits are not set.
+    urls:
+      pr: https://github.com/canonical/haproxy-operator/pull/318
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false

@@ -1,0 +1,12 @@
+schema_version: 1
+changes:
+  - title: Fix incorrect doc for terraform constraints.
+    author: javierdelapuente
+    type: minor
+    description: Fix incorrect doc for terraform constraints.
+    urls:
+      pr: https://github.com/canonical/haproxy-operator/pull/256
+      related_doc:
+      related_issue:
+    visibility: hidden
+    highlight: false

@@ -1,0 +1,12 @@
+schema_version: 1
+title: Enable merging multiple TCP backends on the same port with SNI routing
+author: tphan025
+type: major
+description: >
+  Added support for merging multiple TCP backends requesting the same port to a single frontend.
+  Backends that don't meet routing requirements (missing SNI or enforce_tls=False) are filtered out
+  and tracked as invalid. Furthermore, backends with tls_terminate=True have priority when merging.
+urls:
+  - https://github.com/canonical/haproxy-operator/pull/355
+visibility: public
+highlight:

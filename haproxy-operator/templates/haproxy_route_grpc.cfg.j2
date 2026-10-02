@@ -1,0 +1,25 @@
+{% for backend in grpc_backends %}
+frontend {{ backend.backend_name }}
+    mode http
+    bind [::]:{{ backend.application_data.external_grpc_port }} v4v6 ssl crt /var/lib/haproxy/certs alpn h2
+    acl acl_host_{{ backend.backend_name }} req.hdr(host),field(1,:) -i {% for hostname in backend.hostname_acls %}{{hostname}} {% endfor +%}
+    {% if backend.path_acl_required %}
+    acl acl_path_{{ backend.backend_name }} path_beg -i {% for path in backend.application_data.paths %}{{ path }} {% endfor +%}
+    {% endif %}
+    {% if backend.deny_path_acl_required %}
+    acl acl_deny_path_{{ backend.backend_name }} path_beg -i {% for path in backend.application_data.deny_paths %}{{ path }} {% endfor +%}
+    {% endif %}
+    use_backend {{ backend.backend_name }} if {% if backend.path_acl_required %}acl_path_{{ backend.backend_name }} {% endif %}acl_host_{{ backend.backend_name }} {% if backend.deny_path_acl_required %}!acl_deny_path_{{ backend.backend_name }}{% endif %}
+
+
+backend {{ backend.backend_name }}
+    balance {{ backend.load_balancing_configuration }}
+    timeout server {{ backend.application_data.timeout.server }}s
+    timeout connect {{ backend.application_data.timeout.connect }}s
+    {% for rewrite_configuration in backend.grpc_rewrite_configurations %}
+    http-request {{ rewrite_configuration }}
+    {% endfor %}
+    {% for server in backend.servers %}
+    server {{ server.server_name }} {{ server.address }}:{{ server.port }}{{ backend.grpc_backend_server_configuration }}
+    {% endfor %}
+{% endfor %}

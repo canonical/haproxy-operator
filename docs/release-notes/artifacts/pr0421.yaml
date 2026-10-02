@@ -1,0 +1,21 @@
+version_schema: 2
+
+changes:
+  - title: Bootstrapped MVP for haproxy-route-policy-operator charm
+    author: tphan025
+    type: minor
+    description: >
+      Added a new machine charm, `haproxy-route-policy-operator`, as an MVP to
+      manage the haproxy-route-policy service. The charm installs and configures
+      the `haproxy-route-policy` snap from PostgreSQL relation data, runs
+      database migrations, starts the gunicorn snap service, and opens port 8080.
+      Included charm metadata/configuration, PostgreSQL relation handling state,
+      supporting policy helpers, vendored data-platform relation library, and
+      initial unit and integration tests.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/421
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false

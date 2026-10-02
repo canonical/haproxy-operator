@@ -1,0 +1,13 @@
+version_schema: 2
+changes:
+  - title: Fix hosts validation in haproxy-route-tcp, and haproxy-route relation libraries
+    author: skatsaounis
+    type: bugfix
+    description: >
+      Fixed hosts validation in the haproxy-route-tcp and haproxy-route relation libraries, ensuring
+      that only valid IP addresses are accepted.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/383
+    visibility: public
+    highlight: false

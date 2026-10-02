@@ -1,0 +1,18 @@
+version_schema: 2
+
+changes:
+  - title: Reconcile on update-status to periodically refresh backend request evaluations
+    author: tphan025
+    type: minor
+    description: >
+      Added an observer for the update-status event in the
+      haproxy-route-policy-operator charm so that backend requests are
+      periodically re-evaluated against the current rule set without
+      requiring a relation change or manual action.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/478
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false

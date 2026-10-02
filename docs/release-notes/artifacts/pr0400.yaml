@@ -1,0 +1,21 @@
+version_schema: 2
+
+changes:
+  - title: Added rules management REST API for haproxy-route-policy app
+    author: tphan025
+    type: minor
+    description: >
+      Added the Rule model with UUID primary key and fields for kind, value, action,
+      priority, and comment. Implemented REST API endpoints for rules: GET /api/v1/rules
+      (list ordered by descending priority), POST /api/v1/rules (create with validation),
+      GET /api/v1/rules/<uuid> (retrieve by ID), PUT /api/v1/rules/<uuid> (partial update),
+      and DELETE /api/v1/rules/<uuid> (idempotent delete). Added RuleSerializer with
+      custom validation for hostname_and_path_match rules including hostname and path
+      checks. Included unit and integration tests for the Rule model and API views.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/400
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false

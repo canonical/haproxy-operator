@@ -1,0 +1,19 @@
+version_schema: 2
+
+changes:
+  - title: Added option forwardfor by default to haproxy-route HTTP backends
+    author: Copilot
+    type: minor
+    description: >
+      Added `option forwardfor` to every HTTP backend in the
+      `haproxy_route.cfg.j2` template so HAProxy automatically set the
+      `X-Forwarded-For` header on proxied requests, allowing backend
+      applications to identify the original client IP. This restored
+      parity with the legacy configuration.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/550
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false

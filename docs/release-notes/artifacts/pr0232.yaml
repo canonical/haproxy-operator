@@ -1,0 +1,15 @@
+# --- Release notes change artifact ----
+
+schema_version: 1
+changes:
+  - title: Add HAProxy SPOE Auth Charm
+    author: tphan025
+    type: major
+    description: |
+      Added a new charm for HAProxy SPOE authentication.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/232
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false

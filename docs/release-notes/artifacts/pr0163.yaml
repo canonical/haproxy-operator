@@ -1,0 +1,14 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+changes:
+  - title: Fixed charm library docstring
+    author: dimaqq
+    type: minor
+    description: Updated the example in the docstring to the actual arguments of the requirer.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/163
+      related_doc: 
+      related_issue: 
+    visibility: hidden
+    highlight: false

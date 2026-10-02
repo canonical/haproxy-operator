@@ -1,0 +1,855 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+"""Unit tests for the haproxy charm."""
+
+import json
+import logging
+import pathlib
+import re
+from unittest.mock import ANY, MagicMock, patch
+
+import ops
+import ops.testing
+import pytest
+import scenario
+
+import tls_relation
+from charm import CharmStateValidationBaseError, HAProxyCharm
+from tests.unit.conftest import (
+    TEST_EXTERNAL_HOSTNAME_CONFIG,
+    TEST_LOG_HASH_CLIENT_ADDRESS,
+    TEST_LOG_HASH_SALT,
+)
+
+from .conftest import build_haproxy_route_relation, build_spoe_auth_relation
+from .helper import RegexMatcher
+
+logger = logging.getLogger(__name__)
+
+
+def test_install(context_with_install_mock, base_state):
+    """
+    arrange: prepare some state with peer relation
+    act: run start
+    assert: status is active
+    """
+    context, (install_mock, reconcile_default_mock, *_) = context_with_install_mock
+    state = ops.testing.State(**base_state)
+    context.run(context.on.install(), state)
+    install_mock.assert_called_once()
+    reconcile_default_mock.assert_called_once()
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+@pytest.mark.parametrize(
+    "configure_salt,expected_present",
+    [(False, False), (True, True)],
+    ids=["salt_removed", "salt_configured"],
+)
+def test_config_changed_client_ip_hash_salt(
+    monkeypatch: pytest.MonkeyPatch, peer_relation, configure_salt, expected_present
+):
+    """
+    arrange: prepare a state with or without a client IP hash salt.
+    act: run config-changed.
+    assert: the rendered config hashes client IPs only when the salt is configured.
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    context = ops.testing.Context(HAProxyCharm)
+    log_hash_salt = ops.testing.Secret(tracked_content={"salt": TEST_LOG_HASH_SALT})
+    state = ops.testing.State(relations=[peer_relation], leader=True)
+    if configure_salt:
+        state = ops.testing.State(
+            relations=[peer_relation],
+            leader=True,
+            config={"client-ip-hash-salt": log_hash_salt.id},
+            secrets=[log_hash_salt],
+        )
+
+    context.run(context.on.config_changed(), state)
+
+    render_file_mock.assert_called_once()
+    config_content = render_file_mock.call_args.args[1]
+    assert (f'log-format "{TEST_LOG_HASH_CLIENT_ADDRESS}' in config_content) is expected_present
+    assert (
+        f'error-log-format "{TEST_LOG_HASH_CLIENT_ADDRESS}' in config_content
+    ) is expected_present
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_config_changed_client_ip_hash_salt_rejects_inaccessible_secret(
+    monkeypatch: pytest.MonkeyPatch, peer_relation
+):
+    """
+    arrange: configure an ID for a salt secret that is not available to the charm.
+    act: run config-changed.
+    assert: the unit is blocked and the HAProxy config is not rendered.
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    context = ops.testing.Context(HAProxyCharm)
+    inaccessible_secret = ops.testing.Secret(tracked_content={"salt": TEST_LOG_HASH_SALT})
+    state = ops.testing.State(
+        relations=[peer_relation],
+        leader=True,
+        config={"client-ip-hash-salt": inaccessible_secret.id},
+    )
+
+    out = context.run(context.on.config_changed(), state)
+
+    assert out.unit_status == ops.testing.BlockedStatus(
+        "The client-ip-hash-salt secret does not exist or cannot be accessed."
+    )
+    render_file_mock.assert_not_called()
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+@pytest.mark.parametrize(
+    "secret_content",
+    [
+        pytest.param({"other": "value"}, id="missing_key"),
+        pytest.param({"salt": ""}, id="empty"),
+        pytest.param({"salt": "   "}, id="whitespace"),
+    ],
+)
+def test_config_changed_client_ip_hash_salt_rejects_blank_value(
+    monkeypatch: pytest.MonkeyPatch,
+    peer_relation,
+    secret_content: dict[str, str],
+):
+    """
+    arrange: prepare a state with hashing enabled and a missing or blank salt.
+    act: run config-changed.
+    assert: the unit is blocked and the HAProxy config is not rendered.
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    context = ops.testing.Context(HAProxyCharm)
+    log_hash_salt = ops.testing.Secret(tracked_content=secret_content)
+    state = ops.testing.State(
+        relations=[peer_relation],
+        leader=True,
+        config={"client-ip-hash-salt": log_hash_salt.id},
+        secrets=[log_hash_salt],
+    )
+
+    out = context.run(context.on.config_changed(), state)
+
+    assert out.unit_status == ops.testing.BlockedStatus(
+        "The client-ip-hash-salt secret must contain a non-empty 'salt' value."
+    )
+    render_file_mock.assert_not_called()
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+@pytest.mark.parametrize(
+    "salt",
+    [
+        pytest.param('unsafe"salt', id="quote"),
+        pytest.param("unsafe\\salt", id="backslash"),
+        pytest.param("unsafe\nsalt", id="control_character"),
+        pytest.param("unsafe$salt", id="dollar_sign"),
+    ],
+)
+def test_config_changed_client_ip_hash_salt_rejects_unsafe_value(
+    monkeypatch: pytest.MonkeyPatch,
+    peer_relation,
+    salt: str,
+):
+    """
+    arrange: prepare a state with hashing enabled and a salt containing an unsafe character.
+    act: run config-changed.
+    assert: the unit is blocked and the HAProxy config is not rendered.
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    context = ops.testing.Context(HAProxyCharm)
+    log_hash_salt = ops.testing.Secret(tracked_content={"salt": salt})
+    state = ops.testing.State(
+        relations=[peer_relation],
+        leader=True,
+        config={"client-ip-hash-salt": log_hash_salt.id},
+        secrets=[log_hash_salt],
+    )
+
+    out = context.run(context.on.config_changed(), state)
+
+    assert out.unit_status == ops.testing.BlockedStatus(
+        "The client-ip-hash-salt secret must not contain control characters, "
+        "double quotes, backslashes, or dollar signs."
+    )
+    render_file_mock.assert_not_called()
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_non_leader_waiting_for_peer_data(peer_relation, certificates_integration):
+    """
+    arrange: prepare state as non-leader with peer relation but no cert data in databag.
+    act: trigger config changed.
+    assert: unit status is WaitingStatus because peer cert data is not available yet.
+    """
+    ctx = ops.testing.Context(HAProxyCharm)
+    state = ops.testing.State(
+        relations=[peer_relation, certificates_integration],
+        leader=False,
+        config={"external-hostname": "haproxy.internal"},
+    )
+    out = ctx.run(ctx.on.config_changed(), state)
+    assert out.unit_status.name == ops.testing.WaitingStatus.name
+
+
+def test_ingress_per_unit_mode_success(
+    context_with_install_mock, base_state_with_ingress_per_unit
+):
+    """
+    arrange: prepare some state with ingress per unit relation
+    act: trigger config changed hook
+    assert: reconcile_ingress is called once
+    """
+    context, (*_, reconcile_ingress_mock) = context_with_install_mock
+    state = ops.testing.State(**base_state_with_ingress_per_unit)
+    context.run(context.on.config_changed(), state)
+    reconcile_ingress_mock.assert_called_once()
+
+
+def test_ingress_per_unit_data_validation_error(
+    context_with_install_mock, base_state_with_ingress_per_unit
+):
+    """
+    arrange: prepare some state with ingress per unit relation
+    act: trigger config changed hook
+    assert: haproxy is in a blocked state
+    """
+    context, _ = context_with_install_mock
+    base_state_with_ingress_per_unit["relations"][1] = scenario.Relation(
+        endpoint="ingress-per-unit", remote_app_name="requirer", remote_units_data={0: {}}
+    )
+    state = ops.testing.State(**base_state_with_ingress_per_unit)
+    out = context.run(context.on.config_changed(), state)
+    assert out.unit_status == ops.testing.BlockedStatus(
+        "Validation of ingress per unit relation data failed."
+    )
+
+
+def test_ingress_mode_success(context_with_install_mock, base_state_with_ingress):
+    """
+    arrange: prepare some state with ingress relation
+    act: trigger config changed hook
+    assert: reconcile ingress is called once
+    """
+    context, (*_, reconcile_ingress_mock) = context_with_install_mock
+    state = ops.testing.State(**base_state_with_ingress)
+    context.run(context.on.config_changed(), state)
+    reconcile_ingress_mock.assert_called_once()
+
+
+def test_ingress_data_validation_error(context_with_install_mock, base_state_with_ingress):
+    """
+    arrange: prepare some state with ingress relation
+    act: trigger config changed hook
+    assert: haproxy is in a blocked state
+    """
+    context, _ = context_with_install_mock
+    base_state_with_ingress["relations"][1] = scenario.Relation(
+        endpoint="ingress", remote_app_name="requirer", remote_app_data={}
+    )
+    state = ops.testing.State(**base_state_with_ingress)
+    out = context.run(context.on.config_changed(), state)
+    assert out.unit_status == ops.testing.BlockedStatus(
+        "Validation of ingress relation data failed."
+    )
+
+
+def test_haproxy_route(context_with_reconcile_mock, base_state_haproxy_route):
+    """
+    arrange: prepare some state with peer relation
+    act: run start
+    assert: status is active
+    """
+    context, reconcile_mock = context_with_reconcile_mock
+    state = ops.testing.State(**base_state_haproxy_route)
+    context.run(context.on.config_changed(), state)
+    reconcile_mock.assert_called_once()
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_ca_certificates_available(
+    monkeypatch: pytest.MonkeyPatch, receive_ca_certs_relation, ca_certificate_and_key
+):
+    """
+    arrange: Prepare a state with the receive-ca-cert.
+    act: Run relation_changed for the receive-ca-cert relation.
+    assert: The unit is active and the certificate in the relation was written to the file.
+    """
+    ca_certificate, _ = ca_certificate_and_key
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("tls_relation.render_file", render_file_mock)
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+
+    mock_cas_dir = MagicMock()
+    mock_cas_dir.exists.return_value = False
+    monkeypatch.setattr("tls_relation.HAPROXY_CAS_DIR", mock_cas_dir)
+
+    state = ops.testing.State(
+        relations=frozenset({receive_ca_certs_relation}),
+        leader=True,
+        model=ops.testing.Model(name="haproxy-tutorial"),
+        app_status=ops.testing.ActiveStatus(""),
+        unit_status=ops.testing.ActiveStatus(""),
+    )
+
+    ctx = ops.testing.Context(HAProxyCharm)
+    out = ctx.run(
+        ctx.on.relation_changed(receive_ca_certs_relation),
+        state,
+    )
+    mock_cas_dir.mkdir.assert_called_once()
+    render_file_mock.assert_any_call(
+        tls_relation.HAPROXY_CAS_FILE, ca_certificate.raw + "\n", 0o644
+    )
+    assert out.app_status == ops.testing.ActiveStatus("")
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_ca_certificates_removed(monkeypatch: pytest.MonkeyPatch, receive_ca_certs_relation):
+    """
+    arrange: Prepare a state with the receive-ca-cert and the external accesses mocked.
+    act: Run relation_broken for the receive-ca-cert relation.
+    assert: The CA certificates file is removed from the unit.
+    """
+    monkeypatch.setattr("haproxy.render_file", MagicMock())
+
+    mock_cas_file = MagicMock()
+    monkeypatch.setattr("tls_relation.HAPROXY_CAS_FILE", mock_cas_file)
+
+    state = ops.testing.State(
+        relations=frozenset({receive_ca_certs_relation}),
+        model=ops.testing.Model(name="haproxy-tutorial"),
+        app_status=ops.testing.ActiveStatus(""),
+        unit_status=ops.testing.ActiveStatus(""),
+    )
+
+    ctx = ops.testing.Context(HAProxyCharm)
+    out = ctx.run(
+        ctx.on.relation_broken(receive_ca_certs_relation),
+        state,
+    )
+
+    mock_cas_file.unlink.assert_called_once()
+    assert out.app_status == ops.testing.ActiveStatus("")
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_get_proxied_endpoints_no_backend_filter() -> None:
+    """
+    arrange: create state with one haproxy-route relation containing
+        hostname, additional_hostnames, and paths.
+    act: trigger the get-proxied-endpoints action without a backend filter.
+    assert: returns a list of all proxied endpoints for every hostname/path combination.
+    """
+    context = ops.testing.Context(HAProxyCharm)
+
+    haproxy_route_relation = ops.testing.Relation(
+        "haproxy-route",
+        remote_app_data={
+            "hostname": f'"{TEST_EXTERNAL_HOSTNAME_CONFIG}"',
+            "additional_hostnames": json.dumps(
+                [
+                    f"ok2.{TEST_EXTERNAL_HOSTNAME_CONFIG}",
+                    f"ok3.{TEST_EXTERNAL_HOSTNAME_CONFIG}",
+                ]
+            ),
+            "paths": '["/v1", "/v2"]',
+            "ports": "[443]",
+            "protocol": '"http"',
+            "service": '"haproxy-tutorial-ingress-configurator"',
+        },
+        remote_units_data={0: {"address": '"10.75.1.129"'}},
+    )
+    charm_state = ops.testing.State(
+        relations=[haproxy_route_relation],
+        leader=True,
+        model=ops.testing.Model(name="haproxy-tutorial"),
+        app_status=ops.testing.ActiveStatus(),
+        unit_status=ops.testing.ActiveStatus(),
+    )
+
+    context.run(context.on.action("get-proxied-endpoints"), charm_state)
+
+    out = context.action_results
+    assert out is not None
+
+    assert set(json.loads(out["endpoints"])) == {
+        "https://haproxy.internal/v1",
+        "https://haproxy.internal/v2",
+        "https://ok2.haproxy.internal/v1",
+        "https://ok2.haproxy.internal/v2",
+        "https://ok3.haproxy.internal/v1",
+        "https://ok3.haproxy.internal/v2",
+    }
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_get_proxied_endpoints_no_backend_filter_no_endpoints() -> None:
+    """
+    arrange: create state with no haproxy-route relations.
+    act: trigger the get-proxied-endpoints action without a backend filter.
+    assert: returns an empty list.
+    """
+    context = ops.testing.Context(HAProxyCharm)
+    charm_state = ops.testing.State(
+        relations=[],
+        leader=True,
+        model=ops.testing.Model(name="haproxy-tutorial"),
+        app_status=ops.testing.ActiveStatus(),
+        unit_status=ops.testing.ActiveStatus(),
+    )
+
+    context.run(context.on.action("get-proxied-endpoints"), charm_state)
+
+    out = context.action_results
+
+    assert out == {"endpoints": "[]"}
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_get_proxied_endpoints_with_backend_filter() -> None:
+    """
+    arrange: create state with a haproxy-route relation for a specific backend.
+    act: trigger the get-proxied-endpoints action with the backend filter.
+    assert: returns a list containing the endpoint for that backend.
+    """
+    service_name = "haproxy-tutorial-ingress-configurator"
+    context = ops.testing.Context(HAProxyCharm)
+    haproxy_route_relation = ops.testing.Relation(
+        "haproxy-route",
+        remote_app_data={
+            "hostname": f'"{TEST_EXTERNAL_HOSTNAME_CONFIG}"',
+            "ports": "[443]",
+            "protocol": '"http"',
+            "service": f'"{service_name}"',
+        },
+        remote_units_data={0: {"address": '"10.75.1.129"'}},
+    )
+    charm_state = ops.testing.State(
+        relations=[haproxy_route_relation],
+        leader=True,
+        model=ops.testing.Model(name="haproxy-tutorial"),
+        app_status=ops.testing.ActiveStatus(),
+        unit_status=ops.testing.ActiveStatus(),
+    )
+
+    context.run(
+        context.on.action("get-proxied-endpoints", params={"backend": service_name}),
+        charm_state,
+    )
+
+    out = context.action_results
+
+    assert out == {"endpoints": f'["https://{TEST_EXTERNAL_HOSTNAME_CONFIG}"]'}
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_get_proxied_endpoints_with_backend_filter_non_existing_backend() -> None:
+    """
+    arrange: create state with a haproxy-route relation for a specific backend.
+    act: trigger the get-proxied-endpoints action with a non-existing backend name.
+    assert: returns an empty list when the backend does not exist.
+    """
+    service_name = "haproxy-tutorial-ingress-configurator"
+    context = ops.testing.Context(HAProxyCharm)
+    haproxy_route_relation = ops.testing.Relation(
+        "haproxy-route",
+        remote_app_data={
+            "hostname": f'"{TEST_EXTERNAL_HOSTNAME_CONFIG}"',
+            "ports": "[443]",
+            "protocol": '"http"',
+            "service": f'"{service_name}"',
+        },
+        remote_units_data={0: {"address": '"10.75.1.129"'}},
+    )
+    charm_state = ops.testing.State(
+        relations=[haproxy_route_relation],
+        leader=True,
+        model=ops.testing.Model(name="haproxy-tutorial"),
+        app_status=ops.testing.ActiveStatus(),
+        unit_status=ops.testing.ActiveStatus(),
+    )
+
+    context.run(
+        context.on.action("get-proxied-endpoints", params={"backend": "random_name"}),
+        charm_state,
+    )
+
+    out = context.action_results
+
+    assert out == {"endpoints": "[]"}
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_spoe_auth(monkeypatch: pytest.MonkeyPatch, certificates_integration):
+    """
+    arrange: Prepare a haproxy with haproxy_route and spoe.
+    act: trigger relation changed.
+    assert: The haproxy.conf and spoe_auth.conf files are writtern with the relevant lines.
+    """
+    monkeypatch.setattr(
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4.private_key",
+        MagicMock(),
+    )
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+
+    spoe_auth_relation = build_spoe_auth_relation()
+    haproxy_route_relation = build_haproxy_route_relation()
+
+    ctx = ops.testing.Context(HAProxyCharm)
+    state = ops.testing.State(
+        relations=[certificates_integration, spoe_auth_relation, haproxy_route_relation],
+        leader=True,
+    )
+    out = ctx.run(
+        ctx.on.relation_changed(spoe_auth_relation),
+        state,
+    )
+    assert render_file_mock.call_count == 2
+    # It should write the files:
+    # - /etc/haproxy/spoe_auth.conf
+    # - /etc/haproxy/haproxy.cfg
+    # Test a random line related to spoe-auth in each file.
+    render_file_mock.assert_any_call(
+        pathlib.Path("/etc/haproxy/spoe_auth.conf"),
+        RegexMatcher("event on-frontend-http-request"),
+        ANY,
+    )
+    render_file_mock.assert_any_call(
+        pathlib.Path("/etc/haproxy/haproxy.cfg"),
+        RegexMatcher("filter spoe engine spoe-auth"),
+        ANY,
+    )
+    assert out.unit_status == ops.testing.ActiveStatus("1/1 valid relations")
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_two_spoe_auth(monkeypatch: pytest.MonkeyPatch, certificates_integration):
+    """
+    arrange: are a haproxy with two haproxy_route and two spoe.
+    act: trigger relation changed.
+    assert: The haproxy.conf and spoe_auth.conf files are writtern with the relevant lines.
+    """
+    monkeypatch.setattr(
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4.private_key",
+        MagicMock(),
+    )
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+
+    spoe_auth_relation_1 = build_spoe_auth_relation(hostname="haproxy1.internal")
+    haproxy_route_relation_1 = build_haproxy_route_relation(
+        hostname="haproxy1.internal", service="service1"
+    )
+    spoe_auth_relation_2 = build_spoe_auth_relation(hostname="haproxy2.internal")
+    haproxy_route_relation_2 = build_haproxy_route_relation(
+        hostname="haproxy2.internal", service="service2"
+    )
+
+    ctx = ops.testing.Context(HAProxyCharm)
+    state = ops.testing.State(
+        relations=[
+            certificates_integration,
+            spoe_auth_relation_1,
+            spoe_auth_relation_2,
+            haproxy_route_relation_1,
+            haproxy_route_relation_2,
+        ],
+        leader=True,
+    )
+    out = ctx.run(
+        ctx.on.relation_changed(spoe_auth_relation_1),
+        state,
+    )
+    assert render_file_mock.call_count == 2
+    # It should write the files:
+    # - /etc/haproxy/spoe_auth.conf
+    # - /etc/haproxy/haproxy.cfg
+    # assert some required information in the files for each relation.
+    spoe_rel_ids = {rel.id for rel in out.relations if rel.endpoint == "spoe-auth"}
+    for rel in spoe_rel_ids:
+        render_file_mock.assert_any_call(
+            pathlib.Path("/etc/haproxy/spoe_auth.conf"),
+            RegexMatcher(re.escape(f"[spoe-auth-{rel}]")),
+            ANY,
+        )
+        render_file_mock.assert_any_call(
+            pathlib.Path("/etc/haproxy/haproxy.cfg"),
+            RegexMatcher(
+                re.escape(f"filter spoe engine spoe-auth-{rel} config /etc/haproxy/spoe_auth.conf")
+            ),
+            ANY,
+        )
+    assert out.unit_status == ops.testing.ActiveStatus("2/2 valid relations")
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_spoe_auth_invalid_data(monkeypatch: pytest.MonkeyPatch, certificates_integration):
+    """
+    arrange: Prepare a haproxy with haproxy_route and spoe with wrong data in the spoe-auth relation.
+    act: trigger relation changed.
+    assert: No file should be updated and the charm should be blocked.
+    """
+    monkeypatch.setattr(
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4.private_key",
+        MagicMock(),
+    )
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+
+    spoe_auth_relation = build_spoe_auth_relation()
+    del spoe_auth_relation.remote_app_data["hostname"]
+    haproxy_route_relation = build_haproxy_route_relation()
+
+    ctx = ops.testing.Context(HAProxyCharm)
+    state = ops.testing.State(
+        relations=[certificates_integration, spoe_auth_relation, haproxy_route_relation],
+        leader=True,
+    )
+    out = ctx.run(
+        ctx.on.relation_changed(spoe_auth_relation),
+        state,
+    )
+    assert render_file_mock.call_count == 0
+    assert out.unit_status.name == ops.testing.BlockedStatus.name
+    assert spoe_auth_relation.remote_app_name in out.unit_status.message
+
+
+def test_dns_record_relation_joined_triggers_reconcile(
+    context_with_dns_mock, base_state, dns_record_relation
+):
+    """
+    arrange: charm state with dns-record relation
+    act: dns_record_relation_joined event fires
+    assert: DNSRecordService.update_dns_records is called (via reconcile)
+    """
+    context, update_dns_mock = context_with_dns_mock
+    state = ops.testing.State(
+        **{
+            **base_state,
+            "relations": [*base_state.get("relations", []), dns_record_relation],
+            "leader": True,
+        }
+    )
+    context.run(context.on.relation_joined(dns_record_relation), state)
+    update_dns_mock.assert_called_once()
+
+
+def test_dns_record_relation_created_triggers_reconcile(
+    context_with_dns_mock, base_state, dns_record_relation
+):
+    """
+    arrange: charm state with dns-record relation
+    act: dns_record_relation_created event fires
+    assert: DNSRecordService.update_dns_records is called (via reconcile)
+    """
+    context, update_dns_mock = context_with_dns_mock
+    state = ops.testing.State(
+        **{
+            **base_state,
+            "relations": [*base_state.get("relations", []), dns_record_relation],
+            "leader": True,
+        }
+    )
+    context.run(context.on.relation_created(dns_record_relation), state)
+    update_dns_mock.assert_called_once()
+
+
+def test_dns_update_uses_vip_when_ha_active(
+    context_with_dns_mock, base_state, dns_record_relation
+):
+    """
+    arrange: HA relation active with vip config set
+    act: config_changed fires
+    assert: update_dns_records is called with the VIP as the IP
+    """
+    context, update_dns_mock = context_with_dns_mock
+    ha_relation = scenario.Relation(
+        endpoint="ha",
+        remote_app_name="hacluster",
+        remote_units_data={0: {}},
+    )
+    state = ops.testing.State(
+        config={"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "vip": "192.168.1.100"},
+        relations=[*base_state.get("relations", []), dns_record_relation, ha_relation],
+        leader=True,
+    )
+    context.run(context.on.config_changed(), state)
+
+    calls = update_dns_mock.call_args_list
+    assert any(call_args.args[1] == "192.168.1.100" for call_args in calls)
+
+
+def test_dns_update_uses_binding_ip_when_no_ha(
+    context_with_dns_mock, base_state, dns_record_relation
+):
+    """
+    arrange: no HA relation, standard network binding
+    act: config_changed fires
+    assert: update_dns_records is called with the binding ingress address
+    """
+    context, update_dns_mock = context_with_dns_mock
+    state = ops.testing.State(
+        config={"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG},
+        relations=[*base_state.get("relations", []), dns_record_relation],
+        leader=True,
+    )
+    with patch("ops.model.Model.get_binding") as mock_binding:
+        mock_network = MagicMock()
+        mock_network.network.ingress_addresses = ["10.0.0.5"]
+        mock_binding.return_value = mock_network
+        context.run(context.on.config_changed(), state)
+
+    calls = update_dns_mock.call_args_list
+    assert any(call_args.args[1] == "10.0.0.5" for call_args in calls)
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_get_configuration_returns_disk_config(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    arrange: mock the config file on disk with known content.
+    act: trigger the get-configuration action.
+    assert: the on-disk file content is returned unchanged.
+    """
+    content = "global\n    maxconn 4096\n\nfrontend default\n    bind :80\n"
+    monkeypatch.setattr("charm.file_exists", MagicMock(return_value=True))
+    monkeypatch.setattr("charm.read_file", MagicMock(return_value=content))
+    context = ops.testing.Context(HAProxyCharm)
+    state = ops.testing.State(leader=True)
+
+    context.run(context.on.action("get-configuration"), state)
+
+    assert context.action_results == {"configuration": content, "source": "disk"}
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_get_configuration_redacts_log_hash_salt(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    arrange: mock on-disk formats containing a salt different from the current secret.
+    act: trigger the get-configuration action.
+    assert: every on-disk salt is redacted without changing the rest of the configuration.
+    """
+    content = "\n".join(
+        [
+            f'log-format "{TEST_LOG_HASH_CLIENT_ADDRESS} HTTP"',
+            f'error-log-format "{TEST_LOG_HASH_CLIENT_ADDRESS} ERROR"',
+            f'log-format "{TEST_LOG_HASH_CLIENT_ADDRESS} TCP"',
+        ]
+    )
+    monkeypatch.setattr("charm.file_exists", MagicMock(return_value=True))
+    monkeypatch.setattr("charm.read_file", MagicMock(return_value=content))
+    context = ops.testing.Context(HAProxyCharm)
+    log_hash_salt = ops.testing.Secret(tracked_content={"salt": "different-current-salt"})
+    state = ops.testing.State(
+        leader=True,
+        config={"client-ip-hash-salt": log_hash_salt.id},
+        secrets=[log_hash_salt],
+    )
+
+    context.run(context.on.action("get-configuration"), state)
+
+    results = context.action_results
+    assert results is not None
+    configuration = results["configuration"]
+    assert configuration == content.replace(TEST_LOG_HASH_SALT, "<redacted>")
+    assert TEST_LOG_HASH_SALT not in configuration
+    assert configuration.count("<redacted>") == 3
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_get_configuration_missing_file_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    arrange: mock the config file as absent from disk.
+    act: trigger the get-configuration action.
+    assert: the action fails with a clear message rather than returning empty.
+    """
+    monkeypatch.setattr("charm.file_exists", MagicMock(return_value=False))
+    context = ops.testing.Context(HAProxyCharm)
+    state = ops.testing.State(leader=True)
+
+    with pytest.raises(ops.testing.ActionFailed) as exc_info:
+        context.run(context.on.action("get-configuration"), state)
+
+    assert "not found" in exc_info.value.message
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+@pytest.mark.parametrize(
+    "on_disk_config, rendered_default, expect_default_warning",
+    [
+        pytest.param(
+            "global\n    maxconn 4096\n",
+            "global\n    maxconn 4096\n",
+            True,
+            id="matches-default",
+        ),
+        pytest.param(
+            "frontend haproxy\n    bind :80\n",
+            "global\n    maxconn 4096\n",
+            False,
+            id="differs-from-default",
+        ),
+    ],
+)
+def test_get_configuration_default_warning(
+    monkeypatch: pytest.MonkeyPatch,
+    on_disk_config: str,
+    rendered_default: str,
+    expect_default_warning: bool,
+) -> None:
+    """
+    arrange: mock the on-disk config to either match or differ from the rendered default.
+    act: trigger the get-configuration action.
+    assert: the configuration is returned, and the "matches default" warning is logged
+        only when the config is the default.
+    """
+    monkeypatch.setattr("charm.file_exists", MagicMock(return_value=True))
+    monkeypatch.setattr("charm.read_file", MagicMock(return_value=on_disk_config))
+    monkeypatch.setattr(
+        "charm.HAProxyService.render_default_config",
+        MagicMock(return_value=rendered_default),
+    )
+    context = ops.testing.Context(HAProxyCharm)
+    state = ops.testing.State(leader=True)
+
+    context.run(context.on.action("get-configuration"), state)
+
+    assert context.action_results == {"configuration": on_disk_config, "source": "disk"}
+    warned = any("default configuration" in log.lower() for log in context.action_logs)
+    assert warned == expect_default_warning
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_get_configuration_notes_invalid_charm_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    arrange: the config file is present, but building the charm state raises.
+    act: trigger the get-configuration action.
+    assert: the configuration is still returned, and a "could not determine" note is
+        logged instead of silently claiming it is not the default.
+    """
+    content = "frontend haproxy\n    bind :80\n"
+    monkeypatch.setattr("charm.file_exists", MagicMock(return_value=True))
+    monkeypatch.setattr("charm.read_file", MagicMock(return_value=content))
+    monkeypatch.setattr(
+        "charm.CharmState.from_charm",
+        MagicMock(side_effect=CharmStateValidationBaseError("invalid config")),
+    )
+    context = ops.testing.Context(HAProxyCharm)
+    state = ops.testing.State(leader=True)
+
+    context.run(context.on.action("get-configuration"), state)
+
+    results = context.action_results
+    assert results is not None
+    assert results == {"configuration": content, "source": "disk"}
+    assert any("could not determine" in log.lower() for log in context.action_logs)
+    assert not any("matches the default" in log.lower() for log in context.action_logs)

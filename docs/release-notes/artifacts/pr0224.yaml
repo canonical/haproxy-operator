@@ -1,0 +1,16 @@
+schema_version: 1
+changes:
+  - title: Added `haproxy-spoe-auth` snap
+    author: Thanhphan1147
+    type: major
+    description: |
+       Now the repository contains a snap package running a
+       Stream Processing Offload Engine (SPOE) agent for the charm.
+       The SPOE agent works with HAProxy to act as an authentication
+       proxy for both LDAP and OIDC.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/224
+      related_doc: 
+      related_issue: 
+    visibility: public
+    highlight: false

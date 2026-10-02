@@ -1,0 +1,14 @@
+# --- Release notes artifact ----
+
+schema_version: 1
+changes:
+  - title: Updated documentation
+    author: erinecon
+    type: minor
+    description: Added Contents section to documentation overview page.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/137
+      related_doc: 
+      related_issue: 
+    visibility: hidden
+    highlight: false

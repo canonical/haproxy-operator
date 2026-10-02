@@ -1,0 +1,14 @@
+schema_version: 1
+changes:
+  - title:  run renovate only twice a month
+    author: javierdelapuente
+    type: minor
+    description: |
+      Run renovate only twice a month except for vulnerability alerts.
+      Also use allNonMajor.
+    urls:
+      pr: https://github.com/canonical/haproxy-operator/pull/262
+      related_doc:
+      related_issue:
+    visibility: internal
+    highlight: false

@@ -1,0 +1,18 @@
+version_schema: 2
+
+changes:
+  - title: Publish haproxy-route backend requests to policy provider and refactor relation observers
+    author: tphan025
+    type: minor
+    description: >
+      Refactored the repetitive relation event observer registration. 
+      Added logic so the leader unit publishes backend requests
+      derived from haproxy-route requirers to the haproxy-route-policy
+      provider during the reconcile loop.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/463
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false

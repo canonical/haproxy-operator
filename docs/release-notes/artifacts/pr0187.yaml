@@ -1,0 +1,14 @@
+schema_version: 1
+changes:
+  - title: Added `rsyslog` configuration when HAProxy is installed
+    author: Thanhphan1147
+    type: minor
+    description: |
+      Now the `rsyslog` configuration is added when the HAProxy package
+      is installed, setting the logging destination to the unix socket.      
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/187
+      related_doc: 
+      related_issue: 
+    visibility: public
+    highlight: false

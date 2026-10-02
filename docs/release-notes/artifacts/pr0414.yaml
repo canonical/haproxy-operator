@@ -1,0 +1,19 @@
+# Version of the artifact schema
+version_schema: 2
+
+# The key holding the change(s)
+changes:
+- title: Updated contributing guidelines
+  author: erinecon
+  type: minor
+  description: |
+    Now the contributing guidelines for code development and documentation
+    contain an AI usage policy.
+  urls:
+    pr: 
+      - https://github.com/canonical/haproxy-operator/pull/414
+    related_doc: https://documentation.ubuntu.com/haproxy-charm/latest/how-to/contribute/
+    related_issue: # only applicable if there's a corresponding GitHub issue
+  visibility: hidden
+  highlight: false
+

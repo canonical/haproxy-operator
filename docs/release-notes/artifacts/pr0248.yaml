@@ -1,0 +1,15 @@
+
+schema_version: 1
+changes:
+  - title: Refine error and status messages.
+    author: tphan025
+    type: minor
+    description: |
+      Update the log output to reduce volume and provide better context.
+       Update some status messages that are not clear.
+    urls:
+      pr: https://github.com/canonical/haproxy-operator/pull/248
+      related_doc:
+      related_issue:
+    visibility: hidden
+    highlight: false

@@ -1,0 +1,23 @@
+version_schema: 2
+
+changes:
+  - title: Added allowed-hosts configuration support to haproxy-route-policy-operator
+    author: tphan025
+    type: minor
+    description: >
+      Added a new `allowed-hosts` charm configuration option for
+      `haproxy-route-policy-operator` and wired it into snap configuration as a
+      JSON-encoded `DJANGO_ALLOWED_HOSTS` value. Introduced a dedicated policy
+      state module to centralize shared operator information (allowed hosts,
+      admin credentials, secret key), including validation of hostnames/IP
+      addresses. Updated charm reconcile flow to consume the new state model and
+      refined leader/non-leader behavior for migration and admin-user updates.
+      Added unit tests for allowed-hosts validation/serialization and updated
+      charm unit tests for the new peer/state behavior.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/423
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false

@@ -1,0 +1,14 @@
+# --- Release notes change artifact ----
+
+schema_version: 1
+changes:
+  - title: Unpin HAProxy apt package version
+    author: tphan025
+    type: minor
+    description: Unpinned the HAProxy APT package version.
+    urls: 
+      pr: https://github.com/canonical/haproxy-operator/pull/276
+      related_doc: 
+      related_issue: 
+    visibility: public
+    highlight: false

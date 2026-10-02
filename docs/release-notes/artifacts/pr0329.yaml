@@ -1,0 +1,15 @@
+version_schema: 2
+
+changes:
+  - title: Added path rewrite support for gRPC backends.
+    author: f-atwi
+    type: minor
+    description: >
+      Added support for path rewriting in gRPC backends.
+      Used in the same way as path rewrites for HTTP backends,
+      by specifying the 'path_rewrite_expressions' in the `haproxy-route` relation.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/329
+    visibility: public
+    highlight: false

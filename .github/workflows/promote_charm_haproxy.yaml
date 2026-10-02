@@ -1,0 +1,35 @@
+name: Promote the haproxy-operator charm
+
+on:
+  workflow_dispatch:
+    inputs:
+      origin-channel:
+        type: choice
+        description: 'Origin Channel'
+        options:
+        - 2.8/edge
+        - 2.8/candidate
+      destination-channel:
+        type: choice
+        description: 'Destination Channel'
+        options:
+        - 2.8/candidate
+        - 2.8/stable
+    secrets:
+      CHARMHUB_TOKEN:
+        required: true
+
+jobs:
+  promote-charm:
+    uses: canonical/operator-workflows/.github/workflows/promote_charm.yaml@main
+    permissions:
+      contents: write
+    with:
+      origin-channel: ${{ github.event.inputs.origin-channel }}
+      destination-channel: ${{ github.event.inputs.destination-channel }}
+      working-directory: ./haproxy-operator
+      base-channel: 24.04
+      base-name: ubuntu
+      base-architecture: amd64
+      tag-prefix: haproxy
+    secrets: inherit

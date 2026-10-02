@@ -1,0 +1,15 @@
+version_schema: 2
+
+changes:
+  - title: Added header rewrite support for gRPC backends.
+    author: f-atwi
+    type: minor
+    description: >
+      Added support for header rewriting in gRPC backends.
+      Used in the same way as header rewrites for HTTP backends,
+      by specifying the 'header_rewrite_expressions' in the `haproxy-route` relation.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/324
+    visibility: public
+    highlight: false

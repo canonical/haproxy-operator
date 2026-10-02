@@ -1,0 +1,21 @@
+version_schema: 2
+
+changes:
+  - title: Switched TLS certificates library to charmlibs-interfaces-tls-certificates (app mode)
+    author: tphan025
+    type: minor
+    description: >
+      Replaced the vendored charms.tls_certificates_interface.v4 library
+      with the upstream charmlibs-interfaces-tls-certificates package
+      (>=1.8.1). All imports across charm.py, tls_relation.py, and
+      state/tls.py now use charmlibs.interfaces.tls_certificates. This
+      enables app-mode certificate management and removes the need for a
+      locally vendored TLS interface library. Also fixed a duplicate
+      ops.main call at the end of charm.py.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/521
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false

@@ -1,0 +1,10 @@
+groups:
+  - name: haproxy_vip_started
+    rules:
+      - alert: HaproxyVipStarted
+        expr: count_over_time({%%juju_topology%%} |~ `res_haproxy_.*_vip.*Bringing device (.*) up` [5m]) > 0
+        for: 0s
+        labels:
+            severity: warning
+        annotations:
+            summary: Haproxy VIP resource started
