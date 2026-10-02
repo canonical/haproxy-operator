@@ -10,6 +10,7 @@ from charms.traefik_k8s.v2.ingress import DataValidationError, IngressPerAppProv
 from pydantic import IPvAnyAddress
 
 from .exception import CharmStateValidationBaseError
+from .peers import PeersInformation
 
 INGRESS_RELATION = "ingress"
 
@@ -49,7 +50,7 @@ class HAProxyBackend:
 
 
 @dataclasses.dataclass(frozen=True)
-class IngressRequirersInformation:
+class IngressRequirersInformation(PeersInformation):
     """A component of charm state containing ingress requirers information.
 
     Attrs:
