@@ -14,7 +14,7 @@ Manage the full operations lifecycle of the HAProxy charm, from initial traffic 
 
 HAProxy routes traffic to charmed applications as well as external workloads. Route behavior and backend approval policies can be customized through dedicated integrator charms.
 
-* [Integrate with non-charm workloads](integrate-with-non-charm-workload.md): Route HTTP and TCP traffic to external services running outside Juju using the `ingress-configurator` charm.
+* {ref}`Integrate with non-charm workloads <how_to_integrate_with_non_charm_workload>`: Route HTTP and TCP traffic to external services running outside Juju using the `ingress-configurator` charm.
 * [Provide extra configuration to ingress requirers](provide-extra-configurations-for-ingress-requirer-charms.md): Extend standard `ingress` relations with advanced `haproxy-route` features such as path rewrites and custom hostnames.
 * [Control haproxy-route relation data with the policy charm](control-haproxy-route-relation-data.md): Restrict and approve backend routes dynamically using the `haproxy-route-policy` REST API.
 
