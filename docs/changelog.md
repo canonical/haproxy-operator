@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-09-25
+
+- docs: Onboarded `docs` folder into central management solution located at
+  [platform-engineering-documentation-files](https://github.com/canonical/platform-engineering-documentation-files).
+
 ## 2026-09-01
 
 - docs: Added a how-to guide for hashing client IP addresses in logs and a GDPR/privacy section on security practices.
