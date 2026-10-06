@@ -35,7 +35,7 @@ frontend haproxy
 {% endfor %}
 {% endif %}
 
-{% for backend in http_backends %}
+{% for backend in http_backends if backend != default_backend %}
 {% if backend.path_acl_required %}
     acl acl_path_{{ backend.backend_name }} path_beg -i {% for path in backend.application_data.paths %}{{ path }} {% endfor +%}
 {% endif %}
@@ -57,7 +57,7 @@ frontend haproxy
     {{ policy_provider_backend.use_backend_configuration }}
 {% endif %}
 
-    default_backend default
+    default_backend {{ default_backend.backend_name if default_backend else 'default' }}
 
 {% if policy_provider_backend is not none %}
 # Backend configuration for the haproxy-route-policy provider

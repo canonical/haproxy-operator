@@ -176,16 +176,17 @@ class HAProxyService:
         store_config_to_file(ddos_protection_config.deny_paths, DENY_PATHS_FILE)
 
         valid_backends = haproxy_route_requirers_information.valid_backends()
+        http_backends = [
+            backend
+            for backend in valid_backends
+            if not backend.application_data.external_grpc_port
+        ]
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
             "enable_hsts": charm_state.enable_hsts,
             "ddos_protection": charm_state.ddos_protection,
             "ddos_protection_config": ddos_protection_config,
-            "http_backends": [
-                backend
-                for backend in valid_backends
-                if not backend.application_data.external_grpc_port
-            ],
+            "http_backends": http_backends,
             "tcp_frontends": haproxy_route_requirers_information.valid_tcp_frontends(),
             "grpc_backends": [
                 backend
@@ -200,6 +201,7 @@ class HAProxyService:
             "ip_allow_list_file": IP_ALLOW_LIST_FILE,
             "deny_paths_file": DENY_PATHS_FILE,
             "policy_provider_backend": haproxy_route_requirers_information.policy_provider_backend,
+            "default_backend": haproxy_route_requirers_information.default_backend,
             **self._build_log_template_context(charm_state),
         }
         self._render_haproxy_config(HAPROXY_ROUTE_CONFIG_TEMPLATE, template_context)

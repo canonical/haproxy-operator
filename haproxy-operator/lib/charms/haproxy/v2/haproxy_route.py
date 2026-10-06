@@ -67,6 +67,7 @@ class SomeCharm(CharmBase):
         server_maxconn=<optional>,
         unit_address=<optional>,
         http_server_close=<optional>,
+        default_backend=<optional>, whether this backend is the default landing page,
     )
 
     # 2.To initialize the requirer with no parameters, i.e
@@ -157,7 +158,7 @@ LIBAPI = 2
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 4
+LIBPATCH = 5
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -582,6 +583,10 @@ class RequirerApplicationData(_DatabagModel):
         allow_http: Whether to allow HTTP traffic in addition to HTTPS. Defaults to False.
             Warning: enabling HTTP is a security risk, make sure you apply the necessary precautions.
         external_grpc_port: Optional external gRPC port.
+        default_backend: Whether this backend should be used as the default backend.
+            The default backend does not render any ACL and is used as the target of the
+            `default_backend` directive in the frontend. Only one requirer application may
+            set this to True, otherwise all requesting backends are rejected.
     """
 
     service: VALIDSTR = Field(description="The name of the service.")
@@ -640,6 +645,14 @@ class RequirerApplicationData(_DatabagModel):
     )
     external_grpc_port: int | None = Field(
         description="Optional external gRPC port.", default=None, gt=0, le=65535
+    )
+    default_backend: bool = Field(
+        description=(
+            "Whether this backend should be used as the default backend. "
+            "The default backend does not render any ACL and is used as the target of the "
+            "`default_backend` directive in the frontend."
+        ),
+        default=False,
     )
 
     @field_validator("load_balancing")
@@ -795,6 +808,25 @@ class HaproxyRouteRequirersData:
                 ]
             ):
                 self.relation_ids_with_invalid_data.add(requirer_data.relation_id)
+        return self
+
+    @model_validator(mode="after")
+    def check_single_default_backend(self) -> Self:
+        """Check that at most one requirer application requests to be the default backend.
+
+        If more than one requirer application sets `default_backend` to True, all of their
+        relation ids are added to relation_ids_with_invalid_data.
+
+        Returns:
+            The validated model.
+        """
+        default_backend_relation_ids = [
+            requirer_data.relation_id
+            for requirer_data in self.requirers_data
+            if requirer_data.application_data.default_backend
+        ]
+        if len(default_backend_relation_ids) > 1:
+            self.relation_ids_with_invalid_data.update(default_backend_relation_ids)
         return self
 
 
@@ -1048,6 +1080,7 @@ class HaproxyRouteRequirer(Object):
         unit_address: Optional[str] = None,
         http_server_close: bool = False,
         allow_http: bool = False,
+        default_backend: bool = False,
     ) -> None:
         """Initialize the HaproxyRouteRequirer.
 
@@ -1089,6 +1122,10 @@ class HaproxyRouteRequirer(Object):
             allow_http: Whether to allow HTTP traffic in addition to HTTPS.
                 Warning: enabling HTTP is a security risk,
                 make sure you apply the necessary precautions.
+            default_backend: Whether this backend should be used as the default backend.
+                The default backend does not render any ACL and is used as the target of the
+                `default_backend` directive in the frontend. Only one requirer application may
+                set this to True, otherwise all requesting backends are rejected.
         """
         super().__init__(charm, relation_name)
 
@@ -1130,6 +1167,7 @@ class HaproxyRouteRequirer(Object):
             server_maxconn,
             http_server_close,
             allow_http,
+            default_backend,
         )
         self._unit_address = unit_address
 
@@ -1188,6 +1226,7 @@ class HaproxyRouteRequirer(Object):
         http_server_close: bool = False,
         allow_http: bool = False,
         external_grpc_port: Optional[int] = None,
+        default_backend: bool = False,
     ) -> None:
         """Update haproxy-route requirements data in the relation.
 
@@ -1228,6 +1267,10 @@ class HaproxyRouteRequirer(Object):
                 Warning: enabling HTTP is a security risk,
                 make sure you apply the necessary precautions.
             external_grpc_port: Optional external gRPC port.
+            default_backend: Whether this backend should be used as the default backend.
+                The default backend does not render any ACL and is used as the target of the
+                `default_backend` directive in the frontend. Only one requirer application may
+                set this to True, otherwise all requesting backends are rejected.
         """
         self._unit_address = unit_address
         self._application_data = self._generate_application_data(
@@ -1263,6 +1306,7 @@ class HaproxyRouteRequirer(Object):
             http_server_close,
             allow_http,
             external_grpc_port,
+            default_backend,
         )
         self.update_relation_data()
 
@@ -1301,6 +1345,7 @@ class HaproxyRouteRequirer(Object):
         http_server_close: bool = False,
         allow_http: bool = False,
         external_grpc_port: Optional[int] = None,
+        default_backend: bool = False,
     ) -> dict[str, Any]:
         """Generate the complete application data structure.
 
@@ -1340,6 +1385,10 @@ class HaproxyRouteRequirer(Object):
                 Warning: enabling HTTP is a security risk,
                 make sure you apply the necessary precautions.
             external_grpc_port: Optional external gRPC port.
+            default_backend: Whether this backend should be used as the default backend.
+                The default backend does not render any ACL and is used as the target of the
+                `default_backend` directive in the frontend. Only one requirer application may
+                set this to True, otherwise all requesting backends are rejected.
 
         Returns:
             dict: A dictionary containing the complete application data structure.
@@ -1394,6 +1443,7 @@ class HaproxyRouteRequirer(Object):
             "http_server_close": http_server_close,
             "allow_http": allow_http,
             "external_grpc_port": external_grpc_port,
+            "default_backend": default_backend,
         }
 
         if allow_http:

@@ -266,3 +266,70 @@ def test_check_external_grpc_port_unique(
     )
 
     assert data.relation_ids_with_invalid_data == {1, 2, 3, 4, 5}
+
+
+def test_requirer_application_data_default_backend_default_is_false():
+    """
+    arrange: Create a RequirerApplicationData model without specifying default_backend.
+    act: Check the default_backend value.
+    assert: default_backend defaults to False.
+    """
+    data = RequirerApplicationData(
+        service="test-service",
+        ports=[8080],
+    )
+
+    assert data.default_backend is False
+
+
+def test_single_default_backend_is_valid(
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
+) -> None:
+    """
+    arrange: Create HaproxyRouteRequirersData with a single default backend.
+    act: Instantiate HaproxyRouteRequirersData.
+    assert: relation_ids_with_invalid_data is empty.
+    """
+    requirer_data = haproxy_route_relation_data(
+        "default-service",
+        relation_id=1,
+        default_backend=True,
+    )
+
+    data = HaproxyRouteRequirersData(
+        requirers_data=[requirer_data],
+        relation_ids_with_invalid_data=set(),
+    )
+
+    assert data.relation_ids_with_invalid_data == set()
+
+
+def test_multiple_default_backends_are_all_invalid(
+    haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
+) -> None:
+    """
+    arrange: Create HaproxyRouteRequirersData with multiple default backends.
+    act: Instantiate HaproxyRouteRequirersData.
+    assert: all backends requesting to be the default backend are marked invalid.
+    """
+    requirer_data_1 = haproxy_route_relation_data(
+        "default-service-1",
+        relation_id=1,
+        default_backend=True,
+    )
+    requirer_data_2 = haproxy_route_relation_data(
+        "default-service-2",
+        relation_id=2,
+        default_backend=True,
+    )
+    requirer_data_3 = haproxy_route_relation_data(
+        "regular-service",
+        relation_id=3,
+    )
+
+    data = HaproxyRouteRequirersData(
+        requirers_data=[requirer_data_1, requirer_data_2, requirer_data_3],
+        relation_ids_with_invalid_data=set(),
+    )
+
+    assert data.relation_ids_with_invalid_data == {1, 2}

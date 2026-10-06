@@ -266,3 +266,123 @@ def test_grpc_backend(
         in haproxy_conf_contents
     )
     assert out.app_status == ActiveStatus("")
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls", "mocks_tls_ca_write")
+def test_default_backend_renders_default_backend_directive(
+    monkeypatch: pytest.MonkeyPatch, certificates_integration, receive_ca_certs_relation
+):
+    """
+    arrange: prepare the state with one regular backend and one default backend.
+    act: run relation_changed for the haproxy-route relation.
+    assert: the default backend is targeted by the default_backend directive, does not
+        render any hostname ACL or use_backend, and is still rendered as a normal backend.
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    regular_relation = Relation(
+        endpoint="haproxy-route",
+        id=1,
+        local_app_data={"endpoints": json.dumps([f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}/"])},
+        remote_app_data={
+            "hostname": '"regular.example.com"',
+            "hosts": '["10.12.97.153"]',
+            "ports": "[80]",
+            "service": '"regular-service"',
+        },
+        remote_units_data={0: {"address": '"10.75.1.129"'}},
+    )
+    default_relation = Relation(
+        endpoint="haproxy-route",
+        id=2,
+        local_app_data={"endpoints": json.dumps([f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}/"])},
+        remote_app_data={
+            "hostname": '"landing.example.com"',
+            "hosts": '["10.12.97.154"]',
+            "ports": "[80]",
+            "service": '"default-service"',
+            "default_backend": "true",
+        },
+        remote_units_data={0: {"address": '"10.75.1.130"'}},
+    )
+    state = State(
+        relations=frozenset(
+            {
+                certificates_integration,
+                receive_ca_certs_relation,
+                regular_relation,
+                default_relation,
+            }
+        ),
+        leader=True,
+        model=Model(name="haproxy-tutorial"),
+        app_status=ActiveStatus(""),
+        unit_status=ActiveStatus(""),
+    )
+
+    ctx = Context(HAProxyCharm, juju_version="3.6.8")
+    out = ctx.run(
+        ctx.on.relation_changed(default_relation),
+        state,
+    )
+
+    render_file_mock.assert_called_once()
+    haproxy_conf_contents = render_file_mock.call_args_list[0].args[1]
+    assert "default_backend default-service\n" in haproxy_conf_contents
+    assert "default_backend default\n" not in haproxy_conf_contents
+    assert "backend default\n" not in haproxy_conf_contents
+    assert "acl_host_default-service" not in haproxy_conf_contents
+    assert "use_backend default-service" not in haproxy_conf_contents
+    assert "acl_host_regular-service" in haproxy_conf_contents
+    assert "use_backend regular-service" in haproxy_conf_contents
+    assert "backend default-service\n" in haproxy_conf_contents
+    assert out.app_status == ActiveStatus("")
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls", "mocks_tls_ca_write")
+def test_no_default_backend_renders_inline_default(
+    monkeypatch: pytest.MonkeyPatch, certificates_integration, receive_ca_certs_relation
+):
+    """
+    arrange: prepare the state with a single regular backend.
+    act: run relation_changed for the haproxy-route relation.
+    assert: the inline default backend is used as the default_backend target.
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    regular_relation = Relation(
+        endpoint="haproxy-route",
+        local_app_data={"endpoints": json.dumps([f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}/"])},
+        remote_app_data={
+            "hostname": '"regular.example.com"',
+            "hosts": '["10.12.97.153"]',
+            "ports": "[80]",
+            "service": '"regular-service"',
+        },
+        remote_units_data={0: {"address": '"10.75.1.129"'}},
+    )
+    state = State(
+        relations=frozenset(
+            {
+                certificates_integration,
+                receive_ca_certs_relation,
+                regular_relation,
+            }
+        ),
+        leader=True,
+        model=Model(name="haproxy-tutorial"),
+        app_status=ActiveStatus(""),
+        unit_status=ActiveStatus(""),
+    )
+
+    ctx = Context(HAProxyCharm, juju_version="3.6.8")
+    out = ctx.run(
+        ctx.on.relation_changed(regular_relation),
+        state,
+    )
+
+    render_file_mock.assert_called_once()
+    haproxy_conf_contents = render_file_mock.call_args_list[0].args[1]
+    assert "default_backend default\n" in haproxy_conf_contents
+    assert "backend default\n" in haproxy_conf_contents
+    assert out.app_status == ActiveStatus("")
