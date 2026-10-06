@@ -18,7 +18,7 @@ This guide assumes that you are working in a Juju model named `haproxy-route-gui
 - The `haproxy` charm deployed with TLS certificates
 - A backend requirer (e.g. `ingress-configurator`) integrated with `haproxy`
 
-If you have already completed the [Getting started tutorial](../tutorial/getting-started.md), you can reuse that setup. Otherwise, follow the steps below to set up the required environment.
+If you have already completed the {ref}`Getting started tutorial <tutorial_getting_started>`, you can reuse that setup. Otherwise, follow the steps below to set up the required environment.
 
 ### Set up the model
 

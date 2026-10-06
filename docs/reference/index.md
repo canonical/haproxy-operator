@@ -14,23 +14,23 @@ Technical specifications, protocol capabilities, and interface definitions for t
 
 This section covers the most common protocols supported by the HAProxy charm.
 
-* [gRPC support](grpc-support.md): Specifications and limitations for proxying gRPC traffic over HTTPS and custom frontend ports.
-* [HTTP/2 support](http2-support.md): ALPN protocol negotiation, independent frontend and backend version handling, and TLS requirements.
-* [FTP support](ftp-support.md): Passive FTP, FTPS, and SFTP support mechanisms, port range architectures, and operational constraints.
+* {ref}`gRPC support <reference_grpc_support>`: Specifications and limitations for proxying gRPC traffic over HTTPS and custom frontend ports.
+* {ref}`HTTP/2 support <reference_http2_support>`: ALPN protocol negotiation, independent frontend and backend version handling, and TLS requirements.
+* {ref}`FTP support <reference_ftp_support>`: Passive FTP, FTPS, and SFTP support mechanisms, port range architectures, and operational constraints.
 
 ## Integrations
 
 This section discusses the relations supported between the HAProxy and its related charms, as well as the integration between HAProxy and an authentication proxy via Stream Processing Offload Engine (SPOE).
 
-* [Relation endpoints](relation-endpoints.md): Comprehensive inventory of provided and required Juju relation endpoints, interfaces, and supported charms.
-* [SPOE authentication](spoe-auth-support.md): Architectural details and constraints of the Stream Processing Offload Engine (SPOE) OpenID Connect integration.
+* {ref}`Relation endpoints <reference_relation_endpoints>`: Comprehensive inventory of provided and required Juju relation endpoints, interfaces, and supported charms.
+* {ref}`SPOE authentication <reference_spoe-auth_support>`: Architectural details and constraints of the Stream Processing Offload Engine (SPOE) OpenID Connect integration.
 
 ## Deployment and release
 
 Infrastructure-as-code definitions and changelog format.
 
-* [Terraform module](terraform.md): Input variables, outputs, and integration parameters for the HAProxy Terraform deployment module.
-* [Changelog](../changelog.md): Historical log of feature releases, bug fixes, breaking changes, and documentation updates across revisions.
+* {ref}`Terraform module <reference_terraform>`: Input variables, outputs, and integration parameters for the HAProxy Terraform deployment module.
+* {ref}`Changelog <changelog>`: Historical log of feature releases, bug fixes, breaking changes, and documentation updates across revisions.
 
 ```{toctree}
 :hidden:

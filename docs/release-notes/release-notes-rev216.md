@@ -15,7 +15,7 @@ Main bug fixes:
 * Fixed a typo in the cookie fetch method in the load-balancing algorithm ([PR](https://github.com/canonical/haproxy-operator/pull/179)).
 * Fixed an ambiguous endpoint in an integration test ([PR](https://github.com/canonical/haproxy-operator/pull/129)).
 
-See our [Release policy and schedule](index.md).
+See our {ref}`Release policy and schedule <release_notes_index>`.
 
 ## Requirements and compatibility
 
