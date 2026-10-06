@@ -1,25 +1,29 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Integration tests for the ingress per unit relation."""
+"""Integration tests for the haproxy-route default backend support."""
 
 import json
 
+import httpx
 import jubilant
 import pytest
 
 from .conftest import all_active_and_idle
+from .helper import get_unit_ip_address
 
 
 @pytest.mark.abort_on_fail
-def test_haproxy_route_any_charm_requirer(
+def test_haproxy_route_default_backend(
     configured_application_with_tls: str,
     any_charm_haproxy_route_requirer: str,
     juju: jubilant.Juju,
 ):
-    """Deploy the charm with anycharm ingress per unit requirer that installs apache2.
+    """Deploy the charm with anycharm haproxy-route requirer that installs apache2.
 
-    Assert that the requirer endpoints are available.
+    Mark the requirer as the default backend and assert that it is used as the target of
+    the default_backend directive, renders no ACL, and serves requests that do not match
+    any configured hostname.
     """
     juju.run(f"{any_charm_haproxy_route_requirer}/0", "rpc", {"method": "start_server"})
 
@@ -34,8 +38,6 @@ def test_haproxy_route_any_charm_requirer(
             )
         ),
     )
-    # We set the removed retry-interval config option here as
-    # ingress-configurator is not yet synced with the updated lib. This will be removed.
     juju.run(
         f"{any_charm_haproxy_route_requirer}/0",
         "rpc",
@@ -44,13 +46,9 @@ def test_haproxy_route_any_charm_requirer(
             "args": json.dumps(
                 [
                     {
-                        "service": "any_charm_with_retry",
+                        "service": "any_charm_default_backend",
                         "ports": [80],
-                        "retry_count": 3,
-                        "retry_redispatch": True,
-                        "load_balancing_algorithm": "source",
-                        "load_balancing_consistent_hashing": True,
-                        "http_server_close": True,
+                        "default_backend": True,
                     }
                 ]
             ),
@@ -64,13 +62,18 @@ def test_haproxy_route_any_charm_requirer(
     haproxy_config = juju.exec(
         "cat /etc/haproxy/haproxy.cfg", unit=f"{configured_application_with_tls}/0"
     ).stdout
-    assert all(
-        entry in haproxy_config
-        for entry in [
-            "retries 3",
-            "option redispatch",
-            "option http-server-close",
-            "balance source",
-            "hash-type consistent",
-        ]
-    )
+    assert "default_backend default\n" not in haproxy_config
+    assert "backend default\n" not in haproxy_config
+    assert "default_backend any_charm_default_backend\n" in haproxy_config
+    assert "use_backend any_charm_default_backend" not in haproxy_config
+    assert "acl_host_any_charm_default_backend" not in haproxy_config
+
+    haproxy_ip_address = get_unit_ip_address(juju, configured_application_with_tls)
+    with httpx.Client(http2=False, verify=False) as client:  # nosec: B501
+        response = client.get(
+            f"https://{haproxy_ip_address}",
+            headers={"Host": "does-not-match.example.com"},
+            timeout=5.0,
+        )
+        assert response.status_code == httpx.codes.OK
+        assert "ok!" in response.text
