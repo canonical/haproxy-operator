@@ -27,7 +27,7 @@ This section discusses the relations supported between the HAProxy and its relat
 
 ## Deployment and release
 
-Infrastructure-as-code definitions and changelog format.
+This section contains details on infrastructure-as-code definitions and log of user-relevant changes.
 
 * {ref}`Terraform module <reference_terraform>`: Input variables, outputs, and integration parameters for the HAProxy Terraform deployment module.
 * {ref}`Changelog <changelog>`: Historical log of feature releases, bug fixes, breaking changes, and documentation updates across revisions.
