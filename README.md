@@ -1,6 +1,10 @@
 # HAProxy operator
 
-This repository provides a collection of operators related to HAProxy. For deployment, integration,
+This repository provides a collection of operators related to HAProxy.
+HAProxy is an open-source reverse proxy that provides fast, efficient, and reliable
+proxying for TCP and HTTP-based applications.
+
+For deployment, integration,
 and management guidance, see the official [HAProxy operator documentation](https://canonical.com/juju/docs/haproxy-charm/).
 
 ## Repository layout
@@ -28,12 +32,12 @@ tests/                                     # Shared integration and spread tests
 
 This repository contains the code for the following charms:
 
-| Component | Path | Role |  |
-| --- | --- | --- | --- |
-| `haproxy` | [`haproxy-operator/`](haproxy-operator/README.md) | A machine charm managing HAProxy. See the [haproxy README](haproxy-operator/README.md) for more information. |  |
-| `haproxy-ddos-protection-configurator` | [`haproxy-ddos-protection-configurator/`](haproxy-ddos-protection-configurator/README.md) | A [Juju](https://canonical.com/juju) [charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/) that serves as a configurator for HAProxy to provide DDoS protection capabilities. |  |
-| `haproxy-spoe-auth-operator` | [`haproxy-spoe-auth-operator/`](haproxy-spoe-auth-operator/README.md) | A machine charm deploying an SPOE agent that serves as an authentication proxy. See the [haproxy-spoe-auth-operator README](haproxy-spoe-auth-operator/README.md) for more information. |  |
-| `haproxy-route-policy-operator` | [`haproxy-route-policy-operator/`](haproxy-route-policy-operator/README.md) | A machine charm deploying the `haproxy-route-policy` application for controlling the data from different `haproxy-route` relations. See the [haproxy-route-policy-operator README](haproxy-route-policy-operator/README.md) for more information. |  |
+| Component | Path | Role |
+| --- | --- | --- |
+| `haproxy` | [`haproxy-operator/`](haproxy-operator/README.md) | A machine charm managing HAProxy. See the [haproxy README](haproxy-operator/README.md) for more information. |
+| `haproxy-ddos-protection-configurator` | [`haproxy-ddos-protection-configurator/`](haproxy-ddos-protection-configurator/README.md) | A [Juju](https://canonical.com/juju) [charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/) that serves as a configurator for HAProxy to provide DDoS protection capabilities. |
+| `haproxy-spoe-auth-operator` | [`haproxy-spoe-auth-operator/`](haproxy-spoe-auth-operator/README.md) | A machine charm deploying an SPOE agent that serves as an authentication proxy. See the [haproxy-spoe-auth-operator README](haproxy-spoe-auth-operator/README.md) for more information. |
+| `haproxy-route-policy-operator` | [`haproxy-route-policy-operator/`](haproxy-route-policy-operator/README.md) | A machine charm deploying the `haproxy-route-policy` application for controlling the data from different `haproxy-route` relations. See the [haproxy-route-policy-operator README](haproxy-route-policy-operator/README.md) for more information. |
 
 The repository also contains the snapped workload of some charms:
 
@@ -56,7 +60,7 @@ The repository also contains the snapped workload of some charms:
 ## Get started
 
 For a step-by-step basic deployment, start with [`docs/tutorial/getting-started.md`](docs/tutorial/getting-started.md).
-That tutorial covers requirements, setting up a tutorial model, deploying the HAProxy charm, configuring TLS,
+That tutorial covers setup, deploying the HAProxy charm, configuring TLS,
 deploying the backend application, and cleanup.
 
 ## Documentation
@@ -92,7 +96,7 @@ make lint-md
 
 ## Project and community
 
-The haproxy-operator project is a member of the Ubuntu family. It is an open source project
+The HAProxy project is a member of the Ubuntu family. It is an open source project
 that warmly welcomes community projects, contributions, suggestions, fixes and constructive feedback.
 
 * [Code of conduct](https://ubuntu.com/community/code-of-conduct)
