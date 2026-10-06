@@ -4,15 +4,21 @@
 """Unit tests for charm file."""
 
 from dataclasses import replace
+from subprocess import CalledProcessError
 from unittest.mock import MagicMock
 
 import pytest
 
-from haproxy import HAPROXY_DH_PARAM, HAPROXY_DHCONFIG, HAProxyService
+from haproxy import (
+    HAPROXY_DH_PARAM,
+    HAPROXY_DHCONFIG,
+    HAProxyService,
+    HaproxyValidateConfigError,
+)
 
 
 @pytest.mark.usefixtures("systemd_mock")
-def test_deploy(monkeypatch: pytest.MonkeyPatch):
+def test_deploy(monkeypatch: pytest.MonkeyPatch, tmp_path):
     """
     arrange: Given a HAProxyService class with mocked apt library methods.
     act: Call haproxy_service.install().
@@ -23,12 +29,29 @@ def test_deploy(monkeypatch: pytest.MonkeyPatch):
     render_file_mock = MagicMock()
     monkeypatch.setattr("haproxy.render_file", render_file_mock)
     monkeypatch.setattr("haproxy.run", MagicMock())
+    certs_dir = tmp_path / "certs"
+    monkeypatch.setattr("haproxy.HAPROXY_CERTS_DIR", certs_dir)
 
     haproxy_service = HAProxyService()
     haproxy_service.install()
 
     apt_add_package_mock.assert_called_once()
     render_file_mock.assert_called_once_with(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
+    assert certs_dir.is_dir()
+
+
+def test_validate_config_logs_command_output(monkeypatch: pytest.MonkeyPatch, caplog):
+    error = CalledProcessError(
+        returncode=1,
+        cmd=["/usr/sbin/haproxy", "-f", "/etc/haproxy/haproxy.cfg", "-c"],
+        stderr=b"No SSL certificate specified",
+    )
+    monkeypatch.setattr("haproxy.subprocess.run", MagicMock(side_effect=error))
+
+    with pytest.raises(HaproxyValidateConfigError):
+        HAProxyService()._validate_haproxy_config()
+
+    assert "No SSL certificate specified" in caplog.text
 
 
 def test_render_default_config_hashes_client_ip_when_enabled(hashed_charm_state):
