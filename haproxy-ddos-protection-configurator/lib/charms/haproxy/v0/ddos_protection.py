@@ -92,7 +92,7 @@ import json
 import logging
 from collections.abc import MutableMapping
 from enum import Enum
-from ipaddress import IPv4Address, IPv4Network
+from ipaddress import ip_address, ip_network
 from typing import Optional, cast
 
 from ops import CharmBase
@@ -101,6 +101,8 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    IPvAnyAddress,
+    IPvAnyNetwork,
     ValidationError,
     field_validator,
     model_validator,
@@ -229,7 +231,7 @@ class DDoSProtectionProviderAppData(_DatabagModel):
         limit_policy_http: Policy to be applied when HTTP-level limits are exceeded.
         limit_policy_tcp: Policy to be applied when TCP-level limits are exceeded.
         policy_status_code: HTTP status code for deny policy (only set when limit_policy_http is deny).
-        ip_allow_list: List of IPv4 addresses or CIDR blocks to be allowed.
+        ip_allow_list: List of IP addresses or CIDR blocks to be allowed.
         http_request_timeout: Timeout for HTTP requests in seconds.
         http_keepalive_timeout: Timeout for HTTP keep-alive connections in seconds.
         client_timeout: Timeout for client connections in seconds.
@@ -243,7 +245,7 @@ class DDoSProtectionProviderAppData(_DatabagModel):
     limit_policy_http: Optional[HttpRateLimitPolicy] = Field(default=None)
     limit_policy_tcp: Optional[TcpRateLimitPolicy] = Field(default=None)
     policy_status_code: Optional[int] = Field(default=None, ge=100, le=599)
-    ip_allow_list: Optional[list[IPv4Network | IPv4Address]] = Field(default=None)
+    ip_allow_list: Optional[list[IPvAnyAddress | IPvAnyNetwork]] = Field(default=None)
     http_request_timeout: Optional[int] = Field(default=None, gt=0)
     http_keepalive_timeout: Optional[int] = Field(default=None, gt=0)
     client_timeout: Optional[int] = Field(default=None, gt=0)
@@ -253,21 +255,21 @@ class DDoSProtectionProviderAppData(_DatabagModel):
     @classmethod
     def validate_ip_allow_list(
         cls, v: Optional[list[str]]
-    ) -> Optional[list[IPv4Network | IPv4Address]]:
+    ) -> Optional[list[IPvAnyAddress | IPvAnyNetwork]]:
         """Validate and convert IP allow list.
 
-        Converts each string to either IPv4Address (for single IPs) or IPv4Network (for CIDR blocks).
+        Converts each string to either an IP address or a network.
 
         Args:
             v: The list of IP addresses or CIDR blocks as strings.
 
         Returns:
-            The list of converted IPv4Address or IPv4Network objects.
+            The list of converted IP address or network objects.
         """
         if v is None:
             return None
 
-        return [IPv4Network(ip_str) if "/" in ip_str else IPv4Address(ip_str) for ip_str in v]
+        return [ip_network(ip_str) if "/" in ip_str else ip_address(ip_str) for ip_str in v]
 
     @field_validator("deny_paths", mode="after")
     @classmethod
@@ -450,7 +452,7 @@ class DDoSProtectionProvider(Object):
             error_rate: Number of errors per minute per entry to trigger the limit policy.
             limit_policy_http: Policy to be applied when HTTP-level limits are exceeded.
             limit_policy_tcp: Policy to be applied when TCP-level limits are exceeded.
-            ip_allow_list: List of IPv4 addresses or CIDR blocks to be allowed.
+            ip_allow_list: List of IP addresses or CIDR blocks to be allowed.
             http_request_timeout: Timeout for HTTP requests in seconds.
             http_keepalive_timeout: Timeout for HTTP keep-alive connections in seconds.
             client_timeout: Timeout for client connections in seconds.
@@ -467,7 +469,7 @@ class DDoSProtectionProvider(Object):
                 error_rate=error_rate,
                 limit_policy_http=cast(Optional[HttpRateLimitPolicy], limit_policy_http),
                 limit_policy_tcp=cast(Optional[TcpRateLimitPolicy], limit_policy_tcp),
-                ip_allow_list=cast(Optional[list[IPv4Network | IPv4Address]], ip_allow_list),
+                ip_allow_list=cast(Optional[list[IPvAnyAddress | IPvAnyNetwork]], ip_allow_list),
                 http_request_timeout=http_request_timeout,
                 http_keepalive_timeout=http_keepalive_timeout,
                 client_timeout=client_timeout,
