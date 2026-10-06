@@ -20,7 +20,7 @@ HAProxy routes traffic to charmed applications as well as external workloads. Ro
 
 ## Protocol load balancing
 
-Workloads requiring protocols beyond standard HTTP requires more advanced configurations. The HAProxy charm can provide gRPC loadbalancing over HTTP/2 and routes TCP traffic to a range of backend ports for services like FTP.
+Workloads requiring protocols beyond standard HTTP requires more advanced configurations. The HAProxy charm can provide gRPC load balancing over HTTP/2 and routes TCP traffic to a range of backend ports for services like FTP.
 
 * [Provide load balancing for a gRPC server](loadbalancing-for-a-grpc-server.md): Configure Layer-7 load balancing and ALPN negotiation for gRPC services.
 * [Provide load balancing for an FTP server](loadbalancing-for-an-ftp-server.md): Configure Layer-4 TCP frontends and port ranges for passive FTP and FTPS traffic.
