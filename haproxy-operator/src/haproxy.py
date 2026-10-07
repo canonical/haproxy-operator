@@ -47,6 +47,9 @@ HAPROXY_DH_PARAM = (
 HAPROXY_DHCONFIG = Path(HAPROXY_CONFIG_DIR / "ffdhe2048.txt")
 HAPROXY_SERVICE = "haproxy"
 HAPROXY_LOGROTATE_CONFIG = Path("/etc/logrotate.d/haproxy")
+# The default daily timer needs overriding only to run hourly checks: rotation
+# directives do not schedule logrotate, so maxsize alone cannot trigger hourly checks.
+# https://www.dash0.com/guides/log-rotation-linux-logrotate#important-note-on-hourly-rotation
 LOGROTATE_TIMER_OVERRIDE = Path("/etc/systemd/system/logrotate.timer.d/override.conf")
 HAPROXY_INGRESS_CONFIG_TEMPLATE = "haproxy_ingress.cfg.j2"
 HAPROXY_INGRESS_PER_UNIT_CONFIG_TEMPLATE = "haproxy_ingress_per_unit.cfg.j2"
