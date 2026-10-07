@@ -282,6 +282,48 @@ def test_requirer_application_data_default_backend_default_is_false():
     assert data.default_backend is False
 
 
+@pytest.mark.parametrize("protocol", ["http", "https"])
+def test_default_backend_with_external_grpc_port_is_invalid(protocol):
+    """
+    arrange: Set both default_backend and external_grpc_port in application data.
+    act: Validate the application data.
+    assert: Validation fails regardless of the backend protocol.
+    """
+    with pytest.raises(
+        ValidationError, match="default_backend cannot be True when external_grpc_port is set"
+    ):
+        RequirerApplicationData(
+            service="grpc-service",
+            ports=[8080],
+            protocol=protocol,
+            external_grpc_port=9000,
+            default_backend=True,
+        )
+
+
+@pytest.mark.parametrize(
+    ("default_backend", "external_grpc_port"), [(False, None), (True, None), (False, 9000)]
+)
+def test_default_backend_and_external_grpc_port_valid_combinations(
+    default_backend, external_grpc_port
+):
+    """
+    arrange: Configure at most one of default_backend and external_grpc_port.
+    act: Validate the application data.
+    assert: Each supported combination is accepted.
+    """
+    data = RequirerApplicationData(
+        service="test-service",
+        ports=[8080],
+        protocol="https",
+        default_backend=default_backend,
+        external_grpc_port=external_grpc_port,
+    )
+
+    assert data.default_backend is default_backend
+    assert data.external_grpc_port == external_grpc_port
+
+
 def test_single_default_backend_is_valid(
     haproxy_route_relation_data: typing.Callable[..., HaproxyRouteRequirerData],
 ) -> None:

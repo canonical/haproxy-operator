@@ -587,6 +587,7 @@ class RequirerApplicationData(_DatabagModel):
             The default backend does not render any ACL and is used as the target of the
             `default_backend` directive in the frontend. Only one requirer application may
             set this to True, otherwise all requesting backends are rejected.
+            Cannot be True when external_grpc_port is set; such relations are invalid.
     """
 
     service: VALIDSTR = Field(description="The name of the service.")
@@ -654,6 +655,20 @@ class RequirerApplicationData(_DatabagModel):
         ),
         default=False,
     )
+
+    @model_validator(mode="after")
+    def check_default_backend_without_external_grpc_port(self) -> Self:
+        """Check that a default backend does not specify an external gRPC port.
+
+        Raises:
+            ValueError: When default_backend is True and external_grpc_port is set.
+
+        Returns:
+            The validated model.
+        """
+        if self.default_backend and self.external_grpc_port is not None:
+            raise ValueError("default_backend cannot be True when external_grpc_port is set.")
+        return self
 
     @field_validator("load_balancing")
     @classmethod
