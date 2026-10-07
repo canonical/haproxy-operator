@@ -696,18 +696,13 @@ class HaproxyRouteRequirersInformation:
 
         The library guarantees that at most one valid backend requests to be the
         default backend (backends that request it contradictorily are marked invalid).
-        gRPC backends are ignored as they are served by their own frontend and cannot be
-        the default landing page of the HTTP frontend.
+        The library also rejects gRPC backends requesting to be the default backend.
 
         Returns:
             Optional[HAProxyRouteBackend]: The default backend, or None if not requested.
         """
         return next(
-            (
-                backend
-                for backend in self.valid_backends()
-                if backend.is_default_backend and not backend.application_data.external_grpc_port
-            ),
+            (backend for backend in self.valid_backends() if backend.is_default_backend),
             None,
         )
 
