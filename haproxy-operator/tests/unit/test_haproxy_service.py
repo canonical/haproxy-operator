@@ -4,7 +4,6 @@
 """Unit tests for charm file."""
 
 from dataclasses import replace
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -15,7 +14,6 @@ from haproxy import (
     HAPROXY_LOGROTATE_CONFIG,
     LOGROTATE_TIMER_OVERRIDE,
     HAProxyService,
-    render_file,
 )
 
 
