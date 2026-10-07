@@ -87,6 +87,7 @@ class HAProxyService:
         """Install the haproxy apt package."""
         run_systemd_tmpfiles_create()
         apt.add_package(package_names=APT_PACKAGE_NAME, update_cache=True)
+        HAPROXY_CERTS_DIR.mkdir(parents=True, exist_ok=True)
         pin_haproxy_package_version()
         render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
 
@@ -345,7 +346,21 @@ class HAProxyService:
             # Ignore bandit rule as we're not parsing user input
             subprocess.run(validate_config_command, capture_output=True, check=True)  # nosec B603
         except subprocess.CalledProcessError as exc:
-            logger.error("Failed validating the HAProxy config")
+            stdout = (
+                exc.stdout.decode(errors="replace")
+                if isinstance(exc.stdout, bytes)
+                else exc.stdout
+            )
+            stderr = (
+                exc.stderr.decode(errors="replace")
+                if isinstance(exc.stderr, bytes)
+                else exc.stderr
+            )
+            logger.error(
+                "Failed validating the HAProxy config. stdout: %s; stderr: %s",
+                stdout,
+                stderr,
+            )
             raise HaproxyValidateConfigError("Failed validating the HAProxy config.") from exc
 
 
