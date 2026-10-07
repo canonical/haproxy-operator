@@ -23,12 +23,15 @@ def test_deploy(monkeypatch: pytest.MonkeyPatch):
     render_file_mock = MagicMock()
     monkeypatch.setattr("haproxy.render_file", render_file_mock)
     monkeypatch.setattr("haproxy.run", MagicMock())
+    certs_dir = MagicMock()
+    monkeypatch.setattr("haproxy.HAPROXY_CERTS_DIR", certs_dir)
 
     haproxy_service = HAProxyService()
     haproxy_service.install()
 
     apt_add_package_mock.assert_called_once()
     render_file_mock.assert_called_once_with(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
+    certs_dir.mkdir.assert_called_once_with(parents=True, exist_ok=True)
 
 
 def test_render_default_config_hashes_client_ip_when_enabled(hashed_charm_state):
