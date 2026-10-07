@@ -45,7 +45,7 @@ suggestions, fixes and constructive feedback.
 * [Code of conduct](https://ubuntu.com/community/code-of-conduct)
 * [Get support](https://discourse.charmhub.io/)
 * [Join our online chat](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)
-* [Contribute](https://github.com/canonical/haproxy-operator/blob/docs/readme/CONTRIBUTING.md)
+* [Contribute](https://github.com/canonical/haproxy-operator/blob/main/CONTRIBUTING.md)
 * [Roadmap](https://charmhub.io/haproxy/docs/roadmap)
 Thinking about using the HAProxy charm for your next project? [Get in touch](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)!
 
