@@ -109,7 +109,6 @@ class HAProxyService:
             user="root",
         )
         systemd.daemon_reload()
-        systemd.service_enable("logrotate.timer")
         systemd.service_restart("logrotate.timer")
 
     def is_active(self) -> bool:

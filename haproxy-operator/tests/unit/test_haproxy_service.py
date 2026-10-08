@@ -54,7 +54,7 @@ def test_deploy(monkeypatch: pytest.MonkeyPatch):
     )
     assert mkdir_mock.call_count == 2
     systemd_mock.daemon_reload.assert_called_once_with()
-    systemd_mock.service_enable.assert_called_once_with("logrotate.timer")
+    systemd_mock.service_enable.assert_not_called()
     systemd_mock.service_restart.assert_called_once_with("logrotate.timer")
 
 
