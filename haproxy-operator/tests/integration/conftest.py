@@ -382,3 +382,37 @@ def haproxy_route_tcp_relation_fixture(
         )
     )
     return any_charm_haproxy_route_tcp_requirer
+
+
+@pytest.fixture(name="haproxy_route_tcp_plain_tcp_relation")
+def haproxy_route_tcp_plain_tcp_relation_fixture(
+    configured_application_with_tls: str,
+    any_charm_haproxy_route_tcp_requirer: str,
+    juju: jubilant.Juju,
+) -> str:
+    """Integrate the TCP requirer with the haproxy application without TLS termination."""
+    juju.integrate(
+        f"{configured_application_with_tls}:haproxy-route-tcp",
+        any_charm_haproxy_route_tcp_requirer,
+    )
+    juju.wait(
+        lambda status: (
+            jubilant.all_blocked(status, configured_application_with_tls)
+            and jubilant.all_agents_idle(
+                status, configured_application_with_tls, any_charm_haproxy_route_tcp_requirer
+            )
+        ),
+    )
+    juju.run(
+        f"{any_charm_haproxy_route_tcp_requirer}/0",
+        "rpc",
+        {"method": "update_relation_plain_tcp"},
+    )
+    juju.wait(
+        lambda status: all_active_and_idle(
+            status,
+            configured_application_with_tls,
+            any_charm_haproxy_route_tcp_requirer,
+        )
+    )
+    return any_charm_haproxy_route_tcp_requirer
