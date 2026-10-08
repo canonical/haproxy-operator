@@ -77,17 +77,32 @@
     },
     {
       "customType": "regex",
-      "description": "Update dependency charm revisions pinned via `# renovate: depName=...` annotations in integration test constants.py and Terraform files (ISD301)",
+      "description": "Update dependency charm revisions pinned via `# renovate: depName=...` annotations in integration test constants.py (ISD301)",
       "managerFilePatterns": [
-        "/(^|/)tests/(integration/)?constants\\.py$/",
+        "/(^|/)tests/(integration/)?constants\\.py$/"
+      ],
+      "matchStringsStrategy": "recursive",
+      "matchStrings": [
+        "# renovate: depName=\"(?<depName>.*?)\" channel=\"(?<charmChannel>.*?)\" base=\"(?<base>.*?)\" arch=\"(?<arch>.*?)\"\\s*\\n\\s*\\w+_REVISION\\s*=\\s*\\d+\\s*\\n?",
+        "_REVISION\\s*=\\s*(?<currentValue>\\d+)\\s*\\n?"
+      ],
+      "datasourceTemplate": "custom.charmhub",
+      "registryUrlTemplate": "https://api.charmhub.io/v2/charms/info/{{depName}}?channel={{charmChannel}}&fields=channel-map",
+      "versioningTemplate": "semver-coerced",
+      "extractVersionTemplate": "^{{base}}_{{arch}}_(?<version>.*)$"
+    },
+    {
+      "customType": "regex",
+      "description": "Update dependency charm revisions pinned via `# renovate: depName=...` annotations in Terraform files (ISD301)",
+      "managerFilePatterns": [
         "/\\.tftest\\.hcl$/",
         "/\\.tf$/"
       ],
+      "matchStringsStrategy": "recursive",
       "matchStrings": [
-        "# renovate: depName=\"(?<depName>.*?)\" channel=\"(?<charmChannel>.*?)\" base=\"(?<base>.*?)\" arch=\"(?<arch>.*?)\"\\s*\\n\\s*\\w+_REVISION = (?<currentValue>\\d+)",
-        "# renovate: depName=\"(?<depName>.*?)\" channel=\"(?<charmChannel>.*?)\" base=\"(?<base>.*?)\" arch=\"(?<arch>.*?)\"\\s*\\n\\s*revision\\s*=\\s*(?<currentValue>\\d+)"
+        "# renovate: depName=\"(?<depName>.*?)\" channel=\"(?<charmChannel>.*?)\" base=\"(?<base>.*?)\" arch=\"(?<arch>.*?)\"\\s*\\n\\s*revision\\s*=\\s*\\d+\\s*\\n?",
+        "revision\\s*=\\s*(?<currentValue>\\d+)\\s*\\n?"
       ],
-      "matchStringsStrategy": "any",
       "datasourceTemplate": "custom.charmhub",
       "registryUrlTemplate": "https://api.charmhub.io/v2/charms/info/{{depName}}?channel={{charmChannel}}&fields=channel-map",
       "versioningTemplate": "semver-coerced",
