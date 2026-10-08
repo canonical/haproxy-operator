@@ -13,6 +13,12 @@
       "transformTemplates": [
         "{\"releases\": [{\"version\": $string($$.(`channel-map`[channel.risk = 'edge' and channel.track = 'latest' and channel.base.architecture = 'amd64' and channel.base.channel = '24.04'].revision.revision))}]}"
       ]
+    },
+    "charmhubDynamic": {
+      "format": "json",
+      "transformTemplates": [
+        "{\"releases\": [`channel-map`.{\"version\": channel.base.channel & \"_\" & channel.base.architecture & \"_\" & $string(revision.revision)}]}"
+      ]
     }
   },
   "packageRules": [
@@ -29,10 +35,17 @@
     },
     {
       "matchDatasources": [
-        "custom.charmhub"
+        "custom.charmhub",
+        "custom.charmhubDynamic"
       ],
       "automerge": true,
       "enabled": true
+    },
+    {
+      "matchDatasources": [
+        "custom.charmhubDynamic"
+      ],
+      "groupName": "{{packageFileDir}}"
     },
     {
       "enabled": false,
@@ -76,6 +89,20 @@
       "matchStrings": ["# renovate: depName=\"(?<packageName>[^\"]+)\"\\s*\\n\\s*(?<fieldName>[a-zA-Z0-9_]+)\\s*=\\s*(?<currentValue>\\d+)"],
       "versioningTemplate": "semver-coerced",
       "datasourceTemplate": "custom.charmhub"
+    },
+    {
+      "customType": "regex",
+      "description": "Update dependency charm revisions pinned in integration test constants.py files (ISD301)",
+      "managerFilePatterns": [
+        "/(^|/)tests/(integration/)?constants\\.py$/"
+      ],
+      "matchStrings": [
+        "# renovate: depName=\"(?<depName>.*?)\" channel=\"(?<charmChannel>.*?)\" base=\"(?<base>.*?)\" arch=\"(?<arch>.*?)\"\\s*\\n\\s*\\w+_REVISION = (?<currentValue>\\d+)"
+      ],
+      "datasourceTemplate": "custom.charmhubDynamic",
+      "registryUrlTemplate": "https://api.charmhub.io/v2/charms/info/{{depName}}?channel={{charmChannel}}&fields=channel-map",
+      "versioningTemplate": "semver-coerced",
+      "extractVersionTemplate": "^{{base}}_{{arch}}_(?<version>.*)$"
     }
   ],
   "schedule": [

@@ -20,6 +20,15 @@ from playwright._impl._driver import (  # type: ignore[import-not-found]
     get_driver_env,
 )
 
+from .constants import (
+    HYDRA_REVISION,
+    IDENTITY_PLATFORM_LOGIN_UI_OPERATOR_REVISION,
+    KRATOS_REVISION,
+    POSTGRESQL_K8S_REVISION,
+    SELF_SIGNED_CERTIFICATES_REVISION,
+    TRAEFIK_K8S_REVISION,
+)
+
 logger = logging.getLogger(__name__)
 
 JUJU_WAIT_TIMEOUT = 10 * 60  # 10 minutes
@@ -232,14 +241,22 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
         logger.info("identity-platform is already deployed")
         return
     k8s_juju.deploy(
-        "self-signed-certificates", channel="1/stable", revision=317, trust=True, force=True
+        "self-signed-certificates",
+        channel="1/stable",
+        revision=SELF_SIGNED_CERTIFICATES_REVISION,
+        trust=True,
+        force=True,
     )
-    k8s_juju.deploy("hydra", channel="latest/edge", revision=399, trust=True, force=True)
-    k8s_juju.deploy("kratos", channel="latest/edge", revision=567, trust=True, force=True)
+    k8s_juju.deploy(
+        "hydra", channel="latest/edge", revision=HYDRA_REVISION, trust=True, force=True
+    )
+    k8s_juju.deploy(
+        "kratos", channel="latest/edge", revision=KRATOS_REVISION, trust=True, force=True
+    )
     k8s_juju.deploy(
         "identity-platform-login-ui-operator",
         channel="latest/edge",
-        revision=200,
+        revision=IDENTITY_PLATFORM_LOGIN_UI_OPERATOR_REVISION,
         trust=True,
         force=True,
     )
@@ -247,7 +264,7 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
         "traefik-k8s",
         "traefik-public",
         channel="latest/edge",
-        revision=270,
+        revision=TRAEFIK_K8S_REVISION,
         trust=True,
         force=True,
     )
@@ -255,6 +272,7 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
         "postgresql-k8s",
         channel="14/edge",
         base="ubuntu@22.04",
+        revision=POSTGRESQL_K8S_REVISION,
         trust=True,
         force=True,
         config={
