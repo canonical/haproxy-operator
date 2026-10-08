@@ -94,6 +94,21 @@ class AnyCharm(AnyCharmBase):
             check_expect="pong",
         )
 
+    def update_relation_plain_tcp(self):
+        """Update haproxy-route-tcp relation data for a plaintext backend."""
+        self._haproxy_route_tcp.provide_haproxy_route_tcp_requirements(
+            port=4444,
+            backend_port=4000,
+            enforce_tls=False,
+            tls_terminate=False,
+            check_type=TCPHealthCheckType.GENERIC,
+            check_interval=60,
+            check_rise=3,
+            check_fall=3,
+            check_send="ping\r\n",
+            check_expect="pong",
+        )
+
     def update_relation_with_sticky_sessions(self):
         """Update haproxy-route-tcp relation data with sticky sessions"""
         self._haproxy_route_tcp.provide_haproxy_route_tcp_requirements(
