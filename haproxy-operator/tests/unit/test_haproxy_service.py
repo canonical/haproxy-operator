@@ -8,7 +8,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from haproxy import HAPROXY_DH_PARAM, HAPROXY_DHCONFIG, HAProxyService
+from haproxy import (
+    HAPROXY_DH_PARAM,
+    HAPROXY_DHCONFIG,
+    HAPROXY_LOGROTATE_CONFIG,
+    LOGROTATE_TIMER_OVERRIDE,
+    HAProxyService,
+)
 
 
 @pytest.mark.usefixtures("systemd_mock")
@@ -23,15 +29,33 @@ def test_deploy(monkeypatch: pytest.MonkeyPatch):
     render_file_mock = MagicMock()
     monkeypatch.setattr("haproxy.render_file", render_file_mock)
     monkeypatch.setattr("haproxy.run", MagicMock())
-    certs_dir = MagicMock()
-    monkeypatch.setattr("haproxy.HAPROXY_CERTS_DIR", certs_dir)
+    mkdir_mock = MagicMock()
+    monkeypatch.setattr("haproxy.Path.mkdir", mkdir_mock)
+    systemd_mock = MagicMock()
+    monkeypatch.setattr("haproxy.systemd", systemd_mock)
 
     haproxy_service = HAProxyService()
     haproxy_service.install()
 
     apt_add_package_mock.assert_called_once()
-    render_file_mock.assert_called_once_with(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
-    certs_dir.mkdir.assert_called_once_with(parents=True, exist_ok=True)
+    assert render_file_mock.call_count == 3
+    render_file_mock.assert_any_call(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
+    render_file_mock.assert_any_call(
+        HAPROXY_LOGROTATE_CONFIG,
+        HAProxyService()._render_to_string("haproxy.logrotate.j2", {}),
+        0o644,
+        user="root",
+    )
+    render_file_mock.assert_any_call(
+        LOGROTATE_TIMER_OVERRIDE,
+        "[Timer]\nOnCalendar=\nOnCalendar=hourly\nAccuracySec=1min\n",
+        0o644,
+        user="root",
+    )
+    assert mkdir_mock.call_count == 2
+    systemd_mock.daemon_reload.assert_called_once_with()
+    systemd_mock.service_enable.assert_not_called()
+    systemd_mock.service_restart.assert_called_once_with("logrotate.timer")
 
 
 def test_render_default_config_hashes_client_ip_when_enabled(hashed_charm_state):
