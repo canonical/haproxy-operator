@@ -150,19 +150,21 @@ def test_ddos_protection_provider_app_data_with_invalid_tcp_policy(
 
 def test_ddos_protection_provider_app_data_ip_allow_list():
     """
-    arrange: Create a DDoSProtectionProviderAppData model with a mix of IPv4 addresses
+    arrange: Create a DDoSProtectionProviderAppData model with IPv4 and IPv6 addresses
     and CIDR blocks.
     act: Validate the model.
     assert: IP addresses are correctly converted and have expected values.
     """
     data = DDoSProtectionProviderAppData(
         rate_limit_requests_per_minute=100,
-        ip_allow_list=["192.168.0.0/16", "10.0.0.0/8"],
+        ip_allow_list=["192.168.0.0/16", "10.0.0.0/8", "2001:db8::1", "2001:db8:abcd::/48"],
     )
 
-    assert len(data.ip_allow_list) == 2
+    assert len(data.ip_allow_list) == 4
     assert str(data.ip_allow_list[0]) == "192.168.0.0/16"
     assert str(data.ip_allow_list[1]) == "10.0.0.0/8"
+    assert str(data.ip_allow_list[2]) == "2001:db8::1"
+    assert str(data.ip_allow_list[3]) == "2001:db8:abcd::/48"
 
 
 def test_ddos_protection_provider_app_data_invalid_ip():
