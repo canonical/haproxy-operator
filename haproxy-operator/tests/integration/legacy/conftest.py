@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/legacy/haproxy_route_requirer.py"
 HAPROXY_ROUTE_LIB_SRC = "lib/charms/haproxy/v2/haproxy_route.py"
-APT_LIB_SRC = "lib/charms/operator_libs_linux/v0/apt.py"
 
 
 def all_active_and_idle(status: jubilant.Status, *apps: str) -> bool:
@@ -161,7 +160,6 @@ def any_charm_src_fixture() -> dict[str, str]:
         import pathlib
         import ops
         from any_charm_base import AnyCharmBase
-        import apt
         from subprocess import STDOUT, check_call
         import os
         import textwrap
@@ -319,9 +317,9 @@ def any_charm_src_ingress_requirer_fixture() -> dict[str, str]:
     import pathlib
     import subprocess
     import ops
+    from charmlibs import apt
     from any_charm_base import AnyCharmBase
     from ingress import IngressPerAppRequirer
-    import apt
 
     class AnyCharm(AnyCharmBase):
         def __init__(self, *args, **kwargs):
@@ -344,9 +342,6 @@ def any_charm_src_ingress_requirer_fixture() -> dict[str, str]:
 
     return {
         "ingress.py": pathlib.Path("lib/charms/traefik_k8s/v2/ingress.py").read_text(
-            encoding="utf-8"
-        ),
-        "apt.py": pathlib.Path("lib/charms/operator_libs_linux/v0/apt.py").read_text(
             encoding="utf-8"
         ),
         "any_charm.py": any_charm_py,
@@ -382,7 +377,7 @@ def any_charm_ingress_requirer_fixture(
             channel="beta",
             config={
                 "src-overwrite": f"@{tf.name}",
-                "python-packages": "pydantic<2.0",
+                "python-packages": "charmlibs-apt~=1.0\npydantic<2.0",
             },
         )
     juju.wait(lambda status: jubilant.all_active(status, any_charm_ingress_requirer_name))
@@ -474,7 +469,6 @@ def haproxy_route_requirer_fixture(juju: jubilant.Juju) -> str:
         {
             "any_charm.py": pathlib.Path(HAPROXY_ROUTE_REQUIRER_SRC).read_text(encoding="utf-8"),
             "haproxy_route.py": pathlib.Path(HAPROXY_ROUTE_LIB_SRC).read_text(encoding="utf-8"),
-            "apt.py": pathlib.Path(APT_LIB_SRC).read_text(encoding="utf-8"),
         }
     )
     # Write large src-overwrite to a file to avoid ARG_MAX CLI limit
@@ -487,7 +481,7 @@ def haproxy_route_requirer_fixture(juju: jubilant.Juju) -> str:
             app=app_name,
             config={
                 "src-overwrite": f"@{tf.name}",
-                "python-packages": "pydantic~=2.10\nvalidators",
+                "python-packages": "charmlibs-apt~=1.0\npydantic~=2.10\nvalidators",
             },
         )
     juju.wait(lambda status: jubilant.all_active(status, app_name))

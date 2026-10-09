@@ -6,9 +6,9 @@
 
 import pathlib
 
-import apt  # type: ignore
 import ops
 from any_charm_base import AnyCharmBase  # type: ignore
+from charmlibs import apt
 from haproxy_route import HaproxyRouteRequirer  # type: ignore
 
 HAPROXY_ROUTE_RELATION = "require-haproxy-route"
