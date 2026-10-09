@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-10-06
+
+- Rotate HAProxy logs daily or above 1 GiB, retaining seven rotated logs. Check
+  logrotate policies hourly to reduce disk exhaustion for high-traffic deployments.
+
 ## 2026-09-25
 
 - docs: Onboarded `docs` folder into central management solution located at

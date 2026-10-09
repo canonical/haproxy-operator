@@ -1,0 +1,17 @@
+version_schema: 2
+
+changes:
+  - title: Added size-based HAProxy log rotation
+    author: Thanhphan1147
+    type: bugfix
+    description: >
+      Added a 1 GB size threshold to HAProxy log rotation and configured hourly
+      logrotate checks. Existing daily rotation, retention, compression, and
+      rsyslog reopen behavior remain unchanged.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/673
+      related_doc:
+      related_issue:
+    visibility: public
+    highlight: false
