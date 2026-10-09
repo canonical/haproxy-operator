@@ -8,10 +8,9 @@
   "ignorePaths": [],
   "customDatasources": {
     "charmhub": {
-      "defaultRegistryUrlTemplate": "https://api.charmhub.io/v2/charms/info/{{packageName}}?fields=channel-map",
       "format": "json",
       "transformTemplates": [
-        "{\"releases\": [{\"version\": $string($$.(`channel-map`[channel.risk = 'edge' and channel.track = 'latest' and channel.base.architecture = 'amd64' and channel.base.channel = '24.04'].revision.revision))}]}"
+        "{\"releases\": [`channel-map`.{\"version\": channel.base.channel & \"_\" & channel.base.architecture & \"_\" & $string(revision.revision)}]}"
       ]
     }
   },
@@ -33,6 +32,12 @@
       ],
       "automerge": true,
       "enabled": true
+    },
+    {
+      "matchDatasources": [
+        "custom.charmhub"
+      ],
+      "groupName": "{{packageFileDir}}"
     },
     {
       "enabled": false,
@@ -72,10 +77,36 @@
     },
     {
       "customType": "regex",
-      "fileMatch": ["\\.tftest\\.hcl$", "\\.tf$"],
-      "matchStrings": ["# renovate: depName=\"(?<packageName>[^\"]+)\"\\s*\\n\\s*(?<fieldName>[a-zA-Z0-9_]+)\\s*=\\s*(?<currentValue>\\d+)"],
+      "description": "Update dependency charm revisions pinned via `# renovate: depName=...` annotations in integration test constants.py (ISD301)",
+      "managerFilePatterns": [
+        "/(^|/)tests/(integration/)?constants\\.py$/"
+      ],
+      "matchStringsStrategy": "recursive",
+      "matchStrings": [
+        "# renovate: depName=\"(?<depName>.*?)\" channel=\"(?<charmChannel>.*?)\" base=\"(?<base>.*?)\" arch=\"(?<arch>.*?)\"\\s*\\n\\s*\\w+_REVISION\\s*=\\s*\\d+\\s*\\n?",
+        "_REVISION\\s*=\\s*(?<currentValue>\\d+)\\s*\\n?"
+      ],
+      "datasourceTemplate": "custom.charmhub",
+      "registryUrlTemplate": "https://api.charmhub.io/v2/charms/info/{{depName}}?channel={{charmChannel}}&fields=channel-map",
       "versioningTemplate": "semver-coerced",
-      "datasourceTemplate": "custom.charmhub"
+      "extractVersionTemplate": "^{{base}}_{{arch}}_(?<version>.*)$"
+    },
+    {
+      "customType": "regex",
+      "description": "Update dependency charm revisions pinned via `# renovate: depName=...` annotations in Terraform files (ISD301)",
+      "managerFilePatterns": [
+        "/\\.tftest\\.hcl$/",
+        "/\\.tf$/"
+      ],
+      "matchStringsStrategy": "recursive",
+      "matchStrings": [
+        "# renovate: depName=\"(?<depName>.*?)\" channel=\"(?<charmChannel>.*?)\" base=\"(?<base>.*?)\" arch=\"(?<arch>.*?)\"\\s*\\n\\s*revision\\s*=\\s*\\d+\\s*\\n?",
+        "revision\\s*=\\s*(?<currentValue>\\d+)\\s*\\n?"
+      ],
+      "datasourceTemplate": "custom.charmhub",
+      "registryUrlTemplate": "https://api.charmhub.io/v2/charms/info/{{depName}}?channel={{charmChannel}}&fields=channel-map",
+      "versioningTemplate": "semver-coerced",
+      "extractVersionTemplate": "^{{base}}_{{arch}}_(?<version>.*)$"
     }
   ],
   "schedule": [

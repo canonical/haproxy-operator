@@ -16,12 +16,12 @@ run "basic_deploy" {
     model_uuid = run.setup_tests.model_uuid
 
     haproxy = {
-      # renovate: depName="haproxy"
+      # renovate: depName="haproxy" channel="2.8/edge" base="24.04" arch="amd64"
       revision = 344
     }
 
     haproxy_ddos_protection_configurator = {
-      # renovate: depName="haproxy-ddos-protection-configurator"
+      # renovate: depName="haproxy-ddos-protection-configurator" channel="latest/edge" base="24.04" arch="amd64"
       revision = 206
     }
 
@@ -29,11 +29,11 @@ run "basic_deploy" {
       {
         hostname = "one.example.com"
         haproxy_spoe_auth = {
-          # renovate: depName="haproxy-spoe-auth"
+          # renovate: depName="haproxy-spoe-auth" channel="latest/edge" base="24.04" arch="amd64"
           revision = 174
         }
         oauth_external_idp_integrator = {
-          # renovate: depName="oauth-external-idp-integrator"
+          # renovate: depName="oauth-external-idp-integrator" channel="latest/edge" base="22.04" arch="amd64"
           revision = 6
           config = {
             issuer_url             = "https://login.example.com"
@@ -52,7 +52,7 @@ run "basic_deploy" {
         hostname = "two.example.com"
         haproxy_spoe_auth = {
           channel = "latest/edge"
-          # renovate: depName="haproxy-spoe-auth"
+          # renovate: depName="haproxy-spoe-auth" channel="latest/edge" base="24.04" arch="amd64"
           revision = 174
         }
       }
