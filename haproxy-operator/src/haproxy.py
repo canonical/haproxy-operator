@@ -46,6 +46,11 @@ HAPROXY_DH_PARAM = (
 )
 HAPROXY_DHCONFIG = Path(HAPROXY_CONFIG_DIR / "ffdhe2048.txt")
 HAPROXY_SERVICE = "haproxy"
+HAPROXY_LOGROTATE_CONFIG = Path("/etc/logrotate.d/haproxy")
+# The default daily timer needs overriding only to run hourly checks: rotation
+# directives do not schedule logrotate, so maxsize alone cannot trigger hourly checks.
+# https://www.dash0.com/guides/log-rotation-linux-logrotate#important-note-on-hourly-rotation
+LOGROTATE_TIMER_OVERRIDE = Path("/etc/systemd/system/logrotate.timer.d/override.conf")
 HAPROXY_INGRESS_CONFIG_TEMPLATE = "haproxy_ingress.cfg.j2"
 HAPROXY_INGRESS_PER_UNIT_CONFIG_TEMPLATE = "haproxy_ingress_per_unit.cfg.j2"
 HAPROXY_LEGACY_CONFIG_TEMPLATE = "haproxy_legacy.cfg.j2"
@@ -90,6 +95,21 @@ class HAProxyService:
         HAPROXY_CERTS_DIR.mkdir(parents=True, exist_ok=True)
         pin_haproxy_package_version()
         render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
+        render_file(
+            HAPROXY_LOGROTATE_CONFIG,
+            self._render_to_string("haproxy.logrotate.j2", {}),
+            0o644,
+            user="root",
+        )
+        LOGROTATE_TIMER_OVERRIDE.parent.mkdir(parents=True, exist_ok=True)
+        render_file(
+            LOGROTATE_TIMER_OVERRIDE,
+            "[Timer]\nOnCalendar=\nOnCalendar=hourly\nAccuracySec=1min\n",
+            0o644,
+            user="root",
+        )
+        systemd.daemon_reload()
+        systemd.service_restart("logrotate.timer")
 
     def is_active(self) -> bool:
         """Indicate if the haproxy service is active.
@@ -366,7 +386,7 @@ class HAProxyService:
             raise HaproxyValidateConfigError("Failed validating the HAProxy config.") from exc
 
 
-def render_file(path: Path, content: str, mode: int) -> None:
+def render_file(path: Path, content: str, mode: int, *, user: str = HAPROXY_USER) -> None:
     """Write a content rendered from a template to a file.
 
     Args:
@@ -374,10 +394,11 @@ def render_file(path: Path, content: str, mode: int) -> None:
         content: the data to be written to the file.
         mode: access permission mask applied to the
             file using chmod (e.g. 0o640).
+        user: Owner of the rendered file.
     """
     path.write_text(content, encoding="utf-8")
     os.chmod(path, mode)
-    u = pwd.getpwnam(HAPROXY_USER)
+    u = pwd.getpwnam(user)
     # Set the correct ownership for the file.
     os.chown(path, uid=u.pw_uid, gid=u.pw_gid)
 
