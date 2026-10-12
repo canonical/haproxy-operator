@@ -261,6 +261,7 @@ rst_prolog = """
 # Intersphinx mappings for cross-referencing external documentation.
 intersphinx_mapping = {
     "juju": ("https://canonical.com/juju/docs/juju-cli/3.6/", None),
+<<<<<<< before updating
     "starter-pack": (
         "https://canonical-starter-pack.readthedocs-hosted.com/stable/",
         None,
@@ -269,4 +270,6 @@ intersphinx_mapping = {
         "https://sphinxcontrib-mermaid-demo.readthedocs.io/en/latest",
         None,
     ),
+=======
+>>>>>>> after updating
 }
