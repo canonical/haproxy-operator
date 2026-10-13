@@ -26,7 +26,6 @@ output "metadata" {
   description = "Deployment metadata."
   value = {
     version = var.metadata_version
-    risk    = var.risk
   }
 }
 
