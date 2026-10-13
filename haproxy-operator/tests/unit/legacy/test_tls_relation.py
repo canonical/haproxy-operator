@@ -17,6 +17,12 @@ from ops.testing import Harness
 from state.tls import HaproxyPeerRelationAppData, TLSInformation, TLSNotReadyError
 from tls_relation import TLSRelationService
 
+# These legacy tests still use Harness, which ops marks as deprecated with a
+# PendingDeprecationWarning. The unit suite runs with warnings promoted to
+# errors (see pyproject.toml), so ignore that one warning here until the tests
+# are ported to ops.testing.Context like the rest of tests/unit.
+pytestmark = pytest.mark.filterwarnings("ignore:Harness is deprecated:PendingDeprecationWarning")
+
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 
 
