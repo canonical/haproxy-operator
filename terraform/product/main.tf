@@ -1,16 +1,12 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
-locals {
-  use_hacluster  = var.hacluster != null
-  use_keepalived = var.keepalived != null
-}
 
 module "haproxy" {
   source = "../charm/haproxy"
 
   model_uuid  = var.model_uuid
   app_name    = var.haproxy.app_name
-  channel     = var.haproxy.channel
+  channel     = local.haproxy_channel
   revision    = var.haproxy.revision
   base        = var.haproxy.base
   units       = var.haproxy.units
@@ -28,7 +24,7 @@ resource "juju_application" "hacluster" {
   charm {
     name     = "hacluster"
     revision = var.hacluster.revision
-    channel  = var.hacluster.channel
+    channel  = local.hacluster_channel
     base     = var.haproxy.base
   }
 
@@ -59,7 +55,7 @@ resource "juju_application" "keepalived" {
   charm {
     name     = "keepalived"
     revision = var.keepalived.revision
-    channel  = var.keepalived.channel
+    channel  = local.keepalived_channel
     base     = var.haproxy.base
   }
 
@@ -89,7 +85,7 @@ resource "juju_application" "grafana_agent" {
   charm {
     name     = "grafana-agent"
     revision = var.grafana_agent.revision
-    channel  = var.grafana_agent.channel
+    channel  = local.grafana_agent_channel
     base     = var.haproxy.base
   }
 
@@ -115,7 +111,7 @@ module "haproxy_ddos_protection_configurator" {
 
   model_uuid  = var.model_uuid
   app_name    = var.haproxy_ddos_protection_configurator.app_name
-  channel     = var.haproxy_ddos_protection_configurator.channel
+  channel     = local.haproxy_ddos_protection_configurator_channel
   revision    = var.haproxy_ddos_protection_configurator.revision
   base        = var.haproxy_ddos_protection_configurator.base
   units       = var.haproxy_ddos_protection_configurator.units
@@ -147,7 +143,7 @@ module "haproxy_spoe_auth" {
 
   model_uuid  = var.model_uuid
   app_name    = format("%s%s", each.value.app_name, substr(md5(each.key), 0, 8))
-  channel     = each.value.channel
+  channel     = local.haproxy_spoe_auth_channel
   revision    = each.value.revision
   base        = each.value.base
   units       = each.value.units
@@ -184,7 +180,7 @@ resource "juju_application" "oauth_external_idp_integrator" {
   charm {
     name     = "oauth-external-idp-integrator"
     revision = each.value.revision
-    channel  = each.value.channel
+    channel  = local.oauth_external_idp_integrator_channel
     base     = each.value.base
   }
   config = each.value.config
