@@ -111,3 +111,9 @@ EOF
     }), null)
   }))
 }
+
+variable "risk" {
+  description = "Risk level to control the channel risk of the bundled charms in this solution."
+  type        = string
+  default     = "stable"
+}

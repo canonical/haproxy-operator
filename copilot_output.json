@@ -1,0 +1,4 @@
+{
+  "status": "success",
+  "message": "Migrate Terraform modules to CC008: fix charm module variable defaults/nullability (app_name, channel, model_uuid, base, constraints, units, machines), add product module 'risk' variable, add terraform/MAJOR_VERSION, add terraform_modules_release/compliance workflows, pin and refile terraform docs/test workflows with path filters, ignore MAJOR_VERSION in license headers, add a release-notes artifact, and remove the unused root terraform/terraform.tf that the stricter compliance checker misclassified as an incomplete charm module"
+}
