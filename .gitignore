@@ -12,7 +12,7 @@ __pycache__/
 **/.ruff_cache
 *.egg-info/
 */*.rock
-**/.venv/
+**/.venv
 
 # BEGIN VALE WORKFLOW IGNORE
 .vale/styles/*

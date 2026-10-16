@@ -1,0 +1,13 @@
+/var/log/haproxy.log {
+    maxsize 1G
+    {# All directives below are defaults from the HAProxy package's logrotate configuration. #}
+    daily
+    rotate 7
+    missingok
+    notifempty
+    compress
+    delaycompress
+    postrotate
+        [ ! -x /usr/lib/rsyslog/rsyslog-rotate ] || /usr/lib/rsyslog/rsyslog-rotate
+    endscript
+}

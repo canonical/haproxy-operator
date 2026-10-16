@@ -28,15 +28,16 @@ from .helper import RegexMatcher
 logger = logging.getLogger(__name__)
 
 
-def test_install(context_with_install_mock, base_state):
+@pytest.mark.parametrize("event", ["install", "upgrade_charm"])
+def test_install(context_with_install_mock, base_state, event):
     """
     arrange: prepare some state with peer relation
-    act: run start
+    act: run install or upgrade-charm
     assert: status is active
     """
     context, (install_mock, reconcile_default_mock, *_) = context_with_install_mock
     state = ops.testing.State(**base_state)
-    context.run(context.on.install(), state)
+    context.run(getattr(context.on, event)(), state)
     install_mock.assert_called_once()
     reconcile_default_mock.assert_called_once()
 
