@@ -1,0 +1,23 @@
+version_schema: 2
+
+changes:
+  - title: Migrated Terraform modules to the CC008 Charm Terraform Standards
+    author: copilot
+    type: minor
+    description: >
+      All Terraform modules under `terraform/` (the `haproxy`,
+      `haproxy-ddos-protection-configurator` and `haproxy-spoe-auth` charm
+      modules, and the product module) were migrated to the CC008 Charm
+      Terraform Standards. Charm module `base` and `constraints` variables
+      now default to `null` instead of a fixed value, and `app_name`,
+      `channel` and `model_uuid` are no longer nullable. The product module
+      gained a new `risk` input variable. CI now runs the CC008 compliance
+      checker and releases Terraform modules with `tf-X.Y.Z` tags via the
+      canonical/operator-workflows reusable workflows.
+    urls:
+      pr:
+        - ""
+      related_doc:
+      related_issue:
+    visibility: internal
+    highlight: false

@@ -4,7 +4,6 @@
 variable "grafana_agent" {
   type = object({
     app_name = optional(string, "grafana-agent")
-    channel  = optional(string, "2/stable")
     config   = optional(map(string), {})
     revision = optional(number, null)
   })
@@ -14,7 +13,6 @@ variable "grafana_agent" {
 variable "hacluster" {
   type = object({
     app_name = optional(string, "hacluster")
-    channel  = optional(string, "2.4/edge")
     config   = optional(map(string), {})
     revision = optional(number, null)
   })
@@ -24,7 +22,6 @@ variable "hacluster" {
 variable "haproxy" {
   type = object({
     app_name    = optional(string, "haproxy")
-    channel     = optional(string, "2.8/edge")
     config      = optional(map(string), {})
     constraints = optional(string, "arch=amd64")
     revision    = optional(number)
@@ -43,7 +40,6 @@ variable "haproxy_ddos_protection_configurator" {
   description = "Configuration for haproxy-ddos-protection-configurator charm deployment."
   type = object({
     app_name    = optional(string, "haproxy-ddos-protection-configurator")
-    channel     = optional(string, "latest/edge")
     config      = optional(map(string), {})
     constraints = optional(string, "arch=amd64")
     revision    = optional(number, null)
@@ -56,7 +52,6 @@ variable "haproxy_ddos_protection_configurator" {
 variable "keepalived" {
   type = object({
     app_name = optional(string, "keepalived")
-    channel  = optional(string, "latest/edge")
     config   = optional(map(string), {})
     revision = optional(number, null)
   })
@@ -93,7 +88,6 @@ EOF
       config = optional(map(string), {})
       # A random number will be appended to each app_name
       app_name    = optional(string, "haproxy-spoe-auth")
-      channel     = optional(string, "latest/stable")
       constraints = optional(string, "arch=amd64")
       revision    = optional(number)
       base        = optional(string, "ubuntu@24.04")
@@ -102,7 +96,6 @@ EOF
     oauth_external_idp_integrator = optional(object({
       # A number will be appended to the app_name
       app_name    = optional(string, "oauth-external-idp-integrator")
-      channel     = optional(string, "latest/edge")
       config      = optional(map(string), {})
       constraints = optional(string, "arch=amd64")
       revision    = optional(number)
@@ -110,4 +103,15 @@ EOF
       units       = optional(number, 1)
     }), null)
   }))
+}
+
+variable "risk" {
+  description = "Risk level controlling the channel risk of the charms in the solution."
+  type        = string
+  default     = "stable"
+
+  validation {
+    condition     = contains(["stable", "edge"], var.risk)
+    error_message = "risk must be one of: stable, edge."
+  }
 }

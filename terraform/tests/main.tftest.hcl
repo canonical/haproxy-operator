@@ -51,7 +51,6 @@ run "basic_deploy" {
       {
         hostname = "two.example.com"
         haproxy_spoe_auth = {
-          channel = "latest/edge"
           # renovate: depName="haproxy-spoe-auth"
           revision = 174
         }
@@ -122,4 +121,19 @@ run "haproxy_deploys_on_existing_machine" {
     condition     = output.app_name == "haproxy"
     error_message = "haproxy should be deployed on the existing machine"
   }
+}
+
+run "invalid_risk_is_rejected" {
+  command = plan
+
+  module {
+    source = "./product"
+  }
+
+  variables {
+    model_uuid = run.setup_tests.model_uuid
+    risk       = "beta"
+  }
+
+  expect_failures = [var.risk]
 }
