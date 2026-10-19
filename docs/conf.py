@@ -162,6 +162,11 @@ llms_txt_description = textwrap.dedent(
     """
 )
 
+# sphinx-markdown-builder (run by sphinx_llm.txt) has no visitor for these nodes.
+# "meta" may be removable once liran-funaro/sphinx-markdown-builder#70 / NVIDIA/sphinx-llm#172 land;
+# "mermaid" is unaddressed upstream and will still need suppressing.
+llms_txt_suppress_unknown_node_warnings = ["meta", "mermaid"]
+
 # The base URL for references built by sphinx-markdown-builder.
 if os.environ.get("READTHEDOCS"):
     markdown_http_base = html_baseurl
@@ -261,6 +266,7 @@ rst_prolog = """
 # Intersphinx mappings for cross-referencing external documentation.
 intersphinx_mapping = {
     "juju": ("https://canonical.com/juju/docs/juju-cli/3.6/", None),
+<<<<<<< before updating
     "starter-pack": (
         "https://canonical-starter-pack.readthedocs-hosted.com/stable/",
         None,
@@ -269,4 +275,6 @@ intersphinx_mapping = {
         "https://sphinxcontrib-mermaid-demo.readthedocs.io/en/latest",
         None,
     ),
+=======
+>>>>>>> after updating
 }
