@@ -40,4 +40,5 @@ header:
     - 'docs/**'
     - '.lycheeignore'
     - 'haproxy-route-policy/policy/migrations/*.py'
+    - '**/MAJOR_VERSION'
   comment: on-failure
