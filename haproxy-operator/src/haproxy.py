@@ -200,7 +200,8 @@ class HAProxyService:
         http_backends = [
             backend
             for backend in valid_backends
-            if not backend.application_data.external_grpc_port and not backend.is_default_backend
+            if not backend.application_data.external_grpc_port
+            and not backend.application_data.default_backend
         ]
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,

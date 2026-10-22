@@ -290,15 +290,6 @@ class HAProxyRouteBackend:
         """
         return self.application_data.protocol == "http"
 
-    @property
-    def is_default_backend(self) -> bool:
-        """Return whether this backend is the default landing page.
-
-        Returns:
-            bool: True if this backend is requested as the default backend.
-        """
-        return self.application_data.default_backend
-
 
 @dataclass(frozen=True)
 class HaproxyRoutePolicyProviderBackend:
@@ -702,7 +693,11 @@ class HaproxyRouteRequirersInformation:
             Optional[HAProxyRouteBackend]: The default backend, or None if not requested.
         """
         return next(
-            (backend for backend in self.valid_backends() if backend.is_default_backend),
+            (
+                backend
+                for backend in self.valid_backends()
+                if backend.application_data.default_backend
+            ),
             None,
         )
 
