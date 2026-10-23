@@ -295,6 +295,36 @@ def test_dump_requirer_unit_data():
     assert json.loads(databag["address"]) == MOCK_ADDRESS
 
 
+@pytest.mark.parametrize("default_backend", [False, True])
+def test_provider_default_backend_with_external_grpc_port(harness, default_backend):
+    """
+    arrange: Provide a gRPC relation with a configurable default_backend flag.
+    act: Fetch the relation data from the provider.
+    assert: Only the relation requesting both options is marked invalid and excluded.
+    """
+    relation_id = harness.add_relation(
+        MOCK_RELATION_NAME,
+        "grpc-service",
+        app_data={
+            "service": '"grpc-service"',
+            "ports": "[8080]",
+            "protocol": '"https"',
+            "external_grpc_port": "9000",
+            "default_backend": json.dumps(default_backend),
+        },
+    )
+    harness.begin()
+
+    data = harness.charm.haproxy_route_provider.get_data(
+        harness.model.relations[MOCK_RELATION_NAME]
+    )
+
+    assert data.relation_ids_with_invalid_data == ({relation_id} if default_backend else set())
+    assert [requirer.relation_id for requirer in data.requirers_data] == (
+        [] if default_backend else [relation_id]
+    )
+
+
 def test_haproxy_route_provider_initialization(harness):
     """
     arrange: Create a harness with a charm that has a HaproxyRouteProvider.
