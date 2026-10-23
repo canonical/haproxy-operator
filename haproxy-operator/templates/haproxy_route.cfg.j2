@@ -1,6 +1,6 @@
 {% extends 'haproxy.cfg.j2' %}
 {% block proxy_configuration %}
-{% if http_backends or policy_provider_backend is not none %}
+{% if http_backends or default_backend or policy_provider_backend is not none %}
 frontend haproxy
     mode http
     bind [::]:80 v4v6
@@ -57,7 +57,7 @@ frontend haproxy
     {{ policy_provider_backend.use_backend_configuration }}
 {% endif %}
 
-    default_backend default
+    default_backend {{ default_backend.backend_name if default_backend else 'default' }}
 
 {% if policy_provider_backend is not none %}
 # Backend configuration for the haproxy-route-policy provider
@@ -81,7 +81,7 @@ peers haproxy_peers
     table ddos_protection_ip type ip size 100k expire 2m store http_req_rate(1m),conn_rate(1m),conn_cur
 {% endif %}
 
-{% for backend in http_backends %}
+{% for backend in http_backends + ([default_backend] if default_backend else []) %}
 backend {{ backend.backend_name }}
     option forwardfor
     balance {{ backend.load_balancing_configuration }}
