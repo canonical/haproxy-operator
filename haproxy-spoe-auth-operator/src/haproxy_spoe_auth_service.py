@@ -44,8 +44,6 @@ class SpoeAuthService:
     def __init__(self) -> None:
         """Initialize the service."""
         self._template_dir = Path(__file__).parent.parent / "templates"
-        cache = snap.SnapCache()
-        self.haproxy_spoe_auth_snap = cache[SNAP_NAME]
 
     def install(self) -> None:
         """Install the haproxy-spoe-auth snap.
@@ -54,9 +52,8 @@ class SpoeAuthService:
             SpoeAuthServiceInstallError: When snap installation fails.
         """
         try:
-            if not self.haproxy_spoe_auth_snap.present:
-                self.haproxy_spoe_auth_snap.ensure(snap.SnapState.Latest, channel=SNAP_CHANNEL)
-        except snap.SnapError as exc:
+            snap.ensure_installed(SNAP_NAME, channel=SNAP_CHANNEL)
+        except snap.Error as exc:
             logger.error(
                 "An exception occurred when installing the haproxy-spoe-auth snap: %s",
                 str(exc),
@@ -75,10 +72,10 @@ class SpoeAuthService:
         """
         try:
             self._render_config(charm_state, oauth_information)
-            self.haproxy_spoe_auth_snap.restart(reload=True)
+            snap.restart(SNAP_NAME)
             # Ignore bandit rule as this is only used to reset the service restart counter.
             subprocess.check_call(["/usr/bin/systemctl", "reset-failed", SNAP_SERVICE_NAME])  # nosec subprocess_without_shell_equals_true
-        except (snap.SnapError, subprocess.CalledProcessError) as exc:
+        except (snap.Error, subprocess.CalledProcessError) as exc:
             raise SpoeAuthServiceConfigError(
                 f"Failed to reconcile the haproxy-spoe-auth service: {exc}"
             ) from exc

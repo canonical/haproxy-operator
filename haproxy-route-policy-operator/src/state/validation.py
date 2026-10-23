@@ -8,7 +8,7 @@ import logging
 import typing
 
 import ops
-from charmlibs.snap import SnapError
+from charmlibs.snap import Error as SnapError
 from pydantic import ValidationError
 
 from policy import HaproxyRoutePolicyAPIError, HaproxyRoutePolicyDatabaseMigrationError
