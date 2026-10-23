@@ -85,6 +85,13 @@ skip = "build,lib,venv,icon.svg,.tox,.git,.mypy_cache,.ruff_cache,.coverage,html
 [tool.pytest.ini_options]
 minversion = "6.0"
 log_cli_level = "INFO"
+# promote warnings to test failures
+filterwarnings = [
+  "error",
+  # Raised by the vendored data_platform_libs charm lib; the fix belongs
+  # upstream in canonical/data-platform-libs.
+  "ignore:JujuVersion.from_environ\\(\\) is deprecated:DeprecationWarning",
+]
 
 [tool.coverage.run]
 branch = true

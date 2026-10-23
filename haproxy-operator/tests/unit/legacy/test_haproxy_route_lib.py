@@ -26,6 +26,12 @@ from charms.haproxy.v2.haproxy_route import (
 from ops.testing import Harness
 from pydantic import ValidationError
 
+# These legacy tests still use Harness, which ops marks as deprecated with a
+# PendingDeprecationWarning. The unit suite runs with warnings promoted to
+# errors (see pyproject.toml), so ignore that one warning here until the tests
+# are ported to ops.testing.Context like the rest of tests/unit.
+pytestmark = pytest.mark.filterwarnings("ignore:Harness is deprecated:PendingDeprecationWarning")
+
 logger = logging.getLogger()
 MOCK_RELATION_NAME = "haproxy-route"
 MOCK_ADDRESS = "10.0.0.1"
@@ -67,8 +73,10 @@ def mock_provider_app_data_fixture():
 
 @pytest.fixture(name="mock_requirer_charm")
 def mock_requirer_charm_fixture():
-    """Create mock unit data."""
-    return Harness(ops.CharmBase, meta=MOCK_REQUIRER_CHARM_META)
+    """Create a harness for a mock requirer charm and clean up its files afterwards."""
+    harness = Harness(ops.CharmBase, meta=MOCK_REQUIRER_CHARM_META)
+    yield harness
+    harness.cleanup()
 
 
 def test_requirer_application_data_validation():
