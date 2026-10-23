@@ -7,8 +7,26 @@ import hashlib
 
 import jubilant
 import pytest
+import tenacity
 
 from .conftest import LOG_HASH_SALT, all_active_and_idle
+
+
+def _assert_log_contains(juju: jubilant.Juju, unit: str, expected: str) -> None:
+    """Assert that the expected string eventually appears in haproxy's journal.
+
+    HAProxy sends logs to journald asynchronously via syslog, so the log line
+    for a request may not be visible immediately after the request completes.
+    Retry for a few seconds to avoid flaky failures.
+    """
+    for attempt in tenacity.Retrying(
+        stop=tenacity.stop_after_delay(30),
+        wait=tenacity.wait_fixed(2),
+        reraise=True,
+    ):
+        with attempt:
+            haproxy_logs = juju.exec("journalctl -u haproxy --no-pager -n 50", unit=unit).stdout
+            assert expected in haproxy_logs
 
 
 def test_client_ip_hash_salt(
@@ -33,8 +51,7 @@ def test_client_ip_hash_salt(
 
     # HAProxy's hex converter outputs uppercase.
     expected_hash = hashlib.sha256(("127.0.0.1" + LOG_HASH_SALT).encode()).hexdigest().upper()
-    haproxy_logs = juju.exec("journalctl -u haproxy --no-pager -n 50", unit=unit).stdout
-    assert expected_hash in haproxy_logs
+    _assert_log_contains(juju, unit, expected_hash)
 
     request.getfixturevalue("haproxy_route_tcp_plain_tcp_relation")
     # Fix the source port because %cp logs the client port, not the listener port.
@@ -42,5 +59,4 @@ def test_client_ip_hash_salt(
     assert "pong" in nc_result.stdout
 
     expected_tcp_log = f"{expected_hash}:45555"
-    haproxy_logs = juju.exec("journalctl -u haproxy --no-pager -n 50", unit=unit).stdout
-    assert expected_tcp_log in haproxy_logs
+    _assert_log_contains(juju, unit, expected_tcp_log)
