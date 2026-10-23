@@ -16,10 +16,6 @@ from charmlibs.interfaces.tls_certificates import (
     CertificateRequestAttributes,
     CertificateSigningRequest,
     PrivateKey,
-    generate_ca,
-    generate_certificate,
-    generate_csr,
-    generate_private_key,
 )
 from charms.haproxy.v0.spoe_auth import SpoeAuthProviderAppData, SpoeAuthProviderUnitData
 from charms.haproxy.v1.haproxy_route_tcp import (
@@ -80,8 +76,12 @@ def mocks_tls_ca_write_fixture(monkeypatch: pytest.MonkeyPatch):
 @pytest.fixture(scope="function", name="ca_certificate_and_key")
 def ca_certificate_and_key_fixture() -> typing.Tuple[Certificate, PrivateKey]:
     """Ca Certificate and private key."""
-    private_key_ca = generate_private_key()
-    ca = generate_ca(generate_private_key(), timedelta(days=10), "caname")
+    private_key_ca = PrivateKey.generate()
+    ca = Certificate.generate_self_signed_ca(
+        CertificateRequestAttributes(common_name="caname", is_ca=True),
+        private_key_ca,
+        timedelta(days=10),
+    )
     return ca, private_key_ca
 
 
@@ -91,9 +91,12 @@ def csr_certificate_and_key_fixture(
 ) -> typing.Tuple[CertificateSigningRequest, Certificate, PrivateKey]:
     """Ca Certificate and private key."""
     ca, private_key_ca = ca_certificate_and_key
-    private_key = generate_private_key()
-    csr = generate_csr(private_key, TEST_EXTERNAL_HOSTNAME_CONFIG)
-    certificate = generate_certificate(csr, ca, private_key_ca, timedelta(days=5))
+    private_key = PrivateKey.generate()
+    csr_attributes = CertificateRequestAttributes(common_name=TEST_EXTERNAL_HOSTNAME_CONFIG)
+    csr = csr_attributes.generate_csr(private_key)
+    certificate = Certificate.generate(
+        csr=csr, ca=ca, ca_private_key=private_key_ca, validity=timedelta(days=5)
+    )
     return csr, certificate, private_key
 
 

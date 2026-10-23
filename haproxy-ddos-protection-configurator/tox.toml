@@ -129,6 +129,8 @@ commands = [
     "--ignore={toxinidir}/haproxy-operator",
     "--log-cli-level=INFO",
     "-s",
+    # Don't promote warnings for integration tests
+    "--override-ini=filterwarnings=",
     { replace = "posargs", extend = "true" },
   ],
 ]
