@@ -9,7 +9,7 @@ import jubilant
 import pytest
 import requests
 
-from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
+from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG, all_active_and_idle
 from .helper import (
     get_unit_ip_address,
 )
@@ -30,7 +30,7 @@ def test_ingress_per_unit_integration(
         f"{any_charm_ingress_per_unit_requirer}:require-ingress-per-unit",
     )
     juju.wait(
-        lambda status: jubilant.all_active(
+        lambda status: all_active_and_idle(
             status, configured_application_with_tls, any_charm_ingress_per_unit_requirer
         )
     )

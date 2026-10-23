@@ -8,6 +8,7 @@ import json
 import logging
 import pathlib
 import tempfile
+import uuid
 from pathlib import Path
 
 import jubilant
@@ -35,6 +36,7 @@ GRPC_SERVER_DIR = pathlib.Path("tests/integration/grpc_server")
 GRPC_SERVER_SRC = GRPC_SERVER_DIR / "__main__.py"
 GRPC_MESSAGE_STUB_SRC = GRPC_SERVER_DIR / "echo_pb2.py"
 GRPC_SERVICE_STUB_SRC = GRPC_SERVER_DIR / "echo_pb2_grpc.py"
+LOG_HASH_SALT = "demo-salt-value"
 
 
 def all_active_and_idle(status: jubilant.Status, *apps: str) -> bool:
@@ -90,7 +92,10 @@ def certificate_provider_application_fixture(
         logger.warning("Using existing application: %s", SELF_SIGNED_CERTIFICATES_APP_NAME)
         return SELF_SIGNED_CERTIFICATES_APP_NAME
     juju.deploy(
-        "self-signed-certificates", app=SELF_SIGNED_CERTIFICATES_APP_NAME, channel="1/edge"
+        "self-signed-certificates",
+        app=SELF_SIGNED_CERTIFICATES_APP_NAME,
+        channel="1/edge",
+        force=True,
     )
     return SELF_SIGNED_CERTIFICATES_APP_NAME
 
@@ -301,3 +306,113 @@ def any_charm_haproxy_route_tcp_requirer_fixture(
     app_name = any_charm_haproxy_route_tcp_requirer_base
     if app_name not in juju.status().apps:
         return
+
+
+BIND_OPERATOR_APP_NAME = "bind"
+
+
+@pytest.fixture(scope="module", name="bind_operator")
+def bind_operator_fixture(juju: jubilant.Juju, configured_application_with_tls_base: str) -> str:
+    """Deploy bind-operator and integrate with haproxy.
+
+    Returns:
+        The bind-operator application name.
+    """
+    juju.deploy(
+        "bind",
+        app=BIND_OPERATOR_APP_NAME,
+        base="ubuntu@22.04",
+        channel="latest/edge",
+    )
+    juju.integrate(
+        f"{configured_application_with_tls_base}:dns-record",
+        f"{BIND_OPERATOR_APP_NAME}:dns-record",
+    )
+    juju.wait(jubilant.all_active, timeout=10 * 60)
+    return BIND_OPERATOR_APP_NAME
+
+
+@pytest.fixture(name="log_hash_secret")
+def log_hash_secret_fixture(
+    configured_application_with_tls: str,
+    juju: jubilant.Juju,
+):
+    """Provide a granted log hash secret and restore the application configuration."""
+    secret_uri = juju.add_secret(
+        f"haproxy-log-hash-{uuid.uuid4().hex}",
+        {"salt": LOG_HASH_SALT},
+    )
+    juju.grant_secret(secret_uri, configured_application_with_tls)
+    yield secret_uri
+
+    juju.cli("config", configured_application_with_tls, "--reset", "client-ip-hash-salt")
+    juju.wait(lambda status: all_active_and_idle(status, configured_application_with_tls))
+    juju.remove_secret(secret_uri)
+
+
+@pytest.fixture(name="haproxy_route_tcp_relation")
+def haproxy_route_tcp_relation_fixture(
+    configured_application_with_tls: str,
+    any_charm_haproxy_route_tcp_requirer: str,
+    juju: jubilant.Juju,
+) -> str:
+    """Integrate the TCP requirer with haproxy and wait for both to settle."""
+    juju.integrate(
+        f"{configured_application_with_tls}:haproxy-route-tcp",
+        any_charm_haproxy_route_tcp_requirer,
+    )
+    juju.wait(
+        lambda status: (
+            jubilant.all_blocked(status, configured_application_with_tls)
+            and jubilant.all_agents_idle(
+                status, configured_application_with_tls, any_charm_haproxy_route_tcp_requirer
+            )
+        ),
+    )
+    juju.run(
+        f"{any_charm_haproxy_route_tcp_requirer}/0",
+        "rpc",
+        {"method": "update_relation"},
+    )
+    juju.wait(
+        lambda status: all_active_and_idle(
+            status,
+            configured_application_with_tls,
+            any_charm_haproxy_route_tcp_requirer,
+        )
+    )
+    return any_charm_haproxy_route_tcp_requirer
+
+
+@pytest.fixture(name="haproxy_route_tcp_plain_tcp_relation")
+def haproxy_route_tcp_plain_tcp_relation_fixture(
+    configured_application_with_tls: str,
+    any_charm_haproxy_route_tcp_requirer: str,
+    juju: jubilant.Juju,
+) -> str:
+    """Integrate the TCP requirer with the haproxy application without TLS termination."""
+    juju.integrate(
+        f"{configured_application_with_tls}:haproxy-route-tcp",
+        any_charm_haproxy_route_tcp_requirer,
+    )
+    juju.wait(
+        lambda status: (
+            jubilant.all_blocked(status, configured_application_with_tls)
+            and jubilant.all_agents_idle(
+                status, configured_application_with_tls, any_charm_haproxy_route_tcp_requirer
+            )
+        ),
+    )
+    juju.run(
+        f"{any_charm_haproxy_route_tcp_requirer}/0",
+        "rpc",
+        {"method": "update_relation_plain_tcp"},
+    )
+    juju.wait(
+        lambda status: all_active_and_idle(
+            status,
+            configured_application_with_tls,
+            any_charm_haproxy_route_tcp_requirer,
+        )
+    )
+    return any_charm_haproxy_route_tcp_requirer

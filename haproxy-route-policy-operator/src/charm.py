@@ -188,7 +188,6 @@ class HaproxyRoutePolicyCharm(ops.CharmBase):
             password=haproxy_route_policy_information.admin_password,
         )
 
-        self.unit.status = ops.MaintenanceStatus("evaluating backend requests via policy service")
         evaluated = client.refresh(backend_requests)
 
         approved = [

@@ -61,9 +61,9 @@ def test_haproxy_route_tcp(
         )
     )
 
-    haproxy_config = juju.ssh(
-        f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
-    )
+    haproxy_config = juju.exec(
+        "cat /etc/haproxy/haproxy.cfg", unit=f"{configured_application_with_tls}/0"
+    ).stdout
     assert all(
         entry in haproxy_config
         for entry in [
@@ -86,9 +86,9 @@ def test_haproxy_route_tcp(
         )
     )
 
-    haproxy_config = juju.ssh(
-        f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
-    )
+    haproxy_config = juju.exec(
+        "cat /etc/haproxy/haproxy.cfg", unit=f"{configured_application_with_tls}/0"
+    ).stdout
     assert all(
         entry in haproxy_config
         for entry in [
@@ -110,10 +110,10 @@ def test_haproxy_route_tcp(
         )
     )
 
-    haproxy_config = juju.ssh(
-        f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
-    )
-    assert "send-proxy" in haproxy_config
+    haproxy_config = juju.exec(
+        "cat /etc/haproxy/haproxy.cfg", unit=f"{configured_application_with_tls}/0"
+    ).stdout
+    assert "send-proxy-v2" in haproxy_config
 
     # Test with port range binding
     juju.run(
@@ -127,7 +127,7 @@ def test_haproxy_route_tcp(
         )
     )
 
-    haproxy_config = juju.ssh(
-        f"{configured_application_with_tls}/0", "cat /etc/haproxy/haproxy.cfg"
-    )
+    haproxy_config = juju.exec(
+        "cat /etc/haproxy/haproxy.cfg", unit=f"{configured_application_with_tls}/0"
+    ).stdout
     assert "bind [::]:8080-8090" in haproxy_config

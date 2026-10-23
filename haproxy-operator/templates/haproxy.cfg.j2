@@ -74,6 +74,10 @@ defaults
 {% endif %}
     timeout connect 5000
     timeout server 50000
+{% if hash_client_ip_in_logs %}
+    log-format "{{ http_log_format }}"
+    error-log-format "{{ error_log_format }}"
+{% endif %}
 
 frontend prometheus
     bind :8404
@@ -87,5 +91,7 @@ frontend default
     default_backend default
 {% endblock %}
 
+{% if not default_backend %}
 backend default
     http-request return status 200 content-type "text/plain" string "Default page for the haproxy-operator charm"
+{% endif %}

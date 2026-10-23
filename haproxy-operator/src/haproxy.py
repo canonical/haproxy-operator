@@ -46,6 +46,11 @@ HAPROXY_DH_PARAM = (
 )
 HAPROXY_DHCONFIG = Path(HAPROXY_CONFIG_DIR / "ffdhe2048.txt")
 HAPROXY_SERVICE = "haproxy"
+HAPROXY_LOGROTATE_CONFIG = Path("/etc/logrotate.d/haproxy")
+# The default daily timer needs overriding only to run hourly checks: rotation
+# directives do not schedule logrotate, so maxsize alone cannot trigger hourly checks.
+# https://www.dash0.com/guides/log-rotation-linux-logrotate#important-note-on-hourly-rotation
+LOGROTATE_TIMER_OVERRIDE = Path("/etc/systemd/system/logrotate.timer.d/override.conf")
 HAPROXY_INGRESS_CONFIG_TEMPLATE = "haproxy_ingress.cfg.j2"
 HAPROXY_INGRESS_PER_UNIT_CONFIG_TEMPLATE = "haproxy_ingress_per_unit.cfg.j2"
 HAPROXY_LEGACY_CONFIG_TEMPLATE = "haproxy_legacy.cfg.j2"
@@ -87,8 +92,24 @@ class HAProxyService:
         """Install the haproxy apt package."""
         run_systemd_tmpfiles_create()
         apt.add_package(package_names=APT_PACKAGE_NAME, update_cache=True)
+        HAPROXY_CERTS_DIR.mkdir(parents=True, exist_ok=True)
         pin_haproxy_package_version()
         render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
+        render_file(
+            HAPROXY_LOGROTATE_CONFIG,
+            self._render_to_string("haproxy.logrotate.j2", {}),
+            0o644,
+            user="root",
+        )
+        LOGROTATE_TIMER_OVERRIDE.parent.mkdir(parents=True, exist_ok=True)
+        render_file(
+            LOGROTATE_TIMER_OVERRIDE,
+            "[Timer]\nOnCalendar=\nOnCalendar=hourly\nAccuracySec=1min\n",
+            0o644,
+            user="root",
+        )
+        systemd.daemon_reload()
+        systemd.service_restart("logrotate.timer")
 
     def is_active(self) -> bool:
         """Indicate if the haproxy service is active.
@@ -108,6 +129,7 @@ class HAProxyService:
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
             "services": services,
+            **self._build_log_template_context(charm_state),
         }
         self._render_haproxy_config(HAPROXY_LEGACY_CONFIG_TEMPLATE, template_context)
         self._validate_haproxy_config()
@@ -145,6 +167,7 @@ class HAProxyService:
             "peer_tcp_port": ingress_requirers_information.peer_tcp_port,
             "ip_allow_list_file": IP_ALLOW_LIST_FILE,
             "deny_paths_file": DENY_PATHS_FILE,
+            **self._build_log_template_context(charm_state),
         }
         template = (
             HAPROXY_INGRESS_CONFIG_TEMPLATE
@@ -175,16 +198,18 @@ class HAProxyService:
         store_config_to_file(ddos_protection_config.deny_paths, DENY_PATHS_FILE)
 
         valid_backends = haproxy_route_requirers_information.valid_backends()
+        http_backends = [
+            backend
+            for backend in valid_backends
+            if not backend.application_data.external_grpc_port
+            and not backend.application_data.default_backend
+        ]
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
             "enable_hsts": charm_state.enable_hsts,
             "ddos_protection": charm_state.ddos_protection,
             "ddos_protection_config": ddos_protection_config,
-            "http_backends": [
-                backend
-                for backend in valid_backends
-                if not backend.application_data.external_grpc_port
-            ],
+            "http_backends": http_backends,
             "tcp_frontends": haproxy_route_requirers_information.valid_tcp_frontends(),
             "grpc_backends": [
                 backend
@@ -200,6 +225,8 @@ class HAProxyService:
             "ip_allow_list_file": IP_ALLOW_LIST_FILE,
             "deny_paths_file": DENY_PATHS_FILE,
             "policy_provider_backend": haproxy_route_requirers_information.policy_provider_backend,
+            "default_backend": haproxy_route_requirers_information.default_backend,
+            **self._build_log_template_context(charm_state),
         }
         self._render_haproxy_config(HAPROXY_ROUTE_CONFIG_TEMPLATE, template_context)
         if spoe_oauth_info_list:
@@ -220,13 +247,63 @@ class HAProxyService:
         """
         self._render_haproxy_config(
             HAPROXY_DEFAULT_CONFIG_TEMPLATE,
-            {
-                "config_global_max_connection": charm_state.global_max_connection,
-                "ddos_protection": charm_state.ddos_protection,
-            },
+            self._build_default_template_context(charm_state),
         )
         self._validate_haproxy_config()
         self._reload_haproxy_service()
+
+    def render_default_config(self, charm_state: CharmState) -> str:
+        """Render the default haproxy configuration and return it as a string.
+
+        Unlike `reconcile_default`, performs no side effects. Used to detect
+        whether the effective configuration is just the default.
+
+        Args:
+            charm_state: The charm state component.
+
+        Returns:
+            The rendered default configuration.
+        """
+        return self._render_to_string(
+            HAPROXY_DEFAULT_CONFIG_TEMPLATE,
+            self._build_default_template_context(charm_state),
+        )
+
+    def _build_default_template_context(self, charm_state: CharmState) -> dict:
+        """Build the template context for the default haproxy configuration.
+
+        Args:
+            charm_state: The charm state component.
+
+        Returns:
+            The template context for the default template.
+        """
+        return {
+            "config_global_max_connection": charm_state.global_max_connection,
+            "ddos_protection": charm_state.ddos_protection,
+            **self._build_log_template_context(charm_state),
+        }
+
+    @staticmethod
+    def _build_log_template_context(
+        charm_state: CharmState,
+    ) -> dict[str, bool | str | None]:
+        """Build log-format values only when client IP hashing is enabled."""
+        context: dict[str, bool | str | None] = {
+            "hash_client_ip_in_logs": charm_state.hash_client_ip_in_logs,
+            "http_log_format": None,
+            "error_log_format": None,
+            "tcp_log_format": None,
+        }
+        if charm_state.hash_client_ip_in_logs:
+            context.update(
+                {
+                    "http_log_format": charm_state.http_log_format,
+                    "error_log_format": charm_state.error_log_format,
+                    "tcp_log_format": charm_state.tcp_log_format,
+                }
+            )
+        return context
 
     def _render_haproxy_config(self, template_file_path: str, context: dict) -> None:
         """Render the haproxy configuration file.
@@ -245,6 +322,19 @@ class HAProxyService:
             context: Context needed to render the template.
             path: Path of the file to render.
         """
+        rendered = self._render_to_string(template_file_path, context)
+        render_file(path, rendered, 0o644)
+
+    def _render_to_string(self, template_file_path: str, context: dict) -> str:
+        """Render a template to a string without writing it to disk.
+
+        Args:
+            template_file_path: Path of the template to load.
+            context: Context needed to render the template.
+
+        Returns:
+            The rendered template content.
+        """
         env = Environment(
             loader=FileSystemLoader("templates"),
             autoescape=select_autoescape(),
@@ -253,8 +343,7 @@ class HAProxyService:
             lstrip_blocks=True,
         )
         template = env.get_template(template_file_path)
-        rendered = template.render(context)
-        render_file(path, rendered, 0o644)
+        return template.render(context)
 
     def _reload_haproxy_service(self) -> None:
         """Reload the haproxy service.
@@ -282,11 +371,25 @@ class HAProxyService:
             # Ignore bandit rule as we're not parsing user input
             subprocess.run(validate_config_command, capture_output=True, check=True)  # nosec B603
         except subprocess.CalledProcessError as exc:
-            logger.error("Failed validating the HAProxy config")
+            stdout = (
+                exc.stdout.decode(errors="replace")
+                if isinstance(exc.stdout, bytes)
+                else exc.stdout
+            )
+            stderr = (
+                exc.stderr.decode(errors="replace")
+                if isinstance(exc.stderr, bytes)
+                else exc.stderr
+            )
+            logger.error(
+                "Failed validating the HAProxy config. stdout: %s; stderr: %s",
+                stdout,
+                stderr,
+            )
             raise HaproxyValidateConfigError("Failed validating the HAProxy config.") from exc
 
 
-def render_file(path: Path, content: str, mode: int) -> None:
+def render_file(path: Path, content: str, mode: int, *, user: str = HAPROXY_USER) -> None:
     """Write a content rendered from a template to a file.
 
     Args:
@@ -294,10 +397,11 @@ def render_file(path: Path, content: str, mode: int) -> None:
         content: the data to be written to the file.
         mode: access permission mask applied to the
             file using chmod (e.g. 0o640).
+        user: Owner of the rendered file.
     """
     path.write_text(content, encoding="utf-8")
     os.chmod(path, mode)
-    u = pwd.getpwnam(HAPROXY_USER)
+    u = pwd.getpwnam(user)
     # Set the correct ownership for the file.
     os.chown(path, uid=u.pw_uid, gid=u.pw_gid)
 

@@ -1,0 +1,20 @@
+version_schema: 2
+
+changes:
+  - title: Added a user-provided Juju secret for hashing client IPs in logs
+    author: Ignavar
+    type: minor
+    description: >
+      Setting the `client-ip-hash-salt` option to a user-provided Juju secret
+      now enables client IP hashing, while removing it restores plaintext
+      logging. Secret revisions are supported, but rotation is not recommended
+      because changing the salt prevents correlation with earlier logs. The salt
+      is redacted from the get-configuration action output.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/636
+      related_doc:
+        https://github.com/canonical/haproxy-operator/blob/main/docs/how-to/hash-client-ip-addresses-in-logs.md
+      related_issue:
+    visibility: public
+    highlight: false

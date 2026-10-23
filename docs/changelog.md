@@ -8,6 +8,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-10-06
+
+- Rotate HAProxy logs daily or above 1 GiB, retaining seven rotated logs. Check
+  logrotate policies hourly to reduce disk exhaustion for high-traffic deployments.
+
+## 2026-09-25
+
+- docs: Onboarded `docs` folder into central management solution located at
+  [platform-engineering-documentation-files](https://github.com/canonical/platform-engineering-documentation-files).
+
+## 2026-09-01
+
+- docs: Added a how-to guide for hashing client IP addresses in logs and a GDPR/privacy section on security practices.
+
+## 2026-08-28
+
+- Added a `client-ip-hash-salt` configuration option to hash client IP addresses in HAProxy logs.
+
+## 2026-08-19
+
+- Switched from PROXY protocol v1 to v2.
+
+## 2026-07-17
+
+- Added a `get-configuration` action to inspect the effective HAProxy configuration.
+
 ## 2026-07-06
 
 - docs: Add a how-to guide for configuring the backend protocol.
@@ -31,6 +57,10 @@ Each revision is versioned by the date of the revision.
 ## 2026-05-28
 
 - Added relation endpoints reference page.
+
+## 2026-05-27
+
+- Added optional `dns-record` relation to publish DNS A records for HAProxy hostnames.
 
 ## 2026-05-26
 

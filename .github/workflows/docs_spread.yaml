@@ -10,7 +10,7 @@ on:
 
 jobs:
   doc-test:
-    uses: canonical/charm-ci/.github/workflows/doc-test.yml@v0.0.1-alpha.10
+    uses: canonical/charm-ci/.github/workflows/doc-test.yml@58ae6614a3b143d4e57eff0fd1770e97d8c30fab # v1.0.1
     permissions:
       contents: read
       actions: read

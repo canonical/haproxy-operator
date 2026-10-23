@@ -53,7 +53,7 @@ sudo sed -i -e 's/anonymous_enable=NO/anonymous_enable=YES/g' /etc/vsftpd.conf
 cat << EEOF | sudo tee -a /etc/vsftpd.conf
 pasv_enable=Yes
 pasv_max_port=10100
-pasv_min_port=10100
+pasv_min_port=10500
 EEOF
 
 sudo systemctl reload vsftpd.service
@@ -80,7 +80,7 @@ Once the two charms have settled into an "Active" state, update their configurat
 ```sh
 FTP_SERVER_ADDRESS = $(juju status --format json | jq -r  '.machines."5"."ip-addresses".[0]')
 juju config ftp-control tcp-backend-addresses=$FTP_SERVER_ADDRESS tcp-backend-port=21 tcp-frontend-port=2100
-juju config ftp-data tcp-backend-addresses=$FTP_SERVER_ADDRESS tcp-backend-port=10100 tcp-frontend-port=10100
+juju config ftp-data tcp-backend-addresses=$FTP_SERVER_ADDRESS tcp-port-mapping=10100-10500:10100-10500
 
 juju integrate ftp-control:haproxy-route-tcp haproxy
 juju integrate ftp-data:haproxy-route-tcp haproxy
@@ -108,4 +108,8 @@ Using binary mode to transfer files.
 200 Switching to Binary mode.
 ftp>
 ```
+
+## See also
+
+- {ref}`FTP support <reference_ftp_support>` — how the HAProxy charm provides FTP support and its limitations.
 

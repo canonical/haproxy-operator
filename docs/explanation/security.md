@@ -68,3 +68,18 @@ The charm offers several ways to protect against DoS attacks:
 
 - Set a reasonable maximum concurrent connection using the [`global-maxconn` charm configuration](https://charmhub.io/haproxy/configurations?channel=2.8/edge#global-maxconn).
 - For enhanced protection against DDoS attacks, deploy and integrate the HAProxy DDoS Protection Configurator charm with your HAProxy deployment.
+
+## Client IP privacy and data protection compliance
+
+By default, HAProxy records the client IP address of every request in its logs. Client IP addresses are personal data under regulations such as the GDPR, so retaining them in logs can raise compliance concerns such as data minimization and storage limitation.
+
+### Good practices
+
+Configure the `client-ip-hash-salt` charm configuration option to replace plaintext client IP addresses in logs with a salted SHA-256 hash, provided through a Juju secret granted only to the `haproxy` application. Requests from the same client IP address still produce the same hash; even though the logs don't store the client IP addresses, the logs remain useful for correlation, for example to detect abuse. Avoid rotating the salt unless necessary, since rotation prevents correlating logs recorded before and after the change.
+
+Refer to the {ref}`Hash client IP addresses in logs <how_to_hash_client_ip_addresses_in_logs>` guide for configuration steps.
+
+### Summary
+
+- Enable the `client-ip-hash-salt` configuration option to hash client IP addresses in logs instead of storing them in plaintext.
+- Protect the salt secret. Anyone with the salt and a candidate IP address can recompute its hash.

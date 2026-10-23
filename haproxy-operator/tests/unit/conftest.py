@@ -13,6 +13,7 @@ import pytest
 import scenario
 from charmlibs.interfaces.tls_certificates import (
     Certificate,
+    CertificateRequestAttributes,
     CertificateSigningRequest,
     PrivateKey,
     generate_ca,
@@ -34,8 +35,24 @@ from charms.haproxy.v2.haproxy_route import (
 from ops.testing import Context
 
 from charm import HAProxyCharm
+from state.charm_state import CharmState, ProxyMode
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
+TEST_LOG_HASH_SALT = "test-salt"
+TEST_LOG_HASH_CLIENT_ADDRESS = (
+    f'%[src,concat(,,),regsub(^::ffff:,),concat(,,\\"{TEST_LOG_HASH_SALT}\\"),sha2(256),hex]:%cp'
+)
+
+
+@pytest.fixture(name="hashed_charm_state")
+def hashed_charm_state_fixture() -> CharmState:
+    """Return a minimal CharmState with client IP hashing enabled."""
+    return CharmState(
+        mode=ProxyMode.NOPROXY,
+        enable_hsts=False,
+        global_max_connection=1024,
+        client_ip_hash_salt=TEST_LOG_HASH_SALT,
+    )
 
 
 @pytest.fixture(scope="function", name="systemd_mock")
@@ -52,6 +69,12 @@ def mocks_external_calls_fixture(monkeypatch: pytest.MonkeyPatch):
     """Mock external calls."""
     monkeypatch.setattr("haproxy.HAProxyService._validate_haproxy_config", MagicMock())
     monkeypatch.setattr("haproxy.pin_haproxy_package_version", MagicMock())
+
+
+@pytest.fixture(scope="function", name="mocks_tls_ca_write")
+def mocks_tls_ca_write_fixture(monkeypatch: pytest.MonkeyPatch):
+    """Mock TLS CA write."""
+    monkeypatch.setattr("charm.TLSRelationService.update_trusted_cas", MagicMock())
 
 
 @pytest.fixture(scope="function", name="ca_certificate_and_key")
@@ -580,3 +603,31 @@ def haproxy_route_relation_data_fixture() -> typing.Callable[..., HaproxyRouteRe
         )
 
     return generate_requirer_data
+
+
+@pytest.fixture(name="dns_record_relation")
+def dns_record_relation_fixture():
+    """DNS record relation fixture."""
+    return scenario.Relation(endpoint="dns-record", remote_app_name="bind-operator")
+
+
+@pytest.fixture(name="context_with_dns_mock")
+def context_with_dns_mock_fixture():
+    """Context fixture with dns_record and haproxy service mocked."""
+    with (
+        patch("haproxy.HAProxyService.install"),
+        patch("haproxy.HAProxyService.reconcile_default"),
+        patch("haproxy.HAProxyService.reconcile_ingress"),
+        patch("tls_relation.TLSRelationService.write_certificate_to_unit"),
+        # Patch the class so its __init__ (which creates a Juju secret) is never called
+        patch("charm.DNSRecordRequires"),
+        patch("dns_record.DNSRecordService.update_dns_records") as update_dns_mock,
+        patch(
+            "charm.HAProxyCharm._get_certificate_requests",
+            return_value=[CertificateRequestAttributes(common_name=TEST_EXTERNAL_HOSTNAME_CONFIG)],
+        ),
+    ):
+        yield (
+            Context(charm_type=HAProxyCharm),
+            update_dns_mock,
+        )

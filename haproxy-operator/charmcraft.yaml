@@ -69,7 +69,9 @@ requires:
     interface: haproxy-route-policy
     optional: true
     limit: 1
-
+  dns-record:
+    interface: dns_record
+    optional: true
 
 provides:
   ingress:
@@ -120,6 +122,16 @@ config:
         Send the http response header Strict-Transport-Security for domains provided
         through the `haproxy-route` relation without the allow_http attribute.
         The Strict-Transport-Security header value is "max-age=2592000;".
+    client-ip-hash-salt:
+      type: secret
+      description: |
+        User-owned Juju secret containing the salt used to hash client IPs in
+        HAProxy access and error logs. Setting this option enables salted SHA-256
+        hashing; removing it restores plaintext client IP logging. The secret must
+        contain a `salt` key with a string value that is not empty or only
+        whitespace. The value must not contain control characters, DEL, double
+        quotes, backslashes, or dollar signs. The charm does not validate salt
+        length or entropy.
 
 actions:
   get-certificate:
@@ -146,11 +158,27 @@ actions:
         description: |
           The name of the backend for which to get the endpoints.
           If no backend with this name is present, an empty list is returned.
+  get-configuration:
+    description: |
+      Return the rendered haproxy configuration currently on the haproxy unit.
+      Client IP hash salts are redacted. Intended for debugging purposes.
 
 charm-libs:
-- lib: traefik_k8s.ingress_per_unit
+- lib: certificate_transfer_interface.certificate_transfer
   version: "1"
+- lib: grafana_agent.cos_agent
+  version: "0"
 - lib: haproxy.ddos_protection
   version: "0"
 - lib: haproxy_route_policy.haproxy_route_policy
   version: "0"
+- lib: operator_libs_linux.apt
+  version: "0"
+- lib: operator_libs_linux.systemd
+  version: "1"
+- lib: tls_certificates_interface.tls_certificates
+  version: "4"
+- lib: traefik_k8s.ingress
+  version: "2"
+- lib: traefik_k8s.ingress_per_unit
+  version: "1"

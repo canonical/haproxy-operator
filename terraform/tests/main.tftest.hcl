@@ -22,7 +22,7 @@ run "basic_deploy" {
 
     haproxy_ddos_protection_configurator = {
       # renovate: depName="haproxy-ddos-protection-configurator"
-      revision = 165
+      revision = 206
     }
 
     protected_hostnames_configuration = [
@@ -30,7 +30,7 @@ run "basic_deploy" {
         hostname = "one.example.com"
         haproxy_spoe_auth = {
           # renovate: depName="haproxy-spoe-auth"
-          revision = 160
+          revision = 174
         }
         oauth_external_idp_integrator = {
           # renovate: depName="oauth-external-idp-integrator"
@@ -53,7 +53,7 @@ run "basic_deploy" {
         haproxy_spoe_auth = {
           channel = "latest/edge"
           # renovate: depName="haproxy-spoe-auth"
-          revision = 160
+          revision = 174
         }
       }
     ]
@@ -67,5 +67,59 @@ run "basic_deploy" {
   assert {
     condition     = length(output.haproxy_spoe_auth_app_names_map) == 2
     error_message = "Two haproxy-spoe-auth should be deployed"
+  }
+
+  assert {
+    condition     = output.models["haproxy"].model_uuid == run.setup_tests.model_uuid
+    error_message = "models output should expose the deployed model_uuid"
+  }
+
+  assert {
+    condition     = contains(keys(output.models["haproxy"].components), "haproxy")
+    error_message = "models.components should include the haproxy application"
+  }
+
+  assert {
+    condition     = output.metadata.version == "1.0.0"
+    error_message = "metadata.version should default to 1.0.0"
+  }
+}
+
+run "haproxy_units_and_machines_are_mutually_exclusive" {
+  command = plan
+
+  module {
+    source = "./product"
+  }
+
+  variables {
+    model_uuid = "00000000-0000-0000-0000-000000000000"
+
+    haproxy = {
+      units    = 1
+      machines = ["0"]
+    }
+
+    protected_hostnames_configuration = []
+  }
+
+  expect_failures = [var.haproxy]
+}
+
+run "haproxy_deploys_on_existing_machine" {
+  command = plan
+
+  module {
+    source = "./charm/haproxy"
+  }
+
+  variables {
+    model_uuid = run.setup_tests.model_uuid
+    machines   = [run.setup_tests.machine_id]
+  }
+
+  assert {
+    condition     = output.app_name == "haproxy"
+    error_message = "haproxy should be deployed on the existing machine"
   }
 }

@@ -7,7 +7,10 @@ Gunicorn
 hardcoded
 hostnames
 IPs
+logrotate
 monorepo
+Onboarded
+plaintext
 proxied
 proxying
 Requirers

@@ -1,21 +1,12 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-variable "model_uuid" {
-  description = "ID of the model to deploy to"
-  type        = string
-  default     = ""
-}
-
-variable "haproxy" {
+variable "grafana_agent" {
   type = object({
-    app_name    = optional(string, "haproxy")
-    channel     = optional(string, "2.8/edge")
-    config      = optional(map(string), {})
-    constraints = optional(string, "arch=amd64")
-    revision    = optional(number)
-    base        = optional(string, "ubuntu@24.04")
-    units       = optional(number, 1)
+    app_name = optional(string, "grafana-agent")
+    channel  = optional(string, "2/stable")
+    config   = optional(map(string), {})
+    revision = optional(number, null)
   })
   default = {}
 }
@@ -28,6 +19,38 @@ variable "hacluster" {
     revision = optional(number, null)
   })
   default = null
+}
+
+variable "haproxy" {
+  type = object({
+    app_name    = optional(string, "haproxy")
+    channel     = optional(string, "2.8/edge")
+    config      = optional(map(string), {})
+    constraints = optional(string, "arch=amd64")
+    revision    = optional(number)
+    base        = optional(string, "ubuntu@24.04")
+    units       = optional(number)
+    machines    = optional(set(string))
+  })
+  default = {}
+  validation {
+    condition     = var.haproxy.machines == null || var.haproxy.units == null
+    error_message = "haproxy machines and units cannot both be set."
+  }
+}
+
+variable "haproxy_ddos_protection_configurator" {
+  description = "Configuration for haproxy-ddos-protection-configurator charm deployment."
+  type = object({
+    app_name    = optional(string, "haproxy-ddos-protection-configurator")
+    channel     = optional(string, "latest/edge")
+    config      = optional(map(string), {})
+    constraints = optional(string, "arch=amd64")
+    revision    = optional(number, null)
+    base        = optional(string, "ubuntu@24.04")
+    units       = optional(number, 1)
+  })
+  default = {}
 }
 
 variable "keepalived" {
@@ -44,28 +67,16 @@ variable "keepalived" {
   }
 }
 
-variable "grafana_agent" {
-  type = object({
-    app_name = optional(string, "grafana-agent")
-    channel  = optional(string, "2/stable")
-    config   = optional(map(string), {})
-    revision = optional(number, null)
-  })
-  default = {}
+variable "metadata_version" {
+  description = "Version string reported in the product module 'metadata' output."
+  type        = string
+  default     = "1.0.0"
 }
 
-variable "haproxy_ddos_protection_configurator" {
-  description = "Configuration for haproxy-ddos-protection-configurator charm deployment."
-  type = object({
-    app_name    = optional(string, "haproxy-ddos-protection-configurator")
-    channel     = optional(string, "latest/edge")
-    config      = optional(map(string), {})
-    constraints = optional(string, "arch=amd64")
-    revision    = optional(number, null)
-    base        = optional(string, "ubuntu@24.04")
-    units       = optional(number, 1)
-  })
-  default = {}
+variable "model_uuid" {
+  description = "ID of the model to deploy to"
+  type        = string
+  default     = ""
 }
 
 variable "protected_hostnames_configuration" {

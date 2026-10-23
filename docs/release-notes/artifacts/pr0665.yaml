@@ -1,0 +1,16 @@
+version_schema: 2
+
+changes:
+  - title: Onboarded documentation in central management solution
+    author: erinecon
+    type: minor
+    description: >
+      The documentation for this project is now managed by
+      [platform-engineering-documentation-files](https://github.com/canonical/platform-engineering-documentation-files),
+      a Copier-based solution for managing common files across Platform Engineering documentation projects.
+    urls:
+      pr: https://github.com/canonical/haproxy-operator/pull/665
+      related_doc:
+      related_issue:
+    visibility: internal
+    highlight: false

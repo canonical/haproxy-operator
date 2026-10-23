@@ -343,9 +343,9 @@ class HaproxyRoutePolicyProviderBackend:
                 provider_data = relation.load(HaproxyRoutePolicyProviderAppData, relation.app)
                 provider_unit_addresses = [
                     # explicitly cast to IPvAnyAddress because we already filtered out None values.
-                    cast(IPvAnyAddress, relation.data[unit].get("private-address"))
+                    cast(IPvAnyAddress, unit_address)
                     for unit in relation.units
-                    if relation.data[unit].get("private-address") is not None
+                    if (unit_address := relation.data[unit].get("ingress-address")) is not None
                 ]
                 return cls(
                     policy_backend_port=provider_data.policy_backend_port,
@@ -681,6 +681,26 @@ class HaproxyRouteRequirersInformation(PeersInformation):
             for backend in self.backends
             if backend.relation_id not in self.relation_ids_with_invalid_data
         ]
+
+    @property
+    def default_backend(self) -> Optional[HAProxyRouteBackend]:
+        """Get the backend requested as the default landing page, if any.
+
+        The library guarantees that at most one valid backend requests to be the
+        default backend (backends that request it contradictorily are marked invalid).
+        The library also rejects gRPC backends requesting to be the default backend.
+
+        Returns:
+            Optional[HAProxyRouteBackend]: The default backend, or None if not requested.
+        """
+        return next(
+            (
+                backend
+                for backend in self.valid_backends()
+                if backend.application_data.default_backend
+            ),
+            None,
+        )
 
     def valid_tcp_frontends(self) -> list[HAProxyRouteTcpFrontend]:
         """Get the list of valid TCP endpoints (not in the invalid list).
