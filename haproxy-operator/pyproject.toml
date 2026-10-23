@@ -118,6 +118,10 @@ ignore-words-list = "iif"
 [tool.pytest.ini_options]
 minversion = "6.0"
 log_cli_level = "INFO"
+# promote warnings to test failures
+filterwarnings = [
+  "error",
+]
 
 [tool.coverage.run]
 branch = true
