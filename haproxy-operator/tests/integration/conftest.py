@@ -16,6 +16,7 @@ import pytest
 import yaml
 from opcli.pytest_plugin import CharmPathList
 
+from .constants import BIND_REVISION, SELF_SIGNED_CERTIFICATES_REVISION
 from .helper import pytestconfig_arg_no_deploy
 
 logger = logging.getLogger(__name__)
@@ -95,6 +96,7 @@ def certificate_provider_application_fixture(
         "self-signed-certificates",
         app=SELF_SIGNED_CERTIFICATES_APP_NAME,
         channel="1/edge",
+        revision=SELF_SIGNED_CERTIFICATES_REVISION,
         force=True,
     )
     return SELF_SIGNED_CERTIFICATES_APP_NAME
@@ -323,6 +325,7 @@ def bind_operator_fixture(juju: jubilant.Juju, configured_application_with_tls_b
         app=BIND_OPERATOR_APP_NAME,
         base="ubuntu@22.04",
         channel="latest/edge",
+        revision=BIND_REVISION,
     )
     juju.integrate(
         f"{configured_application_with_tls_base}:dns-record",
