@@ -13,6 +13,8 @@ jobs:
     uses: canonical/charm-ci/.github/workflows/integration-test.yml@14b1cf49d48b9d5b96192d9bca2890c98b7295cf # v1.0.2
     with:
       spread-jobs-include: "integration-test-ci:*"
+      charmcraft-environments: |
+        CHARMCRAFT_EXPERIMENTAL_MONOREPO=1
     secrets: inherit
     permissions:
       contents: read

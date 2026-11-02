@@ -13,11 +13,7 @@ import pytest
 from charmlibs.interfaces.tls_certificates import (
     TLSCertificatesRequiresV4,
 )
-from charms.haproxy.v0.ddos_protection import (
-    DDoSProtectionInvalidRelationDataError,
-    DDoSProtectionProviderAppData,
-    DDoSProtectionRequirer,
-)
+from charms.haproxy.v0.ddos_protection import DDoSProtectionProviderAppData
 from charms.haproxy.v1.haproxy_route_tcp import (
     DataValidationError as TcpDataValidationError,
 )
@@ -671,23 +667,34 @@ def test_ddos_protection_has_rate_limiting(ddos_kwargs, expected):
     assert ddos_protection.has_rate_limiting is expected
 
 
-def test_ddos_protection_from_charm_no_config():
+def test_ddos_protection_from_charm_no_relation():
     """
-    arrange: Create mock DDoSProtectionRequirer that returns no config.
+    arrange: Do not provide a ddos-protection relation.
     act: Call DDosProtection.from_charm.
     assert: Returns empty DDosProtection instance.
     """
-    mock_ddos_requirer = MagicMock(spec=DDoSProtectionRequirer)
-    mock_ddos_requirer.get_ddos_config.return_value = None
+    result = DDosProtection.from_charm(None)
 
-    result = DDosProtection.from_charm(mock_ddos_requirer)
+    assert result == DDosProtection()
+
+
+def test_ddos_protection_from_charm_relation_without_app():
+    """
+    arrange: Provide a ddos-protection relation that has no remote application yet.
+    act: Call DDosProtection.from_charm.
+    assert: Returns empty DDosProtection instance.
+    """
+    ddos_relation = MagicMock(spec=ops.model.Relation)
+    ddos_relation.app = None
+
+    result = DDosProtection.from_charm(ddos_relation)
 
     assert result == DDosProtection()
 
 
 def test_ddos_protection_from_charm_with_config():
     """
-    arrange: Create mock DDoSProtectionRequirer with full configuration.
+    arrange: Create a mock ddos-protection relation with full configuration.
     act: Call DDosProtection.from_charm.
     assert: Returns DDosProtection with all fields populated correctly.
     """
@@ -705,9 +712,10 @@ def test_ddos_protection_from_charm_with_config():
         deny_paths=["/admin", "/secret"],
     )
 
-    ddos_requirer = MagicMock(spec=DDoSProtectionRequirer)
-    ddos_requirer.get_ddos_config.return_value = config
-    result = DDosProtection.from_charm(ddos_requirer)
+    ddos_relation = MagicMock(spec=ops.model.Relation)
+    ddos_relation.app = MagicMock()
+    ddos_relation.load.return_value = config
+    result = DDosProtection.from_charm(ddos_relation)
 
     assert result.rate_limit_requests_per_minute == 1000
     assert result.rate_limit_connections_per_minute == 500
@@ -727,17 +735,16 @@ def test_ddos_protection_from_charm_with_config():
 
 def test_ddos_protection_from_charm_relation_data_error():
     """
-    arrange: Create mock DDoSProtectionRequirer that raises relation data error.
+    arrange: Create a mock ddos-protection relation that raises a data error.
     act: Call DDosProtection.from_charm.
     assert: Raises DDosProtectionValidationError with wrapped error.
     """
-    mock_ddos_requirer = MagicMock(spec=DDoSProtectionRequirer)
-    mock_ddos_requirer.get_ddos_config.side_effect = DDoSProtectionInvalidRelationDataError(
-        "Invalid relation data"
-    )
+    ddos_relation = MagicMock(spec=ops.model.Relation)
+    ddos_relation.app = MagicMock()
+    ddos_relation.load.side_effect = ValueError("Invalid relation data")
 
     with pytest.raises(DDosProtectionValidationError) as exc_info:
-        DDosProtection.from_charm(mock_ddos_requirer)
+        DDosProtection.from_charm(ddos_relation)
 
     assert "Failed to load DDoS protection configuration" in str(exc_info.value)
     assert "Invalid relation data" in str(exc_info.value)
