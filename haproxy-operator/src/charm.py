@@ -26,10 +26,7 @@ from charms.certificate_transfer_interface.v1.certificate_transfer import (
     CertificateTransferRequires,
 )
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
-from charms.haproxy.v0.ddos_protection import (
-    DDOS_PROTECTION_RELATION_NAME,
-    DDoSProtectionRequirer,
-)
+from charms.haproxy.v0.ddos_protection import DDOS_PROTECTION_RELATION_NAME
 from charms.haproxy.v0.spoe_auth import SpoeAuthRequirer
 from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpProvider
 from charms.haproxy.v2.haproxy_route import HaproxyRouteProvider
@@ -118,7 +115,6 @@ class HAProxyCharm(ops.CharmBase):
         self.haproxy_route_provider = HaproxyRouteProvider(self)
         self.haproxy_route_tcp_provider = HaproxyRouteTcpProvider(self)
         self.spoe_auth_requirer = SpoeAuthRequirer(self, SPOE_AUTH_RELATION)
-        self.ddos_requirer = DDoSProtectionRequirer(self)
         self.haproxy_route_policy = HaproxyRoutePolicyRequirer(
             self, HAPROXY_ROUTE_POLICY_RELATION_NAME
         )
@@ -323,7 +319,9 @@ class HAProxyCharm(ops.CharmBase):
         ingress_requirers_information = requirer_class.from_provider(
             ingress_provider, self._get_peer_units_address()
         )
-        ddos_protection_config = DDosProtection.from_charm(self.ddos_requirer)
+        ddos_protection_config = DDosProtection.from_charm(
+            self.model.get_relation(DDOS_PROTECTION_RELATION_NAME)
+        )
         self.unit.set_ports(80, 443)
         self.haproxy_service.reconcile_ingress(
             charm_state,
@@ -371,7 +369,9 @@ class HAProxyCharm(ops.CharmBase):
         )
         tls_information = TLSInformation.from_charm(self, self.certificates, allow_no_certificates)
         self._tls.certificate_available(tls_information)
-        ddos_protection_config = DDosProtection.from_charm(self.ddos_requirer)
+        ddos_protection_config = DDosProtection.from_charm(
+            self.model.get_relation(DDOS_PROTECTION_RELATION_NAME)
+        )
 
         spoe_oauth_info_list = SpoeAuthInformation.from_requirer(self.spoe_auth_requirer)
 

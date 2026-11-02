@@ -10,10 +10,16 @@ platforms:
 
 parts:
   charm:
-    source: .
+    source: ..
+    source-subdir: haproxy-ddos-protection-configurator
     plugin: uv
     build-snaps:
     - astral-uv
+  shared-libs:
+    plugin: dump
+    source: ../lib
+    organize:
+      "*": lib/
 
 name: haproxy-ddos-protection-configurator
 title: HAProxy DDoS protection configurator
@@ -78,10 +84,6 @@ config:
     deny-paths:
       type: string
       description: Comma-seperated list of paths to deny.
-
-charm-libs:
-- lib: haproxy.ddos_protection
-  version: "0"
 
 provides:
   ddos-protection:

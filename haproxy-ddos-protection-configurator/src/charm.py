@@ -10,9 +10,9 @@ import logging
 import ops
 from charms.haproxy.v0.ddos_protection import (
     DDOS_PROTECTION_RELATION_NAME,
-    DataValidationError,
-    DDoSProtectionProvider,
+    DDoSProtectionProviderAppData,
 )
+from pydantic import ValidationError
 
 from state import CharmState, InvalidDDoSProtectionConfigError
 
@@ -24,7 +24,6 @@ class HAProxyDDoSProtectionConfiguratorCharm(ops.CharmBase):
 
     def __init__(self, framework: ops.Framework) -> None:
         super().__init__(framework)
-        self._ddos_provider = DDoSProtectionProvider(self)
 
         framework.observe(self.on.start, self._reconcile)
         framework.observe(self.on.config_changed, self._reconcile)
@@ -38,13 +37,13 @@ class HAProxyDDoSProtectionConfiguratorCharm(ops.CharmBase):
         try:
             state = CharmState.from_charm(self)
 
-            self._ddos_provider.set_config(
+            provider_data = DDoSProtectionProviderAppData(
                 rate_limit_requests_per_minute=state.rate_limit_requests_per_minute,
                 rate_limit_connections_per_minute=state.rate_limit_connections_per_minute,
                 concurrent_connections_limit=state.concurrent_connections_limit,
                 error_rate=state.error_rate_per_minute,
-                limit_policy_http=state.limit_policy_http,
-                limit_policy_tcp=state.limit_policy_tcp,
+                limit_policy_http=state.limit_policy_http,  # type: ignore[arg-type]
+                limit_policy_tcp=state.limit_policy_tcp,  # type: ignore[arg-type]
                 ip_allow_list=state.ip_allow_list,
                 http_request_timeout=state.http_request_timeout,
                 http_keepalive_timeout=state.http_keepalive_timeout,
@@ -52,10 +51,14 @@ class HAProxyDDoSProtectionConfiguratorCharm(ops.CharmBase):
                 deny_paths=state.deny_paths,
             )
 
+            relation = self.model.get_relation(DDOS_PROTECTION_RELATION_NAME)
+            if relation is not None and self.unit.is_leader():
+                relation.save(provider_data, self.app)
+
             logger.info("Configuration applied successfully")
             self.unit.status = ops.ActiveStatus()
 
-        except (InvalidDDoSProtectionConfigError, DataValidationError) as e:
+        except (InvalidDDoSProtectionConfigError, ValidationError, ops.ModelError) as e:
             logger.error("Failed to apply configuration: %s", str(e))
             self.unit.status = ops.BlockedStatus(str(e))
 

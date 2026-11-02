@@ -12,7 +12,7 @@ passenv = [ "PYTHONPATH", "CHARM_BUILD_DIR", "MODEL_SETTINGS" ]
 runner = "uv-venv-lock-runner"
 
 [env_run_base.setenv]
-PYTHONPATH = "{toxinidir}:{toxinidir}/lib:{[vars]src_path}"
+PYTHONPATH = "{toxinidir}:{toxinidir}/lib:{toxinidir}/../lib:{[vars]src_path}"
 PYTHONBREAKPOINT = "ipdb.set_trace"
 PY_COLORS = "1"
 
@@ -84,7 +84,7 @@ commands = [
   [
     "coverage",
     "run",
-    "--source={[vars]src_path},{toxinidir}/lib/charms/haproxy/v2/,{[vars]src_path},{toxinidir}/lib/charms/haproxy/v0/,{toxinidir}/lib/charms/haproxy/v1/",
+    "--source={[vars]src_path},{toxinidir}/lib/charms/haproxy/v2/,{[vars]src_path},{toxinidir}/lib/charms/haproxy/v0/,{toxinidir}/../lib/charms/haproxy/v0/,{toxinidir}/lib/charms/haproxy/v1/",
     "-m",
     "pytest",
     "--ignore={[vars]tst_path}integration",
