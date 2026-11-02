@@ -1,6 +1,0 @@
-{% extends 'haproxy.cfg.j2' %}
-{% block proxy_configuration %}
-{% for service in services %}
-{{ service }}
-{% endfor %}
-{% endblock %}
