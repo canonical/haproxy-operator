@@ -10,7 +10,8 @@ platforms:
 
 parts:
   charm:
-    source: .
+    source: ..
+    source-subdir: haproxy-operator
     plugin: uv
     build-snaps:
     - astral-uv
@@ -21,6 +22,11 @@ parts:
     source: .
     stage:
     - templates
+  shared-libs:
+    plugin: dump
+    source: ../lib
+    organize:
+      "*": lib/
 name: haproxy
 title: HAProxy charm.
 description: |
@@ -157,8 +163,6 @@ charm-libs:
 - lib: certificate_transfer_interface.certificate_transfer
   version: "1"
 - lib: grafana_agent.cos_agent
-  version: "0"
-- lib: haproxy.ddos_protection
   version: "0"
 - lib: haproxy_route_policy.haproxy_route_policy
   version: "0"

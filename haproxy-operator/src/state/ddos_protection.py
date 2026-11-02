@@ -6,10 +6,9 @@
 import logging
 from typing import Optional
 
-from charms.haproxy.v0.ddos_protection import (
-    DDoSProtectionInvalidRelationDataError,
-    DDoSProtectionRequirer,
-)
+import ops
+from charms.haproxy.v0.ddos_protection import DDoSProtectionProviderAppData
+from pydantic import ValidationError
 from pydantic.dataclasses import dataclass
 
 from .exception import CharmStateValidationBaseError
@@ -70,13 +69,13 @@ class DDosProtection:
     @classmethod
     def from_charm(
         cls,
-        ddos_requirer: DDoSProtectionRequirer,
+        ddos_relation: Optional[ops.model.Relation],
     ) -> "DDosProtection":
         """Get DDoS protection configuration from charm's ddos-protection relation.
         Convert timeouts from seconds to milliseconds.
 
         Args:
-            ddos_requirer: The DDoSProtectionRequirer instance from the charm.
+            ddos_relation: The ddos-protection relation, if established.
 
         Raises:
             DDosProtectionValidationError: When validation of the state component failed.
@@ -84,10 +83,11 @@ class DDosProtection:
         Returns:
             DDosProtection: DDoS protection configuration.
         """
+        if ddos_relation is None or ddos_relation.app is None:
+            return cls()
+
         try:
-            config = ddos_requirer.get_ddos_config()
-            if not config:
-                return cls()
+            config = ddos_relation.load(DDoSProtectionProviderAppData, ddos_relation.app)
 
             http_request_timeout = (
                 config.http_request_timeout * 1000 if config.http_request_timeout else None
@@ -121,7 +121,7 @@ class DDosProtection:
                 deny_paths=config.deny_paths,
             )
 
-        except (DDosProtectionValidationError, DDoSProtectionInvalidRelationDataError) as e:
+        except (ValidationError, ValueError, ops.ModelError) as e:
             logger.error("Failed to load DDoS protection configuration: %s", str(e))
             raise DDosProtectionValidationError(
                 f"Failed to load DDoS protection configuration: {e}"
