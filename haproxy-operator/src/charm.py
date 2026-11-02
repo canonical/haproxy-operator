@@ -45,13 +45,12 @@ from charms.traefik_k8s.v2.ingress import (
     IngressPerAppDataRemovedEvent,
     IngressPerAppProvider,
 )
-from interface_hacluster.ops_ha_interface import HAServiceRequires
 from ops.charm import ActionEvent
 from ops.model import Port, SecretNotFoundError
 
 from charms.dns_integrator.v0.dns_record import DNSRecordRequires
 from dns_record import DNS_RECORD_RELATION, DNSRecordService
-from haproxy import HAPROXY_CONFIG, HAPROXY_SERVICE, HAProxyService, file_exists, read_file
+from haproxy import HAPROXY_CONFIG, HAProxyService, file_exists, read_file
 from http_interface import (
     HTTPBackendAvailableEvent,
     HTTPBackendRemovedEvent,
@@ -61,13 +60,8 @@ from http_interface import (
 from state.charm_state import CharmState, ProxyMode
 from state.ddos_protection import DDosProtection
 from state.exception import CharmStateValidationBaseError
-from state.ha import (
-    HACLUSTER_INTEGRATION,
-    HAPROXY_PEER_INTEGRATION,
-    HAInformation,
-    HAInformationValidationError,
-)
 from state.haproxy_route import (
+    HAPROXY_PEER_INTEGRATION,
     HAPROXY_ROUTE_RELATION,
     HAProxyRouteBackend,
     HaproxyRouteIntegrationDataValidationError,
@@ -188,7 +182,6 @@ class HAProxyCharm(ops.CharmBase):
             dashboard_dirs=["./src/grafana_dashboards"],
         )
 
-        self.hacluster = HAServiceRequires(self, HACLUSTER_INTEGRATION)
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.secret_changed, self._on_secret_changed)
@@ -215,13 +208,6 @@ class HAProxyCharm(ops.CharmBase):
         )
         self.framework.observe(
             self._ingress_per_unit_provider.on.data_removed, self._on_ingress_data_removed
-        )
-        self.framework.observe(self.hacluster.on.ha_ready, self._on_config_changed)
-        self.framework.observe(
-            self.on[HACLUSTER_INTEGRATION].relation_changed, self._on_config_changed
-        )
-        self.framework.observe(
-            self.on[HACLUSTER_INTEGRATION].relation_broken, self._on_config_changed
         )
         self.framework.observe(
             self.on[DNS_RECORD_RELATION].relation_created, self._on_config_changed
@@ -341,9 +327,6 @@ class HAProxyCharm(ops.CharmBase):
             # by the _validate_state method
             return
 
-        ha_information = HAInformation.from_charm(self)
-        self._reconcile_ha(ha_information)
-
         self._tls.update_trusted_cas()
 
         status_message = ""
@@ -355,7 +338,7 @@ class HAProxyCharm(ops.CharmBase):
             case ProxyMode.LEGACY:
                 self._configure_legacy(charm_state)
             case ProxyMode.HAPROXY_ROUTE:
-                status_message = self._configure_haproxy_route(charm_state, ha_information)
+                status_message = self._configure_haproxy_route(charm_state)
             case _:
                 if self.model.get_relation(TLS_CERT_RELATION):
                     # Reconcile certificates in case the certificates relation is present
@@ -422,9 +405,7 @@ class HAProxyCharm(ops.CharmBase):
             charm_state, self.reverseproxy_requirer.get_services()
         )
 
-    def _configure_haproxy_route(
-        self, charm_state: CharmState, ha_information: HAInformation
-    ) -> str:
+    def _configure_haproxy_route(self, charm_state: CharmState) -> str:
         """Configure the haproxy route relation.
 
         Returns:
@@ -487,9 +468,7 @@ class HAProxyCharm(ops.CharmBase):
         )
         if self.unit.is_leader():
             self._publish_haproxy_route_proxied_endpoints(haproxy_route_requirers_information)
-            self._publish_haproxy_route_tcp_proxied_endpoints(
-                haproxy_route_requirers_information, ha_information
-            )
+            self._publish_haproxy_route_tcp_proxied_endpoints(haproxy_route_requirers_information)
             self._publish_certificate_to_peer_units(tls_information)
 
         return self._get_haproxy_route_status_message(haproxy_route_requirers_information)
@@ -606,8 +585,7 @@ class HAProxyCharm(ops.CharmBase):
     def _update_dns_records(self) -> None:
         """Publish A records for all managed hostnames to the dns-record relation.
 
-        Uses the VIP when an HA relation is active, otherwise uses the ingress
-        binding address of this unit.
+        Uses the ingress binding address of this unit.
 
         Called at the end of _reconcile(), so config/TLS validation has already passed.
         """
@@ -618,23 +596,15 @@ class HAProxyCharm(ops.CharmBase):
         if not hostnames:
             return
 
-        try:
-            ha_information = HAInformation.from_charm(self)
-        except HAInformationValidationError:
-            ha_information = None
-
-        if ha_information and ha_information.ha_integration_ready and ha_information.vip:
-            ip = str(ha_information.vip)
-        else:
-            network_binding = self.model.get_binding(DNS_RECORD_RELATION)
-            if network_binding is None:
-                logger.warning("Cannot resolve network binding for DNS records.")
-                return
-            ingress_addresses = network_binding.network.ingress_addresses
-            if not ingress_addresses:
-                logger.warning("No ingress addresses found; skipping DNS record update.")
-                return
-            ip = str(ingress_addresses[0])
+        network_binding = self.model.get_binding(DNS_RECORD_RELATION)
+        if network_binding is None:
+            logger.warning("Cannot resolve network binding for DNS records.")
+            return
+        ingress_addresses = network_binding.network.ingress_addresses
+        if not ingress_addresses:
+            logger.warning("No ingress addresses found; skipping DNS record update.")
+            return
+        ip = str(ingress_addresses[0])
 
         self._dns_record_service.update_dns_records(hostnames, ip)
 
@@ -675,32 +645,6 @@ class HAProxyCharm(ops.CharmBase):
     ) -> None:
         """Handle the data-removed event."""
         self._reconcile()
-
-    def _reconcile_ha(self, ha_information: HAInformation) -> None:
-        """Update ha configuration.
-
-        Args:
-            ha_information: HAInformation charm state component.
-        """
-        if not ha_information.ha_integration_ready:
-            logger.info("ha integration is not ready, skipping.")
-            return
-
-        if not ha_information.haproxy_peer_integration_ready:
-            logger.info("haproxy-peers integration is not ready, skipping.")
-            return
-
-        peer_relation = typing.cast(
-            ops.model.Relation, self.model.get_relation(HAPROXY_PEER_INTEGRATION)
-        )
-
-        if ha_information.configured_vip and ha_information.configured_vip != ha_information.vip:
-            self.hacluster.remove_vip(self.app.name, str(ha_information.configured_vip))
-
-        self.hacluster.add_vip(self.app.name, str(ha_information.vip))
-        self.hacluster.add_systemd_service(f"{self.app.name}-{HAPROXY_SERVICE}", HAPROXY_SERVICE)
-        self.hacluster.bind_resources()
-        peer_relation.data[self.unit].update({"vip": str(ha_information.vip)})
 
     def _get_peer_units_address(self) -> list[str]:
         """Get address of peer units.
@@ -866,7 +810,6 @@ class HAProxyCharm(ops.CharmBase):
     def _publish_haproxy_route_tcp_proxied_endpoints(
         self,
         haproxy_route_requirers_information: HaproxyRouteRequirersInformation,
-        ha_information: HAInformation,
     ) -> None:
         """Publish the proxied endpoints for TCP frontends."""
         for frontend in haproxy_route_requirers_information.valid_tcp_frontends():
@@ -880,11 +823,6 @@ class HAProxyCharm(ops.CharmBase):
                 if frontend.is_sni_routing_enabled:
                     self.haproxy_route_tcp_provider.publish_proxied_endpoints(
                         [f"{backend.application_data.sni}:{frontend.port}"], relation
-                    )
-                    continue
-                if ha_information.ha_integration_ready:
-                    self.haproxy_route_tcp_provider.publish_proxied_endpoints(
-                        [f"{ha_information.vip}:{frontend.port}"], relation
                     )
                     continue
                 self.haproxy_route_tcp_provider.publish_proxied_endpoints(
