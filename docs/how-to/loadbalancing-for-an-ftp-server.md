@@ -29,10 +29,10 @@ juju add-model haproxy-guide
 
 ## Deploy the HAProxy charm
 
-We will deploy charm from Charmhub using the `2.8/edge` channel:
+We will deploy charm from Charmhub using the `3.2/edge` channel:
 
 ```
-juju deploy haproxy --channel=2.8/edge
+juju deploy haproxy --channel=3.2/edge
 ```
 
 ## Deploy and configure the FTP server

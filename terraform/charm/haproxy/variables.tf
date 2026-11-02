@@ -10,13 +10,13 @@ variable "app_name" {
 variable "base" {
   description = "Base of the haproxy charm."
   type        = string
-  default     = "ubuntu@24.04"
+  default     = "ubuntu@26.04"
 }
 
 variable "channel" {
   description = "Channel of the haproxy charm."
   type        = string
-  default     = "2.8/edge"
+  default     = "3.2/edge"
 }
 
 variable "config" {

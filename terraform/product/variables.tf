@@ -24,11 +24,11 @@ variable "hacluster" {
 variable "haproxy" {
   type = object({
     app_name    = optional(string, "haproxy")
-    channel     = optional(string, "2.8/edge")
+    channel     = optional(string, "3.2/edge")
     config      = optional(map(string), {})
     constraints = optional(string, "arch=amd64")
     revision    = optional(number)
-    base        = optional(string, "ubuntu@24.04")
+    base        = optional(string, "ubuntu@26.04")
     units       = optional(number)
     machines    = optional(set(string))
   })

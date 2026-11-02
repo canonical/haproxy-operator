@@ -31,8 +31,8 @@ No modules.
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_app_name"></a> [app\_name](#input\_app\_name) | Application name of the deployed haproxy charm. | `string` | `"haproxy"` | no |
-| <a name="input_base"></a> [base](#input\_base) | Base of the haproxy charm. | `string` | `"ubuntu@24.04"` | no |
-| <a name="input_channel"></a> [channel](#input\_channel) | Revision of the haproxy charm. | `string` | `"2.8/edge"` | no |
+| <a name="input_base"></a> [base](#input\_base) | Base of the haproxy charm. | `string` | `"ubuntu@26.04"` | no |
+| <a name="input_channel"></a> [channel](#input\_channel) | Revision of the haproxy charm. | `string` | `"3.2/edge"` | no |
 | <a name="input_config"></a> [config](#input\_config) | Haproxy charm config. | `map(string)` | `{}` | no |
 | <a name="input_constraints"></a> [constraints](#input\_constraints) | Haproxy constraints. | `string` | `"arch=amd64"` | no |
 | <a name="input_machines"></a> [machines](#input\_machines) | Machines to deploy haproxy units to. Mutually exclusive with units. | `set(string)` | `null` | no |

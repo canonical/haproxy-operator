@@ -19,7 +19,7 @@ Official [HAProxy operator documentation](https://charmhub.io/haproxy).
 
 Deploy the HAProxy charm and integrate it with a certificate provider charm
 ```
-juju deploy haproxy --channel=2.8/edge
+juju deploy haproxy --channel=3.2/edge
 juju config haproxy external-hostname="fqdn.example"
 
 juju deploy self-signed-certificates

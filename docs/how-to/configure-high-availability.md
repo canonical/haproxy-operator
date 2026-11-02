@@ -9,15 +9,15 @@ High availability (HA) allows the HAProxy charm to continue to function even if 
 Deploy the HAProxy charm with three units since it's the minimum required by the `hacluster` charm.
 
 ```
-juju deploy haproxy --channel=2.8/edge -n 3
+juju deploy haproxy --channel=3.2/edge -n 3
 ```
 
 ## Deploy and integrate the `hacluster` subordinate charm
 
-Deploy the subordinate charm, and specify `--base=ubuntu@24.04` so that the charm is deployed with a base matching the HAProxy charm.
+Deploy the subordinate charm, and specify `--base=ubuntu@26.04` so that the charm is deployed with a base matching the HAProxy charm.
 
 ```
-juju deploy hacluster --channel=2.4/edge --base=ubuntu@24.04
+juju deploy hacluster --channel=2.4/edge --base=ubuntu@26.04
 juju integrate hacluster haproxy
 ```
 

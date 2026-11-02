@@ -78,7 +78,7 @@ def application_fixture(juju: jubilant.Juju, charm: str):
     juju.deploy(
         charm=charm,
         app=app_name,
-        base="ubuntu@24.04",
+        base="ubuntu@26.04",
     )
     return app_name
 
