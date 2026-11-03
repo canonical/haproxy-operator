@@ -16,6 +16,8 @@ run "basic_deploy" {
     model_uuid = run.setup_tests.model_uuid
 
     haproxy = {
+      channel = "2.8/edge"
+      base    = "ubuntu@24.04"
       # renovate: depName="haproxy"
       revision = 344
     }
@@ -116,6 +118,8 @@ run "haproxy_deploys_on_existing_machine" {
   variables {
     model_uuid = run.setup_tests.model_uuid
     machines   = [run.setup_tests.machine_id]
+    channel    = "2.8/edge"
+    base       = "ubuntu@24.04"
   }
 
   assert {
