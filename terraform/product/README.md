@@ -25,11 +25,9 @@
 | Name | Type |
 |------|------|
 | [juju_application.grafana_agent](https://registry.terraform.io/providers/juju/juju/latest/docs/resources/application) | resource |
-| [juju_application.hacluster](https://registry.terraform.io/providers/juju/juju/latest/docs/resources/application) | resource |
 | [juju_application.keepalived](https://registry.terraform.io/providers/juju/juju/latest/docs/resources/application) | resource |
 | [juju_application.oauth_external_idp_integrator](https://registry.terraform.io/providers/juju/juju/latest/docs/resources/application) | resource |
 | [juju_integration.grafana_agent](https://registry.terraform.io/providers/juju/juju/latest/docs/resources/integration) | resource |
-| [juju_integration.ha](https://registry.terraform.io/providers/juju/juju/latest/docs/resources/integration) | resource |
 | [juju_integration.haproxy_haproxy_ddos_protection_configurator](https://registry.terraform.io/providers/juju/juju/latest/docs/resources/integration) | resource |
 | [juju_integration.haproxy_spoe_auth](https://registry.terraform.io/providers/juju/juju/latest/docs/resources/integration) | resource |
 | [juju_integration.keepalived](https://registry.terraform.io/providers/juju/juju/latest/docs/resources/integration) | resource |
@@ -40,7 +38,6 @@
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_grafana_agent"></a> [grafana\_agent](#input\_grafana\_agent) | n/a | <pre>object({<br/>    app_name = optional(string, "grafana-agent")<br/>    channel  = optional(string, "2/stable")<br/>    config   = optional(map(string), {})<br/>    revision = optional(number, null)<br/>  })</pre> | `{}` | no |
-| <a name="input_hacluster"></a> [hacluster](#input\_hacluster) | n/a | <pre>object({<br/>    app_name = optional(string, "hacluster")<br/>    channel  = optional(string, "2.4/edge")<br/>    config   = optional(map(string), {})<br/>    revision = optional(number, null)<br/>  })</pre> | `null` | no |
 | <a name="input_haproxy"></a> [haproxy](#input\_haproxy) | n/a | <pre>object({<br/>    app_name    = optional(string, "haproxy")<br/>    channel     = optional(string, "3.2/edge")<br/>    config      = optional(map(string), {})<br/>    constraints = optional(string, "arch=amd64")<br/>    revision    = optional(number)<br/>    base        = optional(string, "ubuntu@26.04")<br/>    units       = optional(number)<br/>    machines    = optional(set(string))<br/>  })</pre> | `{}` | no |
 | <a name="input_haproxy_ddos_protection_configurator"></a> [haproxy\_ddos\_protection\_configurator](#input\_haproxy\_ddos\_protection\_configurator) | Configuration for haproxy-ddos-protection-configurator charm deployment. | <pre>object({<br/>    app_name    = optional(string, "haproxy-ddos-protection-configurator")<br/>    channel     = optional(string, "latest/edge")<br/>    config      = optional(map(string), {})<br/>    constraints = optional(string, "arch=amd64")<br/>    revision    = optional(number, null)<br/>    base        = optional(string, "ubuntu@24.04")<br/>    units       = optional(number, 1)<br/>  })</pre> | `{}` | no |
 | <a name="input_keepalived"></a> [keepalived](#input\_keepalived) | n/a | <pre>object({<br/>    app_name = optional(string, "keepalived")<br/>    channel  = optional(string, "latest/edge")<br/>    config   = optional(map(string), {})<br/>    revision = optional(number, null)<br/>  })</pre> | `null` | no |

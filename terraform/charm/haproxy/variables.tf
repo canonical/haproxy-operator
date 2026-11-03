@@ -43,7 +43,7 @@ variable "revision" {
 }
 
 variable "units" {
-  description = "Number of haproxy units. If hacluster is enabled, it is recommended to use a value > 3 to ensure a quorum."
+  description = "Number of haproxy units."
   type        = number
   default     = null
 }

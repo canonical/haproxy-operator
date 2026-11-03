@@ -11,16 +11,6 @@ variable "grafana_agent" {
   default = {}
 }
 
-variable "hacluster" {
-  type = object({
-    app_name = optional(string, "hacluster")
-    channel  = optional(string, "2.4/edge")
-    config   = optional(map(string), {})
-    revision = optional(number, null)
-  })
-  default = null
-}
-
 variable "haproxy" {
   type = object({
     app_name    = optional(string, "haproxy")
@@ -61,10 +51,6 @@ variable "keepalived" {
     revision = optional(number, null)
   })
   default = null
-  validation {
-    condition     = (var.hacluster == null || var.keepalived == null)
-    error_message = "hacluster and keepalived cannot both be set."
-  }
 }
 
 variable "metadata_version" {
