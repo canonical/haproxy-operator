@@ -26,7 +26,10 @@ from charms.certificate_transfer_interface.v1.certificate_transfer import (
     CertificateTransferRequires,
 )
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
-from charms.haproxy.v0.ddos_protection import DDOS_PROTECTION_RELATION_NAME
+from charms.haproxy.v0.ddos_protection import (
+    DDOS_PROTECTION_RELATION_NAME,
+    DDoSProtectionProviderAppData,
+)
 from charms.haproxy.v0.spoe_auth import SpoeAuthRequirer
 from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpProvider
 from charms.haproxy.v2.haproxy_route import HaproxyRouteProvider
@@ -45,12 +48,12 @@ from charms.traefik_k8s.v2.ingress import (
 from interface_hacluster.ops_ha_interface import HAServiceRequires
 from ops.charm import ActionEvent
 from ops.model import SecretNotFoundError
+from pydantic import ValidationError
 
 from charms.dns_integrator.v0.dns_record import DNSRecordRequires
 from dns_record import DNS_RECORD_RELATION, DNSRecordService
 from haproxy import HAPROXY_CONFIG, HAPROXY_SERVICE, HAProxyService, file_exists, read_file
 from state.charm_state import CharmState, ProxyMode
-from state.ddos_protection import DDosProtection
 from state.exception import CharmStateValidationBaseError
 from state.ha import (
     HACLUSTER_INTEGRATION,
@@ -92,6 +95,10 @@ LOG_HASH_SALT_PATTERN = re.compile(
 
 class HaproxyUnitAddressNotAvailableError(CharmStateValidationBaseError):
     """Exception raised when ingress integration is not established."""
+
+
+class DDosProtectionValidationError(CharmStateValidationBaseError):
+    """Exception raised when validation of DDoS protection state failed."""
 
 
 def _redact_log_hash_salt(configuration: str) -> str:
@@ -229,8 +236,13 @@ class HAProxyCharm(ops.CharmBase):
             DDOS_PROTECTION_RELATION_NAME,
             HAPROXY_ROUTE_POLICY_RELATION_NAME,
         ]:
-            self.framework.observe(self.on[relation].relation_changed, self._on_config_changed)
-            self.framework.observe(self.on[relation].relation_broken, self._on_config_changed)
+            for event in [
+                self.on[relation].relation_created,
+                self.on[relation].relation_joined,
+                self.on[relation].relation_changed,
+                self.on[relation].relation_broken,
+            ]:
+                self.framework.observe(event, self._on_config_changed)
 
     @validate_config_and_tls(defer=False)
     def _on_install(self, _: typing.Any) -> None:
@@ -319,6 +331,27 @@ class HAProxyCharm(ops.CharmBase):
             self._update_dns_records()
         self.unit.status = ops.ActiveStatus(status_message)
 
+    def _get_ddos_protection_config(self) -> DDoSProtectionProviderAppData:
+        """Load the DDoS protection configuration from the relation.
+
+        Raises:
+            DDosProtectionValidationError: When the relation data is invalid.
+
+        Returns:
+            DDoSProtectionProviderAppData: The DDoS protection configuration.
+        """
+        relation = self.model.get_relation(DDOS_PROTECTION_RELATION_NAME)
+        if relation is None or relation.app is None:
+            return DDoSProtectionProviderAppData()
+
+        try:
+            return relation.load(DDoSProtectionProviderAppData, relation.app)
+        except (ValidationError, ValueError, ops.ModelError) as e:
+            logger.error("Failed to load DDoS protection configuration: %s", str(e))
+            raise DDosProtectionValidationError(
+                f"Failed to load DDoS protection configuration: {e}"
+            ) from e
+
     def _configure_ingress(
         self,
         charm_state: CharmState,
@@ -336,9 +369,7 @@ class HAProxyCharm(ops.CharmBase):
         ingress_requirers_information = requirer_class.from_provider(
             ingress_provider, self._get_peer_units_address()
         )
-        ddos_protection_config = DDosProtection.from_charm(
-            self.model.get_relation(DDOS_PROTECTION_RELATION_NAME)
-        )
+        ddos_protection_config = self._get_ddos_protection_config()
         self.unit.set_ports(80, 443)
         self.haproxy_service.reconcile_ingress(
             charm_state,
@@ -388,9 +419,7 @@ class HAProxyCharm(ops.CharmBase):
         )
         tls_information = TLSInformation.from_charm(self, self.certificates, allow_no_certificates)
         self._tls.certificate_available(tls_information)
-        ddos_protection_config = DDosProtection.from_charm(
-            self.model.get_relation(DDOS_PROTECTION_RELATION_NAME)
-        )
+        ddos_protection_config = self._get_ddos_protection_config()
 
         spoe_oauth_info_list = SpoeAuthInformation.from_requirer(self.spoe_auth_requirer)
 

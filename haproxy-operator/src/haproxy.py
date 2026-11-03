@@ -13,12 +13,12 @@ import subprocess  # nosec B404
 from pathlib import Path
 from subprocess import CalledProcessError, run  # nosec
 
+from charms.haproxy.v0.ddos_protection import DDoSProtectionProviderAppData
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from state.charm_state import CharmState
-from state.ddos_protection import DDosProtection
 from state.haproxy_route import HaproxyRouteRequirersInformation
 from state.ingress import IngressRequirersInformation
 from state.ingress_per_unit import IngressPerUnitRequirersInformation
@@ -100,7 +100,7 @@ class HAProxyService:
             IngressRequirersInformation | IngressPerUnitRequirersInformation
         ),
         external_hostname: str,
-        ddos_protection_config: DDosProtection,
+        ddos_protection_config: DDoSProtectionProviderAppData,
     ) -> None:
         """Render the haproxy config for ingress proxying and reload the service.
 
@@ -141,7 +141,7 @@ class HAProxyService:
         charm_state: CharmState,
         haproxy_route_requirers_information: HaproxyRouteRequirersInformation,
         spoe_oauth_info_list: list[SpoeAuthInformation],
-        ddos_protection_config: DDosProtection,
+        ddos_protection_config: DDoSProtectionProviderAppData,
     ) -> None:
         """Render the haproxy config for haproxy-route.
 

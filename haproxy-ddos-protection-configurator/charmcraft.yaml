@@ -15,11 +15,6 @@ parts:
     plugin: uv
     build-snaps:
     - astral-uv
-  shared-libs:
-    plugin: dump
-    source: ../lib
-    organize:
-      "*": lib/
 
 name: haproxy-ddos-protection-configurator
 title: HAProxy DDoS protection configurator
