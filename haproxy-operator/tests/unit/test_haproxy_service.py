@@ -9,8 +9,6 @@ from unittest.mock import MagicMock
 import pytest
 
 from haproxy import (
-    HAPROXY_DH_PARAM,
-    HAPROXY_DHCONFIG,
     HAPROXY_LOGROTATE_CONFIG,
     LOGROTATE_TIMER_OVERRIDE,
     HAProxyService,
@@ -25,7 +23,7 @@ def test_deploy(monkeypatch: pytest.MonkeyPatch):
     assert: The apt mocks are called once.
     """
     apt_add_package_mock = MagicMock()
-    monkeypatch.setattr("charms.operator_libs_linux.v0.apt.add_package", apt_add_package_mock)
+    monkeypatch.setattr("charmlibs.apt.add_package", apt_add_package_mock)
     render_file_mock = MagicMock()
     monkeypatch.setattr("haproxy.render_file", render_file_mock)
     monkeypatch.setattr("haproxy.run", MagicMock())
@@ -38,8 +36,7 @@ def test_deploy(monkeypatch: pytest.MonkeyPatch):
     haproxy_service.install()
 
     apt_add_package_mock.assert_called_once()
-    assert render_file_mock.call_count == 3
-    render_file_mock.assert_any_call(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
+    assert render_file_mock.call_count == 2
     render_file_mock.assert_any_call(
         HAPROXY_LOGROTATE_CONFIG,
         HAProxyService()._render_to_string("haproxy.logrotate.j2", {}),

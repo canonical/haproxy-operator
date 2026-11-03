@@ -11,6 +11,7 @@ import pytest
 from charm import HAProxyCharm
 
 from .conftest import build_haproxy_route_relation
+from .helper import rendered_file_content
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
@@ -34,7 +35,7 @@ def test_ddos_protection_enabled(monkeypatch: pytest.MonkeyPatch, certificates_i
         state,
     )
     assert render_file_mock.call_count == 1
-    config_content = render_file_mock.call_args.args[1]
+    config_content = rendered_file_content(render_file_mock)
 
     assert all(
         entry in config_content
@@ -74,7 +75,7 @@ def test_ddos_protection_disabled(monkeypatch: pytest.MonkeyPatch, certificates_
         state,
     )
     assert render_file_mock.call_count == 1
-    config_content = render_file_mock.call_args.args[1]
+    config_content = rendered_file_content(render_file_mock)
 
     assert not any(
         entry in config_content
