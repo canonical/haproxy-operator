@@ -13,3 +13,4 @@
 "reference/doc-cheat-sheet" "reference"
 "reference/style-guide-myst" "reference"
 "reference/style-guide" "reference"
+"how-to/configure-virtual-ip-on-openstack" "how-to/configure-high-availability"

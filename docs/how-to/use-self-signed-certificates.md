@@ -21,7 +21,7 @@ the `certificates` relation. This guide uses the Pollen charm as the backend app
 requiring a certificate.
 
 ```
-juju deploy haproxy --channel=3.2/stable
+juju deploy haproxy --channel=3.2/edge
 juju deploy pollen --channel=latest/edge
 juju integrate haproxy:haproxy-route pollen
 
@@ -58,7 +58,7 @@ the `certificates` relation. This guide uses the Pollen charm as the backend app
 requiring a certificate.
 
 ```
-juju deploy haproxy --channel=3.2/stable
+juju deploy haproxy --channel=3.2/edge
 juju deploy pollen --channel=latest/edge
 juju integrate haproxy:haproxy-route pollen
 
@@ -104,4 +104,3 @@ curl -k -vv --resolve "pollen.test:443:$HAPROXY_IP" https://pollen.test
 ```
 
 In the output, you should see the HAProxy charm is using the custom CA:
-

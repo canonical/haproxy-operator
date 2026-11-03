@@ -1,0 +1,20 @@
+version_schema: 2
+
+changes:
+  - title: Dropped support for hacluster and the `ha` interface
+    author: tphan025
+    type: major
+    description: >
+      Removed the `ha` relation endpoint, the `vip` configuration option, and
+      the logic that propagated the virtual IP address to peer units. The
+      charm no longer supports active/passive high availability through the
+      `hacluster` subordinate charm. The Terraform module now offers
+      `keepalived` as the supported high-availability integration. The
+      corresponding documentation and tests were removed.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/699
+      related_doc:
+      related_issue: https://warthogs.atlassian.net/browse/ISD-7413
+    visibility: public
+    highlight: true

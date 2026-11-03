@@ -38,4 +38,5 @@ haproxy-route-policy/.python-version
 artifacts.build.yaml
 
 .worktrees
+.opencode/
 **/superpowers/**

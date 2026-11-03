@@ -45,29 +45,17 @@ from charms.traefik_k8s.v2.ingress import (
     IngressPerAppDataRemovedEvent,
     IngressPerAppProvider,
 )
-from interface_hacluster.ops_ha_interface import HAServiceRequires
 from ops.charm import ActionEvent
-from ops.model import Port, SecretNotFoundError
+from ops.model import SecretNotFoundError
 
 from charms.dns_integrator.v0.dns_record import DNSRecordRequires
 from dns_record import DNS_RECORD_RELATION, DNSRecordService
-from haproxy import HAPROXY_CONFIG, HAPROXY_SERVICE, HAProxyService, file_exists, read_file
-from http_interface import (
-    HTTPBackendAvailableEvent,
-    HTTPBackendRemovedEvent,
-    HTTPProvider,
-    HTTPRequirer,
-)
+from haproxy import HAPROXY_CONFIG, HAProxyService, file_exists, read_file
 from state.charm_state import CharmState, ProxyMode
 from state.ddos_protection import DDosProtection
 from state.exception import CharmStateValidationBaseError
-from state.ha import (
-    HACLUSTER_INTEGRATION,
-    HAPROXY_PEER_INTEGRATION,
-    HAInformation,
-    HAInformationValidationError,
-)
 from state.haproxy_route import (
+    HAPROXY_PEER_INTEGRATION,
     HAPROXY_ROUTE_RELATION,
     HAProxyRouteBackend,
     HaproxyRouteIntegrationDataValidationError,
@@ -89,8 +77,6 @@ logger = logging.getLogger(__name__)
 
 INGRESS_RELATION = "ingress"
 TLS_CERT_RELATION = "certificates"
-REVERSE_PROXY_RELATION = "reverseproxy"
-WEBSITE_RELATION = "website"
 RECV_CA_CERTS_RELATION = "receive-ca-certs"
 SPOE_AUTH_RELATION = "spoe-auth"
 HAPROXY_ROUTE_TCP_RELATION = "haproxy-route-tcp"
@@ -103,22 +89,6 @@ LOG_HASH_SALT_PATTERN = re.compile(
 
 class HaproxyUnitAddressNotAvailableError(CharmStateValidationBaseError):
     """Exception raised when ingress integration is not established."""
-
-
-class ReverseProxyInvalidPortError(CharmStateValidationBaseError):
-    """Exception raised when a requested port is not a valid TCP port."""
-
-
-def _validate_port(port: int) -> bool:
-    """Validate if the given value is a valid TCP port.
-
-    Args:
-        port: The port number to validate.
-
-    Returns:
-        bool: True if valid, False otherwise.
-    """
-    return 0 <= port <= 65535
 
 
 def _redact_log_hash_salt(configuration: str) -> str:
@@ -145,7 +115,6 @@ class HAProxyCharm(ops.CharmBase):
         # self._get_certificate_requests()
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
         self._ingress_per_unit_provider = IngressPerUnitProvider(charm=self)
-        self.reverseproxy_requirer = HTTPRequirer(self, REVERSE_PROXY_RELATION)
         self.haproxy_route_provider = HaproxyRouteProvider(self)
         self.haproxy_route_tcp_provider = HaproxyRouteTcpProvider(self)
         self.spoe_auth_requirer = SpoeAuthRequirer(self, SPOE_AUTH_RELATION)
@@ -178,7 +147,6 @@ class HAProxyCharm(ops.CharmBase):
         self._tls = TLSRelationService(self.model, self.certificates, self.recv_ca_certs)
         self.dns_record_requirer = DNSRecordRequires(self)
         self._dns_record_service = DNSRecordService(self.model, self.dns_record_requirer)
-        self.website_requirer = HTTPProvider(self, WEBSITE_RELATION)
 
         self._grafana_agent = COSAgentProvider(
             self,
@@ -188,7 +156,6 @@ class HAProxyCharm(ops.CharmBase):
             dashboard_dirs=["./src/grafana_dashboards"],
         )
 
-        self.hacluster = HAServiceRequires(self, HACLUSTER_INTEGRATION)
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.secret_changed, self._on_secret_changed)
@@ -196,12 +163,6 @@ class HAProxyCharm(ops.CharmBase):
         self.framework.observe(self.on.get_certificate_action, self._on_get_certificate_action)
         self.framework.observe(
             self.certificates.on.certificate_available, self._on_certificate_available
-        )
-        self.framework.observe(
-            self.reverseproxy_requirer.on.http_backend_available, self._on_http_backend_available
-        )
-        self.framework.observe(
-            self.reverseproxy_requirer.on.http_backend_removed, self._on_http_backend_removed
         )
         self.framework.observe(
             self._ingress_provider.on.data_provided, self._on_ingress_data_provided
@@ -215,13 +176,6 @@ class HAProxyCharm(ops.CharmBase):
         )
         self.framework.observe(
             self._ingress_per_unit_provider.on.data_removed, self._on_ingress_data_removed
-        )
-        self.framework.observe(self.hacluster.on.ha_ready, self._on_config_changed)
-        self.framework.observe(
-            self.on[HACLUSTER_INTEGRATION].relation_changed, self._on_config_changed
-        )
-        self.framework.observe(
-            self.on[HACLUSTER_INTEGRATION].relation_broken, self._on_config_changed
         )
         self.framework.observe(
             self.on[DNS_RECORD_RELATION].relation_created, self._on_config_changed
@@ -313,16 +267,6 @@ class HAProxyCharm(ops.CharmBase):
 
         event.fail(f"Missing or incomplete certificate data for {hostname}")
 
-    @validate_config_and_tls(defer=False)
-    def _on_http_backend_available(self, _: HTTPBackendAvailableEvent) -> None:
-        """Handle http_backend_available event for reverseproxy integration."""
-        self._reconcile()
-
-    @validate_config_and_tls(defer=False)
-    def _on_http_backend_removed(self, _: HTTPBackendRemovedEvent) -> None:
-        """Handle data_removed event for reverseproxy integration."""
-        self._reconcile()
-
     def _reconcile(self) -> None:
         """Render the haproxy config and restart the service."""
         self.unit.status = ops.MaintenanceStatus("Configuring haproxy.")
@@ -332,7 +276,6 @@ class HAProxyCharm(ops.CharmBase):
             self._ingress_per_unit_provider,
             self.haproxy_route_provider,
             self.haproxy_route_tcp_provider,
-            self.reverseproxy_requirer,
             self.haproxy_route_policy,
         )
         proxy_mode = charm_state.mode
@@ -340,9 +283,6 @@ class HAProxyCharm(ops.CharmBase):
             # We don't raise any exception/set status here as it should already be handled
             # by the _validate_state method
             return
-
-        ha_information = HAInformation.from_charm(self)
-        self._reconcile_ha(ha_information)
 
         self._tls.update_trusted_cas()
 
@@ -352,10 +292,8 @@ class HAProxyCharm(ops.CharmBase):
                 self._configure_ingress(charm_state, IngressRequirersInformation)
             case ProxyMode.INGRESS_PER_UNIT:
                 self._configure_ingress(charm_state, IngressPerUnitRequirersInformation)
-            case ProxyMode.LEGACY:
-                self._configure_legacy(charm_state)
             case ProxyMode.HAPROXY_ROUTE:
-                status_message = self._configure_haproxy_route(charm_state, ha_information)
+                status_message = self._configure_haproxy_route(charm_state)
             case _:
                 if self.model.get_relation(TLS_CERT_RELATION):
                     # Reconcile certificates in case the certificates relation is present
@@ -396,35 +334,7 @@ class HAProxyCharm(ops.CharmBase):
         self._publish_certificate_to_peer_units(tls_information)
         self._publish_ingress_url(tls_information)
 
-    def _configure_legacy(self, charm_state: CharmState) -> None:
-        """Configure the legacy mode."""
-        if self.model.get_relation(TLS_CERT_RELATION):
-            # Reconcile certificates in case the certificates relation is present
-            tls_information = TLSInformation.from_charm(self, self.certificates)
-            self._tls.certificate_available(tls_information)
-
-        legacy_invalid_requested_port: list[str] = []
-        required_ports: set[Port] = set()
-        for service in self.reverseproxy_requirer.get_services_definition().values():
-            port = service["service_port"]
-            if not _validate_port(port):
-                logger.error("Requested port: %s is not a valid tcp port. Skipping", port)
-                legacy_invalid_requested_port.append(f"{service['service_name']:{port}}")
-                continue
-            required_ports.add(Port(protocol="tcp", port=port))
-
-        if legacy_invalid_requested_port:
-            error_msg = f"Invalid ports requested: {','.join(legacy_invalid_requested_port)}"
-            raise ReverseProxyInvalidPortError(error_msg)
-
-        self.unit.set_ports(*required_ports)
-        self.haproxy_service.reconcile_legacy(
-            charm_state, self.reverseproxy_requirer.get_services()
-        )
-
-    def _configure_haproxy_route(
-        self, charm_state: CharmState, ha_information: HAInformation
-    ) -> str:
+    def _configure_haproxy_route(self, charm_state: CharmState) -> str:
         """Configure the haproxy route relation.
 
         Returns:
@@ -487,9 +397,7 @@ class HAProxyCharm(ops.CharmBase):
         )
         if self.unit.is_leader():
             self._publish_haproxy_route_proxied_endpoints(haproxy_route_requirers_information)
-            self._publish_haproxy_route_tcp_proxied_endpoints(
-                haproxy_route_requirers_information, ha_information
-            )
+            self._publish_haproxy_route_tcp_proxied_endpoints(haproxy_route_requirers_information)
             self._publish_certificate_to_peer_units(tls_information)
 
         return self._get_haproxy_route_status_message(haproxy_route_requirers_information)
@@ -529,7 +437,6 @@ class HAProxyCharm(ops.CharmBase):
                 self._ingress_per_unit_provider,
                 self.haproxy_route_provider,
                 self.haproxy_route_tcp_provider,
-                self.reverseproxy_requirer,
                 self.haproxy_route_policy,
             )
             proxy_mode = charm_state.mode
@@ -606,8 +513,7 @@ class HAProxyCharm(ops.CharmBase):
     def _update_dns_records(self) -> None:
         """Publish A records for all managed hostnames to the dns-record relation.
 
-        Uses the VIP when an HA relation is active, otherwise uses the ingress
-        binding address of this unit.
+        Uses the ingress binding address of this unit.
 
         Called at the end of _reconcile(), so config/TLS validation has already passed.
         """
@@ -618,23 +524,15 @@ class HAProxyCharm(ops.CharmBase):
         if not hostnames:
             return
 
-        try:
-            ha_information = HAInformation.from_charm(self)
-        except HAInformationValidationError:
-            ha_information = None
-
-        if ha_information and ha_information.ha_integration_ready and ha_information.vip:
-            ip = str(ha_information.vip)
-        else:
-            network_binding = self.model.get_binding(DNS_RECORD_RELATION)
-            if network_binding is None:
-                logger.warning("Cannot resolve network binding for DNS records.")
-                return
-            ingress_addresses = network_binding.network.ingress_addresses
-            if not ingress_addresses:
-                logger.warning("No ingress addresses found; skipping DNS record update.")
-                return
-            ip = str(ingress_addresses[0])
+        network_binding = self.model.get_binding(DNS_RECORD_RELATION)
+        if network_binding is None:
+            logger.warning("Cannot resolve network binding for DNS records.")
+            return
+        ingress_addresses = network_binding.network.ingress_addresses
+        if not ingress_addresses:
+            logger.warning("No ingress addresses found; skipping DNS record update.")
+            return
+        ip = str(ingress_addresses[0])
 
         self._dns_record_service.update_dns_records(hostnames, ip)
 
@@ -675,32 +573,6 @@ class HAProxyCharm(ops.CharmBase):
     ) -> None:
         """Handle the data-removed event."""
         self._reconcile()
-
-    def _reconcile_ha(self, ha_information: HAInformation) -> None:
-        """Update ha configuration.
-
-        Args:
-            ha_information: HAInformation charm state component.
-        """
-        if not ha_information.ha_integration_ready:
-            logger.info("ha integration is not ready, skipping.")
-            return
-
-        if not ha_information.haproxy_peer_integration_ready:
-            logger.info("haproxy-peers integration is not ready, skipping.")
-            return
-
-        peer_relation = typing.cast(
-            ops.model.Relation, self.model.get_relation(HAPROXY_PEER_INTEGRATION)
-        )
-
-        if ha_information.configured_vip and ha_information.configured_vip != ha_information.vip:
-            self.hacluster.remove_vip(self.app.name, str(ha_information.configured_vip))
-
-        self.hacluster.add_vip(self.app.name, str(ha_information.vip))
-        self.hacluster.add_systemd_service(f"{self.app.name}-{HAPROXY_SERVICE}", HAPROXY_SERVICE)
-        self.hacluster.bind_resources()
-        peer_relation.data[self.unit].update({"vip": str(ha_information.vip)})
 
     def _get_peer_units_address(self) -> list[str]:
         """Get address of peer units.
@@ -838,7 +710,6 @@ class HAProxyCharm(ops.CharmBase):
                 self._ingress_per_unit_provider,
                 self.haproxy_route_provider,
                 self.haproxy_route_tcp_provider,
-                self.reverseproxy_requirer,
                 self.haproxy_route_policy,
             )
         )
@@ -866,7 +737,6 @@ class HAProxyCharm(ops.CharmBase):
     def _publish_haproxy_route_tcp_proxied_endpoints(
         self,
         haproxy_route_requirers_information: HaproxyRouteRequirersInformation,
-        ha_information: HAInformation,
     ) -> None:
         """Publish the proxied endpoints for TCP frontends."""
         for frontend in haproxy_route_requirers_information.valid_tcp_frontends():
@@ -880,11 +750,6 @@ class HAProxyCharm(ops.CharmBase):
                 if frontend.is_sni_routing_enabled:
                     self.haproxy_route_tcp_provider.publish_proxied_endpoints(
                         [f"{backend.application_data.sni}:{frontend.port}"], relation
-                    )
-                    continue
-                if ha_information.ha_integration_ready:
-                    self.haproxy_route_tcp_provider.publish_proxied_endpoints(
-                        [f"{ha_information.vip}:{frontend.port}"], relation
                     )
                     continue
                 self.haproxy_route_tcp_provider.publish_proxied_endpoints(

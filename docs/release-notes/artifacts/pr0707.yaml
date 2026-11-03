@@ -1,0 +1,19 @@
+version_schema: 2
+
+changes:
+  - title: Moved remaining haproxy-route config checks to scenario tests
+    author: Thanhphan1147
+    type: minor
+    description: >
+      Moved the remaining haproxy-route configuration text assertions from the
+      integration tests to scenario tests. The default backend integration test
+      now only verifies functional request routing, and the redundant
+      haproxy-route text-match test was removed. No user-facing behavior
+      changed.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/707
+      related_doc:
+      related_issue:
+    visibility: internal
+    highlight: false

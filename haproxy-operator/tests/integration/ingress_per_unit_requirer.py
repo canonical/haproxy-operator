@@ -6,9 +6,9 @@
 
 import pathlib
 
-import apt
 import ops
 from any_charm_base import AnyCharmBase
+from charmlibs import apt
 from ingress_per_unit import IngressPerUnitReadyForUnitEvent, IngressPerUnitRequirer
 
 
