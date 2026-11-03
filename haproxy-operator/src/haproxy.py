@@ -52,16 +52,8 @@ class HaproxyPackageVersionPinError(Exception):
     """Error when pinning the version of the haproxy package."""
 
 
-class HaproxyServiceNotActiveError(Exception):
-    """Exception raised when the HAProxy service is not active."""
-
-
 class HaproxyServiceReloadError(Exception):
     """Error when reloading the haproxy service."""
-
-
-class HaproxyInvalidRelationError(Exception):
-    """Exception raised when a relation is invalid."""
 
 
 class HaproxyValidateConfigError(Exception):
@@ -313,8 +305,8 @@ class HAProxyService:
         """Reload the haproxy service.
 
         Raises:
-            HaproxyServiceReloadError: When the haproxy service fails to reload.
-            HaproxyServiceNotActiveError: When the haproxy service is not active after reload.
+            HaproxyServiceReloadError: When the haproxy service fails to reload or is not
+                active after reload.
         """
         try:
             systemd.service_reload(HAPROXY_SERVICE)
@@ -322,7 +314,7 @@ class HAProxyService:
             raise HaproxyServiceReloadError("Failed reloading the haproxy service.") from exc
 
         if not self.is_active():
-            raise HaproxyServiceNotActiveError("HAProxy service is not running.")
+            raise HaproxyServiceReloadError("HAProxy service is not running after reload.")
 
     def _validate_haproxy_config(self) -> None:
         """Validate the generated HAProxy config.
