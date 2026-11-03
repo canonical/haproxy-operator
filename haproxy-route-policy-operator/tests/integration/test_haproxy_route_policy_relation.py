@@ -32,24 +32,11 @@ def test_haproxy_route_policy_relation(
         f"{any_charm_haproxy_route_policy_requirer}:require-haproxy-route-policy",
         f"{application}:haproxy-route-policy",
     )
-    for _ in range(6):
-        juju.run(
-            f"{any_charm_haproxy_route_policy_requirer}/leader",
-            action="rpc",
-            params={"method": "update_relation"},
-        )
-        try:
-            juju.wait(
-                lambda status: jubilant.all_active(
-                    status, application, any_charm_haproxy_route_policy_requirer
-                ),
-                timeout=100,
-            )
-            return
-        except TimeoutError:
-            logger.warning(
-                "haproxy-route-policy did not become active yet, retrying relation update"
-            )
+    juju.run(
+        f"{any_charm_haproxy_route_policy_requirer}/leader",
+        action="rpc",
+        params={"method": "update_relation"},
+    )
     juju.wait(
         lambda status: jubilant.all_active(
             status, application, any_charm_haproxy_route_policy_requirer

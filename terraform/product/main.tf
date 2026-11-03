@@ -29,7 +29,7 @@ resource "juju_application" "hacluster" {
     name     = "hacluster"
     revision = var.hacluster.revision
     channel  = var.hacluster.channel
-    base     = "ubuntu@24.04"
+    base     = var.haproxy.base
   }
 
   config = var.hacluster.config
@@ -60,7 +60,7 @@ resource "juju_application" "keepalived" {
     name     = "keepalived"
     revision = var.keepalived.revision
     channel  = var.keepalived.channel
-    base     = "ubuntu@24.04"
+    base     = var.haproxy.base
   }
 
   config = var.keepalived.config
@@ -90,7 +90,7 @@ resource "juju_application" "grafana_agent" {
     name     = "grafana-agent"
     revision = var.grafana_agent.revision
     channel  = var.grafana_agent.channel
-    base     = "ubuntu@24.04"
+    base     = var.haproxy.base
   }
 
   config = var.grafana_agent.config
