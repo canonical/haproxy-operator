@@ -124,12 +124,11 @@ class SomeCharm(CharmBase):
         ...
 """
 
-import json
 import logging
 from collections import defaultdict
 from enum import Enum
 from functools import partial
-from typing import Annotated, Any, Literal, MutableMapping, Optional, cast
+from typing import Annotated, Any, Literal, Optional, cast
 
 from ops import CharmBase, ModelError, RelationBrokenEvent
 from ops.charm import CharmEvents
@@ -158,7 +157,7 @@ LIBAPI = 2
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 5
+LIBPATCH = 6
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
@@ -225,8 +224,8 @@ class HaproxyRouteInvalidRelationDataError(Exception):
     """Rasied when data validation of the haproxy-route relation fails."""
 
 
-class _DatabagModel(BaseModel):
-    """Base databag model.
+class _HaproxyRouteModel(BaseModel):
+    """Base model for haproxy-route relation data.
 
     Attrs:
         model_config: pydantic model configuration.
@@ -237,98 +236,7 @@ class _DatabagModel(BaseModel):
         extra="ignore",
         # Allow instantiating this class by field name (instead of forcing alias).
         populate_by_name=True,
-        # Custom config key: whether to nest the whole datastructure (as json)
-        # under a field or spread it out at the toplevel.
-        _NEST_UNDER=None,
-    )  # type: ignore
-    """Pydantic config."""
-
-    @classmethod
-    def load(cls, databag: MutableMapping) -> "_DatabagModel":
-        """Load this model from a Juju json databag.
-
-        Args:
-            databag: Databag content.
-
-        Raises:
-            DataValidationError: When model validation failed.
-
-        Returns:
-            _DatabagModel: The validated model.
-        """
-        nest_under = cls.model_config.get("_NEST_UNDER")
-        if nest_under:
-            return cls.model_validate(json.loads(databag[nest_under]))
-
-        try:
-            data = {
-                k: json.loads(v)
-                for k, v in databag.items()
-                # Don't attempt to parse model-external values
-                if k in {(f.alias or n) for n, f in cls.model_fields.items()}
-            }
-        except json.JSONDecodeError as e:
-            msg = f"invalid databag contents: expecting json. {databag}"
-            logger.error(msg)
-            raise DataValidationError(msg) from e
-
-        try:
-            return cls.model_validate_json(json.dumps(data))
-        except ValidationError as e:
-            msg = f"failed to validate databag: {databag}"
-            logger.error(str(e), exc_info=True)
-            raise DataValidationError(msg) from e
-
-    @classmethod
-    def from_dict(cls, values: dict) -> "_DatabagModel":
-        """Load this model from a dict.
-
-        Args:
-            values: Dict values.
-
-        Raises:
-            DataValidationError: When model validation failed.
-
-        Returns:
-            _DatabagModel: The validated model.
-        """
-        try:
-            logger.info("Loading values from dictionary: %s", values)
-            return cls.model_validate(values)
-        except ValidationError as e:
-            msg = f"failed to validate: {values}"
-            logger.debug(msg, exc_info=True)
-            raise DataValidationError(msg) from e
-
-    def dump(
-        self, databag: Optional[MutableMapping] = None, clear: bool = True
-    ) -> Optional[MutableMapping]:
-        """Write the contents of this model to Juju databag.
-
-        Args:
-            databag: The databag to write to.
-            clear: Whether to clear the databag before writing.
-
-        Returns:
-            MutableMapping: The databag.
-        """
-        if clear and databag:
-            databag.clear()
-
-        if databag is None:
-            databag = {}
-        nest_under = self.model_config.get("_NEST_UNDER")
-        if nest_under:
-            databag[nest_under] = self.model_dump_json(
-                by_alias=True,
-                # skip keys whose values are default
-                exclude_defaults=True,
-            )
-            return databag
-
-        dct = self.model_dump(mode="json", by_alias=True, exclude_defaults=True)
-        databag.update({k: json.dumps(v) for k, v in dct.items()})
-        return databag
+    )
 
 
 class ServerHealthCheck(BaseModel):
@@ -557,7 +465,7 @@ class RewriteConfiguration(BaseModel):
     )
 
 
-class RequirerApplicationData(_DatabagModel):
+class RequirerApplicationData(_HaproxyRouteModel):
     """Configuration model for HAProxy route requirer application data.
 
     Attributes:
@@ -710,7 +618,7 @@ class RequirerApplicationData(_DatabagModel):
         return rewrites
 
 
-class HaproxyRouteProviderAppData(_DatabagModel):
+class HaproxyRouteProviderAppData(_HaproxyRouteModel):
     """haproxy-route provider databag schema.
 
     Attributes:
@@ -720,7 +628,7 @@ class HaproxyRouteProviderAppData(_DatabagModel):
     endpoints: list[AnyHttpUrl]
 
 
-class RequirerUnitData(_DatabagModel):
+class RequirerUnitData(_HaproxyRouteModel):
     """haproxy-route requirer unit data.
 
     Attributes:
@@ -990,11 +898,10 @@ class HaproxyRouteProvider(Object):
                 )
                 continue
             try:
-                data = cast(RequirerUnitData, RequirerUnitData.load(databag))
-                requirer_units_data.append(data)
-            except DataValidationError:
+                requirer_units_data.append(relation.load(RequirerUnitData, unit))
+            except ValueError as exc:
                 logger.error("Invalid requirer application data for %s", unit)
-                raise
+                raise DataValidationError(f"Invalid requirer application data for {unit}") from exc
         return requirer_units_data
 
     def _get_requirer_application_data(self, relation: Relation) -> RequirerApplicationData:
@@ -1010,12 +917,12 @@ class HaproxyRouteProvider(Object):
             RequirerApplicationData: Validated application data from the requirer.
         """
         try:
-            return cast(
-                RequirerApplicationData, RequirerApplicationData.load(relation.data[relation.app])
-            )
-        except DataValidationError:
+            return relation.load(RequirerApplicationData, relation.app)
+        except ValueError as exc:
             logger.error("Invalid requirer application data for %s", relation.app.name)
-            raise
+            raise DataValidationError(
+                f"Invalid requirer application data for {relation.app.name}"
+            ) from exc
 
     def publish_proxied_endpoints(self, endpoints: list[str], relation: Relation) -> None:
         """Publish to the app databag the proxied endpoints.
@@ -1024,8 +931,11 @@ class HaproxyRouteProvider(Object):
             endpoints: The list of proxied endpoints to publish.
             relation: The relation with the requirer application.
         """
-        HaproxyRouteProviderAppData(endpoints=[cast(AnyHttpUrl, e) for e in endpoints]).dump(
-            relation.data[self.charm.app], clear=True
+        relation.save(
+            HaproxyRouteProviderAppData(
+                endpoints=[cast(AnyHttpUrl, endpoint) for endpoint in endpoints]
+            ),
+            self.charm.app,
         )
 
 
@@ -1605,8 +1515,7 @@ class HaproxyRouteRequirer(Object):
             relation: The relation instance.
         """
         if self.charm.unit.is_leader():
-            application_data = self._prepare_application_data()
-            application_data.dump(relation.data[self.app], clear=True)
+            relation.save(self._prepare_application_data(), self.app)
 
     def _update_unit_data(self, relation: Relation) -> None:
         """Prepare and update the unit data in the relation databag.
@@ -1614,8 +1523,7 @@ class HaproxyRouteRequirer(Object):
         Args:
             relation: The relation instance.
         """
-        unit_data = self._prepare_unit_data()
-        unit_data.dump(relation.data[self.charm.unit], clear=True)
+        relation.save(self._prepare_unit_data(), self.charm.unit)
 
     def _prepare_application_data(self) -> RequirerApplicationData:
         """Prepare and validate the application data.
@@ -1627,9 +1535,7 @@ class HaproxyRouteRequirer(Object):
             RequirerApplicationData: The validated application data model.
         """
         try:
-            return cast(
-                RequirerApplicationData, RequirerApplicationData.from_dict(self._application_data)
-            )
+            return RequirerApplicationData.model_validate(self._application_data)
         except ValidationError as exc:
             logger.error("Validation error when preparing requirer application data.")
             raise DataValidationError(
@@ -1679,10 +1585,8 @@ class HaproxyRouteRequirer(Object):
             return []
 
         try:
-            provider_data = cast(
-                HaproxyRouteProviderAppData, HaproxyRouteProviderAppData.load(databag)
-            )
+            provider_data = relation.load(HaproxyRouteProviderAppData, relation.app)
             return provider_data.endpoints
-        except DataValidationError:
+        except (ValueError, ModelError):
             logger.exception("Invalid provider url.")
             return []
