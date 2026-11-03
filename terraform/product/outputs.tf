@@ -1,11 +1,6 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-output "grafana_agent" {
-  description = "Name of the deployed grafana-agent application."
-  value       = juju_application.grafana_agent.name
-}
-
 output "haproxy_app_name" {
   description = "Name of the deployed haproxy application."
   value       = module.haproxy.app_name
@@ -37,7 +32,7 @@ output "models" {
       components = merge(
         {
           haproxy                              = module.haproxy.application
-          grafana_agent                        = juju_application.grafana_agent
+          opentelemetry_collector              = juju_application.opentelemetry_collector
           haproxy_ddos_protection_configurator = module.haproxy_ddos_protection_configurator.application
         },
         {
@@ -51,6 +46,11 @@ output "models" {
       )
     }
   }
+}
+
+output "opentelemetry_collector" {
+  description = "Name of the deployed opentelemetry-collector application."
+  value       = juju_application.opentelemetry_collector.name
 }
 
 output "provides" {
@@ -70,8 +70,8 @@ output "provides" {
     }
     logging_provider = {
       kind       = "endpoint"
-      name       = juju_application.grafana_agent.name
-      endpoint   = "logging-provider"
+      name       = juju_application.opentelemetry_collector.name
+      endpoint   = "receive-loki-logs"
       controller = null
     }
   }
@@ -88,13 +88,13 @@ output "requires" {
     }
     grafana_dashboards_consumer = {
       kind       = "endpoint"
-      name       = juju_application.grafana_agent.name
+      name       = juju_application.opentelemetry_collector.name
       endpoint   = "grafana-dashboards-consumer"
       controller = null
     }
     metrics_endpoint = {
       kind       = "endpoint"
-      name       = juju_application.grafana_agent.name
+      name       = juju_application.opentelemetry_collector.name
       endpoint   = "metrics-endpoint"
       controller = null
     }
@@ -112,7 +112,7 @@ output "requires" {
     }
     send_remote_write = {
       kind       = "endpoint"
-      name       = juju_application.grafana_agent.name
+      name       = juju_application.opentelemetry_collector.name
       endpoint   = "send-remote-write"
       controller = null
     }

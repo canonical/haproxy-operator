@@ -51,8 +51,6 @@ requires:
     limit: 1
   reverseproxy:
     interface: http
-  ha:
-    interface: hacluster
   receive-ca-certs:
     interface: certificate_transfer
     optional: true
@@ -105,9 +103,6 @@ config:
       description: |
         Sets the maximum per-process number of concurrent connections to
         <number>. Must be greater than 0.
-    vip:
-      type: string
-      description: Virtual IP address, used in active-passive ha mode.
     ddos-protection:
       type: boolean
       default: true
@@ -171,8 +166,6 @@ charm-libs:
 - lib: haproxy.ddos_protection
   version: "0"
 - lib: haproxy_route_policy.haproxy_route_policy
-  version: "0"
-- lib: operator_libs_linux.apt
   version: "0"
 - lib: operator_libs_linux.systemd
   version: "1"

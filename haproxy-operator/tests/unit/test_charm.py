@@ -23,7 +23,7 @@ from tests.unit.conftest import (
 )
 
 from .conftest import build_haproxy_route_relation, build_spoe_auth_relation
-from .helper import RegexMatcher
+from .helper import RegexMatcher, rendered_file_content
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ def test_config_changed_client_ip_hash_salt(
     context.run(context.on.config_changed(), state)
 
     render_file_mock.assert_called_once()
-    config_content = render_file_mock.call_args.args[1]
+    config_content = rendered_file_content(render_file_mock)
     assert (f'log-format "{TEST_LOG_HASH_CLIENT_ADDRESS}' in config_content) is expected_present
     assert (
         f'error-log-format "{TEST_LOG_HASH_CLIENT_ADDRESS}' in config_content
@@ -665,36 +665,9 @@ def test_dns_record_relation_created_triggers_reconcile(
     update_dns_mock.assert_called_once()
 
 
-def test_dns_update_uses_vip_when_ha_active(
-    context_with_dns_mock, base_state, dns_record_relation
-):
+def test_dns_update_uses_binding_ip(context_with_dns_mock, base_state, dns_record_relation):
     """
-    arrange: HA relation active with vip config set
-    act: config_changed fires
-    assert: update_dns_records is called with the VIP as the IP
-    """
-    context, update_dns_mock = context_with_dns_mock
-    ha_relation = scenario.Relation(
-        endpoint="ha",
-        remote_app_name="hacluster",
-        remote_units_data={0: {}},
-    )
-    state = ops.testing.State(
-        config={"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "vip": "192.168.1.100"},
-        relations=[*base_state.get("relations", []), dns_record_relation, ha_relation],
-        leader=True,
-    )
-    context.run(context.on.config_changed(), state)
-
-    calls = update_dns_mock.call_args_list
-    assert any(call_args.args[1] == "192.168.1.100" for call_args in calls)
-
-
-def test_dns_update_uses_binding_ip_when_no_ha(
-    context_with_dns_mock, base_state, dns_record_relation
-):
-    """
-    arrange: no HA relation, standard network binding
+    arrange: standard network binding
     act: config_changed fires
     assert: update_dns_records is called with the binding ingress address
     """

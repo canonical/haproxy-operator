@@ -13,7 +13,7 @@ import subprocess  # nosec B404
 from pathlib import Path
 from subprocess import CalledProcessError, run  # nosec
 
-from charms.operator_libs_linux.v0 import apt
+from charmlibs import apt
 from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -29,22 +29,6 @@ HAPROXY_CONFIG_DIR = Path("/etc/haproxy")
 HAPROXY_CONFIG = Path(HAPROXY_CONFIG_DIR / "haproxy.cfg")
 SPOE_AUTH_CONFIG = Path(HAPROXY_CONFIG_DIR / "spoe_auth.conf")
 HAPROXY_USER = "haproxy"
-# Configuration used to parameterize Diffie-Hellman key exchange.
-# The base64 content of the file is hard-coded here to avoid having to fetch
-# the file from https://ssl-config.mozilla.org/ffdhe2048.txt as suggested by Mozilla.
-# As the size is 2048, it's safe to use the standard FFDHE parameters.
-# They are more compatible, and there aren't concerns about their security.
-HAPROXY_DH_PARAM = (
-    "-----BEGIN DH PARAMETERS-----\n"
-    "MIIBCAKCAQEA//////////+t+FRYortKmq/cViAnPTzx2LnFg84tNpWp4TZBFGQz\n"
-    "+8yTnc4kmz75fS/jY2MMddj2gbICrsRhetPfHtXV/WVhJDP1H18GbtCFY2VVPe0a\n"
-    "87VXE15/V8k1mE8McODmi3fipona8+/och3xWKE2rec1MKzKT0g6eXq8CrGCsyT7\n"
-    "YdEIqUuyyOP7uWrat2DX9GgdT0Kj3jlN9K5W7edjcrsZCwenyO4KbXCeAvzhzffi\n"
-    "7MA0BM0oNC9hkXL+nOmFg/+OTxIy7vKBg8P+OxtMb61zO7X8vC7CIAXFjvGDfRaD\n"
-    "ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==\n"
-    "-----END DH PARAMETERS-----"
-)
-HAPROXY_DHCONFIG = Path(HAPROXY_CONFIG_DIR / "ffdhe2048.txt")
 HAPROXY_SERVICE = "haproxy"
 HAPROXY_LOGROTATE_CONFIG = Path("/etc/logrotate.d/haproxy")
 # The default daily timer needs overriding only to run hourly checks: rotation
@@ -94,7 +78,6 @@ class HAProxyService:
         apt.add_package(package_names=APT_PACKAGE_NAME, update_cache=True)
         HAPROXY_CERTS_DIR.mkdir(parents=True, exist_ok=True)
         pin_haproxy_package_version()
-        render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
         render_file(
             HAPROXY_LOGROTATE_CONFIG,
             self._render_to_string("haproxy.logrotate.j2", {}),
