@@ -15,9 +15,6 @@ from charmlibs.interfaces.tls_certificates import (
 )
 from charms.haproxy.v0.ddos_protection import DDoSProtectionProviderAppData
 from charms.haproxy.v1.haproxy_route_tcp import (
-    DataValidationError as TcpDataValidationError,
-)
-from charms.haproxy.v1.haproxy_route_tcp import (
     HaproxyRouteTcpProvider,
     HaproxyRouteTcpRequirerData,
     HaproxyRouteTcpRequirersData,
@@ -32,6 +29,7 @@ from charms.traefik_k8s.v1.ingress_per_unit import (
 )
 from charms.traefik_k8s.v2.ingress import DataValidationError as V2DataValidationError
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from pydantic import ValidationError
 
 from state.charm_state import CharmState, ProxyMode
 from state.haproxy_route import (
@@ -1947,7 +1945,7 @@ def test_haproxy_route_tcp_port_mapping_with_port_raises(
     act: Try to create the data model.
     assert: Validation error is raised.
     """
-    with pytest.raises(TcpDataValidationError):
+    with pytest.raises(ValidationError):
         haproxy_route_tcp_relation_data(port=4000, port_mapping="4000-4005:5000-5005")
 
 
@@ -1959,7 +1957,7 @@ def test_haproxy_route_tcp_neither_port_nor_mapping_raises(
     act: Try to create the data model.
     assert: Validation error is raised because one of them is required.
     """
-    with pytest.raises(TcpDataValidationError):
+    with pytest.raises(ValidationError):
         haproxy_route_tcp_relation_data(port=None)
 
 
@@ -1971,7 +1969,7 @@ def test_haproxy_route_tcp_port_mapping_start_greater_than_end(
     act: Try to create the data model.
     assert: Validation error is raised.
     """
-    with pytest.raises(TcpDataValidationError):
+    with pytest.raises(ValidationError):
         haproxy_route_tcp_relation_data(port_mapping="5000-4000:5000-4000")
 
 
@@ -1983,7 +1981,7 @@ def test_haproxy_route_tcp_port_mapping_mismatched_lengths(
     act: Try to create the data model.
     assert: Validation error is raised.
     """
-    with pytest.raises(TcpDataValidationError):
+    with pytest.raises(ValidationError):
         haproxy_route_tcp_relation_data(port_mapping="4000-4005:5000-5006")
 
 

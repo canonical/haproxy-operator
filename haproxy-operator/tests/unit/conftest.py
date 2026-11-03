@@ -485,6 +485,11 @@ def tcp_reconcile_context_fixture():
         )
 
 
+def _model_to_relation_data(model: typing.Any) -> dict[str, str]:
+    """Serialize a pydantic model to a Juju relation databag."""
+    return {k: json.dumps(v) for k, v in model.model_dump(mode="json").items()}
+
+
 def build_haproxy_route_tcp_relation(
     *,
     port: int | None = 4000,
@@ -530,8 +535,12 @@ def build_haproxy_route_tcp_relation(
         endpoint="haproxy-route-tcp",
         interface="haproxy-route-tcp",
         remote_app_name=remote_app_name,
-        remote_app_data=TcpRequirerApplicationData.from_dict(app_data).dump(),
-        remote_units_data={0: TcpRequirerUnitData.from_dict({"address": "10.0.0.1"}).dump()},
+        remote_app_data=_model_to_relation_data(
+            TcpRequirerApplicationData.model_validate(app_data)
+        ),
+        remote_units_data={
+            0: _model_to_relation_data(TcpRequirerUnitData.model_validate({"address": "10.0.0.1"}))
+        },
     )
 
 
@@ -556,16 +565,8 @@ def haproxy_route_tcp_relation_data_fixture() -> typing.Callable[..., HaproxyRou
         return HaproxyRouteTcpRequirerData(
             relation_id=relation_id,
             application="tcp-route-requirer",
-            application_data=typing.cast(
-                TcpRequirerApplicationData,
-                TcpRequirerApplicationData.from_dict(application_data),
-            ),
-            units_data=[
-                typing.cast(
-                    TcpRequirerUnitData,
-                    TcpRequirerUnitData.from_dict({"address": "10.0.0.1"}),
-                )
-            ],
+            application_data=TcpRequirerApplicationData.model_validate(application_data),
+            units_data=[TcpRequirerUnitData.model_validate({"address": "10.0.0.1"})],
         )
 
     return generate_requirer_data
