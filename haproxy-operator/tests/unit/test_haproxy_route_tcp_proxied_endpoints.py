@@ -169,9 +169,7 @@ def test_tcp_proxied_endpoints_sni_with_different_ports(
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
-def test_tcp_proxied_endpoints_single_backend_no_sni_no_ha(
-    tcp_reconcile_context, peer_relation
-) -> None:
+def test_tcp_proxied_endpoints_single_backend_no_sni(tcp_reconcile_context, peer_relation) -> None:
     """
     arrange: Create a single TCP relation without SNI routing.
     act: Trigger config_changed as leader.
