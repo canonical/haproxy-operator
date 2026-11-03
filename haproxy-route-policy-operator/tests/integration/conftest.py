@@ -11,6 +11,8 @@ import pytest
 import yaml
 from opcli.pytest_plugin import CharmPathList
 
+from .constants import POSTGRESQL_REVISION
+
 JUJU_WAIT_TIMEOUT = 10 * 60  # 10 minutes
 ANY_CHARM_HAPROXY_ROUTE_POLICY_REQUIRER_APPLICATION = "any-charm-haproxy-route-policy-requirer"
 HAPROXY_ROUTE_POLICY_REQUIRER_SRC = "tests/integration/haproxy_route_policy_requirer.py"
@@ -98,6 +100,7 @@ def postgresql_fixture(juju: jubilant.Juju):
         app=POSTGRESQL_APPLICATION,
         channel="16/edge",
         base="ubuntu@24.04",
+        revision=POSTGRESQL_REVISION,
         force=True,
     )
     juju.wait(
