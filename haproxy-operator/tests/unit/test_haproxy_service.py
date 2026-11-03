@@ -9,11 +9,10 @@ from unittest.mock import MagicMock
 import pytest
 
 from haproxy import (
-    HAPROXY_DH_PARAM,
-    HAPROXY_DHCONFIG,
     HAPROXY_LOGROTATE_CONFIG,
     LOGROTATE_TIMER_OVERRIDE,
     HAProxyService,
+    HaproxyServiceReloadError,
 )
 
 
@@ -25,7 +24,7 @@ def test_deploy(monkeypatch: pytest.MonkeyPatch):
     assert: The apt mocks are called once.
     """
     apt_add_package_mock = MagicMock()
-    monkeypatch.setattr("charms.operator_libs_linux.v0.apt.add_package", apt_add_package_mock)
+    monkeypatch.setattr("charmlibs.apt.add_package", apt_add_package_mock)
     render_file_mock = MagicMock()
     monkeypatch.setattr("haproxy.render_file", render_file_mock)
     monkeypatch.setattr("haproxy.run", MagicMock())
@@ -38,8 +37,7 @@ def test_deploy(monkeypatch: pytest.MonkeyPatch):
     haproxy_service.install()
 
     apt_add_package_mock.assert_called_once()
-    assert render_file_mock.call_count == 3
-    render_file_mock.assert_any_call(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
+    assert render_file_mock.call_count == 2
     render_file_mock.assert_any_call(
         HAPROXY_LOGROTATE_CONFIG,
         HAProxyService()._render_to_string("haproxy.logrotate.j2", {}),
@@ -56,6 +54,19 @@ def test_deploy(monkeypatch: pytest.MonkeyPatch):
     systemd_mock.daemon_reload.assert_called_once_with()
     systemd_mock.service_enable.assert_not_called()
     systemd_mock.service_restart.assert_called_once_with("logrotate.timer")
+
+
+def test_reload_haproxy_service_raises_when_service_not_active(monkeypatch: pytest.MonkeyPatch):
+    """
+    arrange: Given a HAProxy service that is not active after a reload.
+    act: Call _reload_haproxy_service().
+    assert: HaproxyServiceReloadError is raised.
+    """
+    monkeypatch.setattr("haproxy.systemd.service_reload", MagicMock())
+    monkeypatch.setattr("haproxy.systemd.service_running", MagicMock(return_value=False))
+
+    with pytest.raises(HaproxyServiceReloadError):
+        HAProxyService()._reload_haproxy_service()
 
 
 def test_render_default_config_hashes_client_ip_when_enabled(hashed_charm_state):
