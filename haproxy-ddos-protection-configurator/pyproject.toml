@@ -14,6 +14,7 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
+  "haproxy-libs",
   "ops==3.9.0",
   "pydantic==2.14.3",
 ]
@@ -56,6 +57,7 @@ integration = [
 package = false
 
 [tool.uv.sources]
+haproxy-libs = { path = "../lib" }
 # opcli is published only from the charm-ci git repository, not PyPI.
 opcli = { git = "https://github.com/canonical/charm-ci.git", tag = "v1.0.2" }
 

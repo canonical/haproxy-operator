@@ -240,3 +240,24 @@ class DDoSProtectionProviderAppData(BaseModel):
             object.__setattr__(self, "limit_policy_tcp", TcpRateLimitPolicy.SILENT)
 
         return self
+
+    @property
+    def has_rate_limiting(self) -> bool:
+        """Check if rate limiting should be applied.
+
+        Returns:
+            True if at least one rate limit is configured with a limit policy.
+        """
+        return bool(
+            (
+                self.limit_policy_http
+                and (self.error_rate or self.rate_limit_requests_per_minute)
+            )
+            or (
+                self.limit_policy_tcp
+                and (
+                    self.rate_limit_connections_per_minute
+                    or self.concurrent_connections_limit
+                )
+            )
+        )
