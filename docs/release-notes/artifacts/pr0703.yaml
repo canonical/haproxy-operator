@@ -1,0 +1,21 @@
+version_schema: 2
+
+changes:
+  - title: Refactored the haproxy-route interface library to use the ops relation API
+    author: Thanhphan1147
+    type: minor
+    description: >
+      The `haproxy.haproxy_route` interface library no longer uses the legacy
+      `_DatabagModel` helper and its manual `load` and `dump` methods. The
+      provider and requirer now read and write relation data with the `ops`
+      `Relation.load` and `Relation.save` API, matching the standard used by
+      the other HAProxy interface libraries. The public provider and requirer
+      API is unchanged, and the library remains distributed from its Charmhub
+      location.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/703
+      related_doc:
+      related_issue: https://warthogs.atlassian.net/browse/ISD-6910
+    visibility: internal
+    highlight: false
