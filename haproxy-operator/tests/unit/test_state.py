@@ -157,15 +157,12 @@ def test_proxy_mode_tcp():
     haproxy_route_policy_requirer_mock = MagicMock()
     haproxy_route_policy_requirer_mock.relation = None
     haproxy_route_tcp_provider_mock.relations = [MagicMock(spec=ops.Relation)]
-    reverseproxy_requirer_mock = MagicMock()
-    reverseproxy_requirer_mock.relations = []
     charm_state = CharmState.from_charm(
         charm=MagicMock(spec=ops.CharmBase),
         ingress_provider=ingress_provider_mock,
         ingress_per_unit_provider=ingress_per_unit_provider_mock,
         haproxy_route_provider=haproxy_route_provider_mock,
         haproxy_route_tcp_provider=haproxy_route_tcp_provider_mock,
-        reverseproxy_requirer=reverseproxy_requirer_mock,
         haproxy_route_policy=haproxy_route_policy_requirer_mock,
     )
     assert charm_state.mode == ProxyMode.HAPROXY_ROUTE
@@ -609,8 +606,6 @@ def test_charm_state_ddos_protection(ddos_protection, expected_value):
     haproxy_route_provider_mock.relations = []
     haproxy_route_tcp_provider_mock = MagicMock()
     haproxy_route_tcp_provider_mock.relations = []
-    reverseproxy_requirer_mock = MagicMock()
-    reverseproxy_requirer_mock.relations = []
     haproxy_route_policy_requirer_mock = MagicMock()
     haproxy_route_policy_requirer_mock.relation = None
 
@@ -620,7 +615,6 @@ def test_charm_state_ddos_protection(ddos_protection, expected_value):
         ingress_per_unit_provider=ingress_per_unit_provider_mock,
         haproxy_route_provider=haproxy_route_provider_mock,
         haproxy_route_tcp_provider=haproxy_route_tcp_provider_mock,
-        reverseproxy_requirer=reverseproxy_requirer_mock,
         haproxy_route_policy=haproxy_route_policy_requirer_mock,
     )
 

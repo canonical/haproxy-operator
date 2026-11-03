@@ -1,16 +1,6 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-variable "grafana_agent" {
-  type = object({
-    app_name = optional(string, "grafana-agent")
-    channel  = optional(string, "2/stable")
-    config   = optional(map(string), {})
-    revision = optional(number, null)
-  })
-  default = {}
-}
-
 variable "haproxy" {
   type = object({
     app_name    = optional(string, "haproxy")
@@ -63,6 +53,17 @@ variable "model_uuid" {
   description = "ID of the model to deploy to"
   type        = string
   default     = ""
+}
+
+variable "opentelemetry_collector" {
+  description = "Configuration for the opentelemetry-collector subordinate charm deployment."
+  type = object({
+    app_name = optional(string, "opentelemetry-collector")
+    channel  = optional(string, "0.130/stable")
+    config   = optional(map(string), {})
+    revision = optional(number, null)
+  })
+  default = {}
 }
 
 variable "protected_hostnames_configuration" {

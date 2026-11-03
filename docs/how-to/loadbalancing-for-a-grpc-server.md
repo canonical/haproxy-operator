@@ -12,7 +12,7 @@ should have at least 4 CPU cores, 8 GB of RAM, and 50 GB of disk space.
 This guide requires the following software to be installed on your working station
 (either locally or in the Multipass VM):
 
-- Juju 3.3
+- Juju 3.6
 - LXD 5.21.4
 
 For this guide, Juju must be bootstrapped to a LXD controller. 
