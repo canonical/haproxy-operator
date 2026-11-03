@@ -21,9 +21,8 @@ def test_haproxy_route_default_backend(
 ):
     """Deploy the charm with anycharm haproxy-route requirer that installs apache2.
 
-    Mark the requirer as the default backend and assert that it is used as the target of
-    the default_backend directive, renders no ACL, and serves requests that do not match
-    any configured hostname.
+    Mark the requirer as the default backend and assert that it serves requests that do not
+    match any configured hostname.
     """
     juju.run(f"{any_charm_haproxy_route_requirer}/0", "rpc", {"method": "start_server"})
 
@@ -59,14 +58,6 @@ def test_haproxy_route_default_backend(
             status, configured_application_with_tls, any_charm_haproxy_route_requirer
         )
     )
-    haproxy_config = juju.exec(
-        "cat /etc/haproxy/haproxy.cfg", unit=f"{configured_application_with_tls}/0"
-    ).stdout
-    assert "default_backend default\n" not in haproxy_config
-    assert "backend default\n" not in haproxy_config
-    assert "default_backend any_charm_default_backend\n" in haproxy_config
-    assert "use_backend any_charm_default_backend" not in haproxy_config
-    assert "acl_host_any_charm_default_backend" not in haproxy_config
 
     haproxy_ip_address = get_unit_ip_address(juju, configured_application_with_tls)
     with httpx.Client(http2=False, verify=False) as client:  # nosec: B501

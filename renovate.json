@@ -5,6 +5,10 @@
     "config:recommended",
     "group:allNonMajor"
   ],
+  "baseBranchPatterns": [
+    "main",
+    "track/2.8"
+  ],
   "ignorePaths": [],
   "customDatasources": {
     "charmhub": {

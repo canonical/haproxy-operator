@@ -2,7 +2,7 @@
 
 # Deploy the HAProxy charm
 
-In this tutorial we'll deploy the HAProxy charm to provide ingress to a backend application, then configure high-avalability using the `hacluster` relation. This tutorial is done on LXD and assumes that you have a Juju controller bootstrapped and a machine model to deploy charms.
+In this tutorial we'll deploy the HAProxy charm to provide ingress to a backend application. This tutorial is done on LXD and assumes that you have a Juju controller bootstrapped and a machine model to deploy charms.
 
 (tutorial_requirements)=
 
@@ -25,7 +25,7 @@ multipass launch 26.04 --name charm-tutorial-vm --cpus 4 --memory 8G --disk 50G
 This tutorial requires the following software to be installed on your working station
 (either locally or in the Multipass VM):
 
-- Juju 3.3
+- Juju 3.6
 - LXD 5.21.4
 
 Use [Concierge](https://github.com/canonical/concierge) to set up Juju and LXD:
@@ -58,10 +58,10 @@ juju add-model haproxy-tutorial
 
 ## Deploy the HAProxy charm
 
-We will deploy charm from Charmhub using the `3.2/stable` channel:
+We will deploy charm from Charmhub using the `3.2/edge` channel:
 
 ```
-juju deploy haproxy --channel=3.2/stable
+juju deploy haproxy --channel=3.2/edge
 ```
 
 ## Configure TLS

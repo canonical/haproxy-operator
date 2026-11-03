@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-11-07
+
+- Temporarily use the `3.2/edge` channel in HAProxy deployment examples while
+  `3.2/stable` is unavailable.
+- Replaced the `grafana-agent` subordinate charm with the `opentelemetry-collector`
+  charm in the Terraform module and documentation.
+
 ## 2026-10-06
 
 - Rotate HAProxy logs daily or above 1 GiB, retaining seven rotated logs. Check
