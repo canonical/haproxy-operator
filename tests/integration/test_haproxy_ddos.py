@@ -79,7 +79,7 @@ def test_haproxy_ddos_protection_configuration(
     assert "table ddos_protection_ip" in haproxy_cfg
     assert "tcp-request connection reject if { sc_conn_rate(0) gt 500 }" in haproxy_cfg
     assert "http-request allow if allowed_ips" in haproxy_cfg
-    assert "timeout http-request 30000" in haproxy_cfg
-    assert "timeout http-keep-alive 5000" in haproxy_cfg
-    assert "timeout client 60000" in haproxy_cfg
+    assert "timeout http-request 30s" in haproxy_cfg
+    assert "timeout http-keep-alive 5s" in haproxy_cfg
+    assert "timeout client 60s" in haproxy_cfg
     assert "http-request deny if denied_paths" in haproxy_cfg

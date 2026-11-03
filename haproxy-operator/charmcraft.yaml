@@ -22,11 +22,7 @@ parts:
     source: .
     stage:
     - templates
-  shared-libs:
-    plugin: dump
-    source: ../lib
-    organize:
-      "*": lib/
+
 name: haproxy
 title: HAProxy charm.
 description: |
