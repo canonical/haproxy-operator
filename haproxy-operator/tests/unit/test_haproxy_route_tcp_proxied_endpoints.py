@@ -79,40 +79,9 @@ def test_tcp_proxied_endpoints_sni_routing_multiple_backends(
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
-def test_tcp_proxied_endpoints_ha_vip(tcp_reconcile_context, peer_relation) -> None:
-    """
-    arrange: Create a haproxy-route-tcp relation without SNI and an HA relation with VIP.
-    act: Trigger config_changed as leader.
-    assert: Proxied endpoints are published as "{vip}:{port}".
-    """
-    context, _ = tcp_reconcile_context
-    tcp_relation = build_haproxy_route_tcp_relation(
-        port=5000,
-        enforce_tls=True,
-        tls_terminate=False,
-    )
-    ha_relation = ops.testing.Relation(
-        endpoint="ha",
-        interface="hacluster",
-        remote_app_name="hacluster",
-    )
-
-    state = ops.testing.State(
-        relations=[peer_relation, tcp_relation, ha_relation],
-        config={"vip": "192.168.1.100"},
-        leader=True,
-    )
-    out = context.run(context.on.config_changed(), state)
-
-    out_tcp_relation = out.get_relation(tcp_relation.id)
-    endpoints = json.loads(out_tcp_relation.local_app_data["endpoints"])
-    assert endpoints == ["192.168.1.100:5000"]
-
-
-@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
 def test_tcp_proxied_endpoints_peer_unit_addresses(tcp_reconcile_context, peer_relation) -> None:
     """
-    arrange: Create a haproxy-route-tcp relation without SNI and without HA.
+    arrange: Create a haproxy-route-tcp relation without SNI.
     act: Trigger config_changed as leader.
     assert: Proxied endpoints are published as "{unit_address}:{port}" for each peer.
     """
@@ -200,11 +169,9 @@ def test_tcp_proxied_endpoints_sni_with_different_ports(
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
-def test_tcp_proxied_endpoints_single_backend_no_sni_no_ha(
-    tcp_reconcile_context, peer_relation
-) -> None:
+def test_tcp_proxied_endpoints_single_backend_no_sni(tcp_reconcile_context, peer_relation) -> None:
     """
-    arrange: Create a single TCP relation without SNI routing and without HA.
+    arrange: Create a single TCP relation without SNI routing.
     act: Trigger config_changed as leader.
     assert: Proxied endpoints fall back to peer unit addresses.
     """
@@ -224,73 +191,6 @@ def test_tcp_proxied_endpoints_single_backend_no_sni_no_ha(
     out_tcp_relation = out.get_relation(tcp_relation.id)
     endpoints = json.loads(out_tcp_relation.local_app_data["endpoints"])
     assert endpoints == ["10.0.0.1:8080"]
-
-
-@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
-def test_tcp_proxied_endpoints_ha_vip_takes_priority_over_peers(
-    tcp_reconcile_context, peer_relation
-) -> None:
-    """
-    arrange: Create a TCP relation without SNI but with HA configured (VIP).
-    act: Trigger config_changed as leader.
-    assert: VIP is used instead of peer unit addresses.
-    """
-    context, _ = tcp_reconcile_context
-    tcp_relation = build_haproxy_route_tcp_relation(
-        port=4000,
-        enforce_tls=True,
-        tls_terminate=False,
-    )
-    ha_relation = ops.testing.Relation(
-        endpoint="ha",
-        interface="hacluster",
-        remote_app_name="hacluster",
-    )
-
-    state = ops.testing.State(
-        relations=[peer_relation, tcp_relation, ha_relation],
-        config={"vip": "10.10.10.10"},
-        leader=True,
-    )
-    out = context.run(context.on.config_changed(), state)
-
-    out_tcp_relation = out.get_relation(tcp_relation.id)
-    endpoints = json.loads(out_tcp_relation.local_app_data["endpoints"])
-    assert endpoints == ["10.10.10.10:4000"]
-
-
-@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
-def test_tcp_proxied_endpoints_sni_takes_priority_over_ha(
-    tcp_reconcile_context, peer_relation
-) -> None:
-    """
-    arrange: Create a TCP relation with both SNI and HA configured.
-    act: Trigger config_changed as leader.
-    assert: SNI endpoint is published, not the VIP.
-    """
-    context, _ = tcp_reconcile_context
-    tcp_relation = build_haproxy_route_tcp_relation(
-        port=4000,
-        sni="api.example.com",
-        enforce_tls=True,
-        tls_terminate=False,
-    )
-    ha_relation = ops.testing.Relation(
-        endpoint="ha",
-        interface="hacluster",
-        remote_app_name="hacluster",
-    )
-
-    state = ops.testing.State(
-        relations=[peer_relation, tcp_relation, ha_relation],
-        config={"vip": "10.10.10.10"},
-        leader=True,
-    )
-    out = context.run(context.on.config_changed(), state)
-
-    out_tcp_relation = out.get_relation(tcp_relation.id)
-    endpoints = json.loads(out_tcp_relation.local_app_data["endpoints"])
-    assert endpoints == ["api.example.com:4000"]
 
 
 @pytest.mark.parametrize(

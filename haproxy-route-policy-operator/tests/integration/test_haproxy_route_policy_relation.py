@@ -32,6 +32,16 @@ def test_haproxy_route_policy_relation(
         f"{any_charm_haproxy_route_policy_requirer}:require-haproxy-route-policy",
         f"{application}:haproxy-route-policy",
     )
+    # Wait for the relation to exist before running the action, otherwise the action can
+    # run before the requirer sees it and silently publish nothing.
+    juju.wait(
+        lambda status: (
+            jubilant.all_agents_idle(status, any_charm_haproxy_route_policy_requirer)
+            and "require-haproxy-route-policy"
+            in status.apps[any_charm_haproxy_route_policy_requirer].relations
+            and "haproxy-route-policy" in status.apps[application].relations
+        )
+    )
     juju.run(
         f"{any_charm_haproxy_route_policy_requirer}/leader",
         action="rpc",
