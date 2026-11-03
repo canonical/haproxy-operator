@@ -1,0 +1,18 @@
+version_schema: 2
+
+changes:
+  - title: Use the ops relation API in the haproxy-route-tcp library
+    author: Thanhphan1147
+    type: minor
+    description: >
+      The `haproxy.haproxy_route_tcp` interface library no longer uses the
+      legacy `_DatabagModel` or its manual load/dump helpers. Relation data is
+      now read and written with the `ops` `Relation.load` and `Relation.save`
+      APIs, leaving the library with its pydantic models and the existing
+      provider/requirer helpers.
+    urls:
+      pr: https://github.com/canonical/haproxy-operator/pull/704
+      related_doc:
+      related_issue: https://warthogs.atlassian.net/browse/ISD-6911
+    visibility: internal
+    highlight: false
