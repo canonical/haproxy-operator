@@ -17,6 +17,7 @@ from pydantic import Field
 from pydantic.dataclasses import dataclass
 
 SNAP_NAME = "haproxy-route-policy"
+GUNICORN_SERVICE_NAME = "gunicorn"
 DEFAULT_ENDPOINT = "http://localhost:8080"
 logger = logging.getLogger(__name__)
 
@@ -27,15 +28,12 @@ class HaproxyRoutePolicyDatabaseMigrationError(Exception):
 
 def install_snap(channel: str = "latest/edge") -> None:
     """Install or refresh the route-policy snap."""
-    cache = snap.SnapCache()
-    package = cache[SNAP_NAME]
-    package.ensure(snap.SnapState.Latest, channel=channel)
+    snap.ensure_installed(SNAP_NAME, channel=channel)
 
 
 def configure_snap(config: dict[str, Any]) -> None:
     """Apply snap configuration if any value changed."""
-    package = snap.SnapCache()[SNAP_NAME]
-    package.set(config, typed=True)
+    snap.set(SNAP_NAME, config)
 
 
 def run_migrations() -> None:
@@ -55,14 +53,16 @@ def run_migrations() -> None:
 
 def start_gunicorn_service() -> None:
     """Ensure the snap gunicorn app is running."""
-    package = snap.SnapCache()[SNAP_NAME]
-    package.start()
+    snap.start(SNAP_NAME, GUNICORN_SERVICE_NAME)
 
 
 def is_service_active() -> bool:
     """Check if the snap gunicorn app is active."""
-    package = snap.SnapCache()[SNAP_NAME]
-    return package.services["gunicorn"].get("active", False)
+    result = subprocess.run(  # nosec
+        ["systemctl", "is-active", "--quiet", f"snap.{SNAP_NAME}.{GUNICORN_SERVICE_NAME}.service"],
+        check=False,
+    )
+    return result.returncode == 0
 
 
 def create_or_update_user(username: str, password: str) -> None:

@@ -8,6 +8,12 @@ from ops.testing import Harness
 
 from state.ha import HACLUSTER_INTEGRATION, HAInformation, HAInformationValidationError
 
+# These legacy tests still use Harness, which ops marks as deprecated with a
+# PendingDeprecationWarning. The unit suite runs with warnings promoted to
+# errors (see pyproject.toml), so ignore that one warning here until the tests
+# are ported to ops.testing.Context like the rest of tests/unit.
+pytestmark = pytest.mark.filterwarnings("ignore:Harness is deprecated:PendingDeprecationWarning")
+
 
 def test_ha_information(harness: Harness):
     """

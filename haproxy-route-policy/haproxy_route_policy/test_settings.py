@@ -21,3 +21,9 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.AllowAny",
     ],
 }
+
+# The tests run without `collectstatic`, so STATIC_ROOT does not exist and
+# WhiteNoise would warn "No directory at ..." when its middleware starts. The
+# unit tox envs promote warnings to errors, so serve static files on demand
+# instead of from a pre-collected directory.
+WHITENOISE_AUTOREFRESH = True

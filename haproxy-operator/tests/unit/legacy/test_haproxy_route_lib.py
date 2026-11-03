@@ -26,6 +26,12 @@ from charms.haproxy.v2.haproxy_route import (
 from ops.testing import Harness
 from pydantic import ValidationError
 
+# These legacy tests still use Harness, which ops marks as deprecated with a
+# PendingDeprecationWarning. The unit suite runs with warnings promoted to
+# errors (see pyproject.toml), so ignore that one warning here until the tests
+# are ported to ops.testing.Context like the rest of tests/unit.
+pytestmark = pytest.mark.filterwarnings("ignore:Harness is deprecated:PendingDeprecationWarning")
+
 logger = logging.getLogger()
 MOCK_RELATION_NAME = "haproxy-route"
 MOCK_ADDRESS = "10.0.0.1"
@@ -67,8 +73,10 @@ def mock_provider_app_data_fixture():
 
 @pytest.fixture(name="mock_requirer_charm")
 def mock_requirer_charm_fixture():
-    """Create mock unit data."""
-    return Harness(ops.CharmBase, meta=MOCK_REQUIRER_CHARM_META)
+    """Create a harness for a mock requirer charm and clean up its files afterwards."""
+    harness = Harness(ops.CharmBase, meta=MOCK_REQUIRER_CHARM_META)
+    yield harness
+    harness.cleanup()
 
 
 def test_requirer_application_data_validation():
@@ -293,6 +301,36 @@ def test_dump_requirer_unit_data():
 
     assert "address" in databag
     assert json.loads(databag["address"]) == MOCK_ADDRESS
+
+
+@pytest.mark.parametrize("default_backend", [False, True])
+def test_provider_default_backend_with_external_grpc_port(harness, default_backend):
+    """
+    arrange: Provide a gRPC relation with a configurable default_backend flag.
+    act: Fetch the relation data from the provider.
+    assert: Only the relation requesting both options is marked invalid and excluded.
+    """
+    relation_id = harness.add_relation(
+        MOCK_RELATION_NAME,
+        "grpc-service",
+        app_data={
+            "service": '"grpc-service"',
+            "ports": "[8080]",
+            "protocol": '"https"',
+            "external_grpc_port": "9000",
+            "default_backend": json.dumps(default_backend),
+        },
+    )
+    harness.begin()
+
+    data = harness.charm.haproxy_route_provider.get_data(
+        harness.model.relations[MOCK_RELATION_NAME]
+    )
+
+    assert data.relation_ids_with_invalid_data == ({relation_id} if default_backend else set())
+    assert [requirer.relation_id for requirer in data.requirers_data] == (
+        [] if default_backend else [relation_id]
+    )
 
 
 def test_haproxy_route_provider_initialization(harness):

@@ -141,9 +141,6 @@ class HAProxyCharm(ops.CharmBase):
         """
         super().__init__(*args)
         self.haproxy_service = HAProxyService()
-        # Order is important here as we want _ensure_tls to check if the hostname is configured
-        self.framework.observe(self.on[TLS_CERT_RELATION].relation_created, self._ensure_tls)
-        self.framework.observe(self.on[TLS_CERT_RELATION].relation_changed, self._ensure_tls)
         # Relation handlers are initialized before self.certificates as we need them when calling
         # self._get_certificate_requests()
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
@@ -704,11 +701,6 @@ class HAProxyCharm(ops.CharmBase):
         self.hacluster.add_systemd_service(f"{self.app.name}-{HAPROXY_SERVICE}", HAPROXY_SERVICE)
         self.hacluster.bind_resources()
         peer_relation.data[self.unit].update({"vip": str(ha_information.vip)})
-
-    @validate_config_and_tls(defer=False)
-    def _ensure_tls(self, _: ops.EventBase) -> None:
-        """Ensure that the charm is ready to handle TLS-related events."""
-        TLSInformation.validate(self, self.certificates)
 
     def _get_peer_units_address(self) -> list[str]:
         """Get address of peer units.

@@ -125,6 +125,8 @@ commands = [
     "--ignore={toxinidir}/haproxy_spoe_auth_operator",
     "--log-cli-level=INFO",
     "-s",
+    # Don't promote warnings for integration tests
+    "--override-ini=filterwarnings=",
     { replace = "posargs", extend = "true" },
   ],
 ]

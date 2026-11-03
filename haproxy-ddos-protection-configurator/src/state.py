@@ -29,7 +29,7 @@ class CharmState:
         error_rate_per_minute: Number of errors per minute per entry to trigger the limit policy.
         limit_policy_http: Policy to be applied when HTTP-level limits are exceeded.
         limit_policy_tcp: Policy to be applied when TCP-level limits are exceeded.
-        ip_allow_list: Comma-separated list of IPv4 addresses or CIDR blocks to be allowed.
+        ip_allow_list: Comma-separated list of IP addresses or CIDR blocks to be allowed.
         http_request_timeout: Timeout for HTTP requests in seconds.
         http_keepalive_timeout: Timeout for HTTP keep-alive connections in seconds.
         client_timeout: Timeout for client connections in seconds.

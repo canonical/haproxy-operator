@@ -57,7 +57,7 @@ package = false
 
 [tool.uv.sources]
 # opcli is published only from the charm-ci git repository, not PyPI.
-opcli = { git = "https://github.com/canonical/charm-ci.git", tag = "v1.0.1" }
+opcli = { git = "https://github.com/canonical/charm-ci.git", tag = "v1.0.2" }
 
 [tool.ruff]
 target-version = "py310"
@@ -102,6 +102,10 @@ skip = "build,lib,venv,icon.svg,.tox,.git,.mypy_cache,.ruff_cache,.coverage,html
 [tool.pytest.ini_options]
 minversion = "6.0"
 log_cli_level = "INFO"
+# promote warnings to test failures
+filterwarnings = [
+  "error",
+]
 
 [tool.coverage.run]
 branch = true

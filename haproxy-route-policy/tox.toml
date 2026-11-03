@@ -18,8 +18,15 @@ PY_COLORS = "1"
 
 [env.unit]
 description = "Run unit tests"
+# -W error promotes every Python warning to a test failure, mirroring the
+# filterwarnings = ["error"] setting the charms in this repository use with
+# pytest; Django's test runner has no equivalent setting of its own.
 commands = [
   [
+    "python",
+    "-W",
+    "error",
+    "-m",
     "coverage",
     "run",
     "manage.py",
@@ -37,6 +44,10 @@ dependency_groups = ["unit"]
 description = "Run auth unit tests"
 commands = [
   [
+    "python",
+    "-W",
+    "error",
+    "-m",
     "coverage",
     "run",
     "manage.py",
