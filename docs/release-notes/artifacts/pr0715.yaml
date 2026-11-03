@@ -1,0 +1,19 @@
+version_schema: 2
+
+changes:
+  - title: Replaced grafana-agent with opentelemetry-collector in the Terraform module
+    author: tphan025
+    type: breaking
+    description: >
+      The Terraform module now deploys the `opentelemetry-collector` subordinate
+      charm instead of `grafana-agent`, which does not support the `ubuntu@26.04`
+      base. The `grafana_agent` input and output were renamed to
+      `opentelemetry_collector`, and the `logging_provider` output now exposes the
+      `receive-loki-logs` endpoint.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/715
+      related_doc:
+      related_issue: https://warthogs.atlassian.net/browse/ISD-7473
+    visibility: public
+    highlight: false

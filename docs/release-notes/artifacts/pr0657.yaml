@@ -1,0 +1,16 @@
+version_schema: 2
+
+changes:
+  - title: Migrated to charmlibs
+    author: seb4stien
+    type: minor
+    description: >
+      Switched the snap library dependency to the charmlibs package. No
+      user-facing behavior changed.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/657
+      related_doc:
+      related_issue:
+    visibility: internal
+    highlight: false

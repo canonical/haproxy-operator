@@ -14,14 +14,15 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
+  "charmlibs-apt~=1.0",
   "charmlibs-interfaces-tls-certificates>=1.8.1",
   "cosl==1.11.3",
   "cryptography==50.0.2",
-  "interface-hacluster @ git+https://github.com/charmed-kubernetes/charm-interface-hacluster@1.32+ck2",
+  "jinja2==3.1.6",
   "jsonschema==4.26.0",
-  "opentelemetry-api==1.45.1",
+  "opentelemetry-api==1.45.2",
   "ops==3.9.0",
-  "pydantic==2.14.1",
+  "pydantic==2.14.3",
   "validators>=0.35.0",
 ]
 
@@ -124,7 +125,6 @@ filterwarnings = [
 
 [tool.coverage.run]
 branch = true
-omit = [ "src/legacy.py" ]
 
 [tool.coverage.report]
 show_missing = true

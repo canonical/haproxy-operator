@@ -55,22 +55,10 @@ output "requires" {
       endpoint   = "ddos-protection"
       controller = null
     }
-    ha = {
-      kind       = "endpoint"
-      name       = juju_application.haproxy.name
-      endpoint   = "ha"
-      controller = null
-    }
     receive_ca_certs = {
       kind       = "endpoint"
       name       = juju_application.haproxy.name
       endpoint   = "receive-ca-certs"
-      controller = null
-    }
-    reverseproxy = {
-      kind       = "endpoint"
-      name       = juju_application.haproxy.name
-      endpoint   = "reverseproxy"
       controller = null
     }
     spoe_auth = {

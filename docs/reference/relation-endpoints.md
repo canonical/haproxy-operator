@@ -72,32 +72,17 @@ juju integrate <charm>:ingress-per-unit haproxy:ingress-per-unit
 
 ---
 
-### `website`
-
-- **Interface**: `http`
-- **Supported charms**: Any charm implementing the `http` interface
-
-Legacy interface that exposes HAProxy as an HTTP endpoint to other charms expecting a reverse proxy. Prefer `haproxy-route` for new integrations.
-
-Example `website` integrate command:
-
-```shell
-juju integrate <charm>:reverseproxy haproxy:website
-```
-
----
-
 ### `cos-agent`
 
 - **Interface**: `cos_agent`
-- **Supported charms**: [grafana-agent](https://charmhub.io/grafana-agent)
+- **Supported charms**: [opentelemetry-collector](https://charmhub.io/opentelemetry-collector)
 
-Integrates HAProxy with the Canonical Observability Stack, enabling metrics and log collection via the Grafana Agent.
+Integrates HAProxy with the Canonical Observability Stack, enabling metrics, logs, and traces collection via the OpenTelemetry Collector.
 
 Example `cos-agent` integrate command:
 
 ```shell
-juju integrate grafana-agent:juju-info haproxy:cos-agent
+juju integrate haproxy:cos-agent opentelemetry-collector:cos-agent
 ```
 
 ---
@@ -115,37 +100,6 @@ Example `certificates` integrate command:
 
 ```shell
 juju integrate haproxy:certificates self-signed-certificates:certificates
-```
-
----
-
-### `reverseproxy`
-
-- **Interface**: `http`
-- **Supported charms**: Any charm implementing the `http` interface
-
-Legacy interface allowing backend charms to register themselves as reverse proxy targets. Prefer `haproxy-route` for new integrations.
-
-Example `reverseproxy` integrate command:
-
-```shell
-juju integrate haproxy:reverseproxy <charm>:website
-```
-
----
-
-### `ha`
-
-- **Interface**: `hacluster`
-- **Supported charms**: [hacluster](https://charmhub.io/hacluster)
-
-Integrates with the `hacluster` charm to enable active/passive high-availability using a shared virtual IP address.
-See {ref}`how_to_configure_high_availability` for more details.
-
-Example `ha` integrate command:
-
-```shell
-juju integrate haproxy:ha hacluster:ha
 ```
 
 ---
