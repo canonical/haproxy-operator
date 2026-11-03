@@ -158,10 +158,9 @@ class SomeCharm(CharmBase):
             )
 """
 
-import json
 import logging
 from enum import Enum
-from typing import Annotated, Any, MutableMapping, Optional, cast
+from typing import Annotated, Any, Optional, cast
 
 from ops import CharmBase, ModelError, RelationBrokenEvent
 from ops.charm import CharmEvents
@@ -188,7 +187,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 7
+LIBPATCH = 8
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_TCP_RELATION_NAME = "haproxy-route-tcp"
@@ -239,118 +238,8 @@ def valid_domain_with_wildcard(value: str) -> str:
 VALIDSTR = Annotated[str, BeforeValidator(value_contains_invalid_characters)]
 
 
-class DataValidationError(Exception):
-    """Raised when data validation fails."""
-
-
 class HaproxyRouteTcpInvalidRelationDataError(Exception):
     """Raised when data validation of the haproxy-route relation fails."""
-
-
-class _DatabagModel(BaseModel):
-    """Base databag model.
-
-    Attrs:
-        model_config: pydantic model configuration.
-    """
-
-    model_config = ConfigDict(
-        # tolerate additional keys in databag
-        extra="ignore",
-        # Allow instantiating this class by field name (instead of forcing alias).
-        populate_by_name=True,
-        # Custom config key: whether to nest the whole datastructure (as json)
-        # under a field or spread it out at the toplevel.
-        _NEST_UNDER=None,
-    )  # type: ignore
-    """Pydantic config."""
-
-    @classmethod
-    def load(cls, databag: MutableMapping) -> "_DatabagModel":
-        """Load this model from a Juju json databag.
-
-        Args:
-            databag: Databag content.
-
-        Raises:
-            DataValidationError: When model validation failed.
-
-        Returns:
-            _DatabagModel: The validated model.
-        """
-        nest_under = cls.model_config.get("_NEST_UNDER")
-        if nest_under:
-            return cls.model_validate(json.loads(databag[nest_under]))
-
-        try:
-            data = {
-                k: json.loads(v)
-                for k, v in databag.items()
-                # Don't attempt to parse model-external values
-                if k in {(f.alias or n) for n, f in cls.model_fields.items()}
-            }
-        except json.JSONDecodeError as e:
-            msg = f"invalid databag contents: expecting json. {databag}"
-            logger.error(msg)
-            raise DataValidationError(msg) from e
-
-        try:
-            return cls.model_validate_json(json.dumps(data))
-        except ValidationError as e:
-            msg = f"failed to validate databag: {databag}"
-            logger.error(str(e), exc_info=True)
-            raise DataValidationError(msg) from e
-
-    @classmethod
-    def from_dict(cls, values: dict) -> "_DatabagModel":
-        """Load this model from a dict.
-
-        Args:
-            values: Dict values.
-
-        Raises:
-            DataValidationError: When model validation failed.
-
-        Returns:
-            _DatabagModel: The validated model.
-        """
-        try:
-            logger.info("Loading values from dictionary: %s", values)
-            return cls.model_validate(values)
-        except ValidationError as e:
-            msg = f"failed to validate: {values}"
-            logger.debug(msg, exc_info=True)
-            raise DataValidationError(msg) from e
-
-    def dump(
-        self, databag: Optional[MutableMapping] = None, clear: bool = True
-    ) -> Optional[MutableMapping]:
-        """Write the contents of this model to Juju databag.
-
-        Args:
-            databag: The databag to write to.
-            clear: Whether to clear the databag before writing.
-
-        Returns:
-            MutableMapping: The databag.
-        """
-        if clear and databag:
-            databag.clear()
-
-        if databag is None:
-            databag = {}
-        nest_under = self.model_config.get("_NEST_UNDER")
-        if nest_under:
-            databag[nest_under] = self.model_dump_json(
-                by_alias=True,
-                # skip keys whose values are default
-                exclude_defaults=True,
-            )
-            return databag
-
-        dct = self.model_dump(mode="json", by_alias=True, exclude_defaults=True)
-        databag.update({k: json.dumps(v) for k, v in dct.items()})
-        return databag
 
 
 class TCPHealthCheckType(Enum):
@@ -726,7 +615,7 @@ class PortMapping:
         return self.backend.start - self.frontend.start
 
 
-class TcpRequirerApplicationData(_DatabagModel):
+class TcpRequirerApplicationData(BaseModel):
     """Configuration model for HAProxy route requirer application data.
 
     Attributes:
@@ -750,6 +639,8 @@ class TcpRequirerApplicationData(_DatabagModel):
         tls_terminate: Whether to enable tls termination on the dedicated frontend.
         proxy_protocol: Whether to enable PROXY protocol when connecting to backend servers.
     """
+
+    model_config = ConfigDict(extra="ignore")
 
     port: Optional[int] = Field(
         description="The port exposed on the provider.", default=None, gt=0, le=65535
@@ -916,22 +807,26 @@ class TcpRequirerApplicationData(_DatabagModel):
         return self.port_range.port_count > 1
 
 
-class HaproxyRouteTcpProviderAppData(_DatabagModel):
+class HaproxyRouteTcpProviderAppData(BaseModel):
     """haproxy-route provider databag schema.
 
     Attributes:
         endpoints: The list of proxied endpoints that maps to the backend.
     """
 
+    model_config = ConfigDict(extra="ignore")
+
     endpoints: list[str]
 
 
-class TcpRequirerUnitData(_DatabagModel):
+class TcpRequirerUnitData(BaseModel):
     """haproxy-route requirer unit data.
 
     Attributes:
         address: IP address of the unit.
     """
+
+    model_config = ConfigDict(extra="ignore")
 
     address: IPvAnyAddress = Field(description="IP address of the unit.")
 
@@ -1074,7 +969,7 @@ class HaproxyRouteTcpProvider(Object):
                     application=relation.app.name,
                 )
                 requirers_data.append(haproxy_route_tcp_requirer_data)
-            except DataValidationError as exc:
+            except (ValueError, ModelError) as exc:
                 if self.raise_on_validation_error:
                     logger.error(
                         "haproxy-route-tcp data validation failed for relation %s: %s",
@@ -1103,7 +998,7 @@ class HaproxyRouteTcpProvider(Object):
             relation: The relation to fetch unit data from.
 
         Raises:
-            DataValidationError: When unit data validation fails.
+            ValueError: When unit data validation fails.
 
         Returns:
             list[RequirerUnitData]: List of validated unit data from the requirer.
@@ -1118,10 +1013,9 @@ class HaproxyRouteTcpProvider(Object):
                 )
                 continue
             try:
-                data = cast(TcpRequirerUnitData, TcpRequirerUnitData.load(databag))
-                requirer_units_data.append(data)
-            except DataValidationError:
-                logger.error("Invalid requirer application data for %s", unit)
+                requirer_units_data.append(relation.load(TcpRequirerUnitData, unit))
+            except (ValueError, ModelError):
+                logger.error("Invalid requirer unit data for %s", unit)
                 raise
         return requirer_units_data
 
@@ -1132,17 +1026,14 @@ class HaproxyRouteTcpProvider(Object):
             relation: The relation to fetch application data from.
 
         Raises:
-            DataValidationError: When requirer application data validation fails.
+            ValueError: When requirer application data validation fails.
 
         Returns:
             RequirerApplicationData: Validated application data from the requirer.
         """
         try:
-            return cast(
-                TcpRequirerApplicationData,
-                TcpRequirerApplicationData.load(relation.data[relation.app]),
-            )
-        except DataValidationError:
+            return relation.load(TcpRequirerApplicationData, relation.app)
+        except (ValueError, ModelError):
             logger.error("Invalid requirer application data for %s", relation.app.name)
             raise
 
@@ -1159,20 +1050,15 @@ class HaproxyRouteTcpProvider(Object):
         # infinite reconciliation loop when provider and requirer both react
         # to each other's writes.
         try:
-            current = cast(
-                HaproxyRouteTcpProviderAppData,
-                HaproxyRouteTcpProviderAppData.load(relation.data[self.charm.app]),
-            )
+            current = relation.load(HaproxyRouteTcpProviderAppData, self.charm.app)
             if set(current.endpoints) == set(endpoints):
                 return
-        except DataValidationError:
+        except (ValueError, ModelError):
             logger.error(
                 "Invalid data in provider databag for relation %s, overwriting.",
                 relation,
             )
-        HaproxyRouteTcpProviderAppData(endpoints=endpoints).dump(
-            relation.data[self.charm.app], clear=True
-        )
+        relation.save(HaproxyRouteTcpProviderAppData(endpoints=endpoints), self.charm.app)
 
     @staticmethod
     def _get_invalid_port_range_relations(
@@ -1751,7 +1637,7 @@ class HaproxyRouteTcpRequirer(Object):
         """
         if self.charm.unit.is_leader():
             application_data = self._prepare_application_data()
-            application_data.dump(relation.data[self.app], clear=True)
+            relation.save(application_data, self.app)
 
     def _update_unit_data(self, relation: Relation) -> None:
         """Prepare and update the unit data in the relation databag.
@@ -1760,25 +1646,22 @@ class HaproxyRouteTcpRequirer(Object):
             relation: The relation instance.
         """
         unit_data = self._prepare_unit_data()
-        unit_data.dump(relation.data[self.charm.unit], clear=True)
+        relation.save(unit_data, self.charm.unit)
 
     def _prepare_application_data(self) -> TcpRequirerApplicationData:
         """Prepare and validate the application data.
 
         Raises:
-            DataValidationError: When validation of application data fails.
+            HaproxyRouteTcpInvalidRelationDataError: When validation of application data fails.
 
         Returns:
             RequirerApplicationData: The validated application data model.
         """
         try:
-            return cast(
-                TcpRequirerApplicationData,
-                TcpRequirerApplicationData.from_dict(self._application_data),
-            )
+            return TcpRequirerApplicationData.model_validate(self._application_data)
         except ValidationError as exc:
             logger.error("Validation error when preparing requirer application data.")
-            raise DataValidationError(
+            raise HaproxyRouteTcpInvalidRelationDataError(
                 "Validation error when preparing requirer application data."
             ) from exc
 
@@ -1786,7 +1669,7 @@ class HaproxyRouteTcpRequirer(Object):
         """Prepare and validate unit data.
 
         Raises:
-            DataValidationError: When no address or unit IP is available.
+            HaproxyRouteTcpInvalidRelationDataError: When no address or unit IP is available.
 
         Returns:
             RequirerUnitData: The validated unit data model.
@@ -1801,7 +1684,7 @@ class HaproxyRouteTcpRequirer(Object):
                 address = str(bind_address)
             else:
                 logger.error("No unit IP available.")
-                raise DataValidationError("No unit IP available.")
+                raise HaproxyRouteTcpInvalidRelationDataError("No unit IP available.")
         return TcpRequirerUnitData(address=cast(IPvAnyAddress, address))
 
     def get_proxied_endpoints(self) -> list[str]:
@@ -1814,22 +1697,9 @@ class HaproxyRouteTcpRequirer(Object):
         if not relation or not relation.app:
             return []
 
-        # Fetch the provider's app databag
         try:
-            databag = relation.data[relation.app]
-        except ModelError:
-            logger.exception("Error reading remote app data.")
-            return []
-
-        if not databag:  # not ready yet
-            return []
-
-        try:
-            provider_data = cast(
-                HaproxyRouteTcpProviderAppData, HaproxyRouteTcpProviderAppData.load(databag)
-            )
-            return provider_data.endpoints
-        except DataValidationError:
+            return relation.load(HaproxyRouteTcpProviderAppData, relation.app).endpoints
+        except (ValueError, ModelError):
             logger.exception("Invalid provider url.")
             return []
 
