@@ -11,7 +11,7 @@ changes:
       methods. No user-facing behavior changed.
     urls:
       pr:
-        - https://github.com/canonical/haproxy-operator/pull/0000
+        - https://github.com/canonical/haproxy-operator/pull/706
       related_doc:
       related_issue:
     visibility: internal
