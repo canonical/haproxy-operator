@@ -5,7 +5,7 @@ myst:
 ---
 # HAProxy operator
 
-The HAProxy operator is an open-source software operator that deploys and operates HAProxy 3.2 on Juju 3.3 and above.
+The HAProxy operator is an open-source software operator that deploys and operates HAProxy 3.2 on Juju 3.6 and above.
 HAProxy is an open-source reverse proxy that provides fast, efficient, and reliable proxying for TCP
 and HTTP-based applications. 
 

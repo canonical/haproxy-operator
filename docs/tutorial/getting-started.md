@@ -25,7 +25,7 @@ multipass launch 26.04 --name charm-tutorial-vm --cpus 4 --memory 8G --disk 50G
 This tutorial requires the following software to be installed on your working station
 (either locally or in the Multipass VM):
 
-- Juju 3.3
+- Juju 3.6
 - LXD 5.21.4
 
 Use [Concierge](https://github.com/canonical/concierge) to set up Juju and LXD:
