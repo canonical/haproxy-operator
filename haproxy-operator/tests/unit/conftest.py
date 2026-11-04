@@ -40,6 +40,14 @@ TEST_LOG_HASH_CLIENT_ADDRESS = (
 )
 
 
+def model_to_relation_data(model) -> dict[str, str]:
+    """Serialize a pydantic model the same way Relation.save does."""
+    return {
+        key: json.dumps(value)
+        for key, value in model.model_dump(mode="json", by_alias=True).items()
+    }
+
+
 @pytest.fixture(name="hashed_charm_state")
 def hashed_charm_state_fixture() -> CharmState:
     """Return a minimal CharmState with client IP hashing enabled."""
@@ -351,12 +359,14 @@ def base_state_with_ingress_fixture(peer_relation, ingress_integration, certific
 @pytest.fixture(name="haproxy_route_requirer_application_data_with_hosts")
 def haproxy_route_requirer_application_data_with_hosts_fixture():
     """haproxy-route requirer application data with hosts attribute set."""
-    return RequirerApplicationData(
-        service="test-service",
-        ports=[8080, 8443],
-        hosts=["10.0.0.1", "10.0.0.2"],
-        hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
-    ).dump()
+    return model_to_relation_data(
+        RequirerApplicationData(
+            service="test-service",
+            ports=[8080, 8443],
+            hosts=["10.0.0.1", "10.0.0.2"],
+            hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
+        )
+    )
 
 
 @pytest.fixture(name="base_state_haproxy_route")
@@ -396,13 +406,17 @@ def build_haproxy_route_relation(
         local_unit_data={},
         remote_app_name="ingress-configurator",
         limit=1,
-        remote_app_data=RequirerApplicationData(
-            service=service,
-            ports=[8080, 8443],
-            hosts=["10.0.0.1", "10.0.0.2"],
-            hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
-        ).dump(),
-        remote_units_data={0: RequirerUnitData(address=IPv4Address("10.0.0.1")).dump()},
+        remote_app_data=model_to_relation_data(
+            RequirerApplicationData(
+                service=service,
+                ports=[8080, 8443],
+                hosts=["10.0.0.1", "10.0.0.2"],
+                hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
+            )
+        ),
+        remote_units_data={
+            0: model_to_relation_data(RequirerUnitData(address=IPv4Address("10.0.0.1")))
+        },
     )
 
 
@@ -596,13 +610,8 @@ def haproxy_route_relation_data_fixture() -> typing.Callable[..., HaproxyRouteRe
 
         return HaproxyRouteRequirerData(
             relation_id=relation_id,
-            application_data=typing.cast(
-                RequirerApplicationData,
-                RequirerApplicationData.from_dict(application_data_dict),
-            ),
-            units_data=[
-                typing.cast(RequirerUnitData, RequirerUnitData.from_dict({"address": "10.0.0.1"}))
-            ],
+            application_data=RequirerApplicationData.model_validate(application_data_dict),
+            units_data=[RequirerUnitData.model_validate({"address": "10.0.0.1"})],
         )
 
     return generate_requirer_data
