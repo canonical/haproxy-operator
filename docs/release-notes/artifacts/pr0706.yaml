@@ -1,14 +1,16 @@
 version_schema: 2
 
 changes:
-  - title: Refactored haproxy-route-tcp integration tests
+  - title: Refactored and stabilized haproxy-route-tcp integration tests
     author: Thanhphan1147
     type: minor
     description: >
       Moved the haproxy-route-tcp configuration assertions for sticky sessions,
       timeouts, PROXY protocol, and port-range binding from the integration
       test to scenario tests, and removed the now-unused any-charm requirer
-      methods. No user-facing behavior changed.
+      methods. The integration test now waits for the TCP relation to settle
+      before publishing requirer data, fixing a race exposed on Juju 4. No
+      user-facing behavior changed.
     urls:
       pr:
         - https://github.com/canonical/haproxy-operator/pull/706
