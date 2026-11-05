@@ -7,6 +7,7 @@ import json
 from unittest.mock import MagicMock
 
 import pytest
+from charms.haproxy.v2.haproxy_route import RequirerApplicationData
 from ops.testing import ActiveStatus, Context, Model, Relation, State
 
 from charm import HAProxyCharm
@@ -265,6 +266,80 @@ def test_grpc_backend(
         " ssl ca-file /var/lib/haproxy/cas/cas.pem alpn h2 check-alpn h2\n"
         in haproxy_conf_contents
     )
+    assert out.app_status == ActiveStatus("")
+
+
+@pytest.mark.parametrize(
+    "application_data,expected_config_entries",
+    [
+        pytest.param(
+            {"retry": {"count": 3, "redispatch": True}},
+            ["retries 3\n    option redispatch"],
+            id="retry",
+        ),
+        pytest.param(
+            {"http_server_close": True},
+            ["option http-server-close"],
+            id="http-server-close",
+        ),
+        pytest.param(
+            {"load_balancing": {"algorithm": "source", "consistent_hashing": True}},
+            ["balance source", "hash-type consistent"],
+            id="source-load-balancing",
+        ),
+    ],
+)
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls", "mocks_tls_ca_write")
+def test_route_backend_options(
+    monkeypatch: pytest.MonkeyPatch,
+    certificates_integration,
+    receive_ca_certs_relation,
+    application_data,
+    expected_config_entries,
+):
+    """
+    arrange: prepare the state with a haproxy-route relation configured with backend options.
+    act: run relation_changed for the haproxy-route relation.
+    assert: the rendered config contains the configured options.
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    haproxy_route_relation = Relation(
+        endpoint="haproxy-route",
+        local_app_data={"endpoints": json.dumps([f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}/"])},
+        remote_app_data=RequirerApplicationData(
+            service="any-charm",
+            ports=[80],
+            hosts=["10.12.97.153"],
+            hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
+            **application_data,
+        ).dump(),
+        remote_units_data={0: {"address": '"10.75.1.129"'}},
+    )
+    state = State(
+        relations=frozenset(
+            {
+                receive_ca_certs_relation,
+                haproxy_route_relation,
+                certificates_integration,
+            }
+        ),
+        leader=True,
+        model=Model(name="haproxy-tutorial"),
+        app_status=ActiveStatus(""),
+        unit_status=ActiveStatus(""),
+    )
+
+    ctx = Context(HAProxyCharm, juju_version="3.6.8")
+    out = ctx.run(
+        ctx.on.relation_changed(haproxy_route_relation),
+        state,
+    )
+
+    render_file_mock.assert_called_once()
+    haproxy_conf_contents = render_file_mock.call_args_list[0].args[1]
+    for entry in expected_config_entries:
+        assert entry in haproxy_conf_contents
     assert out.app_status == ActiveStatus("")
 
 
