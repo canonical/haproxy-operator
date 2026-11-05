@@ -67,12 +67,6 @@ output "requires" {
       endpoint   = "receive-ca-certs"
       controller = null
     }
-    reverseproxy = {
-      kind       = "endpoint"
-      name       = juju_application.haproxy.name
-      endpoint   = "reverseproxy"
-      controller = null
-    }
     spoe_auth = {
       kind       = "endpoint"
       name       = juju_application.haproxy.name

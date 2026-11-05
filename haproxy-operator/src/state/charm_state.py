@@ -21,8 +21,6 @@ from charms.traefik_k8s.v2.ingress import IngressPerAppProvider
 from pydantic import Field, ValidationError, field_validator
 from pydantic.dataclasses import dataclass
 
-from http_interface import HTTPRequirer
-
 from .exception import CharmStateValidationBaseError
 
 logger = logging.getLogger()
@@ -39,7 +37,6 @@ class ProxyMode(StrEnum):
         HAPROXY_ROUTE: When haproxy-route is related.
         INGRESS: when ingress is related.
         INGRESS_PER_UNIT: when ingress-per-unit is related.
-        LEGACY: when reverseproxy is related.
         NOPROXY: when haproxy should return a default page.
         INVALID: when the charm state is invalid.
     """
@@ -47,7 +44,6 @@ class ProxyMode(StrEnum):
     HAPROXY_ROUTE = "haproxy-route"
     INGRESS = "ingress"
     INGRESS_PER_UNIT = "ingress-per-unit"
-    LEGACY = "legacy"
     NOPROXY = "noproxy"
     INVALID = "invalid"
 
@@ -197,7 +193,6 @@ class CharmState:
         ingress_per_unit_provider: IngressPerUnitProvider,
         haproxy_route_provider: HaproxyRouteProvider,
         haproxy_route_tcp_provider: HaproxyRouteTcpProvider,
-        reverseproxy_requirer: HTTPRequirer,
         haproxy_route_policy: HaproxyRoutePolicyRequirer,
     ) -> ProxyMode:
         """Validate if all the necessary preconditions are fulfilled.
@@ -207,7 +202,6 @@ class CharmState:
             ingress_per_unit_provider: The ingress per unit provider.
             haproxy_route_provider: The haproxy route provider.
             haproxy_route_tcp_provider: The haproxy-route-tcp provider.
-            reverseproxy_requirer: The reverse proxy requirer.
             haproxy_route_policy: The haproxy route policy requirer.
 
         Raises:
@@ -219,23 +213,16 @@ class CharmState:
         """
         is_ingress_related = bool(ingress_provider.relations)
         is_ingress_per_unit_related = bool(ingress_per_unit_provider.relations)
-        is_legacy_related = bool(reverseproxy_requirer.relations)
         is_haproxy_route_related = bool(
             haproxy_route_provider.relations
             or haproxy_route_tcp_provider.relations
             or haproxy_route_policy.relation is not None
         )
 
-        if (
-            is_ingress_per_unit_related
-            + is_ingress_related
-            + is_legacy_related
-            + is_haproxy_route_related
-            > 1
-        ):
+        if is_ingress_per_unit_related + is_ingress_related + is_haproxy_route_related > 1:
             msg = (
-                "Only one integration out of 'ingress', 'ingress-per-unit', "
-                "'reverseproxy' or 'haproxy-route' can be active at a time."
+                "Only one integration out of 'ingress', 'ingress-per-unit' "
+                "or 'haproxy-route' can be active at a time."
             )
             logger.error(msg)
             raise HaproxyTooManyIntegrationsError(msg)
@@ -245,9 +232,6 @@ class CharmState:
 
         if is_ingress_per_unit_related:
             return ProxyMode.INGRESS_PER_UNIT
-
-        if is_legacy_related:
-            return ProxyMode.LEGACY
 
         if is_haproxy_route_related:
             return ProxyMode.HAPROXY_ROUTE
@@ -262,7 +246,6 @@ class CharmState:
         ingress_per_unit_provider: IngressPerUnitProvider,
         haproxy_route_provider: HaproxyRouteProvider,
         haproxy_route_tcp_provider: HaproxyRouteTcpProvider,
-        reverseproxy_requirer: HTTPRequirer,
         haproxy_route_policy: HaproxyRoutePolicyRequirer,
     ) -> "CharmState":
         """Create a CharmState class from a charm instance.
@@ -273,7 +256,6 @@ class CharmState:
             ingress_per_unit_provider: The ingress per unit provider.
             haproxy_route_provider: The haproxy-route provider.
             haproxy_route_tcp_provider: The haproxy-route-tcp provider.
-            reverseproxy_requirer: The reverse proxy requirer.
             haproxy_route_policy: The haproxy route policy requirer.
 
         Raises:
@@ -294,7 +276,6 @@ class CharmState:
                     ingress_per_unit_provider,
                     haproxy_route_provider,
                     haproxy_route_tcp_provider,
-                    reverseproxy_requirer,
                     haproxy_route_policy,
                 ),
                 global_max_connection=global_max_connection,

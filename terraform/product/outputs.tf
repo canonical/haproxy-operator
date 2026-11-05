@@ -104,12 +104,6 @@ output "requires" {
       endpoint   = "receive-ca-certs"
       controller = null
     }
-    reverseproxy = {
-      kind       = "endpoint"
-      name       = module.haproxy.app_name
-      endpoint   = "reverseproxy"
-      controller = null
-    }
     send_remote_write = {
       kind       = "endpoint"
       name       = juju_application.grafana_agent.name
