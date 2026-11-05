@@ -39,7 +39,7 @@ Production deployments require defense against malicious traffic, identity verif
 
 Clustered deployments ensure uninterrupted traffic handling during unit failures or maintenance. A shared virtual IP coordinates traffic distribution and automatic recovery across units.
 
-* {ref}`Configure high availability <how_to_configure_high_availability>`: Deploy the `hacluster` subordinate charm to establish a shared virtual IP across multiple HAProxy units.
+* {ref}`Configure high availability <how_to_configure_high_availability>`: Configure the charm to manage a shared virtual IP across multiple HAProxy units.
 * {ref}`Configure virtual IP on OpenStack <how_to_configure_virtual_ip_on_openstack>`: Allocate an OpenStack VIP port and configure allowed address pairs for traffic routing.
 
 ## Operations and maintenance

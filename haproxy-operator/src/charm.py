@@ -52,6 +52,7 @@ from ops.model import SecretNotFoundError
 from charms.dns_integrator.v0.dns_record import DNSRecordRequires
 from dns_record import DNS_RECORD_RELATION, DNSRecordService
 from haproxy import HAPROXY_CONFIG, HAPROXY_SERVICE, HAProxyService, file_exists, read_file
+from keepalived import KeepalivedService
 from state.charm_state import CharmState, ProxyMode
 from state.ddos_protection import DDosProtection
 from state.exception import CharmStateValidationBaseError
@@ -117,6 +118,7 @@ class HAProxyCharm(ops.CharmBase):
         """
         super().__init__(*args)
         self.haproxy_service = HAProxyService()
+        self.keepalived_service = KeepalivedService()
         # Relation handlers are initialized before self.certificates as we need them when calling
         # self._get_certificate_requests()
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
@@ -240,11 +242,13 @@ class HAProxyCharm(ops.CharmBase):
     def _on_install(self, _: typing.Any) -> None:
         """Install the haproxy service and reconcile."""
         self.haproxy_service.install()
+        self.keepalived_service.install()
         self._reconcile()
 
     @validate_config_and_tls(defer=False)
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
+        self.keepalived_service.install()
         self._reconcile()
 
     @validate_config_and_tls(defer=False)
