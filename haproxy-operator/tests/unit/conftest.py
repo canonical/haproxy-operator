@@ -494,6 +494,7 @@ def build_haproxy_route_tcp_relation(
     enforce_tls: bool = True,
     tls_terminate: bool = False,
     remote_app_name: str = "tcp-requirer",
+    **application_data: typing.Any,
 ) -> scenario.Relation:
     """Build a scenario Relation for haproxy-route-tcp.
 
@@ -505,11 +506,12 @@ def build_haproxy_route_tcp_relation(
         enforce_tls: Whether to enforce TLS.
         tls_terminate: Whether to terminate TLS.
         remote_app_name: Remote application name.
+        application_data: Additional fields to add to the requirer application data.
 
     Returns:
         A scenario Relation for haproxy-route-tcp.
     """
-    app_data: dict[str, str | int | bool | None] = {
+    app_data: dict[str, typing.Any] = {
         "enforce_tls": enforce_tls,
         "tls_terminate": tls_terminate,
     }
@@ -522,6 +524,7 @@ def build_haproxy_route_tcp_relation(
             app_data["backend_port"] = backend_port
     if sni is not None:
         app_data["sni"] = sni
+    app_data.update(application_data)
 
     return scenario.Relation(
         endpoint="haproxy-route-tcp",
