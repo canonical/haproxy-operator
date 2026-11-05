@@ -12,7 +12,7 @@ changes:
       changed.
     urls:
       pr:
-        - https://github.com/canonical/haproxy-operator/pull/0000
+        - https://github.com/canonical/haproxy-operator/pull/707
       related_doc:
       related_issue:
     visibility: internal
