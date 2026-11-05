@@ -172,8 +172,6 @@ charm-libs:
   version: "0"
 - lib: haproxy_route_policy.haproxy_route_policy
   version: "0"
-- lib: operator_libs_linux.apt
-  version: "0"
 - lib: operator_libs_linux.systemd
   version: "1"
 - lib: tls_certificates_interface.tls_certificates
