@@ -13,6 +13,7 @@ from ops.testing import ActiveStatus, Context, Model, Relation, State
 from charm import HAProxyCharm
 
 from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
+from .helper import rendered_file_content
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls", "mocks_tls_ca_write")
@@ -59,7 +60,7 @@ def test_protocol_https(
     )
 
     render_file_mock.assert_called_once()
-    haproxy_conf_contents = render_file_mock.call_args_list[0].args[1]
+    haproxy_conf_contents = rendered_file_content(render_file_mock)
     assert (
         "server haproxy-tutorial-ingress-configurator_443_0 10.12.97.153:443"
         " ssl ca-file /var/lib/haproxy/cas/cas.pem alpn h2,http/1.1 check-alpn h2,http/1.1\n"
@@ -123,7 +124,7 @@ def test_protocol_https_with_health_check(
     )
 
     render_file_mock.assert_called_once()
-    haproxy_conf_contents = render_file_mock.call_args_list[0].args[1]
+    haproxy_conf_contents = rendered_file_content(render_file_mock)
     assert (
         "server haproxy-tutorial-ingress-configurator_443_0 10.12.97.153:443"
         " check inter 60s rise 2 fall 1"
@@ -195,7 +196,7 @@ def test_protocol_https_no_ca(monkeypatch: pytest.MonkeyPatch, certificates_inte
     )
 
     render_file_mock.assert_called_once()
-    haproxy_conf_contents = render_file_mock.call_args_list[0].args[1]
+    haproxy_conf_contents = rendered_file_content(render_file_mock)
     assert "10.12.97.153:443" not in haproxy_conf_contents
     assert "10.12.97.154:443" not in haproxy_conf_contents
     protocol_https_relation = next(
@@ -255,7 +256,7 @@ def test_grpc_backend(
     )
 
     render_file_mock.assert_called_once()
-    haproxy_conf_contents = render_file_mock.call_args_list[0].args[1]
+    haproxy_conf_contents = rendered_file_content(render_file_mock)
     assert (
         "server grpc-service_50051_0 10.12.97.153:50051"
         " ssl ca-file /var/lib/haproxy/cas/cas.pem alpn h2 check-alpn h2\n"
@@ -337,7 +338,7 @@ def test_route_backend_options(
     )
 
     render_file_mock.assert_called_once()
-    haproxy_conf_contents = render_file_mock.call_args_list[0].args[1]
+    haproxy_conf_contents = rendered_file_content(render_file_mock)
     for entry in expected_config_entries:
         assert entry in haproxy_conf_contents
     assert out.app_status == ActiveStatus("")
@@ -413,7 +414,7 @@ def test_default_backend_renders_default_backend_directive(
     )
 
     render_file_mock.assert_called_once()
-    haproxy_conf_contents = render_file_mock.call_args_list[0].args[1]
+    haproxy_conf_contents = rendered_file_content(render_file_mock)
     assert "frontend haproxy\n" in haproxy_conf_contents
     assert "bind [::]:80 v4v6" in haproxy_conf_contents
     assert "bind [::]:443 v4v6 ssl" in haproxy_conf_contents
@@ -487,7 +488,7 @@ def test_no_default_backend_renders_inline_default(
     )
 
     render_file_mock.assert_called_once()
-    haproxy_conf_contents = render_file_mock.call_args_list[0].args[1]
+    haproxy_conf_contents = rendered_file_content(render_file_mock)
     assert "default_backend default\n" in haproxy_conf_contents
     assert "backend default\n" in haproxy_conf_contents
     assert out.app_status == ActiveStatus("")
