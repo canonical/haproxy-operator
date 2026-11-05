@@ -35,11 +35,26 @@ def test_install(context_with_install_mock, base_state, event):
     act: run install or upgrade-charm
     assert: status is active
     """
-    context, (install_mock, reconcile_default_mock, *_) = context_with_install_mock
+    context, (install_mock, reconcile_default_mock, keepalived_install_mock, *_) = (
+        context_with_install_mock
+    )
     state = ops.testing.State(**base_state)
     context.run(getattr(context.on, event)(), state)
     install_mock.assert_called_once()
+    keepalived_install_mock.assert_called_once()
     reconcile_default_mock.assert_called_once()
+
+
+def test_config_changed_installs_keepalived(context_with_install_mock, base_state):
+    """
+    arrange: prepare a state with peer relation
+    act: run config-changed
+    assert: keepalived is installed
+    """
+    context, (*_, keepalived_install_mock, _) = context_with_install_mock
+    state = ops.testing.State(**base_state)
+    context.run(context.on.config_changed(), state)
+    keepalived_install_mock.assert_called_once()
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
