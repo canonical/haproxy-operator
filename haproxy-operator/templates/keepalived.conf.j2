@@ -1,0 +1,43 @@
+global_defs {
+  router_id {{ router_id }}
+  enable_script_security
+  script_user root
+}
+
+{% for route in check_routes %}
+vrrp_script check_route_{{ loop.index0 }} {
+  script "{{ check_route_script }} {{ route }}"
+  interval 2
+  timeout 1
+  fall 1
+  rise 1
+}
+{% endfor %}
+
+{% for vip in vips %}
+vrrp_instance vrrp_{{ loop.index0 }} {
+  state BACKUP
+  interface {{ interface }}
+  virtual_router_id {{ 1 + loop.index0 }}
+  priority 127
+  advert_int 1
+
+  virtual_ipaddress {
+    {{ vip }} dev {{ interface }}
+  }
+}
+{% endfor %}
+
+vrrp_sync_group vrrp_group {
+  group {
+{% for vip in vips %}
+    vrrp_{{ loop.index0 }}
+{% endfor %}
+  }
+
+  track_script {
+{% for route in check_routes %}
+    check_route_{{ loop.index0 }} weight -1
+{% endfor %}
+  }
+}
