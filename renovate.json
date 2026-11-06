@@ -7,7 +7,7 @@
   ],
   "baseBranchPatterns": [
     "main",
-    "2.8/main"
+    "track/2.8"
   ],
   "ignorePaths": [],
   "customDatasources": {
