@@ -23,7 +23,7 @@ from tests.unit.conftest import (
 )
 
 from .conftest import build_haproxy_route_relation, build_spoe_auth_relation
-from .helper import RegexMatcher
+from .helper import RegexMatcher, rendered_file_content
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ def test_config_changed_client_ip_hash_salt(
     context.run(context.on.config_changed(), state)
 
     render_file_mock.assert_called_once()
-    config_content = render_file_mock.call_args.args[1]
+    config_content = rendered_file_content(render_file_mock)
     assert (f'log-format "{TEST_LOG_HASH_CLIENT_ADDRESS}' in config_content) is expected_present
     assert (
         f'error-log-format "{TEST_LOG_HASH_CLIENT_ADDRESS}' in config_content

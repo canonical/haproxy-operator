@@ -13,7 +13,7 @@ import pytest
 from charm import HAProxyCharm
 
 from .conftest import build_haproxy_route_relation
-from .helper import RegexMatcher
+from .helper import RegexMatcher, rendered_file_content
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
@@ -37,9 +37,8 @@ def test_hsts_disabled(monkeypatch: pytest.MonkeyPatch, certificates_integration
         state,
     )
     assert render_file_mock.call_count == 1
-    assert (
-        "http-response set-header Strict-Transport-Security"
-        not in render_file_mock.call_args.args[1]
+    assert "http-response set-header Strict-Transport-Security" not in rendered_file_content(
+        render_file_mock
     )
     assert out.unit_status.name == ops.testing.ActiveStatus.name
 
@@ -99,7 +98,7 @@ def test_hsts_disabled_allow_http(monkeypatch: pytest.MonkeyPatch, certificates_
         state,
     )
     assert render_file_mock.call_count == 1
-    haproxy_conf_contents = render_file_mock.call_args.args[1]
+    haproxy_conf_contents = rendered_file_content(render_file_mock)
     assert (
         "acl is_allow_http req.hdr(host),field(1,:) -i haproxy.internal" in haproxy_conf_contents
     )
@@ -138,7 +137,7 @@ def test_redirect_without_allow_http_uses_named_acl(
         state,
     )
     assert render_file_mock.call_count == 1
-    haproxy_conf_contents = render_file_mock.call_args.args[1]
+    haproxy_conf_contents = rendered_file_content(render_file_mock)
     assert "acl is_allow_http" not in haproxy_conf_contents
     assert "http-request redirect scheme https unless { ssl_fc }" in haproxy_conf_contents
     assert out.unit_status.name == ops.testing.ActiveStatus.name
@@ -168,7 +167,7 @@ def test_redirect_allow_http_uses_named_acl(
         state,
     )
     assert render_file_mock.call_count == 1
-    haproxy_conf_contents = render_file_mock.call_args.args[1]
+    haproxy_conf_contents = rendered_file_content(render_file_mock)
     assert (
         "acl is_allow_http req.hdr(host),field(1,:) -i haproxy.internal" in haproxy_conf_contents
     )
