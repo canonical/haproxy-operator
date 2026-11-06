@@ -3,10 +3,10 @@
 # How to upgrade
 
 Upgrade the charm with the `juju refresh` command.
-For example, to upgrade `haproxy` along the `2.8/edge` channel, use:
+For example, to upgrade `haproxy` along the `3.2/edge` channel, use:
 
 ```bash
-juju refresh haproxy --channel=2.8/edge
+juju refresh haproxy --channel=3.2/edge
 ```
 
 The charm is stateless, so you don't need to perform a data backup

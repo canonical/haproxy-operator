@@ -124,7 +124,7 @@ def application_fixture(
     lxd_juju.deploy(
         charm=charm_file,
         app=app_name,
-        base="ubuntu@24.04",
+        base="ubuntu@26.04",
     )
     return app_name
 

@@ -1,7 +1,6 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 locals {
-  use_hacluster  = var.hacluster != null
   use_keepalived = var.keepalived != null
 }
 
@@ -17,37 +16,6 @@ module "haproxy" {
   machines    = var.haproxy.machines
   constraints = var.haproxy.constraints
   config      = var.haproxy.config
-}
-
-resource "juju_application" "hacluster" {
-  count      = local.use_hacluster ? 1 : 0
-  name       = var.hacluster.app_name
-  model_uuid = var.model_uuid
-  units      = 0
-
-  charm {
-    name     = "hacluster"
-    revision = var.hacluster.revision
-    channel  = var.hacluster.channel
-    base     = var.haproxy.base
-  }
-
-  config = var.hacluster.config
-}
-
-resource "juju_integration" "ha" {
-  count      = local.use_hacluster ? 1 : 0
-  model_uuid = var.model_uuid
-
-  application {
-    name     = module.haproxy.app_name
-    endpoint = module.haproxy.requires.ha.endpoint
-  }
-
-  application {
-    name     = juju_application.hacluster[0].name
-    endpoint = "ha"
-  }
 }
 
 resource "juju_application" "keepalived" {
