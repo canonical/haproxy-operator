@@ -329,18 +329,6 @@ wheels = [
 ]
 
 [[package]]
-name = "charmhelpers"
-version = "1.2.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "jinja2" },
-    { name = "netaddr" },
-    { name = "pbr" },
-    { name = "pyyaml" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/5a/f5/2ed2c938671e1305f05102888231f618af927f79c721f8aed2af5b459697/charmhelpers-1.2.1.tar.gz", hash = "sha256:298bb9e90d9392e2b66d10a5199b1b2d459dc8d5434b897913325904989dd2d7", size = 610181, upload-time = "2022-04-01T13:03:26.021Z" }
-
-[[package]]
 name = "charmlibs-apt"
 version = "1.0.0.post1"
 source = { registry = "https://pypi.org/simple" }
