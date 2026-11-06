@@ -1,0 +1,18 @@
+version_schema: 2
+
+changes:
+  - title: Moved the HAProxy charm to Ubuntu 26.04 and HAProxy 3.2
+    author: tphan025
+    type: major
+    description: >
+      The HAProxy charm is now based on Ubuntu 26.04 and ships HAProxy 3.2.
+      The charm is published on the new `3.2` track instead of `2.8`, and the
+      documentation, Terraform modules, and CI promotion workflows now reference
+      the new base and track.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/698
+      related_doc:
+      related_issue: https://warthogs.atlassian.net/browse/ISD-6915
+    visibility: public
+    highlight: true

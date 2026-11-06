@@ -16,7 +16,7 @@ should have at least 4 CPU cores, 8 GB of RAM, and 50 GB of disk space.
 ````{tip}
 You can use Multipass to create an isolated environment by running:
 ```
-multipass launch 24.04 --name charm-tutorial-vm --cpus 4 --memory 8G --disk 50G
+multipass launch 26.04 --name charm-tutorial-vm --cpus 4 --memory 8G --disk 50G
 ```
 ````
 
@@ -25,7 +25,7 @@ multipass launch 24.04 --name charm-tutorial-vm --cpus 4 --memory 8G --disk 50G
 This tutorial requires the following software to be installed on your working station
 (either locally or in the Multipass VM):
 
-- Juju 3.3
+- Juju 3.6
 - LXD 5.21.4
 
 Use [Concierge](https://github.com/canonical/concierge) to set up Juju and LXD:
@@ -58,10 +58,10 @@ juju add-model haproxy-tutorial
 
 ## Deploy the HAProxy charm
 
-We will deploy charm from Charmhub using the `2.8/stable` channel:
+We will deploy charm from Charmhub using the `3.2/stable` channel:
 
 ```
-juju deploy haproxy --channel=2.8/stable
+juju deploy haproxy --channel=3.2/stable
 ```
 
 ## Configure TLS
