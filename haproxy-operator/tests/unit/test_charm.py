@@ -665,36 +665,9 @@ def test_dns_record_relation_created_triggers_reconcile(
     update_dns_mock.assert_called_once()
 
 
-def test_dns_update_uses_vip_when_ha_active(
-    context_with_dns_mock, base_state, dns_record_relation
-):
+def test_dns_update_uses_binding_ip(context_with_dns_mock, base_state, dns_record_relation):
     """
-    arrange: HA relation active with vip config set
-    act: config_changed fires
-    assert: update_dns_records is called with the VIP as the IP
-    """
-    context, update_dns_mock = context_with_dns_mock
-    ha_relation = scenario.Relation(
-        endpoint="ha",
-        remote_app_name="hacluster",
-        remote_units_data={0: {}},
-    )
-    state = ops.testing.State(
-        config={"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "vip": "192.168.1.100"},
-        relations=[*base_state.get("relations", []), dns_record_relation, ha_relation],
-        leader=True,
-    )
-    context.run(context.on.config_changed(), state)
-
-    calls = update_dns_mock.call_args_list
-    assert any(call_args.args[1] == "192.168.1.100" for call_args in calls)
-
-
-def test_dns_update_uses_binding_ip_when_no_ha(
-    context_with_dns_mock, base_state, dns_record_relation
-):
-    """
-    arrange: no HA relation, standard network binding
+    arrange: standard network binding
     act: config_changed fires
     assert: update_dns_records is called with the binding ingress address
     """

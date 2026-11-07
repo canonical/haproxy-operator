@@ -24,7 +24,7 @@ This operator is built for **IaaS/VM** and is not supported in **Kubernetes** en
 * - **Get started**
   - {ref}`tutorial_getting_started`
 * - **Deployment**
-  - {ref}`Configure high availability <how_to_configure_high_availability>` | {ref}`Control backend routing <how_to_control_haproxy_route_relation_data>` | {ref}`Create OpenStack virtual IP <how_to_configure_virtual_ip_on_openstack>`
+  - {ref}`Configure high availability <how_to_configure_high_availability>` | {ref}`Control backend routing <how_to_control_haproxy_route_relation_data>` | {ref}`Add to existing Terraform project <how-to-deploy-with-terraform>`
 * - **Integrations**
   - {ref}`Relation endpoints <reference_relation_endpoints>` | {ref}`Integrate with non-charmed workloads <how_to_integrate_with_non_charm_workload>` | {ref}`Configure ingress requirers <how_to_provide_extra_configurations_for_ingress_requirer_charms>`
 * - **Other supported protocols** 
