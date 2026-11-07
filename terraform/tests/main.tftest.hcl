@@ -17,7 +17,7 @@ run "basic_deploy" {
 
     haproxy = {
       # renovate: depName="haproxy"
-      revision = 344
+      revision = 605
     }
 
     haproxy_ddos_protection_configurator = {
