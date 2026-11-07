@@ -19,16 +19,16 @@ Run `juju status` to get the IP address information for each HAProxy unit. You s
 
 ```
 haproxy/1                  active       idle       15       10.142.65.173   80/tcp  
-  grafana-agent/9          active       idle                10.142.65.173           send-remote-write: off, tracing: off
+  opentelemetry-collector/9   active     idle                10.142.65.173           Unit is ready
   hacluster/3              active       idle                10.142.65.173           Unit is ready and clustered
 haproxy/2                  active       idle       16       10.142.65.60    80/tcp  
-  grafana-agent/10         active       idle                10.142.65.60            send-remote-write: off, tracing: off
+  opentelemetry-collector/10  active     idle                10.142.65.60            Unit is ready
   hacluster/4              waiting      idle                10.142.65.60            Resource: res_haproxy_b34f0e1_vip not yet configured
 haproxy/3*                 active       idle       17       10.142.65.229   80/tcp  
-  grafana-agent/11*        active       idle                10.142.65.229           send-remote-write: off, tracing: off
+  opentelemetry-collector/11* active     idle                10.142.65.229           Unit is ready
   hacluster/5*             active       idle                10.142.65.229           Unit is ready and clustered
 haproxy/4                  active       idle       18       10.142.65.219   80/tcp  
-  grafana-agent/12         active       idle                10.142.65.219           send-remote-write: off, tracing: off
+  opentelemetry-collector/12  active     idle                10.142.65.219           Unit is ready
   hacluster/6              waiting      idle                10.142.65.219           Resource: res_haproxy_b34f0e1_vip not yet configured
 ```
 
