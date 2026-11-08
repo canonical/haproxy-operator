@@ -12,11 +12,15 @@ import tenacity
 from .conftest import LOG_HASH_SALT, all_active_and_idle
 
 
-def _assert_log_contains(juju: jubilant.Juju, unit: str, expected: str) -> None:
+def _assert_log_contains(
+    juju: jubilant.Juju, unit: str, expected: str, request_command: str | None = None
+) -> None:
     """Assert that the expected string eventually appears in haproxy's journal.
 
     HAProxy sends logs to journald asynchronously via syslog, so the log line
     for a request may not be visible immediately after the request completes.
+    When a request command is provided, it is also retried so that a request
+    sent before a configuration reload cannot race with the reload.
     Retry for a few seconds to avoid flaky failures.
     """
     for attempt in tenacity.Retrying(
@@ -25,6 +29,8 @@ def _assert_log_contains(juju: jubilant.Juju, unit: str, expected: str) -> None:
         reraise=True,
     ):
         with attempt:
+            if request_command is not None:
+                juju.exec(request_command, unit=unit)
             haproxy_logs = juju.exec("journalctl -u haproxy --no-pager -n 50", unit=unit).stdout
             assert expected in haproxy_logs
 
@@ -47,11 +53,12 @@ def test_client_ip_hash_salt(
         {"client-ip-hash-salt": str(log_hash_secret)},
     )
     juju.wait(lambda status: all_active_and_idle(status, application))
-    juju.exec("curl -Lk 127.0.0.1", unit=unit)
 
     # HAProxy's hex converter outputs uppercase.
     expected_hash = hashlib.sha256(("127.0.0.1" + LOG_HASH_SALT).encode()).hexdigest().upper()
-    _assert_log_contains(juju, unit, expected_hash)
+    # Retry the request as well: the charm may report an idle status before the
+    # new configuration has been reloaded, which would log the plaintext address.
+    _assert_log_contains(juju, unit, expected_hash, request_command="curl -Lk 127.0.0.1")
 
     request.getfixturevalue("haproxy_route_tcp_plain_tcp_relation")
     # Fix the source port because %cp logs the client port, not the listener port.
