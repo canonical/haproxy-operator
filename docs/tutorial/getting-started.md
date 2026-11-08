@@ -58,10 +58,10 @@ juju add-model haproxy-tutorial
 
 ## Deploy the HAProxy charm
 
-We will deploy charm from Charmhub using the `3.2/stable` channel:
+We will deploy charm from Charmhub using the `3.2/edge` channel:
 
 ```
-juju deploy haproxy --channel=3.2/stable
+juju deploy haproxy --channel=3.2/edge
 ```
 
 ## Configure TLS
