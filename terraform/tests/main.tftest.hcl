@@ -17,7 +17,7 @@ run "basic_deploy" {
 
     haproxy = {
       # renovate: depName="haproxy"
-      revision = 344
+      revision = 605
     }
 
     haproxy_ddos_protection_configurator = {
@@ -60,8 +60,18 @@ run "basic_deploy" {
   }
 
   assert {
-    condition     = output.grafana_agent == "grafana-agent"
-    error_message = "grafana_agent app_name did not match expected"
+    condition     = output.opentelemetry_collector == "opentelemetry-collector"
+    error_message = "opentelemetry_collector app_name did not match expected"
+  }
+
+  assert {
+    condition     = output.provides.logging_provider.endpoint == "receive-loki-logs"
+    error_message = "logging_provider should expose the opentelemetry-collector receive-loki-logs endpoint"
+  }
+
+  assert {
+    condition     = output.requires.send_remote_write.endpoint == "send-remote-write"
+    error_message = "send_remote_write should expose the opentelemetry-collector send-remote-write endpoint"
   }
 
   assert {

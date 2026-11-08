@@ -14,6 +14,7 @@ The Terraform module supports deploying HAProxy charm as a single unit, or with 
 
 There are additional options to provide more capabilities to the HAProxy charm:
 
+* The `opentelemetry_collector` option can be used to configure the OpenTelemetry Collector subordinate charm that forwards HAProxy telemetry to the Canonical Observability Stack.
 * The `haproxy_ddos_protection_configurator` option can be used to provide the DDOS protection configuration to the HAProxy charm.
 * The `haproxy_spoe_auth` option can be used to provide the SPOE authentication configuration to the HAProxy charm.
 * The `oauth_external_idp_integrator` option can be used to provide the external IDP integration configuration to the HAProxy charm.
