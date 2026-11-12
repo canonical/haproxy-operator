@@ -32,6 +32,23 @@ MOCK_ADDRESS = ip_address("10.0.0.1")
 ANOTHER_MOCK_ADDRESS = ip_address("10.0.0.2")
 
 
+class _RequirerCharm(ops.CharmBase):
+    """Charm that exercises the haproxy-route-tcp requirer."""
+
+    port = 4000
+    unit_address = "10.0.0.1"
+
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.requirer = HaproxyRouteTcpRequirer(self, MOCK_RELATION_NAME)
+        self.framework.observe(self.on.config_changed, self._on_config_changed)
+
+    def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
+        self.requirer.provide_haproxy_route_tcp_requirements(
+            port=self.port, unit_address=self.unit_address
+        )
+
+
 @pytest.fixture(name="mock_relation_data")
 def mock_relation_data_fixture():
     """Create mock relation data."""
@@ -981,28 +998,14 @@ def test_requirer_saves_relation_data():
     act: Provide the requirer requirements.
     assert: Application and unit data are saved using the ops relation API.
     """
-
-    class _RequirerCharm(ops.CharmBase):
-        """Charm that exercises the haproxy-route-tcp requirer."""
-
-        def __init__(self, *args):
-            super().__init__(*args)
-            self.requirer = HaproxyRouteTcpRequirer(self, "haproxy-route-tcp")
-            self.framework.observe(self.on.config_changed, self._on_config_changed)
-
-        def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
-            self.requirer.provide_haproxy_route_tcp_requirements(
-                port=4000, unit_address="10.0.0.1"
-            )
-
     ctx = ops.testing.Context(
         _RequirerCharm,
         meta={
             "name": "tcp-requirer",
-            "requires": {"haproxy-route-tcp": {"interface": "haproxy-route-tcp"}},
+            "requires": {MOCK_RELATION_NAME: {"interface": MOCK_RELATION_NAME}},
         },
     )
-    relation = ops.testing.Relation("haproxy-route-tcp", interface="haproxy-route-tcp")
+    relation = ops.testing.Relation(MOCK_RELATION_NAME, interface=MOCK_RELATION_NAME)
     state = ops.testing.State(leader=True, relations=[relation])
 
     out = ctx.run(ctx.on.config_changed(), state)
@@ -1011,6 +1014,6 @@ def test_requirer_saves_relation_data():
     assert out_relation is not None
     assert out_relation.local_app_data is not None
     assert out_relation.local_unit_data is not None
-    assert json.loads(out_relation.local_app_data["port"]) == 4000
-    assert json.loads(out_relation.local_app_data["backend_port"]) == 4000
-    assert json.loads(out_relation.local_unit_data["address"]) == "10.0.0.1"
+    assert json.loads(out_relation.local_app_data["port"]) == _RequirerCharm.port
+    assert json.loads(out_relation.local_app_data["backend_port"]) == _RequirerCharm.port
+    assert json.loads(out_relation.local_unit_data["address"]) == _RequirerCharm.unit_address
