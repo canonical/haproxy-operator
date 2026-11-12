@@ -3,7 +3,8 @@
 
 """Unit tests for DDoS protection rules implementation."""
 
-from unittest.mock import MagicMock
+import re
+from unittest.mock import ANY, MagicMock
 
 import ops.testing
 import pytest
@@ -11,7 +12,7 @@ import pytest
 from charm import HAProxyCharm
 
 from .conftest import build_haproxy_route_relation
-from .helper import rendered_file_content
+from .helper import RegexMatcher, rendered_file_content
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
@@ -128,19 +129,16 @@ def test_ddos_protection_configuration_from_relation(
         ctx.on.relation_changed(ddos_relation),
         state,
     )
-    config_content = render_file_mock.call_args.args[1]
 
-    assert all(
-        entry in config_content
-        for entry in [
-            "table ddos_protection_ip",
-            "tcp-request connection reject if { sc_conn_rate(0) gt 500 }",
-            "http-request allow if allowed_ips",
-            "timeout http-request 30s",
-            "timeout http-keep-alive 5s",
-            "timeout client 60s",
-            "http-request deny if denied_paths",
-        ]
-    )
+    for entry in [
+        "table ddos_protection_ip",
+        "tcp-request connection reject if { sc_conn_rate(0) gt 500 }",
+        "http-request allow if allowed_ips",
+        "timeout http-request 30s",
+        "timeout http-keep-alive 5s",
+        "timeout client 60s",
+        "http-request deny if denied_paths",
+    ]:
+        render_file_mock.assert_any_call(ANY, RegexMatcher(re.escape(entry)), ANY)
 
     assert out.unit_status.name == ops.testing.ActiveStatus.name
