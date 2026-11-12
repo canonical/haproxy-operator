@@ -42,6 +42,8 @@ class HAProxyDDoSProtectionConfiguratorCharm(ops.CharmBase):
                 rate_limit_connections_per_minute=state.rate_limit_connections_per_minute,
                 concurrent_connections_limit=state.concurrent_connections_limit,
                 error_rate=state.error_rate_per_minute,
+                # CharmState keeps the raw config strings so that pydantic can parse
+                # them, including an optional status code for the deny policy.
                 limit_policy_http=state.limit_policy_http,  # type: ignore[arg-type]
                 limit_policy_tcp=state.limit_policy_tcp,  # type: ignore[arg-type]
                 ip_allow_list=state.ip_allow_list,
