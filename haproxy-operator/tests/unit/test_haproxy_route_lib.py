@@ -9,6 +9,7 @@ import typing
 from ipaddress import IPv4Address
 from unittest.mock import MagicMock
 
+import ops.testing
 import pytest
 from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpRequirersData
 from charms.haproxy.v2.haproxy_route import (
@@ -26,6 +27,7 @@ from charms.haproxy.v2.haproxy_route import (
     RewriteConfiguration,
     ServerHealthCheck,
 )
+from ops import CharmBase
 from pydantic import ValidationError
 
 from state.haproxy_route import HaproxyRouteRequirersInformation
@@ -52,17 +54,15 @@ def mock_haproxy_route_requirer_data_fixture():
     """Create mock requirer application data with allow_http enabled."""
     return HaproxyRouteRequirerData(
         relation_id=1,
-        application_data=RequirerApplicationData.model_validate(
-            {
-                "service": "service",
-                "ports": [80],
-                "allow_http": True,
-                "hostname": "example.com",
-                "paths": ["/path"],
-                "deny_paths": ["/private"],
-            }
+        application_data=RequirerApplicationData(
+            service="service",
+            ports=[80],
+            allow_http=True,
+            hostname="example.com",
+            paths=["/path"],
+            deny_paths=["/private"],
         ),
-        units_data=[RequirerUnitData.model_validate({"address": "10.0.0.1"})],
+        units_data=[RequirerUnitData(address="10.0.0.1")],
     )
 
 
@@ -416,36 +416,69 @@ def mock_provider_app_data_fixture():
     )
 
 
-def _build_relation(
+_META = {
+    "name": "haproxy-route-test",
+    "requires": {MOCK_RELATION_NAME: {"interface": "haproxy-route"}},
+}
+
+
+class _ProviderCharm(CharmBase):
+    """Minimal charm exposing the haproxy-route provider."""
+
+    def __init__(self, *args: typing.Any) -> None:
+        super().__init__(*args)
+        self.provider = HaproxyRouteProvider(self)
+        self.requirers_data: HaproxyRouteRequirersData | None = None
+        self.framework.observe(self.provider.on.data_available, self._on_data_available)
+
+    def _on_data_available(self, _: typing.Any) -> None:
+        self.requirers_data = self.provider.get_data(self.provider.relations)
+
+
+class _RequirerCharm(CharmBase):
+    """Minimal charm exposing the haproxy-route requirer."""
+
+    def __init__(self, *args: typing.Any) -> None:
+        super().__init__(*args)
+        self.requirer = HaproxyRouteRequirer(self, relation_name=MOCK_RELATION_NAME)
+
+
+def _route_relation(
     app_data: dict[str, str] | None = None,
     units_data: dict[int, dict[str, str]] | None = None,
     relation_id: int = 1,
-) -> MagicMock:
-    """Build a mocked relation whose load() parses the provided databags."""
-    relation = MagicMock()
-    relation.id = relation_id
-    relation.app = MagicMock()
-    relation.app.name = "requirer"
-    relation.units = [MagicMock() for _ in (units_data or {})]
-    relation.data = {relation.app: app_data or {}}
-    for unit, unit_data in zip(relation.units, (units_data or {}).values(), strict=False):
-        relation.data[unit] = unit_data
-
-    def _load(cls, src, *args, **kwargs):
-        raw = {key: json.loads(value) for key, value in relation.data[src].items()}
-        return cls.model_validate(raw)
-
-    relation.load.side_effect = _load
-    return relation
+    *,
+    remote_app_name: str = "requirer",
+) -> ops.testing.Relation:
+    """Build a real haproxy-route relation for scenario tests."""
+    return ops.testing.Relation(
+        endpoint=MOCK_RELATION_NAME,
+        interface="haproxy-route",
+        remote_app_name=remote_app_name,
+        remote_app_data=app_data or {},
+        remote_units_data=units_data if units_data is not None else {0: {}},
+        id=relation_id,
+    )
 
 
-def _build_requirer(app_data: dict[str, str]) -> HaproxyRouteRequirer:
-    """Build a haproxy-route requirer backed by a mocked relation."""
-    charm = MagicMock()
-    relation = _build_relation(app_data=app_data)
-    charm.model.get_relation.return_value = relation
-    charm.framework.model.get_relation.return_value = relation
-    return HaproxyRouteRequirer(charm=charm, relation_name=MOCK_RELATION_NAME)
+def _run_provider(relation: ops.testing.Relation) -> HaproxyRouteRequirersData:
+    """Run the provider charm and return the requirer data it loaded."""
+    ctx = ops.testing.Context(_ProviderCharm, meta=_META)
+    state = ops.testing.State(relations=[relation])
+    with ctx(ctx.on.relation_changed(relation, remote_unit=0), state) as manager:
+        manager.run()
+        requirers_data = manager.charm.requirers_data
+    assert requirers_data is not None
+    return requirers_data
+
+
+def _run_requirer(relation: ops.testing.Relation) -> HaproxyRouteRequirer:
+    """Run the requirer charm and return the requirer object."""
+    ctx = ops.testing.Context(_RequirerCharm, meta=_META)
+    state = ops.testing.State(relations=[relation])
+    with ctx(ctx.on.relation_changed(relation, remote_unit=0), state) as manager:
+        manager.run()
+        return manager.charm.requirer
 
 
 def test_requirer_application_data_validation():
@@ -581,9 +614,8 @@ def test_provider_loads_legacy_requirer_application_data(mock_relation_data):
     """Validate that requirer data without newer fields still loads with defaults."""
     databag = {k: json.dumps(v) for k, v in mock_relation_data.items()}
     databag.pop("protocol")
-    provider = HaproxyRouteProvider(MagicMock())
 
-    data = provider.get_data([_build_relation(app_data=databag)])
+    data = _run_provider(_route_relation(app_data=databag))
 
     application_data = data.requirers_data[0].application_data
     assert application_data.service == "test-service"
@@ -606,9 +638,8 @@ def test_provider_loads_requirer_application_data(mock_relation_data):
     assert: Data is loaded correctly.
     """
     databag = {k: json.dumps(v) for k, v in mock_relation_data.items()}
-    provider = HaproxyRouteProvider(MagicMock())
 
-    data = provider.get_data([_build_relation(app_data=databag)])
+    data = _run_provider(_route_relation(app_data=databag))
 
     application_data = data.requirers_data[0].application_data
     assert application_data.service == "test-service"
@@ -630,12 +661,9 @@ def test_provider_marks_relation_invalid_on_invalid_json():
     act: Fetch data with HaproxyRouteProvider.get_data().
     assert: The relation is marked as invalid instead of raising.
     """
-    relation = _build_relation(app_data={"service": "not-json"})
-    provider = HaproxyRouteProvider(MagicMock())
+    data = _run_provider(_route_relation(app_data={"service": "not-json"}))
 
-    data = provider.get_data([relation])
-
-    assert data.relation_ids_with_invalid_data == {relation.id}
+    assert data.relation_ids_with_invalid_data == {1}
     assert data.requirers_data == []
 
 
@@ -664,15 +692,11 @@ def test_provider_loads_requirer_unit_data(mock_unit_data):
     act: Fetch data with HaproxyRouteProvider.get_data().
     assert: Unit data is loaded correctly.
     """
-    provider = HaproxyRouteProvider(MagicMock())
-
-    data = provider.get_data(
-        [
-            _build_relation(
-                app_data={"service": '"test-service"', "ports": "[8080]"},
-                units_data={0: {k: json.dumps(v) for k, v in mock_unit_data.items()}},
-            )
-        ]
+    data = _run_provider(
+        _route_relation(
+            app_data={"service": '"test-service"', "ports": "[8080]"},
+            units_data={0: {k: json.dumps(v) for k, v in mock_unit_data.items()}},
+        )
     )
 
     assert str(data.requirers_data[0].units_data[0].address) == MOCK_ADDRESS
@@ -702,6 +726,34 @@ def test_requirer_saves_unit_data():
     assert str(saved_data.address) == MOCK_ADDRESS
 
 
+def test_requirer_saves_application_data_with_enum_and_ip():
+    """
+    arrange: Create a requirer and configure application data with an enum and IP address.
+    act: Publish the requirer data to a real relation.
+    assert: The data is serialized correctly to the relation databag.
+    """
+    relation = _route_relation()
+    ctx = ops.testing.Context(_RequirerCharm, meta=_META)
+    state = ops.testing.State(relations=[relation], leader=True)
+
+    with ctx(ctx.on.relation_changed(relation, remote_unit=0), state) as manager:
+        manager.charm.requirer.provide_haproxy_route_requirements(
+            service="test-service",
+            ports=[8080],
+            hosts=["10.0.0.1"],
+            paths=["/api"],
+            load_balancing_algorithm=LoadBalancingAlgorithm.COOKIE,
+            load_balancing_cookie="JSESSIONID",
+        )
+        manager.run()
+        requirer_relation = manager.charm.requirer.relation
+        databag = requirer_relation.data[manager.charm.app]
+
+    assert json.loads(databag["service"]) == "test-service"
+    assert json.loads(databag["hosts"]) == ["10.0.0.1"]
+    assert json.loads(databag["load_balancing"])["algorithm"] == "cookie"
+
+
 @pytest.mark.parametrize("default_backend", [False, True])
 def test_provider_default_backend_with_external_grpc_port(default_backend):
     """
@@ -710,7 +762,7 @@ def test_provider_default_backend_with_external_grpc_port(default_backend):
     assert: Only the relation requesting both options is marked invalid and excluded.
     """
     relation_id = 1
-    relation = _build_relation(
+    relation = _route_relation(
         app_data={
             "service": '"grpc-service"',
             "ports": "[8080]",
@@ -719,11 +771,10 @@ def test_provider_default_backend_with_external_grpc_port(default_backend):
             "default_backend": json.dumps(default_backend),
         },
         relation_id=relation_id,
+        remote_app_name="grpc-service",
     )
-    relation.app.name = "grpc-service"
-    provider = HaproxyRouteProvider(MagicMock())
 
-    data = provider.get_data([relation])
+    data = _run_provider(relation)
 
     assert data.relation_ids_with_invalid_data == ({relation_id} if default_backend else set())
     assert [requirer.relation_id for requirer in data.requirers_data] == (
@@ -789,7 +840,7 @@ def test_update_relation_data_non_leader(mock_relation_data):
 
 def test_get_proxied_endpoints(mock_provider_app_data):
     """Test that get_proxied_endpoints returns the endpoints correctly."""
-    requirer = _build_requirer(mock_provider_app_data)
+    requirer = _run_requirer(_route_relation(app_data=mock_provider_app_data))
 
     endpoints = requirer.get_proxied_endpoints()
 
@@ -799,24 +850,23 @@ def test_get_proxied_endpoints(mock_provider_app_data):
 
 def test_get_proxied_endpoints_empty_data():
     """Test that get_proxied_endpoints returns empty list when no data."""
-    requirer = _build_requirer({})
+    requirer = _run_requirer(_route_relation())
 
     assert requirer.get_proxied_endpoints() == []
 
 
 def test_get_proxied_endpoints_invalid_data():
     """Test that get_proxied_endpoints handles invalid data gracefully."""
-    requirer = _build_requirer({"endpoints": json.dumps(["invalid"])})
+    requirer = _run_requirer(_route_relation(app_data={"endpoints": json.dumps(["invalid"])}))
 
     assert requirer.get_proxied_endpoints() == []
 
 
 def test_prepare_unit_data_no_address():
     """Test that DataValidationError is raised when no address is available."""
-    requirer = _build_requirer({})
-
-    # Reset the unit address and mock a binding with no address
-    requirer.charm.model.get_binding.return_value = None
+    charm = MagicMock()
+    charm.model.get_binding.return_value = None
+    requirer = HaproxyRouteRequirer(charm=charm, relation_name=MOCK_RELATION_NAME)
 
     with pytest.raises(DataValidationError):
         # We want to specifically test this method.

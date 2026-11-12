@@ -9,9 +9,9 @@ changes:
       `_DatabagModel` helper and its manual `load` and `dump` methods. The
       provider and requirer now read and write relation data with the `ops`
       `Relation.load` and `Relation.save` API, matching the standard used by
-      the other HAProxy interface libraries. The public provider and requirer
-      API is unchanged, and the library remains distributed from its Charmhub
-      location.
+      the other HAProxy interface libraries. The relation data models are now
+      pydantic dataclasses. The public provider and requirer API is unchanged,
+      and the library remains distributed from its Charmhub location.
     urls:
       pr:
         - https://github.com/canonical/haproxy-operator/pull/703

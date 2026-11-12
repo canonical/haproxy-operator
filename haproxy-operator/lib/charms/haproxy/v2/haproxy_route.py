@@ -124,6 +124,7 @@ class SomeCharm(CharmBase):
         ...
 """
 
+import json
 import logging
 from collections import defaultdict
 from enum import Enum
@@ -136,9 +137,7 @@ from ops.framework import EventBase, EventSource, Object
 from ops.model import Relation
 from pydantic import (
     AnyHttpUrl,
-    BaseModel,
     BeforeValidator,
-    ConfigDict,
     Field,
     IPvAnyAddress,
     ValidationError,
@@ -163,6 +162,32 @@ logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_RELATION_NAME = "haproxy-route"
 HAPROXY_CONFIG_INVALID_CHARACTERS = "\n\t#\\'\"\r$ "
 HAPROXY_EXPR_INVALID_CHARACTERS = "\n"
+
+
+def _relation_data_default(value: Any) -> Any:
+    """Convert values that are not natively JSON serializable.
+
+    Args:
+        value: The value to convert.
+
+    Returns:
+        A JSON serializable representation of the value.
+    """
+    if isinstance(value, Enum):
+        return value.value
+    return str(value)
+
+
+def _relation_data_encoder(value: Any) -> str:
+    """Serialize a dataclass field value for a Juju relation databag.
+
+    Args:
+        value: The value to serialize.
+
+    Returns:
+        The serialized value.
+    """
+    return json.dumps(value, default=_relation_data_default)
 
 
 def value_contains_invalid_characters(
@@ -224,22 +249,8 @@ class HaproxyRouteInvalidRelationDataError(Exception):
     """Rasied when data validation of the haproxy-route relation fails."""
 
 
-class _HaproxyRouteModel(BaseModel):
-    """Base model for haproxy-route relation data.
-
-    Attrs:
-        model_config: pydantic model configuration.
-    """
-
-    model_config = ConfigDict(
-        # tolerate additional keys in databag
-        extra="ignore",
-        # Allow instantiating this class by field name (instead of forcing alias).
-        populate_by_name=True,
-    )
-
-
-class ServerHealthCheck(BaseModel):
+@dataclass
+class ServerHealthCheck:
     """Configuration model for backend server health checks.
 
     Attributes:
@@ -294,7 +305,8 @@ class RateLimitPolicy(Enum):
     SILENT = "silent-drop"
 
 
-class RateLimit(BaseModel):
+@dataclass
+class RateLimit:
     """Configuration model for connection rate limiting.
 
     Attributes:
@@ -324,7 +336,8 @@ class LoadBalancingAlgorithm(Enum):
     COOKIE = "cookie"
 
 
-class LoadBalancingConfiguration(BaseModel):
+@dataclass
+class LoadBalancingConfiguration:
     """Configuration model for load balancing.
 
     Attributes:
@@ -376,7 +389,8 @@ class LoadBalancingConfiguration(BaseModel):
         return self
 
 
-class BandwidthLimit(BaseModel):
+@dataclass
+class BandwidthLimit:
     """Configuration model for bandwidth rate limiting.
 
     Attributes:
@@ -391,7 +405,8 @@ class BandwidthLimit(BaseModel):
 
 
 # retry-on is not yet implemented
-class Retry(BaseModel):
+@dataclass
+class Retry:
     """Configuration model for retry.
 
     Attributes:
@@ -405,7 +420,8 @@ class Retry(BaseModel):
     )
 
 
-class TimeoutConfiguration(BaseModel):
+@dataclass
+class TimeoutConfiguration:
     """Configuration model for timeout.
 
     Attributes:
@@ -445,7 +461,8 @@ class HaproxyRewriteMethod(Enum):
     SET_HEADER = "set-header"
 
 
-class RewriteConfiguration(BaseModel):
+@dataclass
+class RewriteConfiguration:
     """Configuration model for HTTP rewrite.
 
     Attributes:
@@ -465,7 +482,8 @@ class RewriteConfiguration(BaseModel):
     )
 
 
-class RequirerApplicationData(_HaproxyRouteModel):
+@dataclass
+class RequirerApplicationData:
     """Configuration model for HAProxy route requirer application data.
 
     Attributes:
@@ -506,42 +524,44 @@ class RequirerApplicationData(_HaproxyRouteModel):
     )
     hosts: list[IPvAnyAddress] = Field(
         description="The list of backend server addresses. Currently only support IP addresses.",
-        default=[],
+        default_factory=list,
     )
     paths: list[VALIDSTR] = Field(
-        description="The list of paths to route to this service.", default=[]
+        description="The list of paths to route to this service.", default_factory=list
     )
     hostname: Optional[Annotated[str, BeforeValidator(valid_domain_with_wildcard)]] = Field(
         description="Hostname of this service.", default=None
     )
     additional_hostnames: list[Annotated[str, BeforeValidator(valid_domain_with_wildcard)]] = (
-        Field(description="The list of additional hostnames of this service.", default=[])
+        Field(
+            description="The list of additional hostnames of this service.", default_factory=list
+        )
     )
     rewrites: list[RewriteConfiguration] = Field(
-        description="The list of path rewrite rules.", default=[]
+        description="The list of path rewrite rules.", default_factory=list
     )
     check: Optional[ServerHealthCheck] = Field(
         description="Configure health check for the service.",
         default=None,
     )
     load_balancing: LoadBalancingConfiguration = Field(
-        description="Configure loadbalancing.", default=LoadBalancingConfiguration()
+        description="Configure loadbalancing.", default_factory=LoadBalancingConfiguration
     )
     rate_limit: Optional[RateLimit] = Field(
         description="Configure rate limit for the service.", default=None
     )
     bandwidth_limit: BandwidthLimit = Field(
-        description="Configure bandwidth limit for the service.", default=BandwidthLimit()
+        description="Configure bandwidth limit for the service.", default_factory=BandwidthLimit
     )
     retry: Optional[Retry] = Field(
         description="Configure retry for incoming requests.", default=None
     )
     deny_paths: list[VALIDSTR] = Field(
-        description="Configure path that should not be routed to the backend", default=[]
+        description="Configure path that should not be routed to the backend", default_factory=list
     )
     timeout: TimeoutConfiguration = Field(
         description="Configure timeout",
-        default=TimeoutConfiguration(),
+        default_factory=TimeoutConfiguration,
     )
     server_maxconn: Optional[int] = Field(
         description="Configure maximum connection per server", default=None
@@ -618,7 +638,8 @@ class RequirerApplicationData(_HaproxyRouteModel):
         return rewrites
 
 
-class HaproxyRouteProviderAppData(_HaproxyRouteModel):
+@dataclass
+class HaproxyRouteProviderAppData:
     """haproxy-route provider databag schema.
 
     Attributes:
@@ -628,7 +649,8 @@ class HaproxyRouteProviderAppData(_HaproxyRouteModel):
     endpoints: list[AnyHttpUrl]
 
 
-class RequirerUnitData(_HaproxyRouteModel):
+@dataclass
+class RequirerUnitData:
     """haproxy-route requirer unit data.
 
     Attributes:
@@ -651,6 +673,46 @@ class HaproxyRouteRequirerData:
     relation_id: int
     application_data: RequirerApplicationData
     units_data: list[RequirerUnitData]
+
+    @classmethod
+    def from_relation(cls, relation: Relation) -> "HaproxyRouteRequirerData":
+        """Load and validate the requirer data from a relation.
+
+        Args:
+            relation: The relation to load the data from.
+
+        Raises:
+            DataValidationError: When the relation data is invalid.
+
+        Returns:
+            HaproxyRouteRequirerData: The validated requirer data.
+        """
+        try:
+            application_data = relation.load(RequirerApplicationData, relation.app)
+        except ValueError as exc:
+            logger.error("Invalid requirer application data for %s", relation.app.name)
+            raise DataValidationError(
+                f"Invalid requirer application data for {relation.app.name}"
+            ) from exc
+
+        units_data: list[RequirerUnitData] = []
+        for unit in relation.units:
+            if not relation.data.get(unit):
+                logger.error(
+                    "Requirer unit data does not exist even though the unit is still present."
+                )
+                continue
+            try:
+                units_data.append(relation.load(RequirerUnitData, unit))
+            except ValueError as exc:
+                logger.error("Invalid requirer unit data for %s", unit)
+                raise DataValidationError(f"Invalid requirer unit data for {unit}") from exc
+
+        return cls(
+            relation_id=relation.id,
+            application_data=application_data,
+            units_data=units_data,
+        )
 
 
 @dataclass
@@ -851,14 +913,7 @@ class HaproxyRouteProvider(Object):
         relation_ids_with_invalid_data: set[int] = set()
         for relation in relations:
             try:
-                application_data = self._get_requirer_application_data(relation)
-                units_data = self._get_requirer_units_data(relation)
-                haproxy_route_requirer_data = HaproxyRouteRequirerData(
-                    application_data=application_data,
-                    units_data=units_data,
-                    relation_id=relation.id,
-                )
-                requirers_data.append(haproxy_route_requirer_data)
+                requirers_data.append(HaproxyRouteRequirerData.from_relation(relation))
             except DataValidationError as exc:
                 if self.raise_on_validation_error:
                     logger.error(
@@ -876,54 +931,6 @@ class HaproxyRouteProvider(Object):
             relation_ids_with_invalid_data=relation_ids_with_invalid_data,
         )
 
-    def _get_requirer_units_data(self, relation: Relation) -> list[RequirerUnitData]:
-        """Fetch and validate the requirer's units data.
-
-        Args:
-            relation: The relation to fetch unit data from.
-
-        Raises:
-            DataValidationError: When unit data validation fails.
-
-        Returns:
-            list[RequirerUnitData]: List of validated unit data from the requirer.
-        """
-        requirer_units_data: list[RequirerUnitData] = []
-
-        for unit in relation.units:
-            databag = relation.data.get(unit)
-            if not databag:
-                logger.error(
-                    "Requirer unit data does not exist even though the unit is still present."
-                )
-                continue
-            try:
-                requirer_units_data.append(relation.load(RequirerUnitData, unit))
-            except ValueError as exc:
-                logger.error("Invalid requirer application data for %s", unit)
-                raise DataValidationError(f"Invalid requirer application data for {unit}") from exc
-        return requirer_units_data
-
-    def _get_requirer_application_data(self, relation: Relation) -> RequirerApplicationData:
-        """Fetch and validate the requirer's application databag.
-
-        Args:
-            relation: The relation to fetch application data from.
-
-        Raises:
-            DataValidationError: When requirer application data validation fails.
-
-        Returns:
-            RequirerApplicationData: Validated application data from the requirer.
-        """
-        try:
-            return relation.load(RequirerApplicationData, relation.app)
-        except ValueError as exc:
-            logger.error("Invalid requirer application data for %s", relation.app.name)
-            raise DataValidationError(
-                f"Invalid requirer application data for {relation.app.name}"
-            ) from exc
-
     def publish_proxied_endpoints(self, endpoints: list[str], relation: Relation) -> None:
         """Publish to the app databag the proxied endpoints.
 
@@ -936,6 +943,7 @@ class HaproxyRouteProvider(Object):
                 endpoints=[cast(AnyHttpUrl, endpoint) for endpoint in endpoints]
             ),
             self.charm.app,
+            encoder=_relation_data_encoder,
         )
 
 
@@ -1515,7 +1523,9 @@ class HaproxyRouteRequirer(Object):
             relation: The relation instance.
         """
         if self.charm.unit.is_leader():
-            relation.save(self._prepare_application_data(), self.app)
+            relation.save(
+                self._prepare_application_data(), self.app, encoder=_relation_data_encoder
+            )
 
     def _update_unit_data(self, relation: Relation) -> None:
         """Prepare and update the unit data in the relation databag.
@@ -1523,7 +1533,7 @@ class HaproxyRouteRequirer(Object):
         Args:
             relation: The relation instance.
         """
-        relation.save(self._prepare_unit_data(), self.charm.unit)
+        relation.save(self._prepare_unit_data(), self.charm.unit, encoder=_relation_data_encoder)
 
     def _prepare_application_data(self) -> RequirerApplicationData:
         """Prepare and validate the application data.
@@ -1535,7 +1545,7 @@ class HaproxyRouteRequirer(Object):
             RequirerApplicationData: The validated application data model.
         """
         try:
-            return RequirerApplicationData.model_validate(self._application_data)
+            return RequirerApplicationData(**self._application_data)
         except ValidationError as exc:
             logger.error("Validation error when preparing requirer application data.")
             raise DataValidationError(
