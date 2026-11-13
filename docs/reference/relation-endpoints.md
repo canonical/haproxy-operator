@@ -134,22 +134,6 @@ juju integrate haproxy:reverseproxy <charm>:website
 
 ---
 
-### `ha`
-
-- **Interface**: `hacluster`
-- **Supported charms**: [hacluster](https://charmhub.io/hacluster)
-
-Integrates with the `hacluster` charm to enable active/passive high-availability using a shared virtual IP address.
-See {ref}`how_to_configure_high_availability` for more details.
-
-Example `ha` integrate command:
-
-```shell
-juju integrate haproxy:ha hacluster:ha
-```
-
----
-
 ### `receive-ca-certs`
 
 - **Interface**: `certificate_transfer`

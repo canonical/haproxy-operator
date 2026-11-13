@@ -429,31 +429,6 @@ def reverseproxy_requirer_fixture(
     return app_name
 
 
-@pytest.fixture(name="hacluster")
-def hacluster_fixture(
-    juju: jubilant.Juju,
-) -> str:
-    """Deploy hacluster.
-
-    Args:
-        juju: Jubilant juju fixture.
-
-    Returns:
-        The hacluster app name.
-    """
-    app_name = "hacluster"
-    juju.deploy(
-        "hacluster",
-        app=app_name,
-        channel="2.4/edge",
-        base="ubuntu@24.04",
-    )
-    juju.wait(
-        lambda status: app_name in status.apps,
-    )
-    return app_name
-
-
 @pytest.fixture(name="haproxy_route_requirer")
 def haproxy_route_requirer_fixture(juju: jubilant.Juju) -> str:
     """Deploy any-charm configured as a requirer for the haproxy-route interface.

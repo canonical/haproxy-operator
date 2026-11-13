@@ -55,12 +55,6 @@ output "requires" {
       endpoint   = "ddos-protection"
       controller = null
     }
-    ha = {
-      kind       = "endpoint"
-      name       = juju_application.haproxy.name
-      endpoint   = "ha"
-      controller = null
-    }
     receive_ca_certs = {
       kind       = "endpoint"
       name       = juju_application.haproxy.name
