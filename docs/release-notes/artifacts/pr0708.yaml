@@ -5,9 +5,9 @@ changes:
     author: tphan025
     type: minor
     description: >
-      The HAProxy charm now installs keepalived directly, so the keepalived
-      subordinate charm is no longer required. The `vip` configuration option is
-      restored for active-passive high availability.
+      The HAProxy charm now installs keepalived directly, so a separate
+      keepalived deployment is no longer required. The `vip` configuration option
+      is restored for active-passive high availability.
     urls:
       pr:
         - https://github.com/canonical/haproxy-operator/pull/708
