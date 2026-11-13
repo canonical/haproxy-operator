@@ -234,8 +234,6 @@ def any_charm_ingress_requirer_fixture(
     return any_charm_ingress_requirer_name
 
 
-
-
 @pytest.fixture(name="haproxy_route_requirer")
 def haproxy_route_requirer_fixture(juju: jubilant.Juju) -> str:
     """Deploy any-charm configured as a requirer for the haproxy-route interface.
