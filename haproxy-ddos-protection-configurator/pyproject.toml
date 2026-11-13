@@ -46,7 +46,7 @@ integration = [
   "jubilant==1.14.0",
   "juju==3.6.1.3",
   "opcli",
-  "protobuf==6.33.6",
+  "protobuf==7.36.2",
   "pytest",
   "pytest-jubilant>=2,<3",
   "websockets<18",
