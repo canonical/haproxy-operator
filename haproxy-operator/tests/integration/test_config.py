@@ -4,7 +4,6 @@
 """Integration test for client IP log hashing."""
 
 import hashlib
-from collections.abc import Callable
 
 import jubilant
 import pytest
@@ -13,18 +12,12 @@ import tenacity
 from .conftest import LOG_HASH_SALT, all_active_and_idle
 
 
-def _assert_log_contains(
-    juju: jubilant.Juju,
-    unit: str,
-    expected: str,
-    send_request: Callable[[], object] | None = None,
-) -> None:
+def _assert_log_contains(juju: jubilant.Juju, unit: str, expected: str) -> None:
     """Assert that the expected string eventually appears in haproxy's journal.
 
     HAProxy sends logs to journald asynchronously via syslog, so the log line
     for a request may not be visible immediately after the request completes.
-    The request is resent on every attempt so that it is captured even if the
-    charm applies the new configuration after the first request.
+    Retry for a few seconds to avoid flaky failures.
     """
     for attempt in tenacity.Retrying(
         stop=tenacity.stop_after_delay(30),
@@ -32,8 +25,6 @@ def _assert_log_contains(
         reraise=True,
     ):
         with attempt:
-            if send_request:
-                send_request()
             haproxy_logs = juju.exec("journalctl -u haproxy --no-pager -n 50", unit=unit).stdout
             assert expected in haproxy_logs
 
@@ -63,12 +54,8 @@ def test_client_ip_hash_salt(
 
     # HAProxy's hex converter outputs uppercase.
     expected_hash = hashlib.sha256(("127.0.0.1" + LOG_HASH_SALT).encode()).hexdigest().upper()
-    _assert_log_contains(
-        juju,
-        unit,
-        expected_hash,
-        send_request=lambda: juju.exec("curl -Lk 127.0.0.1", unit=unit),
-    )
+    juju.exec("curl -Lk 127.0.0.1", unit=unit)
+    _assert_log_contains(juju, unit, expected_hash)
 
     request.getfixturevalue("haproxy_route_tcp_plain_tcp_relation")
     # Fix the source port because %cp logs the client port, not the listener port.
