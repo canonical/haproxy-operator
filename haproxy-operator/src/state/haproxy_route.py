@@ -38,6 +38,7 @@ from .haproxy_route_tcp import (
     HAProxyRouteTcpFrontend,
     HAProxyRouteTcpFrontendValidationError,
 )
+from .peers import PeersInformation
 
 HAPROXY_ROUTE_RELATION = "haproxy-route"
 HAPROXY_PEER_INTEGRATION = "haproxy-peers"
@@ -410,7 +411,7 @@ class HaproxyRoutePolicyProviderBackend:
 
 # pylint: disable=too-many-locals
 @dataclass(frozen=True)
-class HaproxyRouteRequirersInformation:
+class HaproxyRouteRequirersInformation(PeersInformation):
     """A component of charm state containing haproxy-route requirers information.
 
     Attrs:
