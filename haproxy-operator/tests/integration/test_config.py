@@ -46,11 +46,15 @@ def test_client_ip_hash_salt(
         application,
         {"client-ip-hash-salt": str(log_hash_secret)},
     )
-    juju.wait(lambda status: all_active_and_idle(status, application))
-    juju.exec("curl -Lk 127.0.0.1", unit=unit)
+    juju.wait(
+        lambda status: all_active_and_idle(status, application),
+        delay=10,
+        successes=6,
+    )
 
     # HAProxy's hex converter outputs uppercase.
     expected_hash = hashlib.sha256(("127.0.0.1" + LOG_HASH_SALT).encode()).hexdigest().upper()
+    juju.exec("curl -Lk 127.0.0.1", unit=unit)
     _assert_log_contains(juju, unit, expected_hash)
 
     request.getfixturevalue("haproxy_route_tcp_plain_tcp_relation")

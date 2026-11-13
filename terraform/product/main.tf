@@ -49,22 +49,21 @@ resource "juju_integration" "keepalived" {
   }
 }
 
-resource "juju_application" "grafana_agent" {
-  name       = var.grafana_agent.app_name
+resource "juju_application" "opentelemetry_collector" {
+  name       = var.opentelemetry_collector.app_name
   model_uuid = var.model_uuid
-  units      = 1
 
   charm {
-    name     = "grafana-agent"
-    revision = var.grafana_agent.revision
-    channel  = var.grafana_agent.channel
+    name     = "opentelemetry-collector"
+    revision = var.opentelemetry_collector.revision
+    channel  = var.opentelemetry_collector.channel
     base     = var.haproxy.base
   }
 
-  config = var.grafana_agent.config
+  config = var.opentelemetry_collector.config
 }
 
-resource "juju_integration" "grafana_agent" {
+resource "juju_integration" "opentelemetry_collector" {
   model_uuid = var.model_uuid
 
   application {
@@ -73,7 +72,7 @@ resource "juju_integration" "grafana_agent" {
   }
 
   application {
-    name     = juju_application.grafana_agent.name
+    name     = juju_application.opentelemetry_collector.name
     endpoint = "cos-agent"
   }
 }
