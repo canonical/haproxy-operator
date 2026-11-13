@@ -98,6 +98,9 @@ config:
       description: |
         Sets the maximum per-process number of concurrent connections to
         <number>. Must be greater than 0.
+    vip:
+      type: string
+      description: Virtual IP address, used in active-passive ha mode.
     ddos-protection:
       type: boolean
       default: true
