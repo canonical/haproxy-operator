@@ -6,7 +6,7 @@
 import logging
 import shutil
 
-from charms.operator_libs_linux.v0 import apt
+from charmlibs import apt
 
 APT_PACKAGE_NAME = "keepalived"
 
