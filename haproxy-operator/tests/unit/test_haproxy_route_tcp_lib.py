@@ -6,12 +6,14 @@
 import json
 import logging
 from ipaddress import ip_address
-from typing import Any, cast
 
+import ops
+import ops.testing
 import pytest
 from charms.haproxy.v1.haproxy_route_tcp import (
     HaproxyRouteTcpProvider,
     HaproxyRouteTcpProviderAppData,
+    HaproxyRouteTcpRequirer,
     HaproxyRouteTcpRequirerData,
     LoadBalancingAlgorithm,
     PortMapping,
@@ -28,6 +30,23 @@ logger = logging.getLogger()
 MOCK_RELATION_NAME = "haproxy-route-tcp"
 MOCK_ADDRESS = ip_address("10.0.0.1")
 ANOTHER_MOCK_ADDRESS = ip_address("10.0.0.2")
+
+
+class _RequirerCharm(ops.CharmBase):
+    """Charm that exercises the haproxy-route-tcp requirer."""
+
+    port = 4000
+    unit_address = "10.0.0.1"
+
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.requirer = HaproxyRouteTcpRequirer(self, MOCK_RELATION_NAME)
+        self.framework.observe(self.on.config_changed, self._on_config_changed)
+
+    def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
+        self.requirer.provide_haproxy_route_tcp_requirements(
+            port=self.port, unit_address=self.unit_address
+        )
 
 
 @pytest.fixture(name="mock_relation_data")
@@ -54,7 +73,12 @@ def mock_unit_data_fixture():
 @pytest.fixture(name="mock_provider_app_data")
 def mock_provider_app_data_fixture():
     """Create mock provider app data."""
-    return HaproxyRouteTcpProviderAppData(endpoints=["backend.haproxy.internal:8080"]).dump()
+    return {
+        k: json.dumps(v)
+        for k, v in HaproxyRouteTcpProviderAppData(endpoints=["backend.haproxy.internal:8080"])
+        .model_dump(mode="json")
+        .items()
+    }
 
 
 # pylint: disable=no-member
@@ -211,14 +235,13 @@ def test_tcp_requirers_data_duplicate_ports_are_mergeable():
     assert len(conflicting) == 0
 
 
-def test_load_requirer_application_data(mock_relation_data):
+def test_validate_requirer_application_data(mock_relation_data):
     """
-    arrange: Create a databag with valid TCP application data.
-    act: Load the data with TcpRequirerApplicationData.load().
+    arrange: Create a dict with valid TCP application data.
+    act: Validate the data with TcpRequirerApplicationData.
     assert: Data is loaded correctly.
     """
-    databag = {k: json.dumps(v) for k, v in mock_relation_data.items()}
-    data = cast(TcpRequirerApplicationData, TcpRequirerApplicationData.load(databag))
+    data = TcpRequirerApplicationData.model_validate(mock_relation_data)
 
     assert data.port == 8080
     assert data.backend_port == 9090
@@ -264,7 +287,7 @@ def test_dump_requirer_application_data():
         tls_terminate=False,
     )
 
-    databag = cast(dict[str, Any], data.dump())
+    databag = {k: json.dumps(v) for k, v in data.model_dump(mode="json").items()}
 
     assert "port" in databag
     assert json.loads(databag["port"]) == 8080
@@ -275,14 +298,13 @@ def test_dump_requirer_application_data():
     assert json.loads(databag["tls_terminate"]) is False
 
 
-def test_load_requirer_unit_data(mock_unit_data):
+def test_validate_requirer_unit_data(mock_unit_data):
     """
-    arrange: Create a databag with valid unit data.
-    act: Load the data with TcpRequirerUnitData.load().
+    arrange: Create a dict with valid unit data.
+    act: Validate the data with TcpRequirerUnitData.
     assert: Data is loaded correctly.
     """
-    databag = {k: json.dumps(v) for k, v in mock_unit_data.items()}
-    data = cast(TcpRequirerUnitData, TcpRequirerUnitData.load(databag))
+    data = TcpRequirerUnitData.model_validate(mock_unit_data)
 
     assert str(data.address) == str(MOCK_ADDRESS)
 
@@ -295,8 +317,7 @@ def test_dump_requirer_unit_data():
     """
     data = TcpRequirerUnitData(address=MOCK_ADDRESS)
 
-    databag: dict[str, str] = {}
-    data.dump(databag)
+    databag = {k: json.dumps(v) for k, v in data.model_dump(mode="json").items()}
 
     assert "address" in databag
     assert json.loads(databag["address"]) == str(MOCK_ADDRESS)
@@ -969,3 +990,30 @@ def test_requirer_application_data_invalid_port_mapping_raises():
     """
     with pytest.raises(ValidationError):
         TcpRequirerApplicationData(port_mapping="8080-8090:9080-9095")
+
+
+def test_requirer_saves_relation_data():
+    """
+    arrange: Create a charm using the requirer and a haproxy-route-tcp relation.
+    act: Provide the requirer requirements.
+    assert: Application and unit data are saved using the ops relation API.
+    """
+    ctx = ops.testing.Context(
+        _RequirerCharm,
+        meta={
+            "name": "tcp-requirer",
+            "requires": {MOCK_RELATION_NAME: {"interface": MOCK_RELATION_NAME}},
+        },
+    )
+    relation = ops.testing.Relation(MOCK_RELATION_NAME, interface=MOCK_RELATION_NAME)
+    state = ops.testing.State(leader=True, relations=[relation])
+
+    out = ctx.run(ctx.on.config_changed(), state)
+
+    out_relation = out.get_relation(relation.id)
+    assert out_relation is not None
+    assert out_relation.local_app_data is not None
+    assert out_relation.local_unit_data is not None
+    assert json.loads(out_relation.local_app_data["port"]) == _RequirerCharm.port
+    assert json.loads(out_relation.local_app_data["backend_port"]) == _RequirerCharm.port
+    assert json.loads(out_relation.local_unit_data["address"]) == _RequirerCharm.unit_address
