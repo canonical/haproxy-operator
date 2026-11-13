@@ -125,7 +125,6 @@ filterwarnings = [
 
 [tool.coverage.run]
 branch = true
-omit = [ "src/legacy.py" ]
 
 [tool.coverage.report]
 show_missing = true

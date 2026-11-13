@@ -37,7 +37,6 @@ HAPROXY_LOGROTATE_CONFIG = Path("/etc/logrotate.d/haproxy")
 LOGROTATE_TIMER_OVERRIDE = Path("/etc/systemd/system/logrotate.timer.d/override.conf")
 HAPROXY_INGRESS_CONFIG_TEMPLATE = "haproxy_ingress.cfg.j2"
 HAPROXY_INGRESS_PER_UNIT_CONFIG_TEMPLATE = "haproxy_ingress_per_unit.cfg.j2"
-HAPROXY_LEGACY_CONFIG_TEMPLATE = "haproxy_legacy.cfg.j2"
 HAPROXY_ROUTE_CONFIG_TEMPLATE = "haproxy_route.cfg.j2"
 SPOE_AUTH_CONFIG_TEMPLATE = "spoe_auth.conf.j2"
 
@@ -53,16 +52,8 @@ class HaproxyPackageVersionPinError(Exception):
     """Error when pinning the version of the haproxy package."""
 
 
-class HaproxyServiceNotActiveError(Exception):
-    """Exception raised when both the reverseproxy and ingress relation are established."""
-
-
 class HaproxyServiceReloadError(Exception):
     """Error when reloading the haproxy service."""
-
-
-class HaproxyInvalidRelationError(Exception):
-    """Exception raised when both the reverseproxy and ingress relation are established."""
 
 
 class HaproxyValidateConfigError(Exception):
@@ -101,22 +92,6 @@ class HAProxyService:
             True if the haproxy is running.
         """
         return systemd.service_running(APT_PACKAGE_NAME)
-
-    def reconcile_legacy(self, charm_state: CharmState, services: list) -> None:
-        """Render the haproxy config for legacy proxying and reload the service.
-
-        Args:
-            charm_state: The charm state component.
-            services: List of configuration stanzas for the defined services.
-        """
-        template_context = {
-            "config_global_max_connection": charm_state.global_max_connection,
-            "services": services,
-            **self._build_log_template_context(charm_state),
-        }
-        self._render_haproxy_config(HAPROXY_LEGACY_CONFIG_TEMPLATE, template_context)
-        self._validate_haproxy_config()
-        self._reload_haproxy_service()
 
     def reconcile_ingress(
         self,
@@ -330,8 +305,8 @@ class HAProxyService:
         """Reload the haproxy service.
 
         Raises:
-            HaproxyServiceReloadError: When the haproxy service fails to reload.
-            HaproxyServiceNotActiveError: When the haproxy service is not active after reload.
+            HaproxyServiceReloadError: When the haproxy service fails to reload or is not
+                active after reload.
         """
         try:
             systemd.service_reload(HAPROXY_SERVICE)
@@ -339,7 +314,7 @@ class HAProxyService:
             raise HaproxyServiceReloadError("Failed reloading the haproxy service.") from exc
 
         if not self.is_active():
-            raise HaproxyServiceNotActiveError("HAProxy service is not running.")
+            raise HaproxyServiceReloadError("HAProxy service is not running after reload.")
 
     def _validate_haproxy_config(self) -> None:
         """Validate the generated HAProxy config.
