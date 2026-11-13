@@ -1,0 +1,17 @@
+global_defs {
+  router_id haproxy
+  enable_script_security
+  script_user root
+}
+
+vrrp_instance vrrp_0 {
+  state BACKUP
+  interface eth0
+  virtual_router_id 1
+  priority 127
+  advert_int 1
+
+  virtual_ipaddress {
+    192.168.1.100/24 dev eth0
+  }
+}
