@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.14'",
@@ -529,6 +529,7 @@ name = "haproxy-ddos-protection-configurator"
 version = "0.0.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "haproxy-libs" },
     { name = "ops" },
     { name = "pydantic" },
 ]
@@ -583,6 +584,7 @@ unit = [
 
 [package.metadata]
 requires-dist = [
+    { name = "haproxy-libs", directory = "../lib" },
     { name = "ops", specifier = "==3.9.0" },
     { name = "pydantic", specifier = "==2.14.3" },
 ]
@@ -631,6 +633,21 @@ unit = [
     { name = "jinja2", specifier = "==3.1.6" },
     { name = "ops", extras = ["testing"] },
     { name = "pytest" },
+]
+
+[[package]]
+name = "haproxy-libs"
+version = "0.0.0"
+source = { directory = "../lib" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "typing-extensions" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2" },
+    { name = "typing-extensions" },
 ]
 
 [[package]]

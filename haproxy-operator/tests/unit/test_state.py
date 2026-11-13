@@ -13,11 +13,7 @@ import pytest
 from charmlibs.interfaces.tls_certificates import (
     TLSCertificatesRequiresV4,
 )
-from charms.haproxy.v0.ddos_protection import (
-    DDoSProtectionInvalidRelationDataError,
-    DDoSProtectionProviderAppData,
-    DDoSProtectionRequirer,
-)
+from charms.haproxy.v0.ddos_protection import DDoSProtectionProviderAppData
 from charms.haproxy.v1.haproxy_route_tcp import (
     DataValidationError as TcpDataValidationError,
 )
@@ -38,7 +34,6 @@ from charms.traefik_k8s.v2.ingress import DataValidationError as V2DataValidatio
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from state.charm_state import CharmState, ProxyMode
-from state.ddos_protection import DDosProtection, DDosProtectionValidationError
 from state.haproxy_route import (
     HAProxyRouteBackend,
     HaproxyRouteRequirersInformation,
@@ -619,128 +614,6 @@ def test_charm_state_ddos_protection(ddos_protection, expected_value):
     )
 
     assert charm_state.ddos_protection is expected_value
-
-
-@pytest.mark.parametrize(
-    "ddos_kwargs, expected",
-    [
-        (
-            {
-                "limit_policy_http": "reject",
-                "rate_limit_requests_per_minute": 100,
-                "concurrent_connections_limit": 50,
-            },
-            True,
-        ),
-        (
-            {
-                "limit_policy_tcp": "reject",
-                "concurrent_connections_limit": 50,
-            },
-            True,
-        ),
-        (
-            {
-                "limit_policy_http": "reject",
-            },
-            False,
-        ),
-        (
-            {
-                "rate_limit_requests_per_minute": 100,
-                "concurrent_connections_limit": 50,
-            },
-            False,
-        ),
-    ],
-    ids=[
-        "http_policy_and_metrics_configured",
-        "tcp_policy_and_metrics_configured",
-        "policy_without_metrics",
-        "metrics_without_policy",
-    ],
-)
-def test_ddos_protection_has_rate_limiting(ddos_kwargs, expected):
-    """
-    arrange: Call DDosProtection with various rate limit configurations.
-    act: Check has_rate_limiting property.
-    assert: has_rate_limiting matches expected value.
-    """
-    ddos_protection = DDosProtection(**ddos_kwargs)
-
-    assert ddos_protection.has_rate_limiting is expected
-
-
-def test_ddos_protection_from_charm_no_config():
-    """
-    arrange: Create mock DDoSProtectionRequirer that returns no config.
-    act: Call DDosProtection.from_charm.
-    assert: Returns empty DDosProtection instance.
-    """
-    mock_ddos_requirer = MagicMock(spec=DDoSProtectionRequirer)
-    mock_ddos_requirer.get_ddos_config.return_value = None
-
-    result = DDosProtection.from_charm(mock_ddos_requirer)
-
-    assert result == DDosProtection()
-
-
-def test_ddos_protection_from_charm_with_config():
-    """
-    arrange: Create mock DDoSProtectionRequirer with full configuration.
-    act: Call DDosProtection.from_charm.
-    assert: Returns DDosProtection with all fields populated correctly.
-    """
-    config = DDoSProtectionProviderAppData(
-        rate_limit_requests_per_minute=1000,
-        rate_limit_connections_per_minute=500,
-        concurrent_connections_limit=100,
-        error_rate=50,
-        limit_policy_http="reject",
-        policy_status_code=429,
-        http_request_timeout=30,
-        http_keepalive_timeout=5,
-        client_timeout=60,
-        ip_allow_list=["192.168.1.1", "10.0.0.0/8"],
-        deny_paths=["/admin", "/secret"],
-    )
-
-    ddos_requirer = MagicMock(spec=DDoSProtectionRequirer)
-    ddos_requirer.get_ddos_config.return_value = config
-    result = DDosProtection.from_charm(ddos_requirer)
-
-    assert result.rate_limit_requests_per_minute == 1000
-    assert result.rate_limit_connections_per_minute == 500
-    assert result.concurrent_connections_limit == 100
-    assert result.error_rate == 50
-    assert result.limit_policy_http == "reject"
-    assert result.limit_policy_tcp == "silent-drop"
-    assert result.policy_status_code == 429
-
-    assert result.http_request_timeout == 30000
-    assert result.http_keepalive_timeout == 5000
-    assert result.client_timeout == 60000
-
-    assert result.ip_allow_list == ["192.168.1.1", "10.0.0.0/8"]
-    assert result.deny_paths == ["/admin", "/secret"]
-
-
-def test_ddos_protection_from_charm_relation_data_error():
-    """
-    arrange: Create mock DDoSProtectionRequirer that raises relation data error.
-    act: Call DDosProtection.from_charm.
-    assert: Raises DDosProtectionValidationError with wrapped error.
-    """
-    mock_ddos_requirer = MagicMock(spec=DDoSProtectionRequirer)
-    mock_ddos_requirer.get_ddos_config.side_effect = DDoSProtectionInvalidRelationDataError(
-        "Invalid relation data"
-    )
-
-    with pytest.raises(DDosProtectionValidationError) as exc_info:
-        DDosProtection.from_charm(mock_ddos_requirer)
-
-    assert "Failed to load DDoS protection configuration" in str(exc_info.value)
-    assert "Invalid relation data" in str(exc_info.value)
 
 
 def test_haproxy_route_backend_wildcard_hostname_acls(
@@ -2141,7 +2014,7 @@ def test_haproxy_route_tcp_port_range_config_rendering(
     rendered = template.render(
         tcp_frontends=frontends,
         haproxy_crt_dir="/etc/haproxy/certs",
-        ddos_protection_config=DDosProtection(),
+        ddos_protection_config=DDoSProtectionProviderAppData(),
         ip_allow_list_file="/etc/haproxy/ip_allow_list",
     )
 
@@ -2177,7 +2050,7 @@ def test_haproxy_route_tcp_config_hashes_client_ip(
     rendered = env.get_template("haproxy_route_tcp.cfg.j2").render(
         tcp_frontends=frontends,
         haproxy_crt_dir="/etc/haproxy/certs",
-        ddos_protection_config=DDosProtection(),
+        ddos_protection_config=DDoSProtectionProviderAppData(),
         ip_allow_list_file="/etc/haproxy/ip_allow_list",
         hash_client_ip_in_logs=True,
         tcp_log_format=hashed_charm_state.tcp_log_format,
