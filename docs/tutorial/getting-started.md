@@ -129,6 +129,7 @@ HAPROXY_IP=$(juju status --format json | jq -r '.applications.haproxy.units."hap
 echo "$HAPROXY_IP pollen.internal" | sudo tee /etc/hosts
 sudo pollinate -s https://pollen.internal -r -i
 ```
+
 <!-- SPREAD SKIP END -->
 
 <!-- SPREAD SKIP END -->
