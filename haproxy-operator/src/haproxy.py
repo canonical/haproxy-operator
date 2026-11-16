@@ -10,6 +10,7 @@ import pwd
 # We silence this rule because subprocess call is only for validating the haproxy config
 # and no user input is parsed
 import subprocess  # nosec B404
+from collections.abc import Sequence
 from pathlib import Path
 from subprocess import CalledProcessError, run  # nosec
 
@@ -17,6 +18,7 @@ from charmlibs import apt
 from charms.haproxy.v0.ddos_protection import DDoSProtectionProviderAppData
 from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from pydantic import IPvAnyAddress, IPvAnyNetwork
 
 from state.charm_state import CharmState
 from state.haproxy_route import HaproxyRouteRequirersInformation
@@ -386,7 +388,11 @@ def file_exists(path: Path) -> bool:
     return path.exists()
 
 
-def store_config_to_file(data: list[str] | None, file_path: Path) -> Path | None:
+# DDoS protection config values may come from the shared pydantic model, which
+# exposes IP addresses and networks as objects, or as plain strings from callers.
+def store_config_to_file(
+    data: Sequence[str | IPvAnyAddress | IPvAnyNetwork] | None, file_path: Path
+) -> Path | None:
     """Store configuration data to a file.
 
     Args:

@@ -142,3 +142,58 @@ def test_ddos_protection_configuration_from_relation(
         render_file_mock.assert_any_call(ANY, RegexMatcher(re.escape(entry)), ANY)
 
     assert out.unit_status.name == ops.testing.ActiveStatus.name
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+@pytest.mark.parametrize(
+    "remote_app_data",
+    [
+        pytest.param(
+            {"rate_limit_requests_per_minute": "not-json"},
+            id="malformed-json",
+        ),
+        pytest.param(
+            {"rate_limit_requests_per_minute": '"not-a-number"'},
+            id="schema-invalid-type",
+        ),
+        pytest.param(
+            {
+                "rate_limit_requests_per_minute": "100",
+                "limit_policy_http": '"invalid-policy"',
+            },
+            id="schema-invalid-policy",
+        ),
+    ],
+)
+def test_ddos_protection_invalid_relation_data(
+    monkeypatch: pytest.MonkeyPatch,
+    certificates_integration,
+    remote_app_data: dict[str, str],
+):
+    """
+    arrange: Prepare a haproxy with a ddos-protection relation carrying invalid configuration.
+    act: trigger the ddos-protection relation changed event.
+    assert: haproxy.cfg is not rendered and the charm is blocked with the validation error.
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    haproxy_route_relation = build_haproxy_route_relation()
+    ddos_relation = ops.testing.Relation(
+        "ddos-protection",
+        interface="ddos_protection",
+        remote_app_data=remote_app_data,
+    )
+
+    ctx = ops.testing.Context(HAProxyCharm)
+    state = ops.testing.State(
+        relations=[certificates_integration, haproxy_route_relation, ddos_relation],
+        leader=True,
+    )
+    out = ctx.run(
+        ctx.on.relation_changed(ddos_relation),
+        state,
+    )
+
+    render_file_mock.assert_not_called()
+    assert out.unit_status.name == ops.testing.BlockedStatus.name
+    assert "Failed to load DDoS protection configuration" in out.unit_status.message

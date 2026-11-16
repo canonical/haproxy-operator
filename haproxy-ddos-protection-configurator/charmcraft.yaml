@@ -10,6 +10,8 @@ platforms:
 
 parts:
   charm:
+    # Charmcraft monorepo support: the repository root is the source so that
+    # the shared ./lib charm library is included when packing the charm.
     source: ..
     source-subdir: haproxy-ddos-protection-configurator
     plugin: uv
