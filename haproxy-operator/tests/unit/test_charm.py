@@ -12,7 +12,6 @@ from unittest.mock import ANY, MagicMock, patch
 import ops
 import ops.testing
 import pytest
-import scenario
 
 import tls_relation
 from charm import CharmStateValidationBaseError, HAProxyCharm
@@ -239,7 +238,7 @@ def test_ingress_per_unit_data_validation_error(
     assert: haproxy is in a blocked state
     """
     context, _ = context_with_install_mock
-    base_state_with_ingress_per_unit["relations"][1] = scenario.Relation(
+    base_state_with_ingress_per_unit["relations"][1] = ops.testing.Relation(
         endpoint="ingress-per-unit", remote_app_name="requirer", remote_units_data={0: {}}
     )
     state = ops.testing.State(**base_state_with_ingress_per_unit)
@@ -268,7 +267,7 @@ def test_ingress_data_validation_error(context_with_install_mock, base_state_wit
     assert: haproxy is in a blocked state
     """
     context, _ = context_with_install_mock
-    base_state_with_ingress["relations"][1] = scenario.Relation(
+    base_state_with_ingress["relations"][1] = ops.testing.Relation(
         endpoint="ingress", remote_app_name="requirer", remote_app_data={}
     )
     state = ops.testing.State(**base_state_with_ingress)
