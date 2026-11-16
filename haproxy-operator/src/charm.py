@@ -91,7 +91,7 @@ class HaproxyUnitAddressNotAvailableError(CharmStateValidationBaseError):
     """Exception raised when ingress integration is not established."""
 
 
-class DDosProtectionValidationError(CharmStateValidationBaseError):
+class DDoSProtectionValidationError(CharmStateValidationBaseError):
     """Exception raised when validation of DDoS protection state failed."""
 
 
@@ -318,7 +318,7 @@ class HAProxyCharm(ops.CharmBase):
         """Load the DDoS protection configuration from the relation.
 
         Raises:
-            DDosProtectionValidationError: When the relation data is invalid.
+            DDoSProtectionValidationError: When the relation data is invalid.
 
         Returns:
             DDoSProtectionProviderAppData: The DDoS protection configuration.
@@ -331,7 +331,7 @@ class HAProxyCharm(ops.CharmBase):
             return relation.load(DDoSProtectionProviderAppData, relation.app)
         except (ValidationError, ValueError, ops.ModelError) as e:
             logger.error("Failed to load DDoS protection configuration: %s", str(e))
-            raise DDosProtectionValidationError(
+            raise DDoSProtectionValidationError(
                 f"Failed to load DDoS protection configuration: {e}"
             ) from e
 

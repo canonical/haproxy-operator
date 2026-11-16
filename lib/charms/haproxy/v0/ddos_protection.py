@@ -249,15 +249,9 @@ class DDoSProtectionProviderAppData(BaseModel):
             True if at least one rate limit is configured with a limit policy.
         """
         return bool(
-            (
-                self.limit_policy_http
-                and (self.error_rate or self.rate_limit_requests_per_minute)
-            )
+            (self.limit_policy_http and (self.error_rate or self.rate_limit_requests_per_minute))
             or (
                 self.limit_policy_tcp
-                and (
-                    self.rate_limit_connections_per_minute
-                    or self.concurrent_connections_limit
-                )
+                and (self.rate_limit_connections_per_minute or self.concurrent_connections_limit)
             )
         )
