@@ -10,8 +10,8 @@ Each revision is versioned by the date of the revision.
 
 ## 2026-11-15
 
-- The HAProxy charm now installs `keepalived` directly instead of relying on the
-  `keepalived` subordinate charm for active-passive high availability.
+- The HAProxy charm now installs and manages `keepalived` directly for
+  active-passive high availability.
 - Restored the `vip` configuration option for active-passive high availability.
 
 ## 2026-11-07
