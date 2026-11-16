@@ -123,11 +123,13 @@ curl -k -sS --retry 30 --retry-delay 2 --retry-connrefused \
 -->
 
 <!-- SPREAD SKIP -->
+
 ```sh
 HAPROXY_IP=$(juju status --format json | jq -r '.applications.haproxy.units."haproxy/0"."public-address"')
 echo "$HAPROXY_IP pollen.internal" | sudo tee /etc/hosts
 sudo pollinate -s https://pollen.internal -r -i
 ```
+
 <!-- SPREAD SKIP END -->
 
 If successful, you should see a success message in the terminal:
