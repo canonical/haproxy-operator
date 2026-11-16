@@ -1,0 +1,17 @@
+version_schema: 2
+
+changes:
+  - title: Dropped support for the legacy reverseproxy and website relations
+    author: tphan025
+    type: breaking
+    description: >
+      Removed the `reverseproxy` and `website` relation endpoints and the legacy
+      HAProxy configuration path they relied on. Use the `haproxy-route` and
+      `haproxy-route-tcp` relations instead.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/700
+      related_doc:
+      related_issue: https://warthogs.atlassian.net/browse/ISD-6909
+    visibility: public
+    highlight: false

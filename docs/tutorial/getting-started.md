@@ -112,13 +112,25 @@ Let's check that the request has been properly proxied to the backend service us
 
 <!-- SPREAD
 juju wait-for application haproxy --query='status=="active"' --timeout 10m
+juju wait-for application pollen --query='status=="active"' --timeout 10m
+# pollinate cannot log in the spread environment (logger: Operation not
+# permitted), so verify the route with curl instead. Pollen answers plain curl
+# requests with a 400 and a message pointing at the pollinate client.
+HAPROXY_IP=$(juju status --format json | jq -r '.applications.haproxy.units."haproxy/0"."public-address"')
+curl -k -sS --retry 30 --retry-delay 2 --retry-connrefused \
+  --resolve "pollen.internal:443:${HAPROXY_IP}" https://pollen.internal \
+  | grep -q "Please use the pollinate client"
 -->
+
+<!-- SPREAD SKIP -->
 
 ```sh
 HAPROXY_IP=$(juju status --format json | jq -r '.applications.haproxy.units."haproxy/0"."public-address"')
 echo "$HAPROXY_IP pollen.internal" | sudo tee /etc/hosts
 sudo pollinate -s https://pollen.internal -r -i
 ```
+
+<!-- SPREAD SKIP END -->
 
 If successful, you should see a success message in the terminal:
 
