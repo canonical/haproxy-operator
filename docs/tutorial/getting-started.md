@@ -132,8 +132,6 @@ sudo pollinate -s https://pollen.internal -r -i
 
 <!-- SPREAD SKIP END -->
 
-<!-- SPREAD SKIP END -->
-
 If successful, you should see a success message in the terminal:
 
 ```{terminal}
