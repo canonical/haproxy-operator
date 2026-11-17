@@ -217,11 +217,11 @@ wheels = [
 
 [[package]]
 name = "charmlibs-snap"
-version = "2.0.0"
+version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d0/f1/b1af81b093f4b94f957a2d2efb20b78975f615a6384d44917c633f77ce82/charmlibs_snap-2.0.0.tar.gz", hash = "sha256:82bc863919614436bf4e8e38cedaa4d809c3d4e1eedab10b2eeb97006116cd29", size = 125387, upload-time = "2026-09-02T21:32:27.485Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/08/46/45a8848a02d9c2476073c7e6bcdfcd3950dc8f200b56246ebe9550a30d36/charmlibs_snap-2.1.0.tar.gz", hash = "sha256:1897eb86c4a8d9a37aa551ac3bc5ff946bbf9dc8ec74b3839a19df0c86a8f87e", size = 127349, upload-time = "2026-11-17T04:25:16.122Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/60/d9/65d7e73532c50f2533b8f1a735894b5d260202f60d5ab05e367b93382e13/charmlibs_snap-2.0.0-py3-none-any.whl", hash = "sha256:6e479163ede22f9ab4b66adead2d4ce4cdc6eb77f36f88c50c4d3d3b075da040", size = 38470, upload-time = "2026-09-02T21:32:26.129Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/f8/e2e00f4c2435faabf9531e49bad5256897a6ed4180db052056acbd8af650/charmlibs_snap-2.1.0-py3-none-any.whl", hash = "sha256:bd1d2ddf27a60a01e9c5983625ac801ed19bd9b685a5a14bc342010f5d303608", size = 40126, upload-time = "2026-11-17T04:25:14.9Z" },
 ]
 
 [[package]]
@@ -512,7 +512,7 @@ unit = [
 
 [package.metadata]
 requires-dist = [
-    { name = "charmlibs-snap", specifier = "==2.0.0" },
+    { name = "charmlibs-snap", specifier = "==2.1.0" },
     { name = "jinja2", specifier = "==3.1.6" },
     { name = "jsonschema", specifier = "==4.26.0" },
     { name = "ops", specifier = "==3.9.0" },
