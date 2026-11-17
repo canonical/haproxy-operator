@@ -49,8 +49,6 @@ requires:
   certificates:
     interface: tls-certificates
     limit: 1
-  reverseproxy:
-    interface: http
   receive-ca-certs:
     interface: certificate_transfer
     optional: true
@@ -78,9 +76,6 @@ provides:
     interface: ingress_per_unit
   cos-agent:
     interface: cos_agent
-    optional: true
-  website:
-    interface: http
     optional: true
   haproxy-route:
     interface: haproxy-route

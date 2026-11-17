@@ -72,21 +72,6 @@ juju integrate <charm>:ingress-per-unit haproxy:ingress-per-unit
 
 ---
 
-### `website`
-
-- **Interface**: `http`
-- **Supported charms**: Any charm implementing the `http` interface
-
-Legacy interface that exposes HAProxy as an HTTP endpoint to other charms expecting a reverse proxy. Prefer `haproxy-route` for new integrations.
-
-Example `website` integrate command:
-
-```shell
-juju integrate <charm>:reverseproxy haproxy:website
-```
-
----
-
 ### `cos-agent`
 
 - **Interface**: `cos_agent`
@@ -115,21 +100,6 @@ Example `certificates` integrate command:
 
 ```shell
 juju integrate haproxy:certificates self-signed-certificates:certificates
-```
-
----
-
-### `reverseproxy`
-
-- **Interface**: `http`
-- **Supported charms**: Any charm implementing the `http` interface
-
-Legacy interface allowing backend charms to register themselves as reverse proxy targets. Prefer `haproxy-route` for new integrations.
-
-Example `reverseproxy` integrate command:
-
-```shell
-juju integrate haproxy:reverseproxy <charm>:website
 ```
 
 ---
