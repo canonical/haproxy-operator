@@ -12,7 +12,7 @@ from ops.testing import ActiveStatus, Context, Model, Relation, State
 
 from charm import HAProxyCharm
 
-from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
+from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG, model_to_relation_data
 from .helper import rendered_file_content
 
 
@@ -308,13 +308,15 @@ def test_route_backend_options(
     haproxy_route_relation = Relation(
         endpoint="haproxy-route",
         local_app_data={"endpoints": json.dumps([f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}/"])},
-        remote_app_data=RequirerApplicationData(
-            service="any-charm",
-            ports=[80],
-            hosts=["10.12.97.153"],
-            hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
-            **application_data,
-        ).dump(),
+        remote_app_data=model_to_relation_data(
+            RequirerApplicationData(
+                service="any-charm",
+                ports=[80],
+                hosts=["10.12.97.153"],
+                hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
+                **application_data,
+            )
+        ),
         remote_units_data={0: {"address": '"10.75.1.129"'}},
     )
     state = State(
