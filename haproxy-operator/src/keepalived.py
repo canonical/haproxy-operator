@@ -25,7 +25,13 @@ def keepalived_to_install() -> str | None:
 
 
 class KeepalivedService:
-    """Keepalived service class."""
+    """Keepalived service class.
+
+    The package is intentionally not pinned with ``apt-mark hold`` so that
+    unattended-upgrades can apply security updates. Unlike haproxy, keepalived
+    does not need a pinned version to keep the charm-generated configuration
+    compatible.
+    """
 
     def install(self) -> None:
         """Install the keepalived apt package."""
