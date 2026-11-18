@@ -14,7 +14,7 @@ changes:
       and the library remains distributed from its Charmhub location.
     urls:
       pr:
-        - https://github.com/canonical/haproxy-operator/pull/703
+        - https://github.com/canonical/haproxy-operator/pull/731
       related_doc:
       related_issue: https://warthogs.atlassian.net/browse/ISD-6910
     visibility: internal
