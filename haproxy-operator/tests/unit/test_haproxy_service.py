@@ -4,6 +4,8 @@
 """Unit tests for charm file."""
 
 from dataclasses import replace
+from ipaddress import ip_address, ip_network
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -12,6 +14,7 @@ from haproxy import (
     HAPROXY_LOGROTATE_CONFIG,
     LOGROTATE_TIMER_OVERRIDE,
     HAProxyService,
+    store_config_to_file,
 )
 
 
@@ -78,3 +81,19 @@ def test_render_default_config_logs_plaintext_client_ip_when_disabled(hashed_cha
 
     assert "log-format" not in config
     assert "error-log-format" not in config
+
+
+def test_store_config_to_file_accepts_ip_objects(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    """
+    arrange: Given a list of pydantic-compatible IP address and network objects.
+    act: Store the configuration to a file.
+    assert: The objects are rendered as their string representations.
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    file_path = tmp_path / "ip_allow_list.lst"
+
+    result = store_config_to_file([ip_address("192.168.1.1"), ip_network("10.0.0.0/8")], file_path)
+
+    assert result == file_path
+    render_file_mock.assert_called_once_with(file_path, "192.168.1.1\n10.0.0.0/8\n", 0o644)

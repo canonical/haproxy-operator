@@ -52,17 +52,40 @@ class HAProxyDDoSProtectionConfiguratorCharm(ops.CharmBase):
                 client_timeout=state.client_timeout,
                 deny_paths=state.deny_paths,
             )
-
-            relation = self.model.get_relation(DDOS_PROTECTION_RELATION_NAME)
-            if relation is not None and self.unit.is_leader():
-                relation.save(provider_data, self.app)
-
-            logger.info("Configuration applied successfully")
-            self.unit.status = ops.ActiveStatus()
-
-        except (InvalidDDoSProtectionConfigError, ValidationError, ops.ModelError) as e:
+        except (InvalidDDoSProtectionConfigError, ValidationError) as e:
             logger.error("Failed to apply configuration: %s", str(e))
             self.unit.status = ops.BlockedStatus(str(e))
+            return
+
+        if not self.unit.is_leader():
+            logger.info("Unit is not the leader, skipping relation data publication")
+            self.unit.status = ops.ActiveStatus()
+            return
+
+        relations = self.model.relations.get(DDOS_PROTECTION_RELATION_NAME, [])
+        published = 0
+        failed_relation_ids: list[int | None] = []
+        for relation in relations:
+            try:
+                relation.save(provider_data, self.app)
+                published += 1
+            except ops.ModelError as e:
+                failed_relation_ids.append(relation.id)
+                logger.error("Failed to publish configuration to relation %s: %s", relation.id, e)
+
+        if failed_relation_ids:
+            logger.warning(
+                "Published DDoS protection configuration to %d/%d relations. "
+                "Failed relation ids: %s",
+                published,
+                len(relations),
+                failed_relation_ids,
+            )
+            self.unit.status = ops.ActiveStatus(f"{published}/{len(relations)} relation published")
+            return
+
+        logger.info("Configuration applied successfully")
+        self.unit.status = ops.ActiveStatus()
 
 
 if __name__ == "__main__":  # pragma: nocover

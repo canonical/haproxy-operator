@@ -3,6 +3,8 @@
 
 import json
 
+import ops
+import pytest
 from ops import testing
 
 from charm import HAProxyDDoSProtectionConfiguratorCharm
@@ -100,3 +102,95 @@ def test_config_changed_saves_relation_data():
         "192.168.1.0/24",
     ]
     assert json.loads(local_app_data["deny_paths"]) == ["/admin", "/internal"]
+
+
+def test_config_changed_publishes_to_every_relation():
+    """
+    arrange: Create a charm context with two ddos-protection relations.
+    act: Run the config-changed event.
+    assert: The configuration is saved to every relation app databag.
+    """
+    ctx = testing.Context(HAProxyDDoSProtectionConfiguratorCharm)
+    relations = [
+        testing.Relation(
+            "ddos-protection",
+            id=1,
+            interface="ddos_protection",
+            remote_app_name="haproxy-one",
+        ),
+        testing.Relation(
+            "ddos-protection",
+            id=2,
+            interface="ddos_protection",
+            remote_app_name="haproxy-two",
+        ),
+    ]
+    state = testing.State(
+        leader=True,
+        relations=relations,
+        config={
+            "rate-limit-requests-per-minute": 100,
+            "rate-limit-connections-per-minute": 50,
+            "limit-policy-http": "reject",
+            "limit-policy-tcp": "reject",
+        },
+    )
+
+    out = ctx.run(ctx.on.config_changed(), state)
+
+    assert out.unit_status == testing.ActiveStatus()
+    out_relations = [rel for rel in out.relations if rel.endpoint == "ddos-protection"]
+    assert len(out_relations) == 2
+    for relation in out_relations:
+        assert relation.local_app_data is not None
+        assert json.loads(relation.local_app_data["rate_limit_requests_per_minute"]) == 100
+
+
+def test_config_changed_reports_partial_publish(monkeypatch: pytest.MonkeyPatch):
+    """
+    arrange: Create a charm context with two relations where saving one fails.
+    act: Run the config-changed event.
+    assert: The charm stays active and reports how many relations were published.
+    """
+    original_save = ops.Relation.save
+
+    def _save(relation: ops.Relation, *args, **kwargs):
+        if relation.id == 2:
+            raise ops.ModelError("relation is not available")
+        return original_save(relation, *args, **kwargs)
+
+    monkeypatch.setattr(ops.Relation, "save", _save)
+
+    ctx = testing.Context(HAProxyDDoSProtectionConfiguratorCharm)
+    relations = [
+        testing.Relation(
+            "ddos-protection",
+            id=1,
+            interface="ddos_protection",
+            remote_app_name="haproxy-one",
+        ),
+        testing.Relation(
+            "ddos-protection",
+            id=2,
+            interface="ddos_protection",
+            remote_app_name="haproxy-two",
+        ),
+    ]
+    state = testing.State(
+        leader=True,
+        relations=relations,
+        config={
+            "rate-limit-requests-per-minute": 100,
+            "rate-limit-connections-per-minute": 50,
+            "limit-policy-http": "reject",
+            "limit-policy-tcp": "reject",
+        },
+    )
+
+    out = ctx.run(ctx.on.config_changed(), state)
+
+    assert out.unit_status == testing.ActiveStatus("1/2 relation published")
+    published_relations = [
+        rel for rel in out.relations if rel.endpoint == "ddos-protection" and rel.local_app_data
+    ]
+    assert len(published_relations) == 1
