@@ -81,7 +81,9 @@ class HAProxyDDoSProtectionConfiguratorCharm(ops.CharmBase):
                 len(relations),
                 failed_relation_ids,
             )
-            self.unit.status = ops.ActiveStatus(f"{published}/{len(relations)} relation published")
+            self.unit.status = ops.ActiveStatus(
+                f"{published}/{len(relations)} relation(s) published"
+            )
             return
 
         logger.info("Configuration applied successfully")

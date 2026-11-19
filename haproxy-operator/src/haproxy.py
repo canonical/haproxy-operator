@@ -388,6 +388,8 @@ def file_exists(path: Path) -> bool:
     return path.exists()
 
 
+# DDoS protection config values may come from the shared pydantic model, which
+# exposes IP addresses and networks as objects, or as plain strings from callers.
 def store_config_to_file(
     data: Sequence[str | IPvAnyAddress | IPvAnyNetwork] | None, file_path: Path
 ) -> Path | None:

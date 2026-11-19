@@ -66,155 +66,96 @@ def test_config_changed_with_invalid_rate_limit_requests():
     assert isinstance(out.unit_status, testing.BlockedStatus)
 
 
-def test_config_changed_saves_relation_data():
+@pytest.mark.parametrize(
+    "leader, relation_ids, failing_relation_id, expected_status, expected_published",
+    [
+        pytest.param(True, [1], None, testing.ActiveStatus(), 1, id="single-relation"),
+        pytest.param(True, [1, 2], None, testing.ActiveStatus(), 2, id="every-relation"),
+        pytest.param(False, [1], None, testing.ActiveStatus(), 0, id="non-leader"),
+        pytest.param(
+            True,
+            [1, 2],
+            2,
+            testing.ActiveStatus("1/2 relation(s) published"),
+            1,
+            id="partial-publish",
+        ),
+    ],
+)
+def test_config_changed_publishes_to_relations(
+    monkeypatch: pytest.MonkeyPatch,
+    leader: bool,
+    relation_ids: list[int],
+    failing_relation_id: int | None,
+    expected_status: testing.ActiveStatus,
+    expected_published: int,
+):
     """
-    arrange: Create a charm context with a ddos-protection relation and valid config.
-    act: Run the config-changed event.
-    assert: The validated configuration is saved to the relation app databag.
+    arrange: Create a charm context with ddos-protection relations and valid config.
+    act: Run the config-changed event, optionally failing to save one relation.
+    assert: The expected relations receive the configuration and the status is reported.
     """
+    if failing_relation_id is not None:
+        original_save = ops.Relation.save
+
+        def _save(relation: ops.Relation, *args, **kwargs):
+            if relation.id == failing_relation_id:
+                raise ops.ModelError("relation is not available")
+            return original_save(relation, *args, **kwargs)
+
+        monkeypatch.setattr(ops.Relation, "save", _save)
+
     ctx = testing.Context(HAProxyDDoSProtectionConfiguratorCharm)
-    relation = testing.Relation("ddos-protection", interface="ddos_protection")
+    relations = [
+        testing.Relation(
+            "ddos-protection",
+            id=relation_id,
+            interface="ddos_protection",
+            remote_app_name=f"haproxy-{relation_id}",
+        )
+        for relation_id in relation_ids
+    ]
     state = testing.State(
-        leader=True,
-        relations=[relation],
+        leader=leader,
+        relations=relations,
         config={
             "rate-limit-requests-per-minute": 100,
             "rate-limit-connections-per-minute": 50,
+            "concurrent-connections-limit": 1000,
+            "error-rate-per-minute": 10,
             "limit-policy-http": "reject",
             "limit-policy-tcp": "reject",
             "ip-allow-list": "192.168.1.1, 192.168.1.0/24",
+            "http-request-timeout": 30,
+            "http-keepalive-timeout": 60,
+            "client-timeout": 50,
             "deny-paths": "/admin, /internal",
         },
     )
 
     out = ctx.run(ctx.on.config_changed(), state)
 
-    assert out.unit_status == testing.ActiveStatus()
-    out_relation = next(rel for rel in out.relations if rel.endpoint == "ddos-protection")
-    assert out_relation.local_app_data is not None
-    local_app_data = out_relation.local_app_data
-    assert json.loads(local_app_data["rate_limit_requests_per_minute"]) == 100
-    assert json.loads(local_app_data["rate_limit_connections_per_minute"]) == 50
-    assert json.loads(local_app_data["limit_policy_http"]) == "reject"
-    assert json.loads(local_app_data["limit_policy_tcp"]) == "reject"
-    assert json.loads(local_app_data["ip_allow_list"]) == [
-        "192.168.1.1",
-        "192.168.1.0/24",
-    ]
-    assert json.loads(local_app_data["deny_paths"]) == ["/admin", "/internal"]
-
-
-def test_config_changed_skips_publication_on_non_leader():
-    """
-    arrange: Create a charm context with a ddos-protection relation and a non-leader unit.
-    act: Run the config-changed event.
-    assert: The unit is active and no configuration is published to the relation.
-    """
-    ctx = testing.Context(HAProxyDDoSProtectionConfiguratorCharm)
-    relation = testing.Relation("ddos-protection", interface="ddos_protection")
-    state = testing.State(
-        leader=False,
-        relations=[relation],
-        config={
-            "rate-limit-requests-per-minute": 100,
-            "limit-policy-http": "reject",
-        },
-    )
-
-    out = ctx.run(ctx.on.config_changed(), state)
-
-    assert out.unit_status == testing.ActiveStatus()
-    out_relation = next(rel for rel in out.relations if rel.endpoint == "ddos-protection")
-    assert not out_relation.local_app_data
-
-
-def test_config_changed_publishes_to_every_relation():
-    """
-    arrange: Create a charm context with two ddos-protection relations.
-    act: Run the config-changed event.
-    assert: The configuration is saved to every relation app databag.
-    """
-    ctx = testing.Context(HAProxyDDoSProtectionConfiguratorCharm)
-    relations = [
-        testing.Relation(
-            "ddos-protection",
-            id=1,
-            interface="ddos_protection",
-            remote_app_name="haproxy-one",
-        ),
-        testing.Relation(
-            "ddos-protection",
-            id=2,
-            interface="ddos_protection",
-            remote_app_name="haproxy-two",
-        ),
-    ]
-    state = testing.State(
-        leader=True,
-        relations=relations,
-        config={
-            "rate-limit-requests-per-minute": 100,
-            "rate-limit-connections-per-minute": 50,
-            "limit-policy-http": "reject",
-            "limit-policy-tcp": "reject",
-        },
-    )
-
-    out = ctx.run(ctx.on.config_changed(), state)
-
-    assert out.unit_status == testing.ActiveStatus()
-    out_relations = [rel for rel in out.relations if rel.endpoint == "ddos-protection"]
-    assert len(out_relations) == 2
-    for relation in out_relations:
-        assert relation.local_app_data is not None
-        assert json.loads(relation.local_app_data["rate_limit_requests_per_minute"]) == 100
-
-
-def test_config_changed_reports_partial_publish(monkeypatch: pytest.MonkeyPatch):
-    """
-    arrange: Create a charm context with two relations where saving one fails.
-    act: Run the config-changed event.
-    assert: The charm stays active and reports how many relations were published.
-    """
-    original_save = ops.Relation.save
-
-    def _save(relation: ops.Relation, *args, **kwargs):
-        if relation.id == 2:
-            raise ops.ModelError("relation is not available")
-        return original_save(relation, *args, **kwargs)
-
-    monkeypatch.setattr(ops.Relation, "save", _save)
-
-    ctx = testing.Context(HAProxyDDoSProtectionConfiguratorCharm)
-    relations = [
-        testing.Relation(
-            "ddos-protection",
-            id=1,
-            interface="ddos_protection",
-            remote_app_name="haproxy-one",
-        ),
-        testing.Relation(
-            "ddos-protection",
-            id=2,
-            interface="ddos_protection",
-            remote_app_name="haproxy-two",
-        ),
-    ]
-    state = testing.State(
-        leader=True,
-        relations=relations,
-        config={
-            "rate-limit-requests-per-minute": 100,
-            "rate-limit-connections-per-minute": 50,
-            "limit-policy-http": "reject",
-            "limit-policy-tcp": "reject",
-        },
-    )
-
-    out = ctx.run(ctx.on.config_changed(), state)
-
-    assert out.unit_status == testing.ActiveStatus("1/2 relation published")
+    assert out.unit_status == expected_status
     published_relations = [
         rel for rel in out.relations if rel.endpoint == "ddos-protection" and rel.local_app_data
     ]
-    assert len(published_relations) == 1
+    assert len(published_relations) == expected_published
+    expected_app_data = {
+        "rate_limit_requests_per_minute": 100,
+        "rate_limit_connections_per_minute": 50,
+        "concurrent_connections_limit": 1000,
+        "error_rate": 10,
+        "limit_policy_http": "reject",
+        "limit_policy_tcp": "reject",
+        "policy_status_code": None,
+        "ip_allow_list": ["192.168.1.1", "192.168.1.0/24"],
+        "http_request_timeout": 30,
+        "http_keepalive_timeout": 60,
+        "client_timeout": 50,
+        "deny_paths": ["/admin", "/internal"],
+    }
+    for relation in published_relations:
+        assert relation.local_app_data is not None
+        assert {
+            key: json.loads(value) for key, value in relation.local_app_data.items()
+        } == expected_app_data
