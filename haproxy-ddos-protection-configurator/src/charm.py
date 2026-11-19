@@ -34,6 +34,11 @@ class HAProxyDDoSProtectionConfiguratorCharm(ops.CharmBase):
 
     def _reconcile(self, _: ops.EventBase) -> None:
         """Reconcile the charm state."""
+        if not self.unit.is_leader():
+            logger.info("Unit is not the leader, skipping relation data publication")
+            self.unit.status = ops.ActiveStatus()
+            return
+
         try:
             state = CharmState.from_charm(self)
 
@@ -55,11 +60,6 @@ class HAProxyDDoSProtectionConfiguratorCharm(ops.CharmBase):
         except (InvalidDDoSProtectionConfigError, ValidationError) as e:
             logger.error("Failed to apply configuration: %s", str(e))
             self.unit.status = ops.BlockedStatus(str(e))
-            return
-
-        if not self.unit.is_leader():
-            logger.info("Unit is not the leader, skipping relation data publication")
-            self.unit.status = ops.ActiveStatus()
             return
 
         relations = self.model.relations.get(DDOS_PROTECTION_RELATION_NAME, [])

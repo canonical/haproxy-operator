@@ -104,6 +104,30 @@ def test_config_changed_saves_relation_data():
     assert json.loads(local_app_data["deny_paths"]) == ["/admin", "/internal"]
 
 
+def test_config_changed_skips_publication_on_non_leader():
+    """
+    arrange: Create a charm context with a ddos-protection relation and a non-leader unit.
+    act: Run the config-changed event.
+    assert: The unit is active and no configuration is published to the relation.
+    """
+    ctx = testing.Context(HAProxyDDoSProtectionConfiguratorCharm)
+    relation = testing.Relation("ddos-protection", interface="ddos_protection")
+    state = testing.State(
+        leader=False,
+        relations=[relation],
+        config={
+            "rate-limit-requests-per-minute": 100,
+            "limit-policy-http": "reject",
+        },
+    )
+
+    out = ctx.run(ctx.on.config_changed(), state)
+
+    assert out.unit_status == testing.ActiveStatus()
+    out_relation = next(rel for rel in out.relations if rel.endpoint == "ddos-protection")
+    assert not out_relation.local_app_data
+
+
 def test_config_changed_publishes_to_every_relation():
     """
     arrange: Create a charm context with two ddos-protection relations.
