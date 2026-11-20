@@ -27,8 +27,9 @@ This section discusses the relations supported between the HAProxy and its relat
 
 ## Deployment and release
 
-This section contains details on infrastructure-as-code definitions and log of user-relevant changes.
+This section contains details on platform requirements, infrastructure-as-code definitions, and log of user-relevant changes.
 
+* {ref}`Resource requirements <reference_resource_requirements>`: Required CPU, memory, disk, software versions, and network access for an HAProxy deployment.
 * {ref}`Terraform module <reference_terraform>`: Input variables, outputs, and integration parameters for the HAProxy Terraform deployment module.
 * {ref}`Changelog <changelog>`: Historical log of feature releases, bug fixes, breaking changes, and documentation updates across revisions.
 
@@ -40,6 +41,7 @@ HTTP/2 support <http2-support.md>
 FTP support <ftp-support.md>
 Relation endpoints <relation-endpoints.md>
 SPOE authentication <spoe-auth-support.md>
+Resource requirements <resource-requirements.md>
 Terraform module <terraform.md>
 Changelog <../changelog.md>
 ```

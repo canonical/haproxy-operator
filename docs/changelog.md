@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-11-19
+
+- docs: Added a reference page describing the CPU, memory, disk, software, and
+  network requirements for HAProxy deployments.
+
 ## 2026-11-07
 
 - Temporarily use the `3.2/edge` channel in HAProxy deployment examples while
