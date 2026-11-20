@@ -10,7 +10,10 @@ platforms:
 
 parts:
   charm:
-    source: .
+    # Charmcraft monorepo support: the repository root is the source so that
+    # the shared ./lib charm library is included when packing the charm.
+    source: ..
+    source-subdir: haproxy-operator
     plugin: uv
     build-snaps:
     - astral-uv
@@ -21,6 +24,7 @@ parts:
     source: .
     stage:
     - templates
+
 name: haproxy
 title: HAProxy charm.
 description: |
@@ -157,8 +161,6 @@ charm-libs:
 - lib: certificate_transfer_interface.certificate_transfer
   version: "1"
 - lib: grafana_agent.cos_agent
-  version: "0"
-- lib: haproxy.ddos_protection
   version: "0"
 - lib: haproxy_route_policy.haproxy_route_policy
   version: "0"

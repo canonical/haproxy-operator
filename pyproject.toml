@@ -43,7 +43,15 @@ integration = [
 [tool.uv]
 package = false
 
+[tool.uv.workspace]
+members = [
+  "lib",
+  "haproxy-operator",
+  "haproxy-ddos-protection-configurator",
+]
+
 [tool.uv.sources]
+haproxy-libs = { workspace = true }
 # opcli is published only from the charm-ci git repository, not PyPI.
 opcli = { git = "https://github.com/canonical/charm-ci.git", tag = "v1.0.2" }
 
