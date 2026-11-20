@@ -251,3 +251,39 @@ def test_ddos_protection_provider_app_data_tcp_limit_policy_requires_rate_limits
         DDoSProtectionProviderAppData(
             limit_policy_tcp="reject",
         )
+
+
+@pytest.mark.parametrize(
+    "ddos_kwargs, expected",
+    [
+        ({}, False),
+        ({"rate_limit_requests_per_minute": 100}, True),
+        ({"error_rate": 10}, True),
+        ({"rate_limit_connections_per_minute": 50}, True),
+        ({"concurrent_connections_limit": 50}, True),
+        (
+            {
+                "limit_policy_http": "reject",
+                "rate_limit_requests_per_minute": 100,
+            },
+            True,
+        ),
+    ],
+    ids=[
+        "no_rate_limits",
+        "http_request_rate_limit",
+        "http_error_rate_limit",
+        "tcp_connection_rate_limit",
+        "tcp_concurrent_connections_limit",
+        "explicit_http_policy",
+    ],
+)
+def test_ddos_protection_provider_app_data_has_rate_limiting(ddos_kwargs, expected):
+    """
+    arrange: Create a DDoSProtectionProviderAppData model with various rate limit configurations.
+    act: Check the has_rate_limiting property.
+    assert: has_rate_limiting matches the expected value.
+    """
+    data = DDoSProtectionProviderAppData(**ddos_kwargs)
+
+    assert data.has_rate_limiting is expected

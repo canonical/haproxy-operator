@@ -1,0 +1,18 @@
+version_schema: 2
+
+changes:
+  - title: Shared the DDoS protection interface library across the monorepo
+    author: Thanhphan1147
+    type: minor
+    description: >
+      The `haproxy.ddos_protection` interface library now lives in the
+      monorepo root `lib/` directory and is included by both the HAProxy and
+      DDoS protection configurator charms at pack time. The library only
+      exposes pydantic models, and the charms now read and write relation data
+      with the `ops` relation API directly.
+    urls:
+      pr: https://github.com/canonical/haproxy-operator/pull/702
+      related_doc:
+      related_issue: https://warthogs.atlassian.net/browse/ISD-6912
+    visibility: internal
+    highlight: false
