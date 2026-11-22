@@ -29,6 +29,7 @@ from charms.haproxy.v2.haproxy_route import (
     RequirerUnitData,
 )
 from ops.testing import Context
+from pydantic import TypeAdapter
 
 from charm import HAProxyCharm
 from state.charm_state import CharmState, ProxyMode
@@ -41,11 +42,12 @@ TEST_LOG_HASH_CLIENT_ADDRESS = (
 
 
 def model_to_relation_data(model) -> dict[str, str]:
-    """Serialize a pydantic model the same way Relation.save does."""
-    return {
-        key: json.dumps(value)
-        for key, value in model.model_dump(mode="json", by_alias=True).items()
-    }
+    """Serialize a pydantic model or dataclass the same way Relation.save does."""
+    if hasattr(model, "model_dump"):
+        data = model.model_dump(mode="json", by_alias=True)
+    else:
+        data = TypeAdapter(type(model)).dump_python(model, mode="json")
+    return {key: json.dumps(value) for key, value in data.items()}
 
 
 @pytest.fixture(name="hashed_charm_state")
@@ -613,8 +615,8 @@ def haproxy_route_relation_data_fixture() -> typing.Callable[..., HaproxyRouteRe
 
         return HaproxyRouteRequirerData(
             relation_id=relation_id,
-            application_data=RequirerApplicationData.model_validate(application_data_dict),
-            units_data=[RequirerUnitData.model_validate({"address": "10.0.0.1"})],
+            application_data=RequirerApplicationData(**application_data_dict),
+            units_data=[RequirerUnitData(address="10.0.0.1")],
         )
 
     return generate_requirer_data
