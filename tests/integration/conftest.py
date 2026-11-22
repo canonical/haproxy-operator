@@ -10,6 +10,7 @@ import logging
 import pathlib
 import subprocess  # nosec
 import tempfile
+import time
 import typing
 
 import jubilant
@@ -362,10 +363,7 @@ def haproxy_spoe_deployer_fixture(
             lambda status: status.apps["self-signed-certificates"].is_active,
             timeout=5 * 60,
         )
-        ca_cert_result = k8s_juju.run(
-            "self-signed-certificates/0", "get-ca-certificate"
-        )
-        ca_cert = ca_cert_result.results["ca-certificate"]
+        ca_cert = get_ca_certificate(k8s_juju)
         lxd_juju.wait(
             lambda status: not status.apps[haproxy_spoe_name].is_waiting, timeout=400
         )
@@ -376,6 +374,30 @@ def haproxy_spoe_deployer_fixture(
         return haproxy_spoe_name
 
     yield deployer
+
+
+def get_ca_certificate(
+    k8s_juju: jubilant.Juju, retries: int = 10, delay: int = 10
+) -> str:
+    """Fetch the CA certificate, retrying until the root certificate is generated.
+
+    The self-signed-certificates unit can briefly report an "active" status
+    before its root certificate is actually generated, so the action call
+    needs a few retries to avoid a race condition.
+    """
+    last_error: jubilant.TaskError | None = None
+    for attempt in range(retries):
+        try:
+            ca_cert_result = k8s_juju.run(
+                "self-signed-certificates/0", "get-ca-certificate"
+            )
+            return ca_cert_result.results["ca-certificate"]
+        except jubilant.TaskError as err:
+            last_error = err
+            if attempt < retries - 1:
+                time.sleep(delay)
+    assert last_error is not None
+    raise last_error
 
 
 def deploy_spoe_auth(
