@@ -14,6 +14,7 @@ from pydantic import Field, IPvAnyAddress
 from pydantic.dataclasses import dataclass
 
 from .exception import CharmStateValidationBaseError
+from .peers import PeersInformation
 
 INGRESS_PER_UNIT_RELATION = "ingress_per_unit"
 
@@ -42,7 +43,7 @@ class HAProxyBackend:
 
 
 @dataclass(frozen=True)
-class IngressPerUnitRequirersInformation:
+class IngressPerUnitRequirersInformation(PeersInformation):
     """A component of charm state containing ingress per unit requirers information.
 
     Attrs:
