@@ -14,10 +14,11 @@ run "basic_deploy" {
 
   variables {
     model_uuid = run.setup_tests.model_uuid
+    risk       = "edge"
 
     haproxy = {
       # renovate: depName="haproxy"
-      revision = 605
+      revision = 643
     }
 
     haproxy_ddos_protection_configurator = {
