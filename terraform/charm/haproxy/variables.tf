@@ -11,7 +11,7 @@ variable "app_name" {
 variable "base" {
   description = "Base of the haproxy charm."
   type        = string
-  default     = "ubuntu@26.04"
+  default     = null
 }
 
 variable "channel" {
