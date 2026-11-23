@@ -102,6 +102,12 @@ config:
       description: |
         Sets the maximum per-process number of concurrent connections to
         <number>. Must be greater than 0.
+    vip:
+      type: string
+      description: |
+        Virtual IP address used for active-passive high availability, optionally
+        including the CIDR prefix length (for example, `10.0.0.100/24`). When
+        set, the charm configures and starts `keepalived` to manage the address.
     ddos-protection:
       type: boolean
       default: true

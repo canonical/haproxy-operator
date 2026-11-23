@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-11-23
+
+- Restored the `vip` configuration option. When set, the charm renders a
+  `keepalived` configuration for active-passive high availability and publishes
+  the virtual IP as the endpoint of `haproxy-route-tcp` relations.
+
 ## 2026-11-15
 
 - The HAProxy charm now installs `keepalived` directly for active-passive high
