@@ -14,9 +14,9 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-  "ops==3.9.0",
+  "ops==3.10.0",
   "requests==2.34.2",
-  "charmlibs-snap==1.0.1.post0",
+  "charmlibs-snap==2.2.0",
   "pydantic>=2.12.5",
   "validators>=0.35.0",
 ]
@@ -28,7 +28,7 @@ unit = [ "coverage[toml]", "ops[testing]", "pytest" ]
 coverage-report = [ "coverage[toml]", "pytest" ]
 static = [ "bandit[toml]" ]
 integration = [
-  "jubilant==1.14.0",
+  "jubilant==1.15.0",
   "juju==3.6.1.3",
   "opcli",
   "pytest",
@@ -40,7 +40,7 @@ package = false
 
 [tool.uv.sources]
 # opcli is published only from the charm-ci git repository, not PyPI.
-opcli = { git = "https://github.com/canonical/charm-ci.git", tag = "v1.0.1" }
+opcli = { git = "https://github.com/canonical/charm-ci.git", tag = "v1.0.2" }
 
 [tool.ruff]
 target-version = "py310"
@@ -85,6 +85,13 @@ skip = "build,lib,venv,icon.svg,.tox,.git,.mypy_cache,.ruff_cache,.coverage,html
 [tool.pytest.ini_options]
 minversion = "6.0"
 log_cli_level = "INFO"
+# promote warnings to test failures
+filterwarnings = [
+  "error",
+  # Raised by the vendored data_platform_libs charm lib; the fix belongs
+  # upstream in canonical/data-platform-libs.
+  "ignore:JujuVersion.from_environ\\(\\) is deprecated:DeprecationWarning",
+]
 
 [tool.coverage.run]
 branch = true

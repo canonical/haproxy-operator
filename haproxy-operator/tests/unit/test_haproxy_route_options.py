@@ -7,11 +7,13 @@ import json
 from unittest.mock import MagicMock
 
 import pytest
+from charms.haproxy.v2.haproxy_route import RequirerApplicationData
 from ops.testing import ActiveStatus, Context, Model, Relation, State
 
 from charm import HAProxyCharm
 
 from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
+from .helper import rendered_file_content
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls", "mocks_tls_ca_write")
@@ -58,7 +60,7 @@ def test_protocol_https(
     )
 
     render_file_mock.assert_called_once()
-    haproxy_conf_contents = render_file_mock.call_args_list[0].args[1]
+    haproxy_conf_contents = rendered_file_content(render_file_mock)
     assert (
         "server haproxy-tutorial-ingress-configurator_443_0 10.12.97.153:443"
         " ssl ca-file /var/lib/haproxy/cas/cas.pem alpn h2,http/1.1 check-alpn h2,http/1.1\n"
@@ -122,7 +124,7 @@ def test_protocol_https_with_health_check(
     )
 
     render_file_mock.assert_called_once()
-    haproxy_conf_contents = render_file_mock.call_args_list[0].args[1]
+    haproxy_conf_contents = rendered_file_content(render_file_mock)
     assert (
         "server haproxy-tutorial-ingress-configurator_443_0 10.12.97.153:443"
         " check inter 60s rise 2 fall 1"
@@ -194,7 +196,7 @@ def test_protocol_https_no_ca(monkeypatch: pytest.MonkeyPatch, certificates_inte
     )
 
     render_file_mock.assert_called_once()
-    haproxy_conf_contents = render_file_mock.call_args_list[0].args[1]
+    haproxy_conf_contents = rendered_file_content(render_file_mock)
     assert "10.12.97.153:443" not in haproxy_conf_contents
     assert "10.12.97.154:443" not in haproxy_conf_contents
     protocol_https_relation = next(
@@ -254,7 +256,7 @@ def test_grpc_backend(
     )
 
     render_file_mock.assert_called_once()
-    haproxy_conf_contents = render_file_mock.call_args_list[0].args[1]
+    haproxy_conf_contents = rendered_file_content(render_file_mock)
     assert (
         "server grpc-service_50051_0 10.12.97.153:50051"
         " ssl ca-file /var/lib/haproxy/cas/cas.pem alpn h2 check-alpn h2\n"
@@ -265,4 +267,228 @@ def test_grpc_backend(
         " ssl ca-file /var/lib/haproxy/cas/cas.pem alpn h2 check-alpn h2\n"
         in haproxy_conf_contents
     )
+    assert out.app_status == ActiveStatus("")
+
+
+@pytest.mark.parametrize(
+    "application_data,expected_config_entries",
+    [
+        pytest.param(
+            {"retry": {"count": 3, "redispatch": True}},
+            ["retries 3\n    option redispatch"],
+            id="retry",
+        ),
+        pytest.param(
+            {"http_server_close": True},
+            ["option http-server-close"],
+            id="http-server-close",
+        ),
+        pytest.param(
+            {"load_balancing": {"algorithm": "source", "consistent_hashing": True}},
+            ["balance source", "hash-type consistent"],
+            id="source-load-balancing",
+        ),
+    ],
+)
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls", "mocks_tls_ca_write")
+def test_route_backend_options(
+    monkeypatch: pytest.MonkeyPatch,
+    certificates_integration,
+    receive_ca_certs_relation,
+    application_data,
+    expected_config_entries,
+):
+    """
+    arrange: prepare the state with a haproxy-route relation configured with backend options.
+    act: run relation_changed for the haproxy-route relation.
+    assert: the rendered config contains the configured options.
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    haproxy_route_relation = Relation(
+        endpoint="haproxy-route",
+        local_app_data={"endpoints": json.dumps([f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}/"])},
+        remote_app_data=RequirerApplicationData(
+            service="any-charm",
+            ports=[80],
+            hosts=["10.12.97.153"],
+            hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
+            **application_data,
+        ).dump(),
+        remote_units_data={0: {"address": '"10.75.1.129"'}},
+    )
+    state = State(
+        relations=frozenset(
+            {
+                receive_ca_certs_relation,
+                haproxy_route_relation,
+                certificates_integration,
+            }
+        ),
+        leader=True,
+        model=Model(name="haproxy-tutorial"),
+        app_status=ActiveStatus(""),
+        unit_status=ActiveStatus(""),
+    )
+
+    ctx = Context(HAProxyCharm, juju_version="3.6.8")
+    out = ctx.run(
+        ctx.on.relation_changed(haproxy_route_relation),
+        state,
+    )
+
+    render_file_mock.assert_called_once()
+    haproxy_conf_contents = rendered_file_content(render_file_mock)
+    for entry in expected_config_entries:
+        assert entry in haproxy_conf_contents
+    assert out.app_status == ActiveStatus("")
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls", "mocks_tls_ca_write")
+@pytest.mark.parametrize("include_regular_backend", [False, True])
+def test_default_backend_renders_default_backend_directive(
+    monkeypatch: pytest.MonkeyPatch,
+    certificates_integration,
+    receive_ca_certs_relation,
+    include_regular_backend,
+):
+    """
+    arrange: prepare the state with a default backend and optionally a regular backend.
+    act: run relation_changed for the haproxy-route relation.
+    assert: the HTTP frontend targets the default backend without ACLs or use_backend,
+        and renders its backend configuration exactly once.
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    regular_relation = Relation(
+        endpoint="haproxy-route",
+        id=1,
+        local_app_data={"endpoints": json.dumps([f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}/"])},
+        remote_app_data={
+            "hostname": '"regular.example.com"',
+            "hosts": '["10.12.97.153"]',
+            "ports": "[80]",
+            "service": '"regular-service"',
+        },
+        remote_units_data={0: {"address": '"10.75.1.129"'}},
+    )
+    default_relation = Relation(
+        endpoint="haproxy-route",
+        id=2,
+        local_app_data={"endpoints": json.dumps([f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}/"])},
+        remote_app_data={
+            "hostname": '"landing.example.com"',
+            "hosts": '["10.12.97.154"]',
+            "ports": "[80]",
+            "service": '"default-service"',
+            "default_backend": "true",
+            "paths": '["/landing"]',
+            "deny_paths": '["/private"]',
+            "check": '{"interval": 10, "rise": 2, "fall": 3, "path": "/health"}',
+            "timeout": '{"server": 30, "connect": 5, "queue": 15}',
+            "load_balancing": '{"algorithm": "roundrobin"}',
+            "rate_limit": '{"connections_per_minute": 100}',
+            "rewrites": '[{"method": "set-path", "expression": "/welcome"}]',
+        },
+        remote_units_data={0: {"address": '"10.75.1.130"'}},
+    )
+    state = State(
+        relations=frozenset(
+            {
+                certificates_integration,
+                receive_ca_certs_relation,
+                default_relation,
+            }
+            | ({regular_relation} if include_regular_backend else set())
+        ),
+        leader=True,
+        model=Model(name="haproxy-tutorial"),
+        app_status=ActiveStatus(""),
+        unit_status=ActiveStatus(""),
+    )
+
+    ctx = Context(HAProxyCharm, juju_version="3.6.8")
+    out = ctx.run(
+        ctx.on.relation_changed(default_relation),
+        state,
+    )
+
+    render_file_mock.assert_called_once()
+    haproxy_conf_contents = rendered_file_content(render_file_mock)
+    assert "frontend haproxy\n" in haproxy_conf_contents
+    assert "bind [::]:80 v4v6" in haproxy_conf_contents
+    assert "bind [::]:443 v4v6 ssl" in haproxy_conf_contents
+    assert "default_backend default-service\n" in haproxy_conf_contents
+    assert "default_backend default\n" not in haproxy_conf_contents
+    assert "backend default\n" not in haproxy_conf_contents
+    assert "acl_host_default-service" not in haproxy_conf_contents
+    assert "acl_path_default-service" not in haproxy_conf_contents
+    assert "acl_deny_path_default-service" not in haproxy_conf_contents
+    assert "use_backend default-service" not in haproxy_conf_contents
+    assert ("acl_host_regular-service" in haproxy_conf_contents) is include_regular_backend
+    assert ("use_backend regular-service" in haproxy_conf_contents) is include_regular_backend
+    assert haproxy_conf_contents.count("\nbackend default-service\n") == 1
+    default_backend_config = haproxy_conf_contents.split("\nbackend default-service\n")[1]
+    assert "balance roundrobin\n" in default_backend_config
+    assert "timeout server 30s\n" in default_backend_config
+    assert "timeout connect 5s\n" in default_backend_config
+    assert "timeout queue 15s\n" in default_backend_config
+    assert "option httpchk GET /health\n" in default_backend_config
+    assert "table default-service_rate_limit" in haproxy_conf_contents
+    assert "http-request track-sc0 src table  haproxy_peers/default-service_rate_limit" in (
+        default_backend_config
+    )
+    assert "http-request set-path /welcome\n" in default_backend_config
+    assert "server default-service_80_0 10.12.97.154:80 check inter 10s rise 2 fall 3" in (
+        default_backend_config
+    )
+    assert out.app_status == ActiveStatus("")
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls", "mocks_tls_ca_write")
+def test_no_default_backend_renders_inline_default(
+    monkeypatch: pytest.MonkeyPatch, certificates_integration, receive_ca_certs_relation
+):
+    """
+    arrange: prepare the state with a single regular backend.
+    act: run relation_changed for the haproxy-route relation.
+    assert: the inline default backend is used as the default_backend target.
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    regular_relation = Relation(
+        endpoint="haproxy-route",
+        local_app_data={"endpoints": json.dumps([f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}/"])},
+        remote_app_data={
+            "hostname": '"regular.example.com"',
+            "hosts": '["10.12.97.153"]',
+            "ports": "[80]",
+            "service": '"regular-service"',
+        },
+        remote_units_data={0: {"address": '"10.75.1.129"'}},
+    )
+    state = State(
+        relations=frozenset(
+            {
+                certificates_integration,
+                receive_ca_certs_relation,
+                regular_relation,
+            }
+        ),
+        leader=True,
+        model=Model(name="haproxy-tutorial"),
+        app_status=ActiveStatus(""),
+        unit_status=ActiveStatus(""),
+    )
+
+    ctx = Context(HAProxyCharm, juju_version="3.6.8")
+    out = ctx.run(
+        ctx.on.relation_changed(regular_relation),
+        state,
+    )
+
+    render_file_mock.assert_called_once()
+    haproxy_conf_contents = rendered_file_content(render_file_mock)
+    assert "default_backend default\n" in haproxy_conf_contents
+    assert "backend default\n" in haproxy_conf_contents
     assert out.app_status == ActiveStatus("")

@@ -10,6 +10,7 @@ import logging
 import pathlib
 import subprocess  # nosec
 import tempfile
+import time
 import typing
 
 import jubilant
@@ -27,7 +28,6 @@ SELF_SIGNED_CERTIFICATES_APP_NAME = "self-signed-certificates"
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/haproxy_route_requirer.py"
 HAPROXY_ROUTE_LIB_SRC = "haproxy-operator/lib/charms/haproxy/v2/haproxy_route.py"
-APT_LIB_SRC = "haproxy-operator/lib/charms/operator_libs_linux/v0/apt.py"
 HAPROXY_ROUTE_POLICY_APP_NAME = "policy"
 POSTGRESQL_APPLICATION = "db"
 
@@ -125,7 +125,7 @@ def application_fixture(
     lxd_juju.deploy(
         charm=charm_file,
         app=app_name,
-        base="ubuntu@24.04",
+        base="ubuntu@26.04",
     )
     return app_name
 
@@ -232,10 +232,18 @@ def deploy_iam_bundle_fixture(k8s_juju: jubilant.Juju):
         logger.info("identity-platform is already deployed")
         return
     k8s_juju.deploy(
-        "self-signed-certificates", channel="1/stable", revision=317, trust=True, force=True
+        "self-signed-certificates",
+        channel="1/stable",
+        revision=317,
+        trust=True,
+        force=True,
     )
-    k8s_juju.deploy("hydra", channel="latest/edge", revision=399, trust=True, force=True)
-    k8s_juju.deploy("kratos", channel="latest/edge", revision=567, trust=True, force=True)
+    k8s_juju.deploy(
+        "hydra", channel="latest/edge", revision=399, trust=True, force=True
+    )
+    k8s_juju.deploy(
+        "kratos", channel="latest/edge", revision=567, trust=True, force=True
+    )
     k8s_juju.deploy(
         "identity-platform-login-ui-operator",
         channel="latest/edge",
@@ -319,7 +327,6 @@ def deploy_any_charm_haproxy_route_requirer(lxd_juju: jubilant.Juju, app_name):
             "haproxy_route.py": pathlib.Path(HAPROXY_ROUTE_LIB_SRC).read_text(
                 encoding="utf-8"
             ),
-            "apt.py": pathlib.Path(APT_LIB_SRC).read_text(encoding="utf-8"),
         }
     )
     with tempfile.NamedTemporaryFile(dir=".") as tf:
@@ -331,7 +338,7 @@ def deploy_any_charm_haproxy_route_requirer(lxd_juju: jubilant.Juju, app_name):
             channel="beta",
             config={
                 "src-overwrite": f"@{tf.name}",
-                "python-packages": "pydantic\ncryptography==45.0.6\nvalidators",
+                "python-packages": "pydantic\ncryptography==45.0.6\nvalidators\ncharmlibs-apt~=1.0",
             },
         )
     return app_name
@@ -356,10 +363,7 @@ def haproxy_spoe_deployer_fixture(
             lambda status: status.apps["self-signed-certificates"].is_active,
             timeout=5 * 60,
         )
-        ca_cert_result = k8s_juju.run(
-            "self-signed-certificates/0", "get-ca-certificate"
-        )
-        ca_cert = ca_cert_result.results["ca-certificate"]
+        ca_cert = get_ca_certificate(k8s_juju)
         lxd_juju.wait(
             lambda status: not status.apps[haproxy_spoe_name].is_waiting, timeout=400
         )
@@ -370,6 +374,30 @@ def haproxy_spoe_deployer_fixture(
         return haproxy_spoe_name
 
     yield deployer
+
+
+def get_ca_certificate(
+    k8s_juju: jubilant.Juju, retries: int = 10, delay: int = 10
+) -> str:
+    """Fetch the CA certificate, retrying until the root certificate is generated.
+
+    The self-signed-certificates unit can briefly report an "active" status
+    before its root certificate is actually generated, so the action call
+    needs a few retries to avoid a race condition.
+    """
+    last_error: jubilant.TaskError | None = None
+    for attempt in range(retries):
+        try:
+            ca_cert_result = k8s_juju.run(
+                "self-signed-certificates/0", "get-ca-certificate"
+            )
+            return ca_cert_result.results["ca-certificate"]
+        except jubilant.TaskError as err:
+            last_error = err
+            if attempt < retries - 1:
+                time.sleep(delay)
+    assert last_error is not None
+    raise last_error
 
 
 def deploy_spoe_auth(

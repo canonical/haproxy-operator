@@ -1,31 +1,13 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-variable "grafana_agent" {
-  type = object({
-    app_name = optional(string, "grafana-agent")
-    config   = optional(map(string), {})
-    revision = optional(number, null)
-  })
-  default = {}
-}
-
-variable "hacluster" {
-  type = object({
-    app_name = optional(string, "hacluster")
-    config   = optional(map(string), {})
-    revision = optional(number, null)
-  })
-  default = null
-}
-
 variable "haproxy" {
   type = object({
     app_name    = optional(string, "haproxy")
     config      = optional(map(string), {})
     constraints = optional(string, "arch=amd64")
     revision    = optional(number)
-    base        = optional(string, "ubuntu@24.04")
+    base        = optional(string, "ubuntu@26.04")
     units       = optional(number)
     machines    = optional(set(string))
   })
@@ -56,10 +38,6 @@ variable "keepalived" {
     revision = optional(number, null)
   })
   default = null
-  validation {
-    condition     = (var.hacluster == null || var.keepalived == null)
-    error_message = "hacluster and keepalived cannot both be set."
-  }
 }
 
 variable "metadata_version" {
@@ -72,6 +50,16 @@ variable "model_uuid" {
   description = "ID of the model to deploy to"
   type        = string
   default     = ""
+}
+
+variable "opentelemetry_collector" {
+  description = "Configuration for the opentelemetry-collector subordinate charm deployment."
+  type = object({
+    app_name = optional(string, "opentelemetry-collector")
+    config   = optional(map(string), {})
+    revision = optional(number, null)
+  })
+  default = {}
 }
 
 variable "protected_hostnames_configuration" {

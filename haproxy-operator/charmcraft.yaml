@@ -1,8 +1,8 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 type: charm
-base: ubuntu@24.04
-build-base: ubuntu@24.04
+base: ubuntu@26.04
+build-base: ubuntu@26.04
 
 platforms:
   amd64:
@@ -10,7 +10,10 @@ platforms:
 
 parts:
   charm:
-    source: .
+    # Charmcraft monorepo support: the repository root is the source so that
+    # the shared ./lib charm library is included when packing the charm.
+    source: ..
+    source-subdir: haproxy-operator
     plugin: uv
     build-snaps:
     - astral-uv
@@ -21,6 +24,7 @@ parts:
     source: .
     stage:
     - templates
+
 name: haproxy
 title: HAProxy charm.
 description: |
@@ -49,10 +53,6 @@ requires:
   certificates:
     interface: tls-certificates
     limit: 1
-  reverseproxy:
-    interface: http
-  ha:
-    interface: hacluster
   receive-ca-certs:
     interface: certificate_transfer
     optional: true
@@ -81,9 +81,6 @@ provides:
   cos-agent:
     interface: cos_agent
     optional: true
-  website:
-    interface: http
-    optional: true
   haproxy-route:
     interface: haproxy-route
   haproxy-route-tcp:
@@ -105,9 +102,6 @@ config:
       description: |
         Sets the maximum per-process number of concurrent connections to
         <number>. Must be greater than 0.
-    vip:
-      type: string
-      description: Virtual IP address, used in active-passive ha mode.
     ddos-protection:
       type: boolean
       default: true
@@ -168,11 +162,7 @@ charm-libs:
   version: "1"
 - lib: grafana_agent.cos_agent
   version: "0"
-- lib: haproxy.ddos_protection
-  version: "0"
 - lib: haproxy_route_policy.haproxy_route_policy
-  version: "0"
-- lib: operator_libs_linux.apt
   version: "0"
 - lib: operator_libs_linux.systemd
   version: "1"

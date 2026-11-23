@@ -19,7 +19,7 @@ charms:
   - arch: amd64
   - arch: arm64
     runner: [ubuntu-24.04-arm]
-  channel: 2.8/edge
+  channel: 3.2/edge
 - name: haproxy-route-policy
   charmcraft-yaml: haproxy-route-policy-operator/charmcraft.yaml
   resources: {}

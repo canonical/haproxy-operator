@@ -12,7 +12,7 @@ should have at least 4 CPU cores, 8 GB of RAM, and 50 GB of disk space.
 This guide requires the following software to be installed on your working station
 (either locally or in the Multipass VM):
 
-- Juju 3.3
+- Juju 3.6
 - LXD 5.21.4
 
 For this guide, Juju must be bootstrapped to a LXD controller. 
@@ -29,10 +29,10 @@ juju add-model haproxy-guide
 
 ## Deploy the HAProxy charm
 
-We will deploy charm from Charmhub using the `2.8/edge` channel:
+We will deploy charm from Charmhub using the `3.2/edge` channel:
 
 ```
-juju deploy haproxy --channel=2.8/edge
+juju deploy haproxy --channel=3.2/edge
 ```
 
 ## Configure TLS

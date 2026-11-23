@@ -1,17 +1,13 @@
 # --- Information about release ----
 
-version_schema: 2
+version_schema: 3
+workload_with_version::
 
-# name of workload and version in the release
-workload_with_version:
+# Rows of the requirements table, for example "3.6", "MicroK8s 1.36", "24.04".
+juju_version:
+kubernetes_version:
+ubuntu_version:
 
-# list of change artifacts included in the release
 included_changes:
-
-# earliest revision included in the release
 earliest_revision:
-
-# latest revision included in the release
 latest_revision:
-
-

@@ -34,7 +34,7 @@ Encrypting these requests would help to prevent any machine-in-the-middle attack
 ### Good practices
 
 Encryption can be achieved by giving a TLS certificate to the charm, configuring it to accept an HTTPS request over an unencrypted HTTP request.
-TLS certificate can be provided through the [`certificates` integration](https://charmhub.io/haproxy/integrations?channel=2.8/edge) to the HAProxy charm.
+TLS certificate can be provided through the [`certificates` integration](https://charmhub.io/haproxy/integrations?channel=3.2/edge) to the HAProxy charm.
 
 ### Summary
 
@@ -66,7 +66,7 @@ The charm offers several ways to protect against DoS attacks:
 
 ### Summary
 
-- Set a reasonable maximum concurrent connection using the [`global-maxconn` charm configuration](https://charmhub.io/haproxy/configurations?channel=2.8/edge#global-maxconn).
+- Set a reasonable maximum concurrent connection using the [`global-maxconn` charm configuration](https://charmhub.io/haproxy/configurations?channel=3.2/edge#global-maxconn).
 - For enhanced protection against DDoS attacks, deploy and integrate the HAProxy DDoS Protection Configurator charm with your HAProxy deployment.
 
 ## Client IP privacy and data protection compliance

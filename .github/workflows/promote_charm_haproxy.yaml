@@ -7,14 +7,14 @@ on:
         type: choice
         description: 'Origin Channel'
         options:
-        - 2.8/edge
-        - 2.8/candidate
+        - 3.2/edge
+        - 3.2/candidate
       destination-channel:
         type: choice
         description: 'Destination Channel'
         options:
-        - 2.8/candidate
-        - 2.8/stable
+        - 3.2/candidate
+        - 3.2/stable
     secrets:
       CHARMHUB_TOKEN:
         required: true
@@ -28,7 +28,7 @@ jobs:
       origin-channel: ${{ github.event.inputs.origin-channel }}
       destination-channel: ${{ github.event.inputs.destination-channel }}
       working-directory: ./haproxy-operator
-      base-channel: 24.04
+      base-channel: 26.04
       base-name: ubuntu
       base-architecture: amd64
       tag-prefix: haproxy

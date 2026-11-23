@@ -10,7 +10,10 @@ platforms:
 
 parts:
   charm:
-    source: .
+    # Charmcraft monorepo support: the repository root is the source so that
+    # the shared ./lib charm library is included when packing the charm.
+    source: ..
+    source-subdir: haproxy-ddos-protection-configurator
     plugin: uv
     build-snaps:
     - astral-uv
@@ -64,7 +67,7 @@ config:
     ip-allow-list:
       type: string
       description: |
-        Comma-separated list of IPv4 addresses or CIDR blocks to be allowed on both TCP and 
+        Comma-separated list of IP addresses or CIDR blocks to be allowed on both TCP and
         HTTP levels.
     http-request-timeout:
       type: int
@@ -78,10 +81,6 @@ config:
     deny-paths:
       type: string
       description: Comma-seperated list of paths to deny.
-
-charm-libs:
-- lib: haproxy.ddos_protection
-  version: "0"
 
 provides:
   ddos-protection:

@@ -10,10 +10,11 @@ myst:
 
 Terraform is an infrastructure as code tool to assist in deployment. The HAProxy charm provides a Terraform module for deployment. The auto-generated documentation is located at [`terraform/product/README.md`](https://github.com/canonical/haproxy-operator/blob/main/terraform/product/README.md) in the repository, and documents the module, resources, inputs, and outputs.
 
-The Terraform module supports deploying HAProxy charm as a single unit, or with `hacluster` for High Availability.
+The Terraform module supports deploying HAProxy charm as a single unit, or with `keepalived` for High Availability.
 
 There are additional options to provide more capabilities to the HAProxy charm:
 
+* The `opentelemetry_collector` option can be used to configure the OpenTelemetry Collector subordinate charm that forwards HAProxy telemetry to the Canonical Observability Stack.
 * The `haproxy_ddos_protection_configurator` option can be used to provide the DDOS protection configuration to the HAProxy charm.
 * The `haproxy_spoe_auth` option can be used to provide the SPOE authentication configuration to the HAProxy charm.
 * The `oauth_external_idp_integrator` option can be used to provide the external IDP integration configuration to the HAProxy charm.

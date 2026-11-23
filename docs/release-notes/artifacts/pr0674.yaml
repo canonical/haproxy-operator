@@ -1,0 +1,19 @@
+version_schema: 2
+
+changes:
+  - title: Support a configurable default backend for haproxy-route
+    author: Thanhphan1147
+    type: minor
+    description: >
+      Added a `default_backend` attribute to the `haproxy-route` interface so a
+      requirer application can designate its backend as the default landing page
+      for requests that do not match any configured hostname or backend. The
+      default backend renders no ACL and is used as the target of the
+      `default_backend` directive. If more than one backend requests the
+      attribute, all of them are rejected and the built-in default page is used.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/674
+      related_issue: https://github.com/canonical/haproxy-operator/issues/664
+    visibility: public
+    highlight: false

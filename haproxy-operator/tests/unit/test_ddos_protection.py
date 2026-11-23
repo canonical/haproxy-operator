@@ -3,7 +3,8 @@
 
 """Unit tests for DDoS protection rules implementation."""
 
-from unittest.mock import MagicMock
+import re
+from unittest.mock import ANY, MagicMock
 
 import ops.testing
 import pytest
@@ -11,6 +12,7 @@ import pytest
 from charm import HAProxyCharm
 
 from .conftest import build_haproxy_route_relation
+from .helper import RegexMatcher, rendered_file_content
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
@@ -34,7 +36,7 @@ def test_ddos_protection_enabled(monkeypatch: pytest.MonkeyPatch, certificates_i
         state,
     )
     assert render_file_mock.call_count == 1
-    config_content = render_file_mock.call_args.args[1]
+    config_content = rendered_file_content(render_file_mock)
 
     assert all(
         entry in config_content
@@ -74,7 +76,7 @@ def test_ddos_protection_disabled(monkeypatch: pytest.MonkeyPatch, certificates_
         state,
     )
     assert render_file_mock.call_count == 1
-    config_content = render_file_mock.call_args.args[1]
+    config_content = rendered_file_content(render_file_mock)
 
     assert not any(
         entry in config_content
@@ -90,3 +92,108 @@ def test_ddos_protection_disabled(monkeypatch: pytest.MonkeyPatch, certificates_
     )
 
     assert out.unit_status.name == ops.testing.ActiveStatus.name
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_ddos_protection_configuration_from_relation(
+    monkeypatch: pytest.MonkeyPatch, certificates_integration
+):
+    """
+    arrange: Prepare a haproxy with a ddos-protection relation carrying configuration.
+    act: trigger the ddos-protection relation changed event.
+    assert: haproxy.cfg includes the configured limits, policies and timeouts.
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    haproxy_route_relation = build_haproxy_route_relation()
+    ddos_relation = ops.testing.Relation(
+        "ddos-protection",
+        interface="ddos_protection",
+        remote_app_data={
+            "rate_limit_connections_per_minute": "500",
+            "limit_policy_tcp": '"reject"',
+            "ip_allow_list": '["192.168.1.1", "10.0.0.0/8"]',
+            "http_request_timeout": "30",
+            "http_keepalive_timeout": "5",
+            "client_timeout": "60",
+            "deny_paths": '["/admin", "/secret"]',
+        },
+    )
+
+    ctx = ops.testing.Context(HAProxyCharm)
+    state = ops.testing.State(
+        relations=[certificates_integration, haproxy_route_relation, ddos_relation],
+        leader=True,
+    )
+    out = ctx.run(
+        ctx.on.relation_changed(ddos_relation),
+        state,
+    )
+
+    for entry in [
+        "table ddos_protection_ip",
+        "tcp-request connection reject if { sc_conn_rate(0) gt 500 }",
+        "http-request allow if allowed_ips",
+        "timeout http-request 30s",
+        "timeout http-keep-alive 5s",
+        "timeout client 60s",
+        "http-request deny if denied_paths",
+    ]:
+        render_file_mock.assert_any_call(ANY, RegexMatcher(re.escape(entry)), ANY)
+
+    assert out.unit_status.name == ops.testing.ActiveStatus.name
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+@pytest.mark.parametrize(
+    "remote_app_data",
+    [
+        pytest.param(
+            {"rate_limit_requests_per_minute": "not-json"},
+            id="malformed-json",
+        ),
+        pytest.param(
+            {"rate_limit_requests_per_minute": '"not-a-number"'},
+            id="schema-invalid-type",
+        ),
+        pytest.param(
+            {
+                "rate_limit_requests_per_minute": "100",
+                "limit_policy_http": '"invalid-policy"',
+            },
+            id="schema-invalid-policy",
+        ),
+    ],
+)
+def test_ddos_protection_invalid_relation_data(
+    monkeypatch: pytest.MonkeyPatch,
+    certificates_integration,
+    remote_app_data: dict[str, str],
+):
+    """
+    arrange: Prepare a haproxy with a ddos-protection relation carrying invalid configuration.
+    act: trigger the ddos-protection relation changed event.
+    assert: haproxy.cfg is not rendered and the charm is blocked with the validation error.
+    """
+    render_file_mock = MagicMock()
+    monkeypatch.setattr("haproxy.render_file", render_file_mock)
+    haproxy_route_relation = build_haproxy_route_relation()
+    ddos_relation = ops.testing.Relation(
+        "ddos-protection",
+        interface="ddos_protection",
+        remote_app_data=remote_app_data,
+    )
+
+    ctx = ops.testing.Context(HAProxyCharm)
+    state = ops.testing.State(
+        relations=[certificates_integration, haproxy_route_relation, ddos_relation],
+        leader=True,
+    )
+    out = ctx.run(
+        ctx.on.relation_changed(ddos_relation),
+        state,
+    )
+
+    render_file_mock.assert_not_called()
+    assert out.unit_status.name == ops.testing.BlockedStatus.name
+    assert "Failed to load DDoS protection configuration" in out.unit_status.message

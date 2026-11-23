@@ -8,8 +8,9 @@ myst:
 
 # Release notes
 
-Release notes for the `2.8/stable` track of HAProxy, summarizing new features,
-bug fixes and backwards-incompatible changes in each revision.
+Release notes for the `3.2/stable` track of HAProxy, summarizing new features,
+bug fixes and backwards-incompatible changes in each revision. Release notes for
+the previous `2.8/stable` track are also listed below.
 
 <!--
 TODO: add upgrade documentation
@@ -29,7 +30,7 @@ For any given track, we'll implement three different risk levels `edge`, `candid
 
 In special cases where an urgent fix is needed on `stable` changes can be pushed directly to that risk level without going through the regular process.
 
-Release notes are published for the `haproxy` charm with every revision of the `2.8/stable` track.
+Release notes are published for the `haproxy` charm with every revision of the `3.2/stable` track.
 
 ## Releases
 

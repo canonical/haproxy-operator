@@ -10,15 +10,17 @@ import pwd
 # We silence this rule because subprocess call is only for validating the haproxy config
 # and no user input is parsed
 import subprocess  # nosec B404
+from collections.abc import Sequence
 from pathlib import Path
 from subprocess import CalledProcessError, run  # nosec
 
-from charms.operator_libs_linux.v0 import apt
+from charmlibs import apt
+from charms.haproxy.v0.ddos_protection import DDoSProtectionProviderAppData
 from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from pydantic import IPvAnyAddress, IPvAnyNetwork
 
 from state.charm_state import CharmState
-from state.ddos_protection import DDosProtection
 from state.haproxy_route import HaproxyRouteRequirersInformation
 from state.ingress import IngressRequirersInformation
 from state.ingress_per_unit import IngressPerUnitRequirersInformation
@@ -29,22 +31,6 @@ HAPROXY_CONFIG_DIR = Path("/etc/haproxy")
 HAPROXY_CONFIG = Path(HAPROXY_CONFIG_DIR / "haproxy.cfg")
 SPOE_AUTH_CONFIG = Path(HAPROXY_CONFIG_DIR / "spoe_auth.conf")
 HAPROXY_USER = "haproxy"
-# Configuration used to parameterize Diffie-Hellman key exchange.
-# The base64 content of the file is hard-coded here to avoid having to fetch
-# the file from https://ssl-config.mozilla.org/ffdhe2048.txt as suggested by Mozilla.
-# As the size is 2048, it's safe to use the standard FFDHE parameters.
-# They are more compatible, and there aren't concerns about their security.
-HAPROXY_DH_PARAM = (
-    "-----BEGIN DH PARAMETERS-----\n"
-    "MIIBCAKCAQEA//////////+t+FRYortKmq/cViAnPTzx2LnFg84tNpWp4TZBFGQz\n"
-    "+8yTnc4kmz75fS/jY2MMddj2gbICrsRhetPfHtXV/WVhJDP1H18GbtCFY2VVPe0a\n"
-    "87VXE15/V8k1mE8McODmi3fipona8+/och3xWKE2rec1MKzKT0g6eXq8CrGCsyT7\n"
-    "YdEIqUuyyOP7uWrat2DX9GgdT0Kj3jlN9K5W7edjcrsZCwenyO4KbXCeAvzhzffi\n"
-    "7MA0BM0oNC9hkXL+nOmFg/+OTxIy7vKBg8P+OxtMb61zO7X8vC7CIAXFjvGDfRaD\n"
-    "ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==\n"
-    "-----END DH PARAMETERS-----"
-)
-HAPROXY_DHCONFIG = Path(HAPROXY_CONFIG_DIR / "ffdhe2048.txt")
 HAPROXY_SERVICE = "haproxy"
 HAPROXY_LOGROTATE_CONFIG = Path("/etc/logrotate.d/haproxy")
 # The default daily timer needs overriding only to run hourly checks: rotation
@@ -53,7 +39,6 @@ HAPROXY_LOGROTATE_CONFIG = Path("/etc/logrotate.d/haproxy")
 LOGROTATE_TIMER_OVERRIDE = Path("/etc/systemd/system/logrotate.timer.d/override.conf")
 HAPROXY_INGRESS_CONFIG_TEMPLATE = "haproxy_ingress.cfg.j2"
 HAPROXY_INGRESS_PER_UNIT_CONFIG_TEMPLATE = "haproxy_ingress_per_unit.cfg.j2"
-HAPROXY_LEGACY_CONFIG_TEMPLATE = "haproxy_legacy.cfg.j2"
 HAPROXY_ROUTE_CONFIG_TEMPLATE = "haproxy_route.cfg.j2"
 SPOE_AUTH_CONFIG_TEMPLATE = "spoe_auth.conf.j2"
 
@@ -69,16 +54,8 @@ class HaproxyPackageVersionPinError(Exception):
     """Error when pinning the version of the haproxy package."""
 
 
-class HaproxyServiceNotActiveError(Exception):
-    """Exception raised when both the reverseproxy and ingress relation are established."""
-
-
 class HaproxyServiceReloadError(Exception):
     """Error when reloading the haproxy service."""
-
-
-class HaproxyInvalidRelationError(Exception):
-    """Exception raised when both the reverseproxy and ingress relation are established."""
 
 
 class HaproxyValidateConfigError(Exception):
@@ -94,7 +71,6 @@ class HAProxyService:
         apt.add_package(package_names=APT_PACKAGE_NAME, update_cache=True)
         HAPROXY_CERTS_DIR.mkdir(parents=True, exist_ok=True)
         pin_haproxy_package_version()
-        render_file(HAPROXY_DHCONFIG, HAPROXY_DH_PARAM, 0o644)
         render_file(
             HAPROXY_LOGROTATE_CONFIG,
             self._render_to_string("haproxy.logrotate.j2", {}),
@@ -119,22 +95,6 @@ class HAProxyService:
         """
         return systemd.service_running(APT_PACKAGE_NAME)
 
-    def reconcile_legacy(self, charm_state: CharmState, services: list) -> None:
-        """Render the haproxy config for legacy proxying and reload the service.
-
-        Args:
-            charm_state: The charm state component.
-            services: List of configuration stanzas for the defined services.
-        """
-        template_context = {
-            "config_global_max_connection": charm_state.global_max_connection,
-            "services": services,
-            **self._build_log_template_context(charm_state),
-        }
-        self._render_haproxy_config(HAPROXY_LEGACY_CONFIG_TEMPLATE, template_context)
-        self._validate_haproxy_config()
-        self._reload_haproxy_service()
-
     def reconcile_ingress(
         self,
         charm_state: CharmState,
@@ -142,7 +102,7 @@ class HAProxyService:
             IngressRequirersInformation | IngressPerUnitRequirersInformation
         ),
         external_hostname: str,
-        ddos_protection_config: DDosProtection,
+        ddos_protection_config: DDoSProtectionProviderAppData,
     ) -> None:
         """Render the haproxy config for ingress proxying and reload the service.
 
@@ -183,7 +143,7 @@ class HAProxyService:
         charm_state: CharmState,
         haproxy_route_requirers_information: HaproxyRouteRequirersInformation,
         spoe_oauth_info_list: list[SpoeAuthInformation],
-        ddos_protection_config: DDosProtection,
+        ddos_protection_config: DDoSProtectionProviderAppData,
     ) -> None:
         """Render the haproxy config for haproxy-route.
 
@@ -197,16 +157,18 @@ class HAProxyService:
         store_config_to_file(ddos_protection_config.deny_paths, DENY_PATHS_FILE)
 
         valid_backends = haproxy_route_requirers_information.valid_backends()
+        http_backends = [
+            backend
+            for backend in valid_backends
+            if not backend.application_data.external_grpc_port
+            and not backend.application_data.default_backend
+        ]
         template_context = {
             "config_global_max_connection": charm_state.global_max_connection,
             "enable_hsts": charm_state.enable_hsts,
             "ddos_protection": charm_state.ddos_protection,
             "ddos_protection_config": ddos_protection_config,
-            "http_backends": [
-                backend
-                for backend in valid_backends
-                if not backend.application_data.external_grpc_port
-            ],
+            "http_backends": http_backends,
             "tcp_frontends": haproxy_route_requirers_information.valid_tcp_frontends(),
             "grpc_backends": [
                 backend
@@ -221,6 +183,7 @@ class HAProxyService:
             "ip_allow_list_file": IP_ALLOW_LIST_FILE,
             "deny_paths_file": DENY_PATHS_FILE,
             "policy_provider_backend": haproxy_route_requirers_information.policy_provider_backend,
+            "default_backend": haproxy_route_requirers_information.default_backend,
             **self._build_log_template_context(charm_state),
         }
         self._render_haproxy_config(HAPROXY_ROUTE_CONFIG_TEMPLATE, template_context)
@@ -344,8 +307,8 @@ class HAProxyService:
         """Reload the haproxy service.
 
         Raises:
-            HaproxyServiceReloadError: When the haproxy service fails to reload.
-            HaproxyServiceNotActiveError: When the haproxy service is not active after reload.
+            HaproxyServiceReloadError: When the haproxy service fails to reload or is not
+                active after reload.
         """
         try:
             systemd.service_reload(HAPROXY_SERVICE)
@@ -353,7 +316,7 @@ class HAProxyService:
             raise HaproxyServiceReloadError("Failed reloading the haproxy service.") from exc
 
         if not self.is_active():
-            raise HaproxyServiceNotActiveError("HAProxy service is not running.")
+            raise HaproxyServiceReloadError("HAProxy service is not running after reload.")
 
     def _validate_haproxy_config(self) -> None:
         """Validate the generated HAProxy config.
@@ -425,7 +388,11 @@ def file_exists(path: Path) -> bool:
     return path.exists()
 
 
-def store_config_to_file(data: list[str] | None, file_path: Path) -> Path | None:
+# DDoS protection config values may come from the shared pydantic model, which
+# exposes IP addresses and networks as objects, or as plain strings from callers.
+def store_config_to_file(
+    data: Sequence[str | IPvAnyAddress | IPvAnyNetwork] | None, file_path: Path
+) -> Path | None:
     """Store configuration data to a file.
 
     Args:

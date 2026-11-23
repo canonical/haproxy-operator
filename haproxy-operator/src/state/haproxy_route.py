@@ -681,6 +681,26 @@ class HaproxyRouteRequirersInformation:
             if backend.relation_id not in self.relation_ids_with_invalid_data
         ]
 
+    @property
+    def default_backend(self) -> Optional[HAProxyRouteBackend]:
+        """Get the backend requested as the default landing page, if any.
+
+        The library guarantees that at most one valid backend requests to be the
+        default backend (backends that request it contradictorily are marked invalid).
+        The library also rejects gRPC backends requesting to be the default backend.
+
+        Returns:
+            Optional[HAProxyRouteBackend]: The default backend, or None if not requested.
+        """
+        return next(
+            (
+                backend
+                for backend in self.valid_backends()
+                if backend.application_data.default_backend
+            ),
+            None,
+        )
+
     def valid_tcp_frontends(self) -> list[HAProxyRouteTcpFrontend]:
         """Get the list of valid TCP endpoints (not in the invalid list).
 

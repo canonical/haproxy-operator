@@ -31,7 +31,7 @@ juju add-model haproxy-route-guide
 Deploy the `haproxy` charm with TLS and an `ingress-configurator` as the backend requirer:
 
 ```sh
-juju deploy haproxy --channel=2.8/edge
+juju deploy haproxy --channel=3.2/edge
 juju deploy self-signed-certificates cert
 juju integrate haproxy:certificates cert
 juju deploy ingress-configurator requirer --channel=latest/edge

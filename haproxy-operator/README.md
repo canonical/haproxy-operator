@@ -1,4 +1,4 @@
-This is the repository for the new HAProxy charm supporting HAProxy v2.8 and published in the [2.8/edge](https://charmhub.io/haproxy?channel=2.8/edge) channel. For the legacy charm in the [latest/edge](https://charmhub.io/haproxy?channel=latest/edge) channel please refer to the [legacy/main](https://github.com/canonical/haproxy-operator/tree/legacy/main) branch.
+This is the repository for the new HAProxy charm supporting HAProxy v3.2 and published in the [3.2/edge](https://charmhub.io/haproxy?channel=3.2/edge) channel. For the legacy charm in the [latest/edge](https://charmhub.io/haproxy?channel=latest/edge) channel please refer to the [legacy/main](https://github.com/canonical/haproxy-operator/tree/legacy/main) branch.
 
 # Overview
 
@@ -8,7 +8,7 @@ A Juju charm that deploys and manages HAProxy on machine. HAProxy is a TCP/HTTP 
 
 Deploy the HAProxy charm and integrate it with a certificate provider charm
 ```
-juju deploy haproxy --channel=2.8/edge
+juju deploy haproxy --channel=3.2/edge
 juju config haproxy external-hostname="fqdn.example"
 
 juju deploy self-signed-certificates

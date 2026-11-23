@@ -129,6 +129,8 @@ commands = [
     "--ignore={[vars]tst_path}unit",
     "--log-cli-level=INFO",
     "-s",
+    # Don't promote warnings for integration tests
+    "--override-ini=filterwarnings=",
     { replace = "posargs", extend = "true" },
   ],
 ]

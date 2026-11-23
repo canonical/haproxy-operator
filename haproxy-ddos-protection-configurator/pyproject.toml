@@ -14,8 +14,9 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-  "ops==3.9.0",
-  "pydantic==2.14.1",
+  "haproxy-libs",
+  "ops==3.10.0",
+  "pydantic==2.14.4",
 ]
 
 [dependency-groups]
@@ -23,7 +24,7 @@ fmt = [ "ruff" ]
 lint = [
   "codespell",
   "jinja2==3.1.6",
-  "jubilant==1.14.0",
+  "jubilant==1.15.0",
   "mypy",
   "ops[testing]",
   "pep8-naming",
@@ -43,10 +44,10 @@ integration = [
   "allure-pytest-collection-report @ git+https://github.com/canonical/data-platform-workflows@v24.0.0#subdirectory=python/pytest_plugins/allure_pytest_collection_report",
   "httpx[http2]==0.28.1",
   "jinja2==3.1.6",
-  "jubilant==1.14.0",
+  "jubilant==1.15.0",
   "juju==3.6.1.3",
   "opcli",
-  "protobuf==6.33.6",
+  "protobuf==7.36.2",
   "pytest",
   "pytest-jubilant>=2,<3",
   "websockets<18",
@@ -56,8 +57,9 @@ integration = [
 package = false
 
 [tool.uv.sources]
+haproxy-libs = { workspace = true }
 # opcli is published only from the charm-ci git repository, not PyPI.
-opcli = { git = "https://github.com/canonical/charm-ci.git", tag = "v1.0.1" }
+opcli = { git = "https://github.com/canonical/charm-ci.git", tag = "v1.0.2" }
 
 [tool.ruff]
 target-version = "py310"
@@ -102,6 +104,10 @@ skip = "build,lib,venv,icon.svg,.tox,.git,.mypy_cache,.ruff_cache,.coverage,html
 [tool.pytest.ini_options]
 minversion = "6.0"
 log_cli_level = "INFO"
+# promote warnings to test failures
+filterwarnings = [
+  "error",
+]
 
 [tool.coverage.run]
 branch = true

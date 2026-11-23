@@ -9,17 +9,13 @@ from datetime import timedelta
 from ipaddress import IPv4Address
 from unittest.mock import MagicMock, Mock, patch
 
+import ops.testing
 import pytest
-import scenario
 from charmlibs.interfaces.tls_certificates import (
     Certificate,
     CertificateRequestAttributes,
     CertificateSigningRequest,
     PrivateKey,
-    generate_ca,
-    generate_certificate,
-    generate_csr,
-    generate_private_key,
 )
 from charms.haproxy.v0.spoe_auth import SpoeAuthProviderAppData, SpoeAuthProviderUnitData
 from charms.haproxy.v1.haproxy_route_tcp import (
@@ -80,8 +76,12 @@ def mocks_tls_ca_write_fixture(monkeypatch: pytest.MonkeyPatch):
 @pytest.fixture(scope="function", name="ca_certificate_and_key")
 def ca_certificate_and_key_fixture() -> typing.Tuple[Certificate, PrivateKey]:
     """Ca Certificate and private key."""
-    private_key_ca = generate_private_key()
-    ca = generate_ca(generate_private_key(), timedelta(days=10), "caname")
+    private_key_ca = PrivateKey.generate()
+    ca = Certificate.generate_self_signed_ca(
+        CertificateRequestAttributes(common_name="caname", is_ca=True),
+        private_key_ca,
+        timedelta(days=10),
+    )
     return ca, private_key_ca
 
 
@@ -91,9 +91,12 @@ def csr_certificate_and_key_fixture(
 ) -> typing.Tuple[CertificateSigningRequest, Certificate, PrivateKey]:
     """Ca Certificate and private key."""
     ca, private_key_ca = ca_certificate_and_key
-    private_key = generate_private_key()
-    csr = generate_csr(private_key, TEST_EXTERNAL_HOSTNAME_CONFIG)
-    certificate = generate_certificate(csr, ca, private_key_ca, timedelta(days=5))
+    private_key = PrivateKey.generate()
+    csr_attributes = CertificateRequestAttributes(common_name=TEST_EXTERNAL_HOSTNAME_CONFIG)
+    csr = csr_attributes.generate_csr(private_key)
+    certificate = Certificate.generate(
+        csr=csr, ca=ca, ca_private_key=private_key_ca, validity=timedelta(days=5)
+    )
     return csr, certificate, private_key
 
 
@@ -231,7 +234,7 @@ def peer_relation_fixture():
 
     Yield: The modeled haproxy-peers relation.
     """
-    return scenario.PeerRelation(
+    return ops.testing.PeerRelation(
         endpoint="haproxy-peers",
         peers_data={},
     )
@@ -243,7 +246,7 @@ def ingress_per_unit_integration_fixture(ingress_per_unit_requirer_data):
 
     Returns: The modeled ingress integration.
     """
-    return scenario.Relation(
+    return ops.testing.Relation(
         endpoint="ingress-per-unit",
         remote_app_name="requirer",
         remote_units_data={0: ingress_per_unit_requirer_data},
@@ -256,7 +259,7 @@ def ingress_integration_fixture(ingress_requirer_application_data, ingress_requi
 
     Returns: The modeled ingress integration.
     """
-    return scenario.Relation(
+    return ops.testing.Relation(
         endpoint="ingress",
         remote_app_name="requirer",
         remote_app_data=ingress_requirer_application_data,
@@ -271,7 +274,7 @@ def certificates_integration_fixture(certificates_relation_data, csr_certificate
     Returns: The modeled ingress integration.
     """
     csr, _, _ = csr_certificate_and_key
-    return scenario.Relation(
+    return ops.testing.Relation(
         endpoint="certificates",
         remote_app_data=certificates_relation_data,
         local_unit_data={
@@ -297,7 +300,7 @@ def receive_ca_certs_relation_fixture(ca_certificate_and_key):
     Returns: The modeled relation.
     """
     ca_certificate, _ = ca_certificate_and_key
-    return scenario.Relation(
+    return ops.testing.Relation(
         endpoint="receive-ca-certs",
         interface="certificate_transfer",
         remote_app_name="self-signed-certificates",
@@ -386,7 +389,7 @@ def base_state_haproxy_route_fixture(
 def build_haproxy_route_relation(
     service="ingress-configurator", hostname=TEST_EXTERNAL_HOSTNAME_CONFIG
 ):
-    return scenario.Relation(
+    return ops.testing.Relation(
         endpoint="haproxy-route",
         interface="haproxy-route",
         local_app_data={"endpoints": f'["https://{hostname}/"]'},
@@ -404,7 +407,7 @@ def build_haproxy_route_relation(
 
 
 def build_spoe_auth_relation(hostname=TEST_EXTERNAL_HOSTNAME_CONFIG):
-    return scenario.Relation(
+    return ops.testing.Relation(
         endpoint="spoe-auth",
         interface="spoe-auth",
         remote_app_name="haproxy-spoe-auth",
@@ -491,8 +494,9 @@ def build_haproxy_route_tcp_relation(
     enforce_tls: bool = True,
     tls_terminate: bool = False,
     remote_app_name: str = "tcp-requirer",
-) -> scenario.Relation:
-    """Build a scenario Relation for haproxy-route-tcp.
+    **application_data: typing.Any,
+) -> ops.testing.Relation:
+    """Build an ops.testing Relation for haproxy-route-tcp.
 
     Args:
         port: Frontend port.
@@ -502,11 +506,12 @@ def build_haproxy_route_tcp_relation(
         enforce_tls: Whether to enforce TLS.
         tls_terminate: Whether to terminate TLS.
         remote_app_name: Remote application name.
+        application_data: Additional fields to add to the requirer application data.
 
     Returns:
-        A scenario Relation for haproxy-route-tcp.
+        An ops.testing Relation for haproxy-route-tcp.
     """
-    app_data: dict[str, str | int | bool | None] = {
+    app_data: dict[str, typing.Any] = {
         "enforce_tls": enforce_tls,
         "tls_terminate": tls_terminate,
     }
@@ -519,8 +524,9 @@ def build_haproxy_route_tcp_relation(
             app_data["backend_port"] = backend_port
     if sni is not None:
         app_data["sni"] = sni
+    app_data.update(application_data)
 
-    return scenario.Relation(
+    return ops.testing.Relation(
         endpoint="haproxy-route-tcp",
         interface="haproxy-route-tcp",
         remote_app_name=remote_app_name,
@@ -608,7 +614,7 @@ def haproxy_route_relation_data_fixture() -> typing.Callable[..., HaproxyRouteRe
 @pytest.fixture(name="dns_record_relation")
 def dns_record_relation_fixture():
     """DNS record relation fixture."""
-    return scenario.Relation(endpoint="dns-record", remote_app_name="bind-operator")
+    return ops.testing.Relation(endpoint="dns-record", remote_app_name="bind-operator")
 
 
 @pytest.fixture(name="context_with_dns_mock")

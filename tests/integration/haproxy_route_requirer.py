@@ -13,9 +13,9 @@ sys.path.insert(0, sys.path[-1])
 
 import pathlib
 
-import apt  # type: ignore[import-not-found]
 import ops
 from any_charm_base import AnyCharmBase  # type: ignore[import-not-found]
+from charmlibs import apt  # type: ignore[import-not-found]
 from haproxy_route import HaproxyRouteRequirer  # type: ignore[import-not-found]
 
 HAPROXY_ROUTE_RELATION = "require-haproxy-route"
