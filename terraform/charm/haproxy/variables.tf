@@ -52,7 +52,7 @@ variable "revision" {
 }
 
 variable "units" {
-  description = "Number of haproxy units."
+  description = "Number of haproxy units. Ignored when machines is set."
   type        = number
   default     = 1
 }
