@@ -39,7 +39,7 @@ Production deployments require defense against malicious traffic, identity verif
 
 Clustered deployments ensure uninterrupted traffic handling during unit failures or maintenance. A shared virtual IP coordinates traffic distribution and automatic recovery across units.
 
-* {ref}`Configure high availability <how_to_configure_high_availability>`: Deploy the `keepalived` subordinate charm to establish a shared virtual IP across multiple HAProxy units.
+* {ref}`Configure high availability <how_to_configure_high_availability>`: Scale the charm across multiple units in preparation for active-passive high availability.
 
 ## Operations and maintenance
 
