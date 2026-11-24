@@ -5,18 +5,20 @@ variable "app_name" {
   description = "Application name of the deployed haproxy charm."
   type        = string
   default     = "haproxy"
+  nullable    = false
 }
 
 variable "base" {
   description = "Base of the haproxy charm."
   type        = string
-  default     = "ubuntu@26.04"
+  default     = null
 }
 
 variable "channel" {
   description = "Channel of the haproxy charm."
   type        = string
   default     = "3.2/edge"
+  nullable    = false
 }
 
 variable "config" {
@@ -28,12 +30,19 @@ variable "config" {
 variable "constraints" {
   description = "Haproxy constraints."
   type        = string
-  default     = "arch=amd64"
+  default     = null
+}
+
+variable "machines" {
+  description = "Machines to deploy haproxy units to. Takes precedence over units when set."
+  type        = set(string)
+  default     = []
 }
 
 variable "model_uuid" {
   description = "ID of the Juju model to deploy to."
   type        = string
+  nullable    = false
 }
 
 variable "revision" {
@@ -43,19 +52,8 @@ variable "revision" {
 }
 
 variable "units" {
-  description = "Number of haproxy units."
+  description = "Number of haproxy units. Ignored when machines is set."
   type        = number
-  default     = null
-}
-
-variable "machines" {
-  description = "Machines to deploy haproxy units to. Mutually exclusive with units."
-  type        = set(string)
-  default     = null
-
-  validation {
-    condition     = var.machines == null || var.units == null
-    error_message = "machines and units cannot both be set."
-  }
+  default     = 1
 }
 
