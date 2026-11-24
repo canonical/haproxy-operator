@@ -27,7 +27,7 @@ JUJU_WAIT_TIMEOUT = 10 * 60  # 10 minutes
 SELF_SIGNED_CERTIFICATES_APP_NAME = "self-signed-certificates"
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/haproxy_route_requirer.py"
-HAPROXY_ROUTE_LIB_SRC = "haproxy-operator/lib/charms/haproxy/v2/haproxy_route.py"
+HAPROXY_ROUTE_LIB_SRC = "haproxy-operator/lib/charms/haproxy/v3/haproxy_route.py"
 HAPROXY_ROUTE_POLICY_APP_NAME = "policy"
 POSTGRESQL_APPLICATION = "db"
 

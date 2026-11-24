@@ -23,7 +23,7 @@ from charms.haproxy.v1.haproxy_route_tcp import (
     TcpRequirerApplicationData,
     TcpRequirerUnitData,
 )
-from charms.haproxy.v2.haproxy_route import (
+from charms.haproxy.v3.haproxy_route import (
     HaproxyRouteRequirerData,
     RequirerApplicationData,
     RequirerUnitData,

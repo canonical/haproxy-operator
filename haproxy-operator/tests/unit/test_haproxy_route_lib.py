@@ -12,7 +12,7 @@ from unittest.mock import MagicMock
 import ops.testing
 import pytest
 from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpRequirersData
-from charms.haproxy.v2.haproxy_route import (
+from charms.haproxy.v3.haproxy_route import (
     DataValidationError,
     HaproxyRewriteMethod,
     HaproxyRouteProvider,
@@ -22,10 +22,12 @@ from charms.haproxy.v2.haproxy_route import (
     HaproxyRouteRequirersData,
     LoadBalancingAlgorithm,
     LoadBalancingConfiguration,
+    RateLimitPolicy,
     RequirerApplicationData,
     RequirerUnitData,
     RewriteConfiguration,
     ServerHealthCheck,
+    TimeoutConfiguration,
 )
 from ops import CharmBase
 from pydantic import ValidationError
@@ -752,6 +754,191 @@ def test_requirer_saves_application_data_with_enum_and_ip():
     assert json.loads(databag["service"]) == "test-service"
     assert json.loads(databag["hosts"]) == ["10.0.0.1"]
     assert json.loads(databag["load_balancing"])["algorithm"] == "cookie"
+
+
+def test_requirer_application_data_encoder_handles_non_json_serializable_defaults():
+    """
+    arrange: Create a requirer with only the required application data.
+    act: Publish the requirer data to a real relation.
+    assert: Default values that are not natively JSON serializable are encoded and loaded.
+    """
+    relation = _route_relation()
+    ctx = ops.testing.Context(_RequirerCharm, meta=_META)
+    state = ops.testing.State(relations=[relation], leader=True)
+
+    with ctx(ctx.on.relation_changed(relation, remote_unit=0), state) as manager:
+        manager.charm.requirer.provide_haproxy_route_requirements(
+            service="test-service",
+            ports=[8080],
+        )
+        manager.run()
+        databag = dict(manager.charm.requirer.relation.data[manager.charm.app])
+
+    assert json.loads(databag["load_balancing"]) == {
+        "algorithm": "leastconn",
+        "cookie": None,
+        "consistent_hashing": False,
+    }
+    assert json.loads(databag["timeout"]) == {"server": 60, "connect": 60, "queue": 60}
+
+    data = _run_provider(_route_relation(app_data=databag))
+    application_data = data.requirers_data[0].application_data
+
+    assert application_data.load_balancing.algorithm == LoadBalancingAlgorithm.LEASTCONN
+    assert application_data.load_balancing.cookie is None  # pylint: disable=no-member
+    assert application_data.timeout == TimeoutConfiguration()
+
+
+def test_requirer_application_data_round_trip_with_all_fields():
+    """
+    arrange: Create a requirer with check, rewrites, limits and timeout configuration.
+    act: Publish the requirer data to a real relation and load it through the provider.
+    assert: Every representative field is serialized and deserialized correctly.
+    """
+    relation = _route_relation()
+    ctx = ops.testing.Context(_RequirerCharm, meta=_META)
+    state = ops.testing.State(relations=[relation], leader=True)
+
+    with ctx(ctx.on.relation_changed(relation, remote_unit=0), state) as manager:
+        manager.charm.requirer.provide_haproxy_route_requirements(
+            service="test-service",
+            ports=[8080, 8443],
+            protocol="https",
+            hosts=["10.0.0.1", "10.0.0.2"],
+            paths=["/api"],
+            hostname="api.haproxy.internal",
+            additional_hostnames=["alt.haproxy.internal"],
+            check_interval=15,
+            check_rise=3,
+            check_fall=2,
+            check_path="/healthz",
+            check_port=8080,
+            path_rewrite_expressions=["/old-path"],
+            query_rewrite_expressions=["old=query"],
+            header_rewrite_expressions=[("X-Forwarded-Proto", "https")],
+            load_balancing_algorithm=LoadBalancingAlgorithm.COOKIE,
+            load_balancing_cookie="JSESSIONID",
+            load_balancing_consistent_hashing=True,
+            rate_limit_connections_per_minute=120,
+            rate_limit_policy=RateLimitPolicy.REJECT,
+            upload_limit=1024,
+            download_limit=2048,
+            retry_count=3,
+            retry_redispatch=True,
+            deny_paths=["/private"],
+            server_timeout=45,
+            connect_timeout=15,
+            queue_timeout=5,
+            server_maxconn=250,
+            unit_address=MOCK_ADDRESS,
+            http_server_close=True,
+            allow_http=True,
+        )
+        manager.run()
+        requirer_relation = manager.charm.requirer.relation
+        databag = dict(requirer_relation.data[manager.charm.app])
+        unit_databag = dict(requirer_relation.data[manager.charm.unit])
+
+    assert json.loads(databag["hosts"]) == ["10.0.0.1", "10.0.0.2"]
+    assert json.loads(databag["check"]) == {
+        "interval": 15,
+        "rise": 3,
+        "fall": 2,
+        "path": "/healthz",
+        "port": 8080,
+    }
+    assert json.loads(databag["rewrites"]) == [
+        {"method": "set-path", "expression": "/old-path", "header": None},
+        {"method": "set-query", "expression": "old=query", "header": None},
+        {"method": "set-header", "expression": "https", "header": "X-Forwarded-Proto"},
+    ]
+    assert json.loads(databag["rate_limit"]) == {
+        "connections_per_minute": 120,
+        "policy": "reject",
+    }
+    assert json.loads(databag["bandwidth_limit"]) == {"upload": 1024, "download": 2048}
+    assert json.loads(databag["timeout"]) == {"server": 45, "connect": 15, "queue": 5}
+    assert json.loads(databag["load_balancing"]) == {
+        "algorithm": "cookie",
+        "cookie": "JSESSIONID",
+        "consistent_hashing": True,
+    }
+    assert json.loads(unit_databag["address"]) == MOCK_ADDRESS
+
+    data = _run_provider(_route_relation(app_data=databag, units_data={0: unit_databag}))
+
+    assert data.relation_ids_with_invalid_data == set()
+    application_data = data.requirers_data[0].application_data
+    assert application_data.service == "test-service"
+    assert application_data.ports == [8080, 8443]
+    assert application_data.protocol == "https"
+    assert application_data.hosts == [IPv4Address("10.0.0.1"), IPv4Address("10.0.0.2")]
+    assert application_data.paths == ["/api"]
+    assert application_data.hostname == "api.haproxy.internal"
+    assert application_data.additional_hostnames == ["alt.haproxy.internal"]
+    assert application_data.check == ServerHealthCheck(
+        interval=15, rise=3, fall=2, path="/healthz", port=8080
+    )
+    assert application_data.rewrites == [
+        RewriteConfiguration(method=HaproxyRewriteMethod.SET_PATH, expression="/old-path"),
+        RewriteConfiguration(method=HaproxyRewriteMethod.SET_QUERY, expression="old=query"),
+        RewriteConfiguration(
+            method=HaproxyRewriteMethod.SET_HEADER,
+            expression="https",
+            header="X-Forwarded-Proto",
+        ),
+    ]
+    assert application_data.load_balancing == LoadBalancingConfiguration(
+        algorithm=LoadBalancingAlgorithm.COOKIE,
+        cookie="JSESSIONID",
+        consistent_hashing=True,
+    )
+    assert application_data.rate_limit.connections_per_minute == 120  # pylint: disable=no-member
+    assert application_data.rate_limit.policy == RateLimitPolicy.REJECT  # pylint: disable=no-member
+    assert application_data.bandwidth_limit.upload == 1024  # pylint: disable=no-member
+    assert application_data.bandwidth_limit.download == 2048  # pylint: disable=no-member
+    assert application_data.retry.count == 3  # pylint: disable=no-member
+    assert application_data.retry.redispatch is True  # pylint: disable=no-member
+    assert application_data.deny_paths == ["/private"]
+    assert application_data.timeout == TimeoutConfiguration(server=45, connect=15, queue=5)
+    assert application_data.server_maxconn == 250
+    assert application_data.http_server_close is True
+    assert application_data.allow_http is True
+    assert str(data.requirers_data[0].units_data[0].address) == MOCK_ADDRESS
+
+
+def test_provider_publishes_proxied_endpoints_round_trip():
+    """
+    arrange: Create a provider with a real relation.
+    act: Publish proxied endpoints and load them back from the relation.
+    assert: The provider URL data is serialized and deserialized correctly.
+    """
+    relation = _route_relation()
+    ctx = ops.testing.Context(_ProviderCharm, meta=_META)
+    state = ops.testing.State(relations=[relation], leader=True)
+
+    with ctx(ctx.on.relation_changed(relation, remote_unit=0), state) as manager:
+        manager.run()
+        provider = manager.charm.provider
+        live_relation = provider.relations[0]
+        provider.publish_proxied_endpoints(
+            [
+                "https://backend.haproxy.internal/path",
+                "https://other.haproxy.internal/other",
+            ],
+            live_relation,
+        )
+        databag = dict(live_relation.data[manager.charm.app])
+        loaded = live_relation.load(HaproxyRouteProviderAppData, manager.charm.app)
+
+    assert json.loads(databag["endpoints"]) == [
+        "https://backend.haproxy.internal/path",
+        "https://other.haproxy.internal/other",
+    ]
+    assert [str(endpoint) for endpoint in loaded.endpoints] == [
+        "https://backend.haproxy.internal/path",
+        "https://other.haproxy.internal/other",
+    ]
 
 
 @pytest.mark.parametrize("default_backend", [False, True])

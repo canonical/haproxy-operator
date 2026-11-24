@@ -7,7 +7,7 @@ import json
 from unittest.mock import MagicMock
 
 import pytest
-from charms.haproxy.v2.haproxy_route import RequirerApplicationData
+from charms.haproxy.v3.haproxy_route import RequirerApplicationData
 from ops.testing import ActiveStatus, Context, Model, Relation, State
 
 from charm import HAProxyCharm
