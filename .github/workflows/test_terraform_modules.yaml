@@ -7,11 +7,12 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - 'terraform/**'
+      - '**/terraform/**'
+      - '.github/workflows/test_terraform_modules.yaml'
 
 jobs:
   terraform-tests:
-    uses: canonical/operator-workflows/.github/workflows/terraform_modules_test.yaml@main
+    uses: canonical/operator-workflows/.github/workflows/terraform_modules_test.yaml@030c5b20a0bb880dcf1ed326bff0fc16b6eb6ac1  # main
     secrets: inherit
     with:
       lxd-controller: true
