@@ -27,14 +27,14 @@ No modules.
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_app_name"></a> [app\_name](#input\_app\_name) | Application name of the deployed haproxy charm. | `string` | `"haproxy"` | no |
-| <a name="input_base"></a> [base](#input\_base) | Base of the haproxy charm. | `string` | `"ubuntu@26.04"` | no |
+| <a name="input_base"></a> [base](#input\_base) | Base of the haproxy charm. | `string` | `null` | no |
 | <a name="input_channel"></a> [channel](#input\_channel) | Channel of the haproxy charm. | `string` | `"3.2/edge"` | no |
 | <a name="input_config"></a> [config](#input\_config) | Haproxy charm config. | `map(string)` | `{}` | no |
 | <a name="input_constraints"></a> [constraints](#input\_constraints) | Haproxy constraints. | `string` | `"arch=amd64"` | no |
-| <a name="input_machines"></a> [machines](#input\_machines) | Machines to deploy haproxy units to. Mutually exclusive with units. | `set(string)` | `null` | no |
+| <a name="input_machines"></a> [machines](#input\_machines) | Machines to deploy haproxy units to. Takes precedence over units when set. | `set(string)` | `[]` | no |
 | <a name="input_model_uuid"></a> [model\_uuid](#input\_model\_uuid) | ID of the Juju model to deploy to. | `string` | n/a | yes |
 | <a name="input_revision"></a> [revision](#input\_revision) | Revision of the haproxy charm. | `number` | `null` | no |
-| <a name="input_units"></a> [units](#input\_units) | Number of haproxy units. | `number` | `null` | no |
+| <a name="input_units"></a> [units](#input\_units) | Number of haproxy units. Ignored when machines is set. | `number` | `1` | no |
 
 ## Outputs
 

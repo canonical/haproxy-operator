@@ -5,18 +5,20 @@ variable "app_name" {
   description = "Application name of the deployed haproxy-spoe-auth charm."
   type        = string
   default     = "haproxy-spoe-auth"
+  nullable    = false
 }
 
 variable "base" {
   description = "Base of the haproxy-spoe-auth charm."
   type        = string
-  default     = "ubuntu@24.04"
+  default     = null
 }
 
 variable "channel" {
   description = "Channel of the haproxy-spoe-auth charm."
   type        = string
   default     = "latest/edge"
+  nullable    = false
 }
 
 variable "config" {
@@ -28,12 +30,13 @@ variable "config" {
 variable "constraints" {
   description = "haproxy-spoe-auth constraints."
   type        = string
-  default     = "arch=amd64"
+  default     = null
 }
 
 variable "model_uuid" {
   description = "ID of the Juju model to deploy to."
   type        = string
+  nullable    = false
 }
 
 variable "revision" {
