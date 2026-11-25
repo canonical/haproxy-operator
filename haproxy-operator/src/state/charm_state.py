@@ -80,7 +80,7 @@ class CharmState:
     global_max_connection: int = Field(gt=0, alias="global_max_connection")
     ddos_protection: bool = True
     client_ip_hash_salt: str | None = Field(default=None, repr=False)
-    vip: IPvAnyInterface | None = None
+    vip: IPvAnyInterface | None = Field(default=None)
 
     @property
     def hash_client_ip_in_logs(self) -> bool:
@@ -270,8 +270,12 @@ class CharmState:
         enable_hsts = typing.cast(bool, charm.config.get("enable-hsts"))
         ddos_protection = typing.cast(bool, charm.config.get("ddos-protection"))
         client_ip_hash_salt = cls._get_client_ip_hash_salt(charm)
-        vip = typing.cast(str | None, charm.config.get("vip"))
-        vip = vip if isinstance(vip, str) and vip else None
+        vip_config = typing.cast(str | None, charm.config.get("vip"))
+        vip = (
+            typing.cast(IPvAnyInterface, vip_config)
+            if isinstance(vip_config, str) and vip_config
+            else None
+        )
 
         try:
             return cls(
@@ -286,7 +290,7 @@ class CharmState:
                 enable_hsts=enable_hsts,
                 ddos_protection=ddos_protection,
                 client_ip_hash_salt=client_ip_hash_salt,
-                vip=vip if vip else None,  # type: ignore[arg-type]
+                vip=vip,
             )
         except ValidationError as exc:
             error_field_str = ",".join(f"{field}" for field in get_invalid_config_fields(exc))
