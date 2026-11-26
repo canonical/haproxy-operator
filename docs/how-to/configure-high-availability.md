@@ -17,6 +17,7 @@ juju deploy haproxy --channel=3.2/edge -n 3
 A virtual IP is shared between all HAProxy units and serves as the single entrypoint to all requirer applications. To add a virtual IP to the HAProxy deployment, use a free IP address from the network of the HAProxy units. This example takes the first available address on the LXD subnet.
 
 ```
+HAPROXY_IP="$(juju status --format json | jq -r '.applications.haproxy.units."haproxy/0"."public-address"')"
 VIP="$(echo "${HAPROXY_IP}" | awk -F'.' '{print $1,$2,$3,2}' OFS='.')"
 juju config haproxy vip="${VIP}"
 ```
