@@ -9,7 +9,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from keepalived import KeepalivedService
+from keepalived import (
+    KeepalivedConfigurationError,
+    KeepalivedService,
+    get_network_interface,
+)
 
 
 @pytest.mark.parametrize(
@@ -51,70 +55,133 @@ def _patch_keepalived_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> 
     return config_file
 
 
-def test_reconcile_renders_config_and_starts_service(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+@pytest.mark.parametrize(
+    "which_return,check_output_return,check_output_exception",
+    [
+        pytest.param(None, None, None, id="missing-ip-command"),
+        pytest.param(
+            "/usr/sbin/ip",
+            None,
+            FileNotFoundError("ip route get failed"),
+            id="route-lookup-failed",
+        ),
+        pytest.param("/usr/sbin/ip", "not json", None, id="invalid-json"),
+        pytest.param("/usr/sbin/ip", "[]", None, id="empty-route"),
+        pytest.param("/usr/sbin/ip", '[{"gateway": "192.168.1.1"}]', None, id="missing-device"),
+    ],
+)
+def test_get_network_interface_raises(
+    monkeypatch: pytest.MonkeyPatch,
+    which_return: str | None,
+    check_output_return: str | None,
+    check_output_exception: Exception | None,
 ):
     """
-    arrange: Given a virtual IP and keepalived not running.
+    arrange: Given an environment where the interface cannot be determined.
+    act: Call get_network_interface().
+    assert: A KeepalivedConfigurationError is raised.
+    """
+    monkeypatch.setattr("keepalived.shutil.which", MagicMock(return_value=which_return))
+    monkeypatch.setattr(
+        "keepalived.subprocess.check_output",
+        MagicMock(return_value=check_output_return, side_effect=check_output_exception),
+    )
+
+    with pytest.raises(KeepalivedConfigurationError):
+        get_network_interface("192.168.1.100")
+
+
+def test_get_network_interface_returns_device(monkeypatch: pytest.MonkeyPatch):
+    """
+    arrange: Given a successful route lookup.
+    act: Call get_network_interface().
+    assert: The device from the route lookup is returned.
+    """
+    monkeypatch.setattr("keepalived.shutil.which", MagicMock(return_value="/usr/sbin/ip"))
+    monkeypatch.setattr(
+        "keepalived.subprocess.check_output",
+        MagicMock(return_value='[{"dev": "eth0"}]'),
+    )
+
+    assert get_network_interface("192.168.1.100") == "eth0"
+
+
+@pytest.mark.parametrize(
+    "vip,initial_config,service_running,reconcile_times,"
+    "expected_start_calls,expected_reload_calls,expected_stop_calls",
+    [
+        pytest.param(
+            "192.168.1.100/24",
+            None,
+            False,
+            1,
+            1,
+            0,
+            0,
+            id="starts-when-stopped",
+        ),
+        pytest.param(
+            "192.168.1.100/24",
+            "old config",
+            True,
+            2,
+            0,
+            1,
+            0,
+            id="reloads-once-when-config-changes",
+        ),
+        pytest.param(
+            None,
+            "config",
+            True,
+            1,
+            0,
+            0,
+            1,
+            id="stops-when-vip-removed",
+        ),
+    ],
+)
+def test_reconcile(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    vip: str | None,
+    initial_config: str | None,
+    service_running: bool,
+    reconcile_times: int,
+    expected_start_calls: int,
+    expected_reload_calls: int,
+    expected_stop_calls: int,
+):
+    """
+    arrange: Given a virtual IP (or none) and a keepalived service in an initial state.
     act: Call KeepalivedService.reconcile().
-    assert: The configuration contains the VIP and interface, and the service is started.
+    assert: The configuration and the service are reconciled as expected.
     """
     config_file = _patch_keepalived_paths(monkeypatch, tmp_path)
+    if initial_config is not None:
+        config_file.write_text(initial_config)
     monkeypatch.setattr("keepalived.get_network_interface", MagicMock(return_value="eth0"))
-    service_running_mock = MagicMock(return_value=False)
     service_start_mock = MagicMock()
     service_reload_mock = MagicMock()
-    monkeypatch.setattr("keepalived.systemd.service_running", service_running_mock)
+    service_stop_mock = MagicMock()
+    monkeypatch.setattr(
+        "keepalived.systemd.service_running", MagicMock(return_value=service_running)
+    )
     monkeypatch.setattr("keepalived.systemd.service_start", service_start_mock)
     monkeypatch.setattr("keepalived.systemd.service_reload", service_reload_mock)
-
-    KeepalivedService().reconcile(ip_interface("192.168.1.100/24"))
-
-    config = config_file.read_text()
-    assert "interface eth0" in config
-    assert "192.168.1.100/24 dev eth0" in config
-    service_start_mock.assert_called_once_with("keepalived")
-    service_reload_mock.assert_not_called()
-
-
-def test_reconcile_reloads_service_only_when_config_changes(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-):
-    """
-    arrange: Given a virtual IP and keepalived already running.
-    act: Call KeepalivedService.reconcile() twice.
-    assert: The service is reloaded only the first time the configuration changes.
-    """
-    config_file = _patch_keepalived_paths(monkeypatch, tmp_path)
-    config_file.write_text("old config")
-    monkeypatch.setattr("keepalived.get_network_interface", MagicMock(return_value="eth0"))
-    service_reload_mock = MagicMock()
-    monkeypatch.setattr("keepalived.systemd.service_running", MagicMock(return_value=True))
-    monkeypatch.setattr("keepalived.systemd.service_start", MagicMock())
-    monkeypatch.setattr("keepalived.systemd.service_reload", service_reload_mock)
-
-    service = KeepalivedService()
-    service.reconcile(ip_interface("192.168.1.100/24"))
-    service.reconcile(ip_interface("192.168.1.100/24"))
-
-    service_reload_mock.assert_called_once_with("keepalived")
-
-
-def test_reconcile_without_vip_stops_service_and_removes_config(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-):
-    """
-    arrange: Given an existing configuration and a running keepalived service.
-    act: Call KeepalivedService.reconcile() without a virtual IP.
-    assert: The configuration is removed and the service is stopped.
-    """
-    config_file = _patch_keepalived_paths(monkeypatch, tmp_path)
-    config_file.write_text("config")
-    service_stop_mock = MagicMock()
-    monkeypatch.setattr("keepalived.systemd.service_running", MagicMock(return_value=True))
     monkeypatch.setattr("keepalived.systemd.service_stop", service_stop_mock)
 
-    KeepalivedService().reconcile(None)
+    service = KeepalivedService()
+    for _ in range(reconcile_times):
+        service.reconcile(ip_interface(vip) if vip else None)
 
-    assert not config_file.exists()
-    service_stop_mock.assert_called_once_with("keepalived")
+    if vip is None:
+        assert not config_file.exists()
+    else:
+        config = config_file.read_text()
+        assert "interface eth0" in config
+        assert f"{vip} dev eth0" in config
+    assert service_start_mock.call_count == expected_start_calls
+    assert service_reload_mock.call_count == expected_reload_calls
+    assert service_stop_mock.call_count == expected_stop_calls

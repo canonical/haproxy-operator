@@ -271,11 +271,7 @@ class CharmState:
         ddos_protection = typing.cast(bool, charm.config.get("ddos-protection"))
         client_ip_hash_salt = cls._get_client_ip_hash_salt(charm)
         vip_config = typing.cast(str | None, charm.config.get("vip"))
-        vip = (
-            typing.cast(IPvAnyInterface, vip_config)
-            if isinstance(vip_config, str) and vip_config
-            else None
-        )
+        vip = typing.cast(IPvAnyInterface | None, vip_config or None)
 
         try:
             return cls(

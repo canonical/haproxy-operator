@@ -16,6 +16,7 @@ import pytest
 
 import tls_relation
 from charm import CharmStateValidationBaseError, HAProxyCharm
+from keepalived import KeepalivedConfigurationError
 from tests.unit.conftest import (
     TEST_EXTERNAL_HOSTNAME_CONFIG,
     TEST_LOG_HASH_CLIENT_ADDRESS,
@@ -94,6 +95,26 @@ def test_config_changed_invalid_vip_blocks(monkeypatch: pytest.MonkeyPatch, base
 
     assert out.unit_status.name == ops.testing.BlockedStatus.name
     assert "vip" in out.unit_status.message
+
+
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_config_changed_keepalived_error_blocks(monkeypatch: pytest.MonkeyPatch, base_state):
+    """
+    arrange: prepare a state where keepalived reconciliation fails.
+    act: run config-changed.
+    assert: the unit is blocked with the keepalived error message.
+    """
+    error = KeepalivedConfigurationError("Could not configure keepalived.")
+    monkeypatch.setattr("keepalived.KeepalivedService.reconcile", MagicMock(side_effect=error))
+    monkeypatch.setattr("keepalived.KeepalivedService.install", MagicMock())
+    monkeypatch.setattr("haproxy.HAProxyService.reconcile_default", MagicMock())
+    state = ops.testing.State(**{**base_state, "config": {"vip": "10.0.0.100/24"}})
+    context = ops.testing.Context(HAProxyCharm)
+
+    out = context.run(context.on.config_changed(), state)
+
+    assert out.unit_status.name == ops.testing.BlockedStatus.name
+    assert "Could not configure keepalived." in out.unit_status.message
 
 
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")

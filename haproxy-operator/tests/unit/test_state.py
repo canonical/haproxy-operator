@@ -152,8 +152,14 @@ def test_proxy_mode_tcp():
     haproxy_route_policy_requirer_mock = MagicMock()
     haproxy_route_policy_requirer_mock.relation = None
     haproxy_route_tcp_provider_mock.relations = [MagicMock(spec=ops.Relation)]
+    charm_mock = MagicMock(spec=ops.CharmBase)
+    charm_mock.config.get.side_effect = lambda key: {
+        "global-maxconn": 4096,
+        "enable-hsts": False,
+        "ddos-protection": True,
+    }.get(key)
     charm_state = CharmState.from_charm(
-        charm=MagicMock(spec=ops.CharmBase),
+        charm=charm_mock,
         ingress_provider=ingress_provider_mock,
         ingress_per_unit_provider=ingress_per_unit_provider_mock,
         haproxy_route_provider=haproxy_route_provider_mock,

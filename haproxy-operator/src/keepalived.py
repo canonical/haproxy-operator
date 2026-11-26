@@ -17,6 +17,8 @@ from charms.operator_libs_linux.v1 import systemd
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import IPvAnyInterface
 
+from state.exception import CharmStateValidationBaseError
+
 APT_PACKAGE_NAME = "keepalived"
 KEEPALIVED_SERVICE = "keepalived"
 KEEPALIVED_CONFIG_DIR = Path("/etc/keepalived")
@@ -26,7 +28,7 @@ KEEPALIVED_CONFIG_TEMPLATE = "keepalived.conf.j2"
 logger = logging.getLogger(__name__)
 
 
-class KeepalivedConfigurationError(Exception):
+class KeepalivedConfigurationError(CharmStateValidationBaseError):
     """Error when rendering or applying the keepalived configuration."""
 
 
