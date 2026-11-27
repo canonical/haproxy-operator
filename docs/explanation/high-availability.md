@@ -36,6 +36,6 @@ Sticky session should be configured explicitly at the load balancer level.
 
 ## Active/passive
 
-An active-passive configuration consists of two or more nodes. In this configuration, only one unit is considered "active" at any given time. All other units are considered "passive", meaning they don't reply to incoming requests. The single entrypoint for all HAProxy charm units exists in the form of a virtual IP address. The charm installs `keepalived` on each unit to support this configuration.
+An active-passive configuration consists of two or more nodes. In this configuration, only one unit is considered "active" at any given time. All other units are considered "passive", meaning they don't reply to incoming requests. The single entrypoint for all HAProxy charm units exists in the form of a virtual IP address. The charm manages `keepalived` internally to attach this virtual IP address to the "active" HAProxy unit and move it to a "passive" unit when the "active" unit goes down.
 
 See {ref}`how_to_configure_high_availability` for a guide to this configuration.

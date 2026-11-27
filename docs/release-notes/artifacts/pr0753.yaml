@@ -1,0 +1,18 @@
+version_schema: 2
+
+changes:
+  - title: Restored the `vip` configuration option
+    author: tphan025
+    type: minor
+    description: >
+      The `vip` configuration option is available again. When set, the charm
+      renders a `keepalived` configuration and starts `keepalived` for
+      active-passive high availability. The virtual IP is also published as the
+      endpoint of `haproxy-route-tcp` relations that are not routed by SNI.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/753
+      related_doc: https://canonical.com/juju/docs/haproxy-charm/how-to/configure-high-availability/
+      related_issue: https://warthogs.atlassian.net/browse/ISD-7662
+    visibility: public
+    highlight: true

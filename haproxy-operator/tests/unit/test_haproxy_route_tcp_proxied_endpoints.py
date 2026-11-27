@@ -103,6 +103,41 @@ def test_tcp_proxied_endpoints_peer_unit_addresses(tcp_reconcile_context, peer_r
     assert endpoints == ["10.0.0.1:6000"]
 
 
+@pytest.mark.parametrize(
+    "vip",
+    [
+        pytest.param("10.0.0.250", id="address"),
+        pytest.param("10.0.0.250/24", id="cidr"),
+    ],
+)
+@pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
+def test_tcp_proxied_endpoints_use_vip_when_configured(
+    tcp_reconcile_context, peer_relation, vip
+) -> None:
+    """
+    arrange: Create a haproxy-route-tcp relation without SNI and configure a virtual IP.
+    act: Trigger config_changed as leader.
+    assert: The proxied endpoint uses the virtual IP address instead of the unit address.
+    """
+    context, _ = tcp_reconcile_context
+    tcp_relation = build_haproxy_route_tcp_relation(
+        port=6000,
+        enforce_tls=True,
+        tls_terminate=False,
+    )
+
+    state = ops.testing.State(
+        relations=[peer_relation, tcp_relation],
+        leader=True,
+        config={"vip": vip},
+    )
+    out = context.run(context.on.config_changed(), state)
+
+    out_tcp_relation = out.get_relation(tcp_relation.id)
+    endpoints = json.loads(out_tcp_relation.local_app_data["endpoints"])
+    assert endpoints == ["10.0.0.250:6000"]
+
+
 @pytest.mark.usefixtures("systemd_mock", "mocks_external_calls")
 def test_tcp_proxied_endpoints_not_leader(tcp_reconcile_context, peer_relation) -> None:
     """

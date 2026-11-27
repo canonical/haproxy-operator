@@ -47,7 +47,7 @@ from charms.traefik_k8s.v2.ingress import (
 )
 from ops.charm import ActionEvent
 from ops.model import SecretNotFoundError
-from pydantic import ValidationError
+from pydantic import IPvAnyInterface, ValidationError
 
 from charms.dns_integrator.v0.dns_record import DNSRecordRequires
 from dns_record import DNS_RECORD_RELATION, DNSRecordService
@@ -296,6 +296,8 @@ class HAProxyCharm(ops.CharmBase):
             # by the _validate_state method
             return
 
+        self.keepalived_service.reconcile(charm_state.vip)
+
         self._tls.update_trusted_cas()
 
         status_message = ""
@@ -430,7 +432,9 @@ class HAProxyCharm(ops.CharmBase):
         )
         if self.unit.is_leader():
             self._publish_haproxy_route_proxied_endpoints(haproxy_route_requirers_information)
-            self._publish_haproxy_route_tcp_proxied_endpoints(haproxy_route_requirers_information)
+            self._publish_haproxy_route_tcp_proxied_endpoints(
+                haproxy_route_requirers_information, charm_state.vip
+            )
             self._publish_certificate_to_peer_units(tls_information)
 
         return self._get_haproxy_route_status_message(haproxy_route_requirers_information)
@@ -770,8 +774,17 @@ class HAProxyCharm(ops.CharmBase):
     def _publish_haproxy_route_tcp_proxied_endpoints(
         self,
         haproxy_route_requirers_information: HaproxyRouteRequirersInformation,
+        vip: IPvAnyInterface | None = None,
     ) -> None:
-        """Publish the proxied endpoints for TCP frontends."""
+        """Publish the proxied endpoints for TCP frontends.
+
+        When a virtual IP is configured, it is published as the entrypoint for
+        frontends that are not routed by SNI.
+
+        Args:
+            haproxy_route_requirers_information: The haproxy-route requirers information.
+            vip: The configured virtual IP, or None when unset.
+        """
         for frontend in haproxy_route_requirers_information.valid_tcp_frontends():
             for backend in frontend.backends:
                 relation = self.model.get_relation(HAPROXY_ROUTE_TCP_RELATION, backend.relation_id)
@@ -783,6 +796,11 @@ class HAProxyCharm(ops.CharmBase):
                 if frontend.is_sni_routing_enabled:
                     self.haproxy_route_tcp_provider.publish_proxied_endpoints(
                         [f"{backend.application_data.sni}:{frontend.port}"], relation
+                    )
+                    continue
+                if vip is not None:
+                    self.haproxy_route_tcp_provider.publish_proxied_endpoints(
+                        [f"{vip.ip}:{frontend.port}"], relation
                     )
                     continue
                 self.haproxy_route_tcp_provider.publish_proxied_endpoints(

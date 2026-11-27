@@ -76,6 +76,7 @@ def mocks_external_calls_fixture(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr("haproxy.HAProxyService._validate_haproxy_config", MagicMock())
     monkeypatch.setattr("haproxy.pin_haproxy_package_version", MagicMock())
     monkeypatch.setattr("keepalived.KeepalivedService.install", MagicMock())
+    monkeypatch.setattr("keepalived.KeepalivedService.reconcile", MagicMock())
 
 
 @pytest.fixture(scope="function", name="mocks_tls_ca_write")
@@ -204,6 +205,7 @@ def context_with_install_mock_fixture():
         patch("haproxy.HAProxyService.install") as install_mock,
         patch("haproxy.HAProxyService.reconcile_default") as reconcile_default_mock,
         patch("keepalived.KeepalivedService.install") as keepalived_install_mock,
+        patch("keepalived.KeepalivedService.reconcile"),
         patch("haproxy.HAProxyService.reconcile_ingress") as reconcile_ingress_mock,
         patch("tls_relation.TLSRelationService.write_certificate_to_unit"),
     ):
@@ -232,6 +234,7 @@ def context_with_reconcile_mock_fixture():
         patch("charm.HAProxyCharm._get_unit_address") as get_unit_address_mock,
         patch("haproxy.HAProxyService.install"),
         patch("keepalived.KeepalivedService.install"),
+        patch("keepalived.KeepalivedService.reconcile"),
     ):
         get_unit_address_mock.return_value = "10.0.0.1"
         yield (
@@ -496,6 +499,7 @@ def tcp_reconcile_context_fixture():
         patch("charm.HAProxyCharm._get_unit_address") as get_unit_address_mock,
         patch("haproxy.HAProxyService.install"),
         patch("keepalived.KeepalivedService.install"),
+        patch("keepalived.KeepalivedService.reconcile"),
     ):
         get_unit_address_mock.return_value = "10.0.0.1"
         yield (
@@ -641,6 +645,7 @@ def context_with_dns_mock_fixture():
         patch("haproxy.HAProxyService.reconcile_default"),
         patch("haproxy.HAProxyService.reconcile_ingress"),
         patch("keepalived.KeepalivedService.install"),
+        patch("keepalived.KeepalivedService.reconcile"),
         patch("tls_relation.TLSRelationService.write_certificate_to_unit"),
         # Patch the class so its __init__ (which creates a Juju secret) is never called
         patch("charm.DNSRecordRequires"),

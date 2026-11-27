@@ -18,7 +18,7 @@ from charms.haproxy.v3.haproxy_route import HaproxyRouteProvider
 from charms.haproxy_route_policy.v0.haproxy_route_policy import HaproxyRoutePolicyRequirer
 from charms.traefik_k8s.v1.ingress_per_unit import IngressPerUnitProvider
 from charms.traefik_k8s.v2.ingress import IngressPerAppProvider
-from pydantic import Field, ValidationError, field_validator
+from pydantic import Field, IPvAnyInterface, ValidationError, field_validator
 from pydantic.dataclasses import dataclass
 
 from .exception import CharmStateValidationBaseError
@@ -72,6 +72,7 @@ class CharmState:
         Must be between 0 and "fs.nr_open" sysctl config.
         ddos_protection: Whether to enable basic DDoS protection mechanisms.
         client_ip_hash_salt: Salt used to hash client IP addresses in logs.
+        vip: The virtual IP address used for active-passive high availability.
     """
 
     mode: ProxyMode
@@ -79,6 +80,7 @@ class CharmState:
     global_max_connection: int = Field(gt=0, alias="global_max_connection")
     ddos_protection: bool = True
     client_ip_hash_salt: str | None = Field(default=None, repr=False)
+    vip: IPvAnyInterface | None = Field(default=None)
 
     @property
     def hash_client_ip_in_logs(self) -> bool:
@@ -268,6 +270,8 @@ class CharmState:
         enable_hsts = typing.cast(bool, charm.config.get("enable-hsts"))
         ddos_protection = typing.cast(bool, charm.config.get("ddos-protection"))
         client_ip_hash_salt = cls._get_client_ip_hash_salt(charm)
+        vip_config = typing.cast(str | None, charm.config.get("vip"))
+        vip = typing.cast(IPvAnyInterface | None, vip_config or None)
 
         try:
             return cls(
@@ -282,6 +286,7 @@ class CharmState:
                 enable_hsts=enable_hsts,
                 ddos_protection=ddos_protection,
                 client_ip_hash_salt=client_ip_hash_salt,
+                vip=vip,
             )
         except ValidationError as exc:
             error_field_str = ",".join(f"{field}" for field in get_invalid_config_fields(exc))
