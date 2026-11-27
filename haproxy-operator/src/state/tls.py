@@ -13,7 +13,7 @@ from charmlibs.interfaces.tls_certificates import (
     Certificate,
     TLSCertificatesRequiresV4,
 )
-from charms.haproxy.v2.haproxy_route import valid_domain_with_wildcard
+from charms.haproxy.v3.haproxy_route import valid_domain_with_wildcard
 from pydantic import ValidationError
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
