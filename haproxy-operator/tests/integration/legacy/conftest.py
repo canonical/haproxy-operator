@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "haproxy.internal"
 HAPROXY_ROUTE_REQUIRER_SRC = "tests/integration/legacy/haproxy_route_requirer.py"
-HAPROXY_ROUTE_LIB_SRC = "lib/charms/haproxy/v2/haproxy_route.py"
+HAPROXY_ROUTE_LIB_SRC = "lib/charms/haproxy/v3/haproxy_route.py"
 
 
 def all_active_and_idle(status: jubilant.Status, *apps: str) -> bool:

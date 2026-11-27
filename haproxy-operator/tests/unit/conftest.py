@@ -23,12 +23,13 @@ from charms.haproxy.v1.haproxy_route_tcp import (
     TcpRequirerApplicationData,
     TcpRequirerUnitData,
 )
-from charms.haproxy.v2.haproxy_route import (
+from charms.haproxy.v3.haproxy_route import (
     HaproxyRouteRequirerData,
     RequirerApplicationData,
     RequirerUnitData,
 )
 from ops.testing import Context
+from pydantic import TypeAdapter
 
 from charm import HAProxyCharm
 from state.charm_state import CharmState, ProxyMode
@@ -38,6 +39,15 @@ TEST_LOG_HASH_SALT = "test-salt"
 TEST_LOG_HASH_CLIENT_ADDRESS = (
     f'%[src,concat(,,),regsub(^::ffff:,),concat(,,\\"{TEST_LOG_HASH_SALT}\\"),sha2(256),hex]:%cp'
 )
+
+
+def model_to_relation_data(model) -> dict[str, str]:
+    """Serialize a pydantic model or dataclass the same way Relation.save does."""
+    if hasattr(model, "model_dump"):
+        data = model.model_dump(mode="json", by_alias=True)
+    else:
+        data = TypeAdapter(type(model)).dump_python(model, mode="json")
+    return {key: json.dumps(value) for key, value in data.items()}
 
 
 @pytest.fixture(name="hashed_charm_state")
@@ -65,6 +75,7 @@ def mocks_external_calls_fixture(monkeypatch: pytest.MonkeyPatch):
     """Mock external calls."""
     monkeypatch.setattr("haproxy.HAProxyService._validate_haproxy_config", MagicMock())
     monkeypatch.setattr("haproxy.pin_haproxy_package_version", MagicMock())
+    monkeypatch.setattr("keepalived.KeepalivedService.install", MagicMock())
 
 
 @pytest.fixture(scope="function", name="mocks_tls_ca_write")
@@ -192,6 +203,7 @@ def context_with_install_mock_fixture():
     with (
         patch("haproxy.HAProxyService.install") as install_mock,
         patch("haproxy.HAProxyService.reconcile_default") as reconcile_default_mock,
+        patch("keepalived.KeepalivedService.install") as keepalived_install_mock,
         patch("haproxy.HAProxyService.reconcile_ingress") as reconcile_ingress_mock,
         patch("tls_relation.TLSRelationService.write_certificate_to_unit"),
     ):
@@ -202,6 +214,7 @@ def context_with_install_mock_fixture():
             (
                 install_mock,
                 reconcile_default_mock,
+                keepalived_install_mock,
                 reconcile_ingress_mock,
             ),
         )
@@ -218,6 +231,7 @@ def context_with_reconcile_mock_fixture():
         patch("tls_relation.TLSRelationService.write_certificate_to_unit"),
         patch("charm.HAProxyCharm._get_unit_address") as get_unit_address_mock,
         patch("haproxy.HAProxyService.install"),
+        patch("keepalived.KeepalivedService.install"),
     ):
         get_unit_address_mock.return_value = "10.0.0.1"
         yield (
@@ -351,12 +365,14 @@ def base_state_with_ingress_fixture(peer_relation, ingress_integration, certific
 @pytest.fixture(name="haproxy_route_requirer_application_data_with_hosts")
 def haproxy_route_requirer_application_data_with_hosts_fixture():
     """haproxy-route requirer application data with hosts attribute set."""
-    return RequirerApplicationData(
-        service="test-service",
-        ports=[8080, 8443],
-        hosts=["10.0.0.1", "10.0.0.2"],
-        hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
-    ).dump()
+    return model_to_relation_data(
+        RequirerApplicationData(
+            service="test-service",
+            ports=[8080, 8443],
+            hosts=["10.0.0.1", "10.0.0.2"],
+            hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
+        )
+    )
 
 
 @pytest.fixture(name="base_state_haproxy_route")
@@ -396,13 +412,17 @@ def build_haproxy_route_relation(
         local_unit_data={},
         remote_app_name="ingress-configurator",
         limit=1,
-        remote_app_data=RequirerApplicationData(
-            service=service,
-            ports=[8080, 8443],
-            hosts=["10.0.0.1", "10.0.0.2"],
-            hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
-        ).dump(),
-        remote_units_data={0: RequirerUnitData(address=IPv4Address("10.0.0.1")).dump()},
+        remote_app_data=model_to_relation_data(
+            RequirerApplicationData(
+                service=service,
+                ports=[8080, 8443],
+                hosts=["10.0.0.1", "10.0.0.2"],
+                hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
+            )
+        ),
+        remote_units_data={
+            0: model_to_relation_data(RequirerUnitData(address=IPv4Address("10.0.0.1")))
+        },
     )
 
 
@@ -475,6 +495,7 @@ def tcp_reconcile_context_fixture():
         patch("tls_relation.TLSRelationService.write_certificate_to_unit"),
         patch("charm.HAProxyCharm._get_unit_address") as get_unit_address_mock,
         patch("haproxy.HAProxyService.install"),
+        patch("keepalived.KeepalivedService.install"),
     ):
         get_unit_address_mock.return_value = "10.0.0.1"
         yield (
@@ -599,13 +620,8 @@ def haproxy_route_relation_data_fixture() -> typing.Callable[..., HaproxyRouteRe
 
         return HaproxyRouteRequirerData(
             relation_id=relation_id,
-            application_data=typing.cast(
-                RequirerApplicationData,
-                RequirerApplicationData.from_dict(application_data_dict),
-            ),
-            units_data=[
-                typing.cast(RequirerUnitData, RequirerUnitData.from_dict({"address": "10.0.0.1"}))
-            ],
+            application_data=RequirerApplicationData(**application_data_dict),
+            units_data=[RequirerUnitData(address="10.0.0.1")],
         )
 
     return generate_requirer_data
@@ -624,6 +640,7 @@ def context_with_dns_mock_fixture():
         patch("haproxy.HAProxyService.install"),
         patch("haproxy.HAProxyService.reconcile_default"),
         patch("haproxy.HAProxyService.reconcile_ingress"),
+        patch("keepalived.KeepalivedService.install"),
         patch("tls_relation.TLSRelationService.write_certificate_to_unit"),
         # Patch the class so its __init__ (which creates a Juju secret) is never called
         patch("charm.DNSRecordRequires"),
