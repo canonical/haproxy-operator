@@ -14,7 +14,7 @@ from charms.haproxy.v1.haproxy_route_tcp import (
     HaproxyRouteTcpProvider,
     HaproxyRouteTcpRequirersData,
 )
-from charms.haproxy.v2.haproxy_route import (
+from charms.haproxy.v3.haproxy_route import (
     DataValidationError,
     HaproxyRewriteMethod,
     HaproxyRouteProvider,
