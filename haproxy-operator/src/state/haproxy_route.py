@@ -10,7 +10,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Optional, cast
 
-from charms.haproxy.v1.haproxy_route_tcp import (
+from charms.haproxy.v2.haproxy_route_tcp import (
     HaproxyRouteTcpProvider,
     HaproxyRouteTcpRequirersData,
 )

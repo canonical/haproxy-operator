@@ -14,7 +14,7 @@ from charmlibs.interfaces.tls_certificates import (
     TLSCertificatesRequiresV4,
 )
 from charms.haproxy.v0.ddos_protection import DDoSProtectionProviderAppData
-from charms.haproxy.v1.haproxy_route_tcp import (
+from charms.haproxy.v2.haproxy_route_tcp import (
     HaproxyRouteTcpProvider,
     HaproxyRouteTcpRequirerData,
     HaproxyRouteTcpRequirersData,

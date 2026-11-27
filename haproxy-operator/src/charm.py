@@ -31,7 +31,7 @@ from charms.haproxy.v0.ddos_protection import (
     DDoSProtectionProviderAppData,
 )
 from charms.haproxy.v0.spoe_auth import SpoeAuthRequirer
-from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpProvider
+from charms.haproxy.v2.haproxy_route_tcp import HaproxyRouteTcpProvider
 from charms.haproxy.v3.haproxy_route import HaproxyRouteProvider
 from charms.haproxy_route_policy.v0.haproxy_route_policy import HaproxyRoutePolicyRequirer
 from charms.traefik_k8s.v1.ingress_per_unit import (

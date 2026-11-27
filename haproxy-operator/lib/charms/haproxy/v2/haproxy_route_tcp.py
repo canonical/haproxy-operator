@@ -10,7 +10,7 @@ To get started using the library, you just need to fetch the library using `char
 
 ```shell
 cd some-charm
-charmcraft fetch-lib charms.haproxy.v1.haproxy_route_tcp
+charmcraft fetch-lib charms.haproxy.v2.haproxy_route_tcp
 ```
 
 ### Dependencies
@@ -37,7 +37,7 @@ requires:
 Then, to initialise the library:
 
 ```python
-from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpRequirer
+from charms.haproxy.v2.haproxy_route_tcp import HaproxyRouteTcpRequirer
 
 class SomeCharm(CharmBase):
   def __init__(self, *args):
@@ -137,7 +137,7 @@ Note that this interface supports relating to multiple endpoints.
 
 Then, to initialise the library:
 ```python
-from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpProvider
+from charms.haproxy.v2.haproxy_route_tcp import HaproxyRouteTcpProvider
 
 class SomeCharm(CharmBase):
     self.haproxy_route_tcp_provider = HaproxyRouteTcpProvider(self)
@@ -158,6 +158,7 @@ class SomeCharm(CharmBase):
             )
 """
 
+import json
 import logging
 from enum import Enum
 from typing import Annotated, Any, Optional, cast
@@ -167,9 +168,7 @@ from ops.charm import CharmEvents
 from ops.framework import EventBase, EventSource, Object
 from ops.model import Relation
 from pydantic import (
-    BaseModel,
     BeforeValidator,
-    ConfigDict,
     Field,
     IPvAnyAddress,
     ValidationError,
@@ -183,15 +182,41 @@ from validators import domain
 LIBID = "b1b5c0a6f1b5481c9923efa042846681"
 
 # Increment this major API version when introducing breaking changes
-LIBAPI = 1
+LIBAPI = 2
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 8
+LIBPATCH = 0
 
 logger = logging.getLogger(__name__)
 HAPROXY_ROUTE_TCP_RELATION_NAME = "haproxy-route-tcp"
 HAPROXY_CONFIG_INVALID_CHARACTERS = "\n\t#\\'\"\r$ "
+
+
+def _relation_data_default(value: Any) -> Any:
+    """Convert values that are not natively JSON serializable.
+
+    Args:
+        value: The value to convert.
+
+    Returns:
+        A JSON serializable representation of the value.
+    """
+    if isinstance(value, Enum):
+        return value.value
+    return str(value)
+
+
+def _relation_data_encoder(value: Any) -> str:
+    """Serialize a dataclass field value for a Juju relation databag.
+
+    Args:
+        value: The value to serialize.
+
+    Returns:
+        The serialized value.
+    """
+    return json.dumps(value, default=_relation_data_default)
 
 
 def value_contains_invalid_characters(value: Optional[str]) -> Optional[str]:
@@ -261,7 +286,8 @@ class TCPHealthCheckType(Enum):
     SMTP = "smtp"
 
 
-class TCPServerHealthCheck(BaseModel):
+@dataclass
+class TCPServerHealthCheck:
     """Configuration model for backend server health checks.
 
     Attributes:
@@ -358,7 +384,8 @@ class TCPRateLimitPolicy(Enum):
     SILENT = "silent-drop"
 
 
-class RateLimit(BaseModel):
+@dataclass
+class RateLimit:
     """Configuration model for connection rate limiting.
 
     Attributes:
@@ -386,7 +413,8 @@ class LoadBalancingAlgorithm(Enum):
     ROUNDROBIN = "roundrobin"
 
 
-class TCPLoadBalancingConfiguration(BaseModel):
+@dataclass
+class TCPLoadBalancingConfiguration:
     """Configuration model for load balancing.
 
     Attributes:
@@ -426,7 +454,8 @@ class TCPLoadBalancingConfiguration(BaseModel):
         return self
 
 
-class BandwidthLimit(BaseModel):
+@dataclass
+class BandwidthLimit:
     """Configuration model for bandwidth rate limiting.
 
     Attributes:
@@ -441,7 +470,8 @@ class BandwidthLimit(BaseModel):
 
 
 # retry-on is not yet implemented
-class Retry(BaseModel):
+@dataclass
+class Retry:
     """Configuration model for retry.
 
     Attributes:
@@ -455,7 +485,8 @@ class Retry(BaseModel):
     )
 
 
-class TimeoutConfiguration(BaseModel):
+@dataclass
+class TimeoutConfiguration:
     """Configuration model for timeout.
 
     Attributes:
@@ -615,7 +646,8 @@ class PortMapping:
         return self.backend.start - self.frontend.start
 
 
-class TcpRequirerApplicationData(BaseModel):
+@dataclass
+class TcpRequirerApplicationData:
     """Configuration model for HAProxy route requirer application data.
 
     Attributes:
@@ -639,8 +671,6 @@ class TcpRequirerApplicationData(BaseModel):
         tls_terminate: Whether to enable tls termination on the dedicated frontend.
         proxy_protocol: Whether to enable PROXY protocol when connecting to backend servers.
     """
-
-    model_config = ConfigDict(extra="ignore")
 
     port: Optional[int] = Field(
         description="The port exposed on the provider.", default=None, gt=0, le=65535
@@ -670,7 +700,7 @@ class TcpRequirerApplicationData(BaseModel):
     )
     hosts: list[IPvAnyAddress] = Field(
         description="The list of backend server addresses. Currently only support IP addresses.",
-        default=[],
+        default_factory=list,
     )
     check: Optional[TCPServerHealthCheck] = Field(
         description="Configure health check for the service.",
@@ -696,7 +726,7 @@ class TcpRequirerApplicationData(BaseModel):
         description="Configure maximum connection per server", default=None
     )
     ip_deny_list: list[IPvAnyAddress] = Field(
-        description="List of IP addresses to block.", default=[]
+        description="List of IP addresses to block.", default_factory=list
     )
     enforce_tls: bool = Field(description="Whether to enforce TLS for all traffic.", default=True)
     tls_terminate: bool = Field(description="Whether to enable tls termination.", default=True)
@@ -807,26 +837,24 @@ class TcpRequirerApplicationData(BaseModel):
         return self.port_range.port_count > 1
 
 
-class HaproxyRouteTcpProviderAppData(BaseModel):
+@dataclass
+class HaproxyRouteTcpProviderAppData:
     """haproxy-route provider databag schema.
 
     Attributes:
         endpoints: The list of proxied endpoints that maps to the backend.
     """
 
-    model_config = ConfigDict(extra="ignore")
-
     endpoints: list[str]
 
 
-class TcpRequirerUnitData(BaseModel):
+@dataclass
+class TcpRequirerUnitData:
     """haproxy-route requirer unit data.
 
     Attributes:
         address: IP address of the unit.
     """
-
-    model_config = ConfigDict(extra="ignore")
 
     address: IPvAnyAddress = Field(description="IP address of the unit.")
 
@@ -1058,7 +1086,11 @@ class HaproxyRouteTcpProvider(Object):
                 "Invalid data in provider databag for relation %s, overwriting.",
                 relation,
             )
-        relation.save(HaproxyRouteTcpProviderAppData(endpoints=endpoints), self.charm.app)
+        relation.save(
+            HaproxyRouteTcpProviderAppData(endpoints=endpoints),
+            self.charm.app,
+            encoder=_relation_data_encoder,
+        )
 
     @staticmethod
     def _get_invalid_port_range_relations(
@@ -1637,7 +1669,7 @@ class HaproxyRouteTcpRequirer(Object):
         """
         if self.charm.unit.is_leader():
             application_data = self._prepare_application_data()
-            relation.save(application_data, self.app)
+            relation.save(application_data, self.app, encoder=_relation_data_encoder)
 
     def _update_unit_data(self, relation: Relation) -> None:
         """Prepare and update the unit data in the relation databag.
@@ -1646,7 +1678,7 @@ class HaproxyRouteTcpRequirer(Object):
             relation: The relation instance.
         """
         unit_data = self._prepare_unit_data()
-        relation.save(unit_data, self.charm.unit)
+        relation.save(unit_data, self.charm.unit, encoder=_relation_data_encoder)
 
     def _prepare_application_data(self) -> TcpRequirerApplicationData:
         """Prepare and validate the application data.
@@ -1658,7 +1690,7 @@ class HaproxyRouteTcpRequirer(Object):
             RequirerApplicationData: The validated application data model.
         """
         try:
-            return TcpRequirerApplicationData.model_validate(self._application_data)
+            return TcpRequirerApplicationData(**self._application_data)
         except ValidationError as exc:
             logger.error("Validation error when preparing requirer application data.")
             raise HaproxyRouteTcpInvalidRelationDataError(

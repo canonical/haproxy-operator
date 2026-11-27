@@ -11,7 +11,7 @@ from unittest.mock import MagicMock
 
 import ops.testing
 import pytest
-from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpRequirersData
+from charms.haproxy.v2.haproxy_route_tcp import HaproxyRouteTcpRequirersData
 from charms.haproxy.v3.haproxy_route import (
     DataValidationError,
     HaproxyRewriteMethod,

@@ -1,15 +1,19 @@
 version_schema: 2
 
 changes:
-  - title: Use the ops relation API in the haproxy-route-tcp library
+  - title: Refactored the haproxy-route-tcp interface library to use the ops relation API
     author: Thanhphan1147
-    type: minor
+    type: breaking
     description: >
-      The `haproxy.haproxy_route_tcp` interface library no longer uses the
-      legacy `_DatabagModel` or its manual load/dump helpers. Relation data is
-      now read and written with the `ops` `Relation.load` and `Relation.save`
-      APIs, leaving the library with its pydantic models and the existing
-      provider/requirer helpers.
+      The `haproxy.haproxy_route_tcp` interface library no longer uses the legacy
+      `_DatabagModel` helper or its manual `load` and `dump` methods. The provider
+      and requirer now read and write relation data with the `ops`
+      `Relation.load` and `Relation.save` API, matching the standard used by the
+      other HAProxy interface libraries. The relation data models are now pydantic
+      dataclasses. Because the exported models no longer inherit from pydantic
+      `BaseModel`, the library API version was raised to 2 and the library moved
+      to `charms.haproxy.v2.haproxy_route_tcp`. The library remains distributed
+      from its Charmhub location.
     urls:
       pr: https://github.com/canonical/haproxy-operator/pull/704
       related_doc:
