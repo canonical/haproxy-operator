@@ -1,0 +1,19 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+version_schema: 2
+
+changes:
+  - title: Remove unavailable rst2html documentation dependency
+    author: akcano
+    type: minor
+    description: >
+      Removed the unavailable rst2html PyPI dependency from the documentation
+      build configuration, following canonical/sphinx-stack#655.
+    urls:
+      pr:
+        - https://github.com/canonical/haproxy-operator/pull/755
+      related_doc:
+      related_issue:
+    visibility: internal
+    highlight: false
