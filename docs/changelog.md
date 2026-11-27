@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-11-15
+
+- The HAProxy charm now installs `keepalived` directly for active-passive high
+  availability.
+
 ## 2026-11-07
 
 - Temporarily use the `3.2/edge` channel in HAProxy deployment examples while

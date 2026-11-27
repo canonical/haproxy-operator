@@ -32,7 +32,7 @@ from charms.haproxy.v0.ddos_protection import (
 )
 from charms.haproxy.v0.spoe_auth import SpoeAuthRequirer
 from charms.haproxy.v1.haproxy_route_tcp import HaproxyRouteTcpProvider
-from charms.haproxy.v2.haproxy_route import HaproxyRouteProvider
+from charms.haproxy.v3.haproxy_route import HaproxyRouteProvider
 from charms.haproxy_route_policy.v0.haproxy_route_policy import HaproxyRoutePolicyRequirer
 from charms.traefik_k8s.v1.ingress_per_unit import (
     IngressDataReadyEvent,
@@ -52,6 +52,7 @@ from pydantic import ValidationError
 from charms.dns_integrator.v0.dns_record import DNSRecordRequires
 from dns_record import DNS_RECORD_RELATION, DNSRecordService
 from haproxy import HAPROXY_CONFIG, HAProxyService, file_exists, read_file
+from keepalived import KeepalivedService
 from state.charm_state import CharmState, ProxyMode
 from state.exception import CharmStateValidationBaseError
 from state.haproxy_route import (
@@ -115,6 +116,7 @@ class HAProxyCharm(ops.CharmBase):
         """
         super().__init__(*args)
         self.haproxy_service = HAProxyService()
+        self.keepalived_service = KeepalivedService()
         # Relation handlers are initialized before self.certificates as we need them when calling
         # self._get_certificate_requests()
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
@@ -234,11 +236,13 @@ class HAProxyCharm(ops.CharmBase):
     def _on_install(self, _: typing.Any) -> None:
         """Install the haproxy service and reconcile."""
         self.haproxy_service.install()
+        self.keepalived_service.install()
         self._reconcile()
 
     @validate_config_and_tls(defer=False)
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
+        self.keepalived_service.install()
         self._reconcile()
 
     @validate_config_and_tls(defer=False)
