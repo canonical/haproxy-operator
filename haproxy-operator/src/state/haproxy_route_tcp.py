@@ -6,7 +6,7 @@
 from functools import cached_property
 from typing import Optional, Self
 
-from charms.haproxy.v1.haproxy_route_tcp import (
+from charms.haproxy.v2.haproxy_route_tcp import (
     HaproxyRouteTcpRequirerData,
     PortRange,
     TCPHealthCheckType,

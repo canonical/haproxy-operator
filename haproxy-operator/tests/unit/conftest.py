@@ -18,7 +18,7 @@ from charmlibs.interfaces.tls_certificates import (
     PrivateKey,
 )
 from charms.haproxy.v0.spoe_auth import SpoeAuthProviderAppData, SpoeAuthProviderUnitData
-from charms.haproxy.v1.haproxy_route_tcp import (
+from charms.haproxy.v2.haproxy_route_tcp import (
     HaproxyRouteTcpRequirerData,
     TcpRequirerApplicationData,
     TcpRequirerUnitData,
@@ -551,8 +551,8 @@ def build_haproxy_route_tcp_relation(
         endpoint="haproxy-route-tcp",
         interface="haproxy-route-tcp",
         remote_app_name=remote_app_name,
-        remote_app_data=TcpRequirerApplicationData.from_dict(app_data).dump(),
-        remote_units_data={0: TcpRequirerUnitData.from_dict({"address": "10.0.0.1"}).dump()},
+        remote_app_data=model_to_relation_data(TcpRequirerApplicationData(**app_data)),
+        remote_units_data={0: model_to_relation_data(TcpRequirerUnitData(address="10.0.0.1"))},
     )
 
 
@@ -577,16 +577,8 @@ def haproxy_route_tcp_relation_data_fixture() -> typing.Callable[..., HaproxyRou
         return HaproxyRouteTcpRequirerData(
             relation_id=relation_id,
             application="tcp-route-requirer",
-            application_data=typing.cast(
-                TcpRequirerApplicationData,
-                TcpRequirerApplicationData.from_dict(application_data),
-            ),
-            units_data=[
-                typing.cast(
-                    TcpRequirerUnitData,
-                    TcpRequirerUnitData.from_dict({"address": "10.0.0.1"}),
-                )
-            ],
+            application_data=TcpRequirerApplicationData(**application_data),
+            units_data=[TcpRequirerUnitData(address="10.0.0.1")],
         )
 
     return generate_requirer_data
