@@ -3,19 +3,19 @@
 
 """Unit tests for haproxy-route-tcp interface library."""
 
+import dataclasses
 import json
 import logging
 from ipaddress import ip_address
+from typing import Any
+from unittest.mock import MagicMock
 
-import ops
-import ops.testing
 import pytest
 from charms.haproxy.v2.haproxy_route_tcp import (
     HaproxyRouteTcpProvider,
     HaproxyRouteTcpProviderAppData,
     HaproxyRouteTcpRequirer,
     HaproxyRouteTcpRequirerData,
-    HaproxyRouteTcpRequirersData,
     LoadBalancingAlgorithm,
     PortMapping,
     PortRange,
@@ -34,63 +34,16 @@ logger = logging.getLogger()
 MOCK_RELATION_NAME = "haproxy-route-tcp"
 MOCK_ADDRESS = ip_address("10.0.0.1")
 ANOTHER_MOCK_ADDRESS = ip_address("10.0.0.2")
-_REQUIRER_META = {
-    "name": "tcp-requirer",
-    "requires": {MOCK_RELATION_NAME: {"interface": MOCK_RELATION_NAME}},
-}
-_PROVIDER_META = {
-    "name": "tcp-provider",
-    "provides": {MOCK_RELATION_NAME: {"interface": MOCK_RELATION_NAME}},
-}
 
 
-class _RequirerCharm(ops.CharmBase):
-    """Charm that exercises the haproxy-route-tcp requirer."""
-
-    port = 4000
-    unit_address = "10.0.0.1"
-
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.requirer = HaproxyRouteTcpRequirer(self, MOCK_RELATION_NAME)
-        self.framework.observe(self.on.config_changed, self._on_config_changed)
-
-    def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
-        self.requirer.provide_haproxy_route_tcp_requirements(
-            port=self.port, unit_address=self.unit_address
-        )
+def _encode_relation_data(data: Any, encoder) -> dict[str, str]:
+    """Encode a dataclass the same way ops Relation.save does."""
+    return {field: encoder(value) for field, value in dataclasses.asdict(data).items()}
 
 
-class _ProviderCharm(ops.CharmBase):
-    """Charm that exercises the haproxy-route-tcp provider."""
-
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.provider = HaproxyRouteTcpProvider(self, MOCK_RELATION_NAME)
-
-
-def _provider_relation(
-    app_data: dict[str, str],
-    units_data: dict[int, dict[str, str]] | None = None,
-) -> ops.testing.Relation:
-    """Build a haproxy-route-tcp relation with the given databags."""
-    return ops.testing.Relation(
-        MOCK_RELATION_NAME,
-        interface=MOCK_RELATION_NAME,
-        remote_app_name="tcp-requirer",
-        remote_app_data=app_data,
-        remote_units_data=units_data or {0: {"address": json.dumps(str(MOCK_ADDRESS))}},
-    )
-
-
-def _run_provider(relation: ops.testing.Relation) -> HaproxyRouteTcpRequirersData:
-    """Run a provider charm with the given relation and return the loaded data."""
-    ctx = ops.testing.Context(_ProviderCharm, meta=_PROVIDER_META)
-    state = ops.testing.State(relations=[relation], leader=True)
-    with ctx(ctx.on.relation_changed(relation, remote_unit=0), state) as manager:
-        manager.run()
-        provider = manager.charm.provider
-        return provider.get_data(provider.relations)
+def _decode_relation_data(databag: dict[str, str]) -> dict[str, Any]:
+    """Decode a relation databag the same way ops Relation.load does."""
+    return {key: json.loads(value) for key, value in databag.items()}
 
 
 @pytest.fixture(name="mock_relation_data")
@@ -1035,45 +988,50 @@ def test_requirer_application_data_invalid_port_mapping_raises():
 
 def test_requirer_saves_relation_data():
     """
-    arrange: Create a charm using the requirer and a haproxy-route-tcp relation.
+    arrange: Create a requirer with a mocked relation and a configured unit address.
     act: Provide the requirer requirements.
     assert: Application and unit data are saved using the ops relation API.
     """
-    ctx = ops.testing.Context(_RequirerCharm, meta=_REQUIRER_META)
-    relation = ops.testing.Relation(MOCK_RELATION_NAME, interface=MOCK_RELATION_NAME)
-    state = ops.testing.State(leader=True, relations=[relation])
+    charm = MagicMock()
+    charm.unit.is_leader.return_value = True
+    requirer = HaproxyRouteTcpRequirer(charm=charm, relation_name=MOCK_RELATION_NAME)
+    relation = MagicMock()
+    requirer.relation = relation
 
-    out = ctx.run(ctx.on.config_changed(), state)
+    requirer.provide_haproxy_route_tcp_requirements(port=4000, unit_address="10.0.0.1")
 
-    out_relation = out.get_relation(relation.id)
-    assert out_relation is not None
-    assert out_relation.local_app_data is not None
-    assert out_relation.local_unit_data is not None
-    assert json.loads(out_relation.local_app_data["port"]) == _RequirerCharm.port
-    assert json.loads(out_relation.local_app_data["backend_port"]) == _RequirerCharm.port
-    assert json.loads(out_relation.local_unit_data["address"]) == _RequirerCharm.unit_address
+    assert relation.save.call_count == 2
+    application_data, app_destination = relation.save.call_args_list[0].args
+    unit_data, unit_destination = relation.save.call_args_list[1].args
+    assert app_destination is charm.app
+    assert unit_destination is charm.unit
+    assert application_data.port == 4000
+    assert application_data.backend_port == 4000
+    assert str(unit_data.address) == "10.0.0.1"
 
 
 def test_requirer_application_data_encoder_handles_non_json_serializable_defaults():
     """
     arrange: Create a requirer with valid but minimally configured application data.
-    act: Publish the requirer data to a real relation.
+    act: Encode the application data with the encoder passed to the relation.
     assert: Enum defaults that are not natively JSON serializable are encoded and loaded.
     """
-    relation = ops.testing.Relation(MOCK_RELATION_NAME, interface=MOCK_RELATION_NAME)
-    ctx = ops.testing.Context(_RequirerCharm, meta=_REQUIRER_META)
-    state = ops.testing.State(relations=[relation], leader=True)
+    charm = MagicMock()
+    charm.unit.is_leader.return_value = True
+    requirer = HaproxyRouteTcpRequirer(charm=charm, relation_name=MOCK_RELATION_NAME)
+    relation = MagicMock()
+    requirer.relation = relation
 
-    with ctx(ctx.on.config_changed(), state) as manager:
-        manager.run()
-        manager.charm.requirer.provide_haproxy_route_tcp_requirements(
-            port=4000,
-            unit_address="10.0.0.1",
-            load_balancing_algorithm=LoadBalancingAlgorithm.LEASTCONN,
-            rate_limit_connections_per_minute=60,
-        )
-        requirer_relation = manager.charm.requirer.relation
-        databag = dict(requirer_relation.data[manager.charm.app])
+    requirer.provide_haproxy_route_tcp_requirements(
+        port=4000,
+        unit_address="10.0.0.1",
+        load_balancing_algorithm=LoadBalancingAlgorithm.LEASTCONN,
+        rate_limit_connections_per_minute=60,
+    )
+
+    application_data, _ = relation.save.call_args_list[0].args
+    encoder = relation.save.call_args_list[0].kwargs["encoder"]
+    databag = _encode_relation_data(application_data, encoder)
 
     assert json.loads(databag["load_balancing"]) == {
         "algorithm": "leastconn",
@@ -1084,57 +1042,59 @@ def test_requirer_application_data_encoder_handles_non_json_serializable_default
         "policy": "reject",
     }
 
-    data = _run_provider(_provider_relation(databag))
-    application_data = data.requirers_data[0].application_data
+    loaded = TcpRequirerApplicationData(**_decode_relation_data(databag))
 
-    assert application_data.load_balancing.algorithm == LoadBalancingAlgorithm.LEASTCONN  # pylint: disable=no-member
-    assert application_data.rate_limit.policy == TCPRateLimitPolicy.REJECT  # pylint: disable=no-member
+    assert loaded.load_balancing.algorithm == LoadBalancingAlgorithm.LEASTCONN  # pylint: disable=no-member
+    assert loaded.rate_limit.policy == TCPRateLimitPolicy.REJECT  # pylint: disable=no-member
 
 
 def test_requirer_application_data_round_trip_with_all_fields():
     """
     arrange: Create a requirer with checks, limits, timeouts and TLS configuration.
-    act: Publish the requirer data to a real relation and load it through the provider.
+    act: Encode the requirer data with the ops relation encoder and load it back.
     assert: Every representative field is serialized and deserialized correctly.
     """
-    relation = ops.testing.Relation(MOCK_RELATION_NAME, interface=MOCK_RELATION_NAME)
-    ctx = ops.testing.Context(_RequirerCharm, meta=_REQUIRER_META)
-    state = ops.testing.State(relations=[relation], leader=True)
+    charm = MagicMock()
+    charm.unit.is_leader.return_value = True
+    requirer = HaproxyRouteTcpRequirer(charm=charm, relation_name=MOCK_RELATION_NAME)
+    relation = MagicMock()
+    requirer.relation = relation
 
-    with ctx(ctx.on.config_changed(), state) as manager:
-        manager.run()
-        manager.charm.requirer.provide_haproxy_route_tcp_requirements(
-            port=4000,
-            backend_port=5000,
-            hosts=["10.0.0.1", "10.0.0.2"],
-            sni="api.haproxy.internal",
-            check_interval=15,
-            check_rise=3,
-            check_fall=2,
-            check_type=TCPHealthCheckType.GENERIC,
-            check_send="PING",
-            check_expect="PONG",
-            load_balancing_algorithm=LoadBalancingAlgorithm.SRCIP,
-            load_balancing_consistent_hashing=True,
-            rate_limit_connections_per_minute=120,
-            rate_limit_policy=TCPRateLimitPolicy.SILENT,
-            upload_limit=1024,
-            download_limit=2048,
-            retry_count=3,
-            retry_redispatch=True,
-            server_timeout=45,
-            connect_timeout=15,
-            queue_timeout=5,
-            server_maxconn=250,
-            ip_deny_list=["10.0.0.9"],
-            enforce_tls=True,
-            tls_terminate=True,
-            proxy_protocol=True,
-            unit_address="10.0.0.1",
-        )
-        requirer_relation = manager.charm.requirer.relation
-        databag = dict(requirer_relation.data[manager.charm.app])
-        unit_databag = dict(requirer_relation.data[manager.charm.unit])
+    requirer.provide_haproxy_route_tcp_requirements(
+        port=4000,
+        backend_port=5000,
+        hosts=["10.0.0.1", "10.0.0.2"],
+        sni="api.haproxy.internal",
+        check_interval=15,
+        check_rise=3,
+        check_fall=2,
+        check_type=TCPHealthCheckType.GENERIC,
+        check_send="PING",
+        check_expect="PONG",
+        load_balancing_algorithm=LoadBalancingAlgorithm.SRCIP,
+        load_balancing_consistent_hashing=True,
+        rate_limit_connections_per_minute=120,
+        rate_limit_policy=TCPRateLimitPolicy.SILENT,
+        upload_limit=1024,
+        download_limit=2048,
+        retry_count=3,
+        retry_redispatch=True,
+        server_timeout=45,
+        connect_timeout=15,
+        queue_timeout=5,
+        server_maxconn=250,
+        ip_deny_list=["10.0.0.9"],
+        enforce_tls=True,
+        tls_terminate=True,
+        proxy_protocol=True,
+        unit_address="10.0.0.1",
+    )
+
+    application_data, _ = relation.save.call_args_list[0].args
+    unit_data, _ = relation.save.call_args_list[1].args
+    encoder = relation.save.call_args_list[0].kwargs["encoder"]
+    databag = _encode_relation_data(application_data, encoder)
+    unit_databag = _encode_relation_data(unit_data, encoder)
 
     assert json.loads(databag["hosts"]) == ["10.0.0.1", "10.0.0.2"]
     assert json.loads(databag["check"]) == {
@@ -1160,15 +1120,14 @@ def test_requirer_application_data_round_trip_with_all_fields():
     assert json.loads(databag["ip_deny_list"]) == ["10.0.0.9"]
     assert json.loads(unit_databag["address"]) == "10.0.0.1"
 
-    data = _run_provider(_provider_relation(databag, {0: unit_databag}))
+    loaded = TcpRequirerApplicationData(**_decode_relation_data(databag))
+    loaded_unit = TcpRequirerUnitData(**_decode_relation_data(unit_databag))
 
-    assert data.relation_ids_with_invalid_data == set()
-    application_data = data.requirers_data[0].application_data
-    assert application_data.port == 4000
-    assert application_data.backend_port == 5000
-    assert [str(host) for host in application_data.hosts] == ["10.0.0.1", "10.0.0.2"]
-    assert application_data.sni == "api.haproxy.internal"
-    assert application_data.check == TCPServerHealthCheck(
+    assert loaded.port == 4000
+    assert loaded.backend_port == 5000
+    assert [str(host) for host in loaded.hosts] == ["10.0.0.1", "10.0.0.2"]
+    assert loaded.sni == "api.haproxy.internal"
+    assert loaded.check == TCPServerHealthCheck(
         interval=15,
         rise=3,
         fall=2,
@@ -1176,51 +1135,75 @@ def test_requirer_application_data_round_trip_with_all_fields():
         send="PING",
         expect="PONG",
     )
-    assert application_data.load_balancing == TCPLoadBalancingConfiguration(
+    assert loaded.load_balancing == TCPLoadBalancingConfiguration(
         algorithm=LoadBalancingAlgorithm.SRCIP, consistent_hashing=True
     )
-    assert application_data.rate_limit.connections_per_minute == 120  # pylint: disable=no-member
-    assert application_data.rate_limit.policy == TCPRateLimitPolicy.SILENT  # pylint: disable=no-member
-    assert application_data.bandwidth_limit.upload == 1024  # pylint: disable=no-member
-    assert application_data.bandwidth_limit.download == 2048  # pylint: disable=no-member
-    assert application_data.retry.count == 3  # pylint: disable=no-member
-    assert application_data.retry.redispatch is True  # pylint: disable=no-member
-    assert application_data.timeout.server == 45  # pylint: disable=no-member
-    assert application_data.timeout.connect == 15  # pylint: disable=no-member
-    assert application_data.timeout.queue == 5  # pylint: disable=no-member
-    assert application_data.server_maxconn == 250
-    assert [str(address) for address in application_data.ip_deny_list] == ["10.0.0.9"]
-    assert application_data.proxy_protocol is True
-    assert str(data.requirers_data[0].units_data[0].address) == "10.0.0.1"
+    assert loaded.rate_limit.connections_per_minute == 120  # pylint: disable=no-member
+    assert loaded.rate_limit.policy == TCPRateLimitPolicy.SILENT  # pylint: disable=no-member
+    assert loaded.bandwidth_limit.upload == 1024  # pylint: disable=no-member
+    assert loaded.bandwidth_limit.download == 2048  # pylint: disable=no-member
+    assert loaded.retry.count == 3  # pylint: disable=no-member
+    assert loaded.retry.redispatch is True  # pylint: disable=no-member
+    assert loaded.timeout.server == 45  # pylint: disable=no-member
+    assert loaded.timeout.connect == 15  # pylint: disable=no-member
+    assert loaded.timeout.queue == 5  # pylint: disable=no-member
+    assert loaded.server_maxconn == 250
+    assert [str(address) for address in loaded.ip_deny_list] == ["10.0.0.9"]
+    assert loaded.proxy_protocol is True
+    assert str(loaded_unit.address) == "10.0.0.1"
 
 
-def test_provider_publishes_proxied_endpoints_round_trip():
+def test_provider_loads_requirer_data():
     """
-    arrange: Create a provider with a real relation.
-    act: Publish proxied endpoints and load them back from the relation.
-    assert: The provider endpoint data is serialized and deserialized correctly.
+    arrange: Create a provider with a mocked relation exposing requirer data.
+    act: Fetch the data with HaproxyRouteTcpProvider.get_data().
+    assert: The loaded requirer application and unit data are returned.
     """
-    relation = ops.testing.Relation(
-        MOCK_RELATION_NAME,
-        interface=MOCK_RELATION_NAME,
-        remote_app_name="tcp-requirer",
-    )
-    ctx = ops.testing.Context(_ProviderCharm, meta=_PROVIDER_META)
-    state = ops.testing.State(relations=[relation], leader=True)
+    charm = MagicMock()
+    provider = HaproxyRouteTcpProvider(charm)
+    relation = MagicMock()
+    relation.id = 1
+    relation.app.name = "tcp-requirer"
+    relation.units = [MagicMock()]
+    application_data = TcpRequirerApplicationData(port=4000)
+    unit_data = TcpRequirerUnitData(address=MOCK_ADDRESS)
 
-    with ctx(ctx.on.relation_changed(relation, remote_unit=0), state) as manager:
-        manager.run()
-        provider = manager.charm.provider
-        live_relation = provider.relations[0]
-        provider.publish_proxied_endpoints(
-            ["api.haproxy.internal:4000", "10.0.0.1:4000"],
-            live_relation,
-        )
-        databag = dict(live_relation.data[manager.charm.app])
-        loaded = live_relation.load(HaproxyRouteTcpProviderAppData, manager.charm.app)
+    def _load(cls, _):
+        if cls is TcpRequirerApplicationData:
+            return application_data
+        return unit_data
 
+    relation.load.side_effect = _load
+
+    data = provider.get_data([relation])
+
+    assert data.relation_ids_with_invalid_data == set()
+    assert data.requirers_data[0].application_data == application_data
+    assert data.requirers_data[0].units_data == [unit_data]
+
+
+def test_provider_publishes_proxied_endpoints():
+    """
+    arrange: Create a provider with a mocked relation.
+    act: Publish proxied endpoints and encode them with the ops relation encoder.
+    assert: The endpoints are saved to the provider application databag.
+    """
+    charm = MagicMock()
+    provider = HaproxyRouteTcpProvider(charm)
+    relation = MagicMock()
+    relation.load.side_effect = ValueError
+
+    provider.publish_proxied_endpoints(["api.haproxy.internal:4000", "10.0.0.1:4000"], relation)
+
+    saved_data, destination = relation.save.call_args.args
+    encoder = relation.save.call_args.kwargs["encoder"]
+    assert destination is charm.app
+
+    databag = _encode_relation_data(saved_data, encoder)
     assert json.loads(databag["endpoints"]) == [
         "api.haproxy.internal:4000",
         "10.0.0.1:4000",
     ]
+
+    loaded = HaproxyRouteTcpProviderAppData(**_decode_relation_data(databag))
     assert loaded.endpoints == ["api.haproxy.internal:4000", "10.0.0.1:4000"]
