@@ -30,7 +30,7 @@ No modules.
 | <a name="input_base"></a> [base](#input\_base) | Base of the haproxy charm. | `string` | `null` | no |
 | <a name="input_channel"></a> [channel](#input\_channel) | Channel of the haproxy charm. | `string` | `"3.2/edge"` | no |
 | <a name="input_config"></a> [config](#input\_config) | Haproxy charm config. | `map(string)` | `{}` | no |
-| <a name="input_constraints"></a> [constraints](#input\_constraints) | Haproxy constraints. | `string` | `"arch=amd64"` | no |
+| <a name="input_constraints"></a> [constraints](#input\_constraints) | Haproxy constraints. | `string` | `null` | no |
 | <a name="input_machines"></a> [machines](#input\_machines) | Machines to deploy haproxy units to. Takes precedence over units when set. | `set(string)` | `[]` | no |
 | <a name="input_model_uuid"></a> [model\_uuid](#input\_model\_uuid) | ID of the Juju model to deploy to. | `string` | n/a | yes |
 | <a name="input_revision"></a> [revision](#input\_revision) | Revision of the haproxy charm. | `number` | `null` | no |
