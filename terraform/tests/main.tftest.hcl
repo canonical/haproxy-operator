@@ -31,7 +31,7 @@ run "basic_deploy" {
         hostname = "one.example.com"
         haproxy_spoe_auth = {
           # renovate: depName="haproxy-spoe-auth"
-          revision = 222
+          revision = 229
         }
         oauth_external_idp_integrator = {
           # renovate: depName="oauth-external-idp-integrator"
@@ -53,7 +53,7 @@ run "basic_deploy" {
         hostname = "two.example.com"
         haproxy_spoe_auth = {
           # renovate: depName="haproxy-spoe-auth"
-          revision = 222
+          revision = 229
         }
       }
     ]
