@@ -24,7 +24,7 @@ permissions:
 jobs:
   terraform-docs:
     name: Update Terraform documentation
-    uses: canonical/operator-workflows/.github/workflows/generate_terraform_docs.yaml@030c5b20a0bb880dcf1ed326bff0fc16b6eb6ac1  # main
+    uses: canonical/operator-workflows/.github/workflows/generate_terraform_docs.yaml@948386e20781573f08d9ccab0b9b09a772aa29f1  # main
     secrets: inherit
     with:
       terraform-directory: terraform/charm/haproxy,terraform/charm/haproxy_ddos_protection_configurator,terraform/charm/haproxy_spoe_auth,terraform/product
